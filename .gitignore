@@ -47,3 +47,9 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+.DS_Store
+inst/.DS_Store
+inst/extdata/.DS_Store
+
+.Rbuildignore

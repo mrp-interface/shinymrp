@@ -1,0 +1,139 @@
+   a {
+    display: inline;
+    word-break: break-all;
+  }
+
+  code {
+    display: inline;
+  }
+
+  p {
+    text-align: justify;
+    font-size: 1.05em;
+  }
+
+  h1 h2 h3 h4 h5 {
+    font-size: 1.05em;
+  }
+
+  .pad_top {
+    margin-top: 20px;
+    width: 100%;
+  }
+
+  .pad_bottom {
+    margin-bottom: 20px;
+    width: 100%;
+  }
+
+  .break_line {
+    border: 1px solid #000000;
+    padding-top: 0px;
+    margin-top: 0px;
+  }
+
+  .break_title {
+    margin-top: 30px;
+    margin-bottom: 5px;
+  }
+
+  .landing_container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    width: 60%;
+  }
+
+  .landing_header {
+    text-align: center;
+    font-size: 12em;
+    font-weight: lighter;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    padding-top: 90px;
+  }
+
+  .landing_subheader {
+    font-size: 1.7em;
+    font-style: italic;
+    text-align: center;
+    padding-bottom: 30px;
+  }
+
+  .landing_text {
+    font-size: 1.2em;
+    line-height: 2;
+  }
+
+  .action_link {
+    word-break: normal;
+  }
+
+  .landing_panels {
+    width: 100%;
+  }
+
+  .landing_panel {
+    width: 49%;
+    height: inherit;
+    margin: 0;
+  }
+
+  .landing_panel_heading {
+    text-align: center;
+    font-size: 1.7em;
+  }
+
+  .landing_panel_body p {
+    margin: 15px 3px 10px 8px;
+    font-size: 1.3em;
+  }
+
+  .landing_panel_body button {
+    width: 100%;
+    margin-top: 10%;
+    font-size: 1.3em;
+  }
+
+  .interface_buttons {
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 50px;
+  }
+
+  .interface_buttons a {
+    width: 33%;
+  }
+
+  .model_spec_buttons button {
+    padding: 3px 5px 1px 5px;
+  }
+
+  .model_tab_header button {
+    color: grey;
+    background: none;
+    border: none;
+    margin: 0;
+    padding: 2px 4px 0px 4px;
+  }
+
+  .justify {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .inline {
+    display: inline;
+  }
+
+  .learn_mrp {
+    text-align: justify;
+    font-size: 1.05em;
+  }
+
+  .feedback {
+    position: fixed;
+    top: 0.6%;
+    left: 93.6%;
+    z-index: 1000;
+  }
