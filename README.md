@@ -7,7 +7,7 @@ R version 4.1.0 or beyond is required. Install the app by executing the R code b
 install.packages('remotes')
 
 # install app from GitHub using remotes
-remotes::install_github('trannttoan/shinymrp')
+remotes::install_github('mrp-interface/shinymrp')
 
 # launch the app
 shinymrp::run_app()
