@@ -37,7 +37,7 @@ run_brms <- function(
     n_chains = 4,
     spec = 0.999,
     sens = 0.7,
-    max_draw = 200
+    max_draw = 10
 ) {
 
   formula <- as.formula(fstr)
@@ -145,7 +145,7 @@ process_yrep <- function(
   yrep_mat,
   brms_input,
   by_time,
-  n_samples = NULL,
+  summarize = FALSE,
   pred_interval = 0.95
 ) {
 
@@ -170,31 +170,29 @@ process_yrep <- function(
       select(-c(time, total)) |>
       mutate_all(function(c) c / agg_tests)
 
-    if(is.null(n_samples)) {
-      df_out <- data.frame(
+    if(summarize) {
+      est <- data.frame(
         time = time,
         upper = est |> apply(1, quantile, qlower),
         lower = est |> apply(1, quantile, qupper),
         median = est |> apply(1, quantile, 0.5)
       )
     } else {
-      df_out <- est[, sample(1:ncol(est), n_samples)] |> mutate(time = time)
+      est <- est |> mutate(time = time)
     }
 
   } else {
     est <- colSums(yrep_mat) / sum(brms_input$total)
 
-    if(is.null(n_samples)) {
-      df_out <- data.frame(
+    if(summarize) {
+      est <- data.frame(
         upper  = quantile(est, qlower),
         lower  = quantile(est, qupper),
         median = quantile(est, 0.5)
       )
-    } else {
-      df_out <- est[1:n_samples]
     }
 
   }
 
-  return(df_out)
+  return(est)
 }
