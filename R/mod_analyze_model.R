@@ -14,6 +14,15 @@ mod_analyze_model_ui <- function(id){
   tags$div(class = "pad_top",
     sidebarLayout(
       sidebarPanel(width = 3,
+        tags$div(class = "pad_bottom",
+          shinyWidgets::radioGroupButtons(
+            inputId = ns("toggle_model_ui"),
+            label = NULL,
+            choices = c(`<div>Fit New Model</div>` = "create", `<div> Upload Existing Fit</div>` = "upload"),
+            selected = "create",
+            justified = TRUE
+          )
+        ),
         uiOutput(outputId = ns("model_spec"))
       ),
       mainPanel(width = 9,
@@ -77,6 +86,7 @@ mod_analyze_model_server <- function(id, global){
     # Model Specification Panel
     output$model_spec <- renderUI({
       spec_sens_ui <- fluidRow()
+
       if(global$covid) {
         spec_sens_ui <- fluidRow(
           column(width = 6,
@@ -98,220 +108,227 @@ mod_analyze_model_server <- function(id, global){
         )
       }
 
-      tagList(
-        tags$div(
-          class = "justify pad_bottom",
-          tags$div(id = "model_spec_title",
-            tags$h4("Model Specification", class = "inline"),
-            icon("info-sign", lib = "glyphicon", id = "model_spec_icon")
+      if(input$toggle_model_ui == "create") {
+        tagList(
+          tags$div(class = "justify",
+            tags$div(class = "pad_bottom",
+              HTML("<details><summary>Model Specification</summary>"),
+              tags$p("Specify models by dragging elements into the \"Effect\" boxes. Drag individual elements out of the \"Effect\" boxes to remove them or use the \"Reset\" button to start over. Click the \"Arrow\" button to fit the specificed model.", style = "padding-right: 10px; font-size: 0.95em;"),
+              HTML("</details>")
+            ),
+            tags$div(
+              class = "model_spec_buttons",
+              actionButton(
+                inputId = ns("reset_btn"),
+                label = icon("repeat", lib = "glyphicon")
+              ),
+              actionButton(
+                inputId = ns("add_btn"),
+                label = icon("arrow-right-from-bracket", "fa")
+              )
+            ),
+            shinyBS::bsTooltip(ns("reset_btn"), "Reset fields", placement = "top"),
+            shinyBS::bsTooltip(ns("add_btn"), "Fit model", placement = "top")
           ),
           tags$div(
-            class = "model_spec_buttons",
-            actionButton(
-              inputId = ns("reset_btn"),
-              label = icon("repeat", lib = "glyphicon"),
-            ),
-            actionButton(
-              inputId = ns("add_btn"),
-              label = icon("plus", "fa")
-            )
-          ),
-          shinyBS::bsTooltip("model_spec_icon", "Specify models by dragging elements from boxes on the left to ones on the right. Drag individual elements out of the \"Effect\" boxes to remove them or use the \"Reset\" button to start over. Press the \"Arrow\" button to fit and save a model."),
-          shinyBS::bsTooltip(ns("reset_btn"), "Reset fields", placement = "top"),
-          shinyBS::bsTooltip(ns("add_btn"), "Add model", placement = "top")
-        ),
-        tags$div(
-          id = ns("remove_panel"),
-          fluidRow(
-            column(
-              width = 6,
-              selectInput(
-                inputId = ns("predictor_select"),
-                label = NULL,
-                choices = names(global$mrp_input$vars)
-              ),
-              conditionalPanel(ns = ns,
-                condition = paste0("input.predictor_select == 'Individual-level Predictor'"),
-                tags$div(
-                  class = "panel panel-success predictor-panel",
+            id = ns("remove_panel"),
+            fluidRow(
+              column(
+                width = 6,
+                selectInput(
+                  inputId = ns("predictor_select"),
+                  label = NULL,
+                  choices = names(global$mrp_input$vars)
+                ),
+                conditionalPanel(ns = ns,
+                  condition = paste0("input.predictor_select == 'Individual-level Predictor'"),
                   tags$div(
-                    class = "panel-body",
-                    id = ns("pred_indiv"),
-                    isolate(global$mrp_input$vars[["Individual-level Predictor"]]) |> lapply(create_drag_item)
+                    class = "panel panel-success predictor-panel",
+                    tags$div(
+                      class = "panel-body",
+                      id = ns("pred_indiv"),
+                      isolate(global$mrp_input$vars[["Individual-level Predictor"]]) |> lapply(create_drag_item)
+                    )
+                  )
+                ),
+                conditionalPanel(ns = ns,
+                  condition = paste0("input.predictor_select == 'Geographic Indicator'"),
+                  tags$div(
+                    class = "panel panel-success",
+                    tags$div(
+                      class = "panel-body",
+                      id = ns("pred_geo_indi"),
+                      isolate(global$mrp_input$vars[["Geographic Indicator"]]) |> create_drag_item()
+                    )
+                  )
+                ),
+                conditionalPanel(ns = ns,
+                  condition = paste0("input.predictor_select == 'Geographic Predictor'"),
+                  tags$div(
+                    class = "panel panel-success",
+                    tags$div(
+                      class = "panel-body",
+                      id = ns("pred_geo"),
+                      isolate(global$mrp_input$vars[["Geographic Predictor"]]) |> lapply(create_drag_item)
+                    )
+                  )
+                ),
+                conditionalPanel(ns = ns,
+                  condition = paste0("input.predictor_select == 'Interaction'"),
+                  tags$div(
+                    class = "panel panel-success",
+                    tags$div(
+                      class = "panel-body",
+                      id = ns("pred_interact"),
+                      isolate(global$mrp_input$vars[["Interaction"]]) |> lapply(create_drag_item)
+                    )
                   )
                 )
               ),
-              conditionalPanel(ns = ns,
-                condition = paste0("input.predictor_select == 'Geographic Indicator'"),
-                tags$div(
-                  class = "panel panel-success",
+              column(
+                width = 6,
+                tags$div(  # fixed effect box
+                  class = "panel panel-primary",
                   tags$div(
-                    class = "panel-body",
-                    id = ns("pred_geo_indi"),
-                    isolate(global$mrp_input$vars[["Geographic Indicator"]]) |> create_drag_item()
+                    class = "panel-heading",
+                    "Fixed Effect"
+                  ),
+                  tags$div(
+                    class = "panel-body effect-box",
+                    id = ns("effect_fixed")
                   )
-                )
-              ),
-              conditionalPanel(ns = ns,
-                condition = paste0("input.predictor_select == 'Geographic Predictor'"),
-                tags$div(
-                  class = "panel panel-success",
+                ),
+                tags$div(  # varying effect box
+                  class = "panel panel-primary",
                   tags$div(
-                    class = "panel-body",
-                    id = ns("pred_geo"),
-                    isolate(global$mrp_input$vars[["Geographic Predictor"]]) |> lapply(create_drag_item)
-                  )
-                )
-              ),
-              conditionalPanel(ns = ns,
-                condition = paste0("input.predictor_select == 'Interaction'"),
-                tags$div(
-                  class = "panel panel-success",
+                    class = "panel-heading",
+                    "Varying Effect"
+                  ),
                   tags$div(
-                    class = "panel-body",
-                    id = ns("pred_interact"),
-                    isolate(global$mrp_input$vars[["Interaction"]]) |> lapply(create_drag_item)
+                    class = "panel-body effect-box",
+                    id = ns("effect_varying")
                   )
                 )
               )
             ),
-            column(
-              width = 6,
-              tags$div(  # fixed effect box
-                class = "panel panel-primary",
-                tags$div(
-                  class = "panel-heading",
-                  "Fixed Effect"
+            sortable_js(
+              ns("pred_indiv"),
+              options = sortable_options(
+                group = list(
+                  name = "indiv",
+                  pull = "clone",
+                  put = FALSE
                 ),
-                tags$div(
-                  class = "panel-body effect-box",
-                  id = ns("effect_fixed")
-                )
-              ),
-              tags$div(  # varying effect box
-                class = "panel panel-primary",
-                tags$div(
-                  class = "panel-heading",
-                  "Varying Effect"
+                sort = FALSE
+              )
+            ),
+            sortable_js(
+              ns("pred_geo_indi"),
+              options = sortable_options(
+                group = list(
+                  name = "geo_indi",
+                  pull = "clone",
+                  put = FALSE
                 ),
-                tags$div(
-                  class = "panel-body effect-box",
-                  id = ns("effect_varying")
-                )
+                sort = FALSE
+              )
+            ),
+            sortable_js(
+              ns("pred_geo"),
+              options = sortable_options(
+                group = list(
+                  name = "geo_pred",
+                  pull = "clone",
+                  put = FALSE
+                ),
+                sort = FALSE
+              )
+            ),
+            sortable_js(
+              ns("pred_interact"),
+              options = sortable_options(
+                group = list(
+                  name = "interact",
+                  pull = "clone",
+                  put = FALSE
+                ),
+                sort = FALSE
+              )
+            ),
+            sortable_js(
+              ns("effect_fixed"),
+              options = sortable_options(
+                group = list(
+                  name = "fixed",
+                  pull = TRUE,
+                  put = c("indiv", "geo_indi", "geo_pred", "interact")
+                ),
+                onSort = sortable_js_capture_input(ns("fixed_effects"))
+              )
+            ),
+            sortable_js(
+              ns("effect_varying"),
+              options = sortable_options(
+                group = list(
+                  name = "varying",
+                  pull = TRUE,
+                  put = c("indiv", "geo_indi", "interact")
+                ),
+                onSort = sortable_js_capture_input(ns("varying_effects"))
+              )
+            ),
+            sortable_js(
+              ns("remove_panel"),
+              options = sortable_options(
+                group = list(
+                  name = "remove",
+                  pull = FALSE,
+                  put = c("fixed", "varying")
+                ),
+                onAdd = htmlwidgets::JS("function (evt) { this.el.removeChild(evt.item); }"),
+                animation = 0
               )
             )
           ),
-          sortable_js(
-            ns("pred_indiv"),
-            options = sortable_options(
-              group = list(
-                name = "indiv",
-                pull = "clone",
-                put = FALSE
-              ),
-              sort = FALSE
+          selectInput(
+            inputId = ns("iter_select"),
+            label = "Select the number of iterations",
+            choices = c("100 (Test)", "500 (Low)", "2000 (Medium)", "5000 (High)", "Custom"),
+            selected = "2000 (Medium)"
+          ),
+          conditionalPanel(ns = ns,
+            condition = paste0("input.iter_select == 'Custom'"),
+            numericInput(
+              inputId = ns("iter_kb"),
+              label = "Enter the number of iterations",
+              min = 100, max = 5000, step = 100,
+              value = 1000
             )
           ),
-          sortable_js(
-            ns("pred_geo_indi"),
-            options = sortable_options(
-              group = list(
-                name = "geo_indi",
-                pull = "clone",
-                put = FALSE
-              ),
-              sort = FALSE
-            )
-          ),
-          sortable_js(
-            ns("pred_geo"),
-            options = sortable_options(
-              group = list(
-                name = "geo_pred",
-                pull = "clone",
-                put = FALSE
-              ),
-              sort = FALSE
-            )
-          ),
-          sortable_js(
-            ns("pred_interact"),
-            options = sortable_options(
-              group = list(
-                name = "interact",
-                pull = "clone",
-                put = FALSE
-              ),
-              sort = FALSE
-            )
-          ),
-          sortable_js(
-            ns("effect_fixed"),
-            options = sortable_options(
-              group = list(
-                name = "fixed",
-                pull = TRUE,
-                put = c("indiv", "geo_indi", "geo_pred", "interact")
-              ),
-              onSort = sortable_js_capture_input(ns("fixed_effects"))
-            )
-          ),
-          sortable_js(
-            ns("effect_varying"),
-            options = sortable_options(
-              group = list(
-                name = "varying",
-                pull = TRUE,
-                put = c("indiv", "geo_indi", "interact")
-              ),
-              onSort = sortable_js_capture_input(ns("varying_effects"))
-            )
-          ),
-          sortable_js(
-            ns("remove_panel"),
-            options = sortable_options(
-              group = list(
-                name = "remove",
-                pull = FALSE,
-                put = c("fixed", "varying")
-              ),
-              onAdd = htmlwidgets::JS("function (evt) { this.el.removeChild(evt.item); }"),
-              animation = 0
-            )
-          )
-        ),
-        selectInput(
-          inputId = ns("iter_select"),
-          label = "Select the number of iterations",
-          choices = c("100 (Test)", "500 (Low)", "2000 (Medium)", "5000 (High)", "Custom"),
-          selected = "2000 (Medium)"
-        ),
-        conditionalPanel(ns = ns,
-          condition = paste0("input.iter_select == 'Custom'"),
           numericInput(
-            inputId = ns("iter_kb"),
-            label = "Enter the number of iterations",
-            min = 100, max = 5000, step = 100,
-            value = 1000
-          )
-        ),
-        numericInput(
-          inputId = ns("chain_select"),
-          label = "Select the number of chains",
-          min = 1, max = 8, step = 1,
-          value = 4
-        ),
-        spec_sens_ui,
-        tags$p(
-          "For details about the model fitting process, go to ",
-          actionLink(
-            inputId = ns("to_mrp"),
-            label = "Interface",
-            class = "action_link"
+            inputId = ns("chain_select"),
+            label = "Select the number of chains",
+            min = 1, max = 8, step = 1,
+            value = 4
           ),
-          "."
+          spec_sens_ui,
+          tags$p(
+            "For details about the model fitting process, go to ",
+            actionLink(
+              inputId = ns("to_mrp"),
+              label = "Interface",
+              class = "action_link"
+            ),
+            "."
+          )
         )
-      )
+      } else {
+        fileInput(
+          inputId = ns("fit_upload"),
+          label = "Select a model fit object (.RDS file)",
+          accept = ".RDS"
+        )
+      }
     })
 
     observeEvent(input$to_mrp, {
@@ -391,9 +408,9 @@ mod_analyze_model_server <- function(id, global){
           create_text_box(
             title = tags$b("Note"),
             if(global$covid) {
-              tags$p("The plots show the weekly prevalence rates computed from the observed data and multiple sets of replicated data.")
+              tags$p("The plots show the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
             } else {
-              tags$p("The plots show the percentage of positive response computed from the observed data and multiple sets of replicated data.")
+              tags$p("The plots show the percentage of positive response computed from the observed data and 10 sets of replicated data.")
             }
           ),
           purrr::map(1:length(structs), ~ list(
@@ -429,7 +446,6 @@ mod_analyze_model_server <- function(id, global){
                 global$mrp_input$brms_input
               )
             }
-
           })
         })
       }
@@ -511,8 +527,7 @@ mod_analyze_model_server <- function(id, global){
               model$yrep <- process_yrep(
                 yrep_mat,
                 global$mrp_input$brms_input,
-                global$covid,
-                10
+                global$covid
               )
 
               model_summary <- summary(model$fit)
@@ -524,7 +539,8 @@ mod_analyze_model_server <- function(id, global){
                 ppc = paste0("ppc", global$model_count),
                 tab = paste0("tab", global$model_count),
                 title = paste0("title", global$model_count),
-                button = paste0("rm_btn", global$model_count)
+                rm_btn = paste0("rm_btn", global$model_count),
+                save_btn = paste0("save_btn", global$model_count)
               )
 
               # create new tab
@@ -535,7 +551,7 @@ mod_analyze_model_server <- function(id, global){
                   inline = TRUE
                 ),
                 actionButton(
-                  inputId = ns(model$IDs$button),
+                  inputId = ns(model$IDs$rm_btn),
                   label = NULL,
                   icon = icon("remove", lib = "glyphicon"),
                   class = "btn-xs remove_model"
@@ -547,7 +563,19 @@ mod_analyze_model_server <- function(id, global){
                 tabPanel(title = tab_header,
                   value = model$IDs$tab,
                   tags$div(class = "pad_top",
-                    HTML(paste0("<h4>", "Formula: ", mean_structure, "</h4>")),
+                    fluidRow(
+                      column(width = 11,
+                        HTML(paste0("<h4>", "Formula: ", model$mean_structure, "</h4>"))
+                      ),
+                      column(width = 1,
+                        downloadButton(
+                          outputId = ns(model$IDs$save_btn),
+                          label = "Save fit",
+                          icon = NULL,
+                          style = "padding: 6px 8px"
+                        )
+                      )
+                    ),
                     tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
                                    "Samples are generated using ", model_summary$chains, " chains with ", model_summary$iter - model_summary$warmup, " post-warmup iterations each.")),
                     create_text_box(
@@ -574,9 +602,9 @@ mod_analyze_model_server <- function(id, global){
                     create_text_box(
                       title = tags$b("Note"),
                       if(global$covid) {
-                        tags$p("The plot shows the weekly prevalence rates computed from the observed data and multiple sets of replicated data.")
+                        tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
                       } else {
-                        tags$p("The plot shows the percentage of positive response computed from the observed data and multiple sets of replicated data.")
+                        tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
                       }
                     ),
                     plotOutput(outputId = ns(model$IDs$ppc))
@@ -628,7 +656,7 @@ mod_analyze_model_server <- function(id, global){
                 }
               )
 
-              observeEvent(input[[model$IDs$button]], {
+              observeEvent(input[[model$IDs$rm_btn]], {
                 # remove model object and tab
                 global$models[[model_name]] <- NULL
                 removeTab("navbar_model", model$IDs$tab, session)
@@ -640,46 +668,194 @@ mod_analyze_model_server <- function(id, global){
                 })
               })
 
+              output[[model$IDs$save_btn]] <- downloadHandler(
+                filename = function() { "fit.RDS" },
+                content = function(file) {
+                  saveRDS(model, file)
+                }
+              )
+
               global$models[[model_name]] <- model
               global$model_count <- global$model_count + 1
               waiter::waiter_hide()
 
             } else {
-              showModal(
-                modalDialog(
-                  title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-                  "This model has already been added."
-                ),
-                session = global$session
-              )
+              show_alert("This model has already been added.", global$session)
             }
           } else {
-            showModal(
-              modalDialog(
-                title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-                formula
-              ),
-              session = global$session
-            )
+            show_alert(formula, global$session)
           }
         } else {
-          showModal(
-            modalDialog(
-              title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "Maximum number of models reached. Please removed existing models to add more."
-            ),
-            session = global$session
-          )
+          show_alert("Maximum number of models reached. Please removed existing models to add more.", global$session)
         }
       } else {
-        showModal(
-          modalDialog(
-            title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-            msg_range
-          ),
-          session = global$session
-        )
+        show_alert(msg_range, global$session)
       }
+    })
+
+    observeEvent(input$fit_upload, {
+      model <- readRDS(input$fit_upload$datapath)
+
+      if(!(model$sig %in% purrr::map(global$models, function(m) m$sig))) {
+        waiter::waiter_show(
+          html = waiter_ui("wait"),
+          color = waiter::transparent(0.9)
+        )
+
+        model_name <- paste0("Model ", length(global$models) + 1)
+        model_summary <- summary(model$fit)
+
+        # UI element IDs
+        model$IDs <- list(
+          fixed = paste0("fixed", global$model_count),
+          varying = paste0("varying", global$model_count),
+          ppc = paste0("ppc", global$model_count),
+          tab = paste0("tab", global$model_count),
+          title = paste0("title", global$model_count),
+          rm_btn = paste0("rm_btn", global$model_count),
+          save_btn = paste0("save_btn", global$model_count)
+        )
+
+        # create new tab
+        tab_header <- tags$div(
+          class = "model_tab_header",
+          textOutput(
+            outputId = ns(model$IDs$title),
+            inline = TRUE
+          ),
+          actionButton(
+            inputId = ns(model$IDs$rm_btn),
+            label = NULL,
+            icon = icon("remove", lib = "glyphicon"),
+            class = "btn-xs remove_model"
+          )
+        )
+
+        appendTab("navbar_model",
+          select = TRUE,
+          tabPanel(title = tab_header,
+            value = model$IDs$tab,
+            tags$div(class = "pad_top",
+              fluidRow(
+                column(width = 11,
+                  HTML(paste0("<h4>", "Formula: ", model$mean_structure, "</h4>"))
+                ),
+                column(width = 1,
+                  downloadButton(
+                    outputId = ns(model$IDs$save_btn),
+                    label = "Save fit",
+                    icon = NULL,
+                    style = "padding: 6px 8px; width: 100%;"
+                  )
+                )
+              ),
+              tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
+                             "Samples are generated using ", model_summary$chains, " chains with ", model_summary$iter - model_summary$warmup, " post-warmup iterations each.")),
+              create_text_box(
+                title = tags$b("Note"),
+                tags$ul(
+                  tags$li("Values for ", tags$code("Convergence"), " that are greater than 1.1 indicates the chains have not yet converged and it is necessary to run more iterations and/or set stronger priors."),
+                  tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
+                )
+              ),
+              tags$h4("Fixed Effects", class = "break_title"),
+              tags$hr(class = "break_line"),
+              tableOutput(ns(model$IDs$fixed)),
+              tags$h4("Varying Effects", class = "break_title"),
+              tags$hr(class = "break_line"),
+              purrr::map(names(model_summary$random),  ~ list(
+                tags$em(tags$h4(.x)),
+                gsub(':', '_', .x) %>%
+                  paste0(model$IDs$varying, '_', .) |>
+                  ns() |>
+                  tableOutput()
+              )),
+              tags$h4("Posterior Predictive Check", class = "break_title"),
+              tags$hr(class = "break_line"),
+              create_text_box(
+                title = tags$b("Note"),
+                if(global$covid) {
+                  tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+                } else {
+                  tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+                }
+              ),
+              plotOutput(outputId = ns(model$IDs$ppc))
+            )
+          )
+        )
+
+        # changeable tab title
+        output[[model$IDs$title]] <- renderText(model_name)
+
+        # render fixed effect table
+        output[[model$IDs$fixed]] <- renderTable({
+          model_summary$fixed |>
+            rename("Convergence" = "Rhat") |>
+            mutate(
+              Bulk_ESS = as.integer(Bulk_ESS),
+              Tail_ESS = as.integer(Tail_ESS)
+            )
+        }, rownames = TRUE)
+
+
+        # render varying effect tables
+        purrr::map(names(model_summary$random), function(s) {
+          id <- gsub(':', '_', s) %>% paste0(model$IDs$varying, '_', .)
+          output[[id]] <- renderTable(
+            model_summary$random[[s]] |>
+              rename("Convergence" = "Rhat") |>
+              mutate(
+                Bulk_ESS = as.integer(Bulk_ESS),
+                Tail_ESS = as.integer(Tail_ESS)
+              ),
+            rownames = TRUE
+          )
+        })
+
+        # render ppc plot
+        output[[model$IDs$ppc]] <- renderPlot(
+          if(global$covid) {
+            plot_ppc_covid_subset(
+              model$yrep,
+              global$mrp_input$brms_input,
+              global$plotdata$dates
+            )
+          } else {
+            plot_ppc_poll(
+              model$yrep,
+              global$mrp_input$brms_input
+            )
+          }
+        )
+
+        observeEvent(input[[model$IDs$rm_btn]], {
+          # remove model object and tab
+          global$models[[model_name]] <- NULL
+          removeTab("navbar_model", model$IDs$tab, session)
+
+          # re-index model objects and tabs
+          names(global$models) <- if(length(global$models) > 0) paste0("Model ", 1:length(global$models)) else character()
+          purrr::map(names(global$models), function(name) {
+            output[[global$models[[name]]$IDs$title]] <- renderText(name)
+          })
+        })
+
+        output[[model$IDs$save_btn]] <- downloadHandler(
+          filename = function() { "fit.RDS" },
+          content = function(file) {
+            saveRDS(model, file)
+          }
+        )
+
+        global$models[[model_name]] <- model
+        global$model_count <- global$model_count + 1
+        waiter::waiter_hide()
+
+      } else {
+        show_alert("This model has already been added.", global$session)
+      }
+
     })
 
     # reset everything when new data is uploaded
