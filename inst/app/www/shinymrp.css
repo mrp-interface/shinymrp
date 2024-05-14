@@ -105,8 +105,13 @@
     width: 33%;
   }
 
+  .model_spec_buttons {
+    width: 25%;
+  }
+
   .model_spec_buttons button {
     padding: 3px 5px 1px 5px;
+    width: 45%;
   }
 
   .model_tab_header button {
