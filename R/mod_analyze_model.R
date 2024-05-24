@@ -14,15 +14,6 @@ mod_analyze_model_ui <- function(id){
   tags$div(class = "pad_top",
     sidebarLayout(
       sidebarPanel(width = 3,
-        tags$div(class = "pad_bottom",
-          shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_model_ui"),
-            label = NULL,
-            choices = c(`<div>Fit New Model</div>` = "create", `<div> Upload Existing Fit</div>` = "upload"),
-            selected = "create",
-            justified = TRUE
-          )
-        ),
         uiOutput(outputId = ns("model_spec"))
       ),
       mainPanel(width = 9,
@@ -108,28 +99,10 @@ mod_analyze_model_server <- function(id, global){
         )
       }
 
-      if(input$toggle_model_ui == "create") {
-        tagList(
-          tags$div(class = "justify",
-            tags$div(class = "pad_bottom",
-              HTML("<details><summary>Model Specification</summary>"),
-              tags$p("Specify models by dragging elements into the \"Effect\" boxes. Drag individual elements out of the \"Effect\" boxes to remove them or use the \"Reset\" button to start over. Click the \"Arrow\" button to fit the specificed model.", style = "padding-right: 10px; font-size: 0.95em;"),
-              HTML("</details>")
-            ),
-            tags$div(
-              class = "model_spec_buttons",
-              actionButton(
-                inputId = ns("reset_btn"),
-                label = icon("repeat", lib = "glyphicon")
-              ),
-              actionButton(
-                inputId = ns("add_btn"),
-                label = icon("arrow-right-from-bracket", "fa")
-              )
-            ),
-            shinyBS::bsTooltip(ns("reset_btn"), "Reset fields", placement = "top"),
-            shinyBS::bsTooltip(ns("add_btn"), "Fit model", placement = "top")
-          ),
+      tagList(
+        HTML("<details open='true'><summary class='collapsible'>Model Specification</summary>"),
+        tags$div(style = "margin-top: 10px",
+          tags$p("Specify models by dragging elements into the \"Effect\" boxes or drag them out to remove them."),
           tags$div(
             id = ns("remove_panel"),
             fluidRow(
@@ -312,6 +285,18 @@ mod_analyze_model_server <- function(id, global){
             value = 4
           ),
           spec_sens_ui,
+          tags$div(class = "justify pad_bottom",
+            actionButton(
+              inputId = ns("reset_btn"),
+              label = "Reset fields",
+              width = "49.5%"
+            ),
+            actionButton(
+              inputId = ns("add_btn"),
+              label = "Fit model",
+              width = "49.5%"
+            )
+          ),
           tags$p(
             "For details about the model fitting process, go to ",
             actionLink(
@@ -321,14 +306,19 @@ mod_analyze_model_server <- function(id, global){
             ),
             "."
           )
-        )
-      } else {
-        fileInput(
-          inputId = ns("fit_upload"),
-          label = "Select a model fit object (.RDS file)",
-          accept = ".RDS"
-        )
-      }
+        ),
+        HTML("</details>"),
+        HTML("<details><summary class='collapsible'>Upload Existing Fit</summary>"),
+        tags$div(style = "margin-top: 10px",
+          fileInput(
+            inputId = ns("fit_upload"),
+            label = "Select a model fit object (.RDS file)",
+            accept = ".RDS"
+          )
+        ),
+        HTML("</details>")
+      )
+
     })
 
     observeEvent(input$to_mrp, {

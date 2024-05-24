@@ -9,7 +9,7 @@
 
   p {
     text-align: justify;
-    font-size: 1.05em;
+    font-size: 1.03em;
   }
 
   h1 h2 h3 h4 h5 {
@@ -17,12 +17,12 @@
   }
 
   .pad_top {
-    margin-top: 20px;
+    margin-top: 15px;
     width: 100%;
   }
 
   .pad_bottom {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     width: 100%;
   }
 
@@ -85,13 +85,13 @@
   }
 
   .landing_panel_body p {
-    margin: 15px 3px 10px 8px;
+    margin: 12px 3px 10px 8px;
     font-size: 1.3em;
   }
 
   .landing_panel_body button {
     width: 100%;
-    margin-top: 10%;
+    margin-top: 5%;
     font-size: 1.3em;
   }
 
@@ -141,4 +141,8 @@
     top: 0.6%;
     left: 93.6%;
     z-index: 1000;
+  }
+
+  .collapsible {
+    font-size: 1.25em;
   }
