@@ -146,3 +146,7 @@
   .collapsible {
     font-size: 1.25em;
   }
+
+  .button_icon {
+    margin-right: 5px;
+  }
