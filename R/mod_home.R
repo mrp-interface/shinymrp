@@ -17,10 +17,10 @@ mod_home_ui <- function(id){
         tags$div(class = "panel panel-primary landing_panel",
           tags$div(class = "panel-heading landing_panel_heading", "Spatio-temporal Data"),
           tags$div(class = "panel-body landing_panel_body",
-            tags$p("Collected over time and by geography"),
-            tags$p("Example: COVID-19 hospital test records", style = "display: inline"),
+            tags$p("Collected over time and by geography", style = "font-style: italic"),
+            tags$p(tags$u("Example"), ": COVID-19 hospital test records", style = "display: inline"),
             downloadButton(
-              outputId = ns("save_st"),
+              outputId = ns("save_st_data"),
               label = NULL,
               style = "padding: 0 2px"
             ),
@@ -33,10 +33,10 @@ mod_home_ui <- function(id){
         tags$div(class = "panel panel-primary landing_panel",
           tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data"),
           tags$div(class = "panel-body landing_panel_body",
-            tags$p("Collected at a single time point"),
-            tags$p("Example: the Cooperative Election Study data", style = "display: inline"),
+            tags$p("Collected at a single time point", style = "font-style: italic"),
+            tags$p(tags$u("Example"), ": the Cooperative Election Study data", style = "display: inline"),
             downloadButton(
-              outputId = ns("save_cs"),
+              outputId = ns("save_cs_data"),
               label = NULL,
               style = "padding: 0 2px"
             ),
@@ -58,17 +58,23 @@ mod_home_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
-    output$save_cs <- downloadHandler(
-      filename = function() { "example_cs_w_state.csv" },
+    # shinyWidgets::sendSweetAlert(
+    #   title = "Information",
+    #   text = "This web app currently only serves as a demo. We are working to provide computation and memory support for the Bayesian model estimation.",
+    #   type = "info"
+    # )
+
+    output$save_cs_data <- downloadHandler(
+      filename = function() { "data_cs_w_state.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/example_cs_w_state.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/data_cs_w_state.csv")) |> write.csv(file, row.names = FALSE)
       }
     )
 
-    output$save_st <- downloadHandler(
-      filename = function() { "example_st.csv" },
+    output$save_st_data <- downloadHandler(
+      filename = function() { "data_st.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/example_st.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/data_st.csv")) |> write.csv(file, row.names = FALSE)
       }
     )
 

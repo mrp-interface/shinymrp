@@ -14,15 +14,6 @@ mod_analyze_model_ui <- function(id){
   tags$div(class = "pad_top",
     sidebarLayout(
       sidebarPanel(width = 3,
-        tags$div(class = "pad_bottom",
-          shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_model_ui"),
-            label = NULL,
-            choices = c(`<div>Fit New Model</div>` = "create", `<div> Upload Existing Fit</div>` = "upload"),
-            selected = "create",
-            justified = TRUE
-          )
-        ),
         uiOutput(outputId = ns("model_spec"))
       ),
       mainPanel(width = 9,
@@ -33,7 +24,8 @@ mod_analyze_model_ui <- function(id){
               uiOutput(outputId = ns("model_select_ui")),
               actionButton(
                 inputId = ns("diagnos_btn"),
-                label = "Run diagnostics"
+                label = "Run diagnostics",
+                icon = icon("gears", lib = "font-awesome", class = "button_icon")
               ),
               tags$h4("Leave-one-out Cross-validation", class = "break_title"),
               tags$hr(class = "break_line"),
@@ -108,28 +100,10 @@ mod_analyze_model_server <- function(id, global){
         )
       }
 
-      if(input$toggle_model_ui == "create") {
-        tagList(
-          tags$div(class = "justify",
-            tags$div(class = "pad_bottom",
-              HTML("<details><summary>Model Specification</summary>"),
-              tags$p("Specify models by dragging elements into the \"Effect\" boxes. Drag individual elements out of the \"Effect\" boxes to remove them or use the \"Reset\" button to start over. Click the \"Arrow\" button to fit the specificed model.", style = "padding-right: 10px; font-size: 0.95em;"),
-              HTML("</details>")
-            ),
-            tags$div(
-              class = "model_spec_buttons",
-              actionButton(
-                inputId = ns("reset_btn"),
-                label = icon("repeat", lib = "glyphicon")
-              ),
-              actionButton(
-                inputId = ns("add_btn"),
-                label = icon("arrow-right-from-bracket", "fa")
-              )
-            ),
-            shinyBS::bsTooltip(ns("reset_btn"), "Reset fields", placement = "top"),
-            shinyBS::bsTooltip(ns("add_btn"), "Fit model", placement = "top")
-          ),
+      tagList(
+        HTML("<details open='true'><summary class='collapsible'>Model Specification</summary>"),
+        tags$div(style = "margin-top: 10px",
+          tags$p("Specify models by dragging elements into the \"Effect\" boxes or drag them out to remove them."),
           tags$div(
             id = ns("remove_panel"),
             fluidRow(
@@ -312,6 +286,20 @@ mod_analyze_model_server <- function(id, global){
             value = 4
           ),
           spec_sens_ui,
+          tags$div(class = "justify pad_bottom",
+            actionButton(
+              inputId = ns("reset_btn"),
+              label = "Reset fields",
+              icon = icon("arrow-rotate-right", lib = "font-awesome", class = "button_icon"),
+              width = "49.5%"
+            ),
+            actionButton(
+              inputId = ns("add_btn"),
+              label = "Fit model",
+              icon = icon("chart-line", lib = "font-awesome", class = "button_icon"),
+              width = "49.5%"
+            )
+          ),
           tags$p(
             "For details about the model fitting process, go to ",
             actionLink(
@@ -321,14 +309,28 @@ mod_analyze_model_server <- function(id, global){
             ),
             "."
           )
-        )
-      } else {
-        fileInput(
-          inputId = ns("fit_upload"),
-          label = "Select a model fit object (.RDS file)",
-          accept = ".RDS"
-        )
-      }
+        ),
+        HTML("</details>"),
+        HTML("<details><summary class='collapsible'>Upload Model Estimation</summary>"),
+        tags$div(style = "margin-top: 10px",
+          fileInput(
+            inputId = ns("fit_upload"),
+            label = "Select a RDS file containing a model estimation",
+            accept = ".RDS"
+          ),
+          HTML("<details><summary>More options</summary>"),
+          tags$div(class = "pad_top",
+            actionButton(
+              inputId = ns("use_example"),
+              label = " Use example model estimation",
+              icon = icon("table", lib = "font-awesome", class = "button_icon")
+            )
+          ),
+          HTML("</details>")
+        ),
+        HTML("</details>")
+      )
+
     })
 
     observeEvent(input$to_mrp, {
@@ -499,6 +501,7 @@ mod_analyze_model_server <- function(id, global){
               # create a list to store model info
               model_name <- paste0("Model ", length(global$models) + 1)
               model <- list()
+              model$covid <- global$covid
               model$sig <- paste0(mean_structure, n_iter)
               model$mean_structure <- mean_structure
 
@@ -564,15 +567,14 @@ mod_analyze_model_server <- function(id, global){
                   value = model$IDs$tab,
                   tags$div(class = "pad_top",
                     fluidRow(
-                      column(width = 11,
+                      column(width = 10,
                         HTML(paste0("<h4>", "Formula: ", model$mean_structure, "</h4>"))
                       ),
-                      column(width = 1,
+                      column(width = 2,
                         downloadButton(
                           outputId = ns(model$IDs$save_btn),
-                          label = "Save fit",
-                          icon = NULL,
-                          style = "padding: 6px 8px"
+                          label = "Save estimation",
+                          style = "padding: 6px auto; width: 100%;"
                         )
                       )
                     ),
@@ -696,6 +698,184 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(input$fit_upload, {
       model <- readRDS(input$fit_upload$datapath)
 
+      if(!("covid" %in% names(model))) {
+        show_alert("The uploaded RDS file does not contain a model estimation.", global$session)
+      } else if(model$covid != global$covid) {
+        if(global$covid) {
+          show_alert(paste0("The uploaded RDS file contains model estimation for cross-sectional data instead of spatio-temporal data."), global$session)
+        } else {
+          show_alert(paste0("The uploaded RDS file contains model estimation for spatio-temporal data instead of cross-sectional data."), global$session)
+        }
+      } else {
+        if(!(model$sig %in% purrr::map(global$models, function(m) m$sig))) {
+          waiter::waiter_show(
+            html = waiter_ui("wait"),
+            color = waiter::transparent(0.9)
+          )
+
+          model_name <- paste0("Model ", length(global$models) + 1)
+          model_summary <- summary(model$fit)
+
+          # UI element IDs
+          model$IDs <- list(
+            fixed = paste0("fixed", global$model_count),
+            varying = paste0("varying", global$model_count),
+            ppc = paste0("ppc", global$model_count),
+            tab = paste0("tab", global$model_count),
+            title = paste0("title", global$model_count),
+            rm_btn = paste0("rm_btn", global$model_count),
+            save_btn = paste0("save_btn", global$model_count)
+          )
+
+          # create new tab
+          tab_header <- tags$div(
+            class = "model_tab_header",
+            textOutput(
+              outputId = ns(model$IDs$title),
+              inline = TRUE
+            ),
+            actionButton(
+              inputId = ns(model$IDs$rm_btn),
+              label = NULL,
+              icon = icon("remove", lib = "glyphicon"),
+              class = "btn-xs remove_model"
+            )
+          )
+
+          appendTab("navbar_model",
+            select = TRUE,
+            tabPanel(title = tab_header,
+              value = model$IDs$tab,
+              tags$div(class = "pad_top",
+                fluidRow(
+                  column(width = 10,
+                    HTML(paste0("<h4>", "Formula: ", model$mean_structure, "</h4>"))
+                  ),
+                  column(width = 2,
+                    downloadButton(
+                      outputId = ns(model$IDs$save_btn),
+                      label = "Save estimation",
+                      style = "padding: 6px auto; width: 100%;"
+                    )
+                  )
+                ),
+                tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
+                               "Samples are generated using ", model_summary$chains, " chains with ", model_summary$iter - model_summary$warmup, " post-warmup iterations each.")),
+                create_text_box(
+                  title = tags$b("Note"),
+                  tags$ul(
+                    tags$li("Values for ", tags$code("Convergence"), " that are greater than 1.1 indicates the chains have not yet converged and it is necessary to run more iterations and/or set stronger priors."),
+                    tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
+                  )
+                ),
+                tags$h4("Fixed Effects", class = "break_title"),
+                tags$hr(class = "break_line"),
+                tableOutput(ns(model$IDs$fixed)),
+                tags$h4("Varying Effects", class = "break_title"),
+                tags$hr(class = "break_line"),
+                purrr::map(names(model_summary$random),  ~ list(
+                  tags$em(tags$h4(.x)),
+                  gsub(':', '_', .x) %>%
+                    paste0(model$IDs$varying, '_', .) |>
+                    ns() |>
+                    tableOutput()
+                )),
+                tags$h4("Posterior Predictive Check", class = "break_title"),
+                tags$hr(class = "break_line"),
+                create_text_box(
+                  title = tags$b("Note"),
+                  if(global$covid) {
+                    tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+                  } else {
+                    tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+                  }
+                ),
+                plotOutput(outputId = ns(model$IDs$ppc))
+              )
+            )
+          )
+
+          # changeable tab title
+          output[[model$IDs$title]] <- renderText(model_name)
+
+          # render fixed effect table
+          output[[model$IDs$fixed]] <- renderTable({
+            model_summary$fixed |>
+              rename("Convergence" = "Rhat") |>
+              mutate(
+                Bulk_ESS = as.integer(Bulk_ESS),
+                Tail_ESS = as.integer(Tail_ESS)
+              )
+          }, rownames = TRUE)
+
+
+          # render varying effect tables
+          purrr::map(names(model_summary$random), function(s) {
+            id <- gsub(':', '_', s) %>% paste0(model$IDs$varying, '_', .)
+            output[[id]] <- renderTable(
+              model_summary$random[[s]] |>
+                rename("Convergence" = "Rhat") |>
+                mutate(
+                  Bulk_ESS = as.integer(Bulk_ESS),
+                  Tail_ESS = as.integer(Tail_ESS)
+                ),
+              rownames = TRUE
+            )
+          })
+
+          # render ppc plot
+          output[[model$IDs$ppc]] <- renderPlot(
+            if(global$covid) {
+              plot_ppc_covid_subset(
+                model$yrep,
+                global$mrp_input$brms_input,
+                global$plotdata$dates
+              )
+            } else {
+              plot_ppc_poll(
+                model$yrep,
+                global$mrp_input$brms_input
+              )
+            }
+          )
+
+          observeEvent(input[[model$IDs$rm_btn]], {
+            # remove model object and tab
+            global$models[[model_name]] <- NULL
+            removeTab("navbar_model", model$IDs$tab, session)
+
+            # re-index model objects and tabs
+            names(global$models) <- if(length(global$models) > 0) paste0("Model ", 1:length(global$models)) else character()
+            purrr::map(names(global$models), function(name) {
+              output[[global$models[[name]]$IDs$title]] <- renderText(name)
+            })
+          })
+
+          output[[model$IDs$save_btn]] <- downloadHandler(
+            filename = function() { "fit.RDS" },
+            content = function(file) {
+              saveRDS(model, file)
+            }
+          )
+
+          global$models[[model_name]] <- model
+          global$model_count <- global$model_count + 1
+          waiter::waiter_hide()
+
+        } else {
+          show_alert("This model has already been added.", global$session)
+        }
+      }
+
+    })
+
+    observeEvent(input$use_example, {
+      if(global$covid) {
+        model <- readRDS(app_sys("extdata/fit_st.RDS"))
+      } else {
+        model <- readRDS(app_sys("extdata/fit_cs.RDS"))
+      }
+
       if(!(model$sig %in% purrr::map(global$models, function(m) m$sig))) {
         waiter::waiter_show(
           html = waiter_ui("wait"),
@@ -737,15 +917,14 @@ mod_analyze_model_server <- function(id, global){
             value = model$IDs$tab,
             tags$div(class = "pad_top",
               fluidRow(
-                column(width = 11,
+                column(width = 10,
                   HTML(paste0("<h4>", "Formula: ", model$mean_structure, "</h4>"))
                 ),
-                column(width = 1,
+                column(width = 2,
                   downloadButton(
                     outputId = ns(model$IDs$save_btn),
-                    label = "Save fit",
-                    icon = NULL,
-                    style = "padding: 6px 8px; width: 100%;"
+                    label = "Save estimation",
+                    style = "padding: 6px auto; width: 100%;"
                   )
                 )
               ),
