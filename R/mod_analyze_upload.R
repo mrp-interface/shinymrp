@@ -27,6 +27,17 @@ mod_analyze_upload_ui <- function(id){
           label = NULL,
           accept = c(".csv", ".xlsx", ".sas7bdat")
         ),
+        tags$div(class = "pad_bottom",
+          HTML("<details><summary>More options</summary>"),
+          tags$div(class = "pad_top",
+            actionButton(
+              inputId = ns("use_example"),
+              label = "Use example aggregated data",
+              icon = icon("table", class = "fa button_icon")
+            )
+          ),
+          HTML("</details>"),
+        ),
         tags$p(
           "For ", tags$u("requirements for input data"), "and preprocessing code, go to the",
           actionLink(
@@ -253,6 +264,70 @@ mod_analyze_upload_server <- function(id, global){
 
     })
 
+    observeEvent(input$use_example, {
+      if(global$covid) {
+        readr::read_csv(app_sys("extdata/data_st.csv"), show_col_types = FALSE) |> rawdata()
+        global$data <- rawdata() |> mutate(zip = as.character(zip))
+      } else {
+        readr::read_csv(app_sys("extdata/data_cs_w_state.csv"), show_col_types = FALSE) |> rawdata()
+        global$data <- rawdata()
+      }
+
+      if(global$covid) {
+        c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
+            global$data,
+            global$extdata$covid$tract_data,
+            global$extdata$covid$zip_tract
+          )
+
+        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_covid(
+            patient,
+            pstrat_data,
+            covariates,
+            global$static$levels$covid
+          )
+
+        global$mrp_input <- list(
+          brms_input = brms_input,
+          brms_new = brms_new,
+          levels = levels,
+          vars = vars
+        )
+
+        global$plotdata <- list(
+          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
+          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp_input$levels$county),
+          raw_covariates = raw_covariates
+        )
+
+      } else {
+        global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
+
+        covariates <- get_state_predictors(global$data)
+        covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
+
+        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_poll(
+          global$data,
+          global$extdata$poll$pstrat_data,
+          covariates,
+          global$static$levels$poll
+        )
+
+        global$mrp_input <- list(
+          brms_input = brms_input,
+          brms_new = brms_new,
+          levels = levels,
+          vars = vars
+        )
+
+        if("state" %in% names(global$data)) {
+          global$plotdata <- list(
+            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp_input$levels$state)
+          )
+        }
+      }
+
+    })
 
     observeEvent(input$to_interface, {
       updateNavbarPage(global$session,

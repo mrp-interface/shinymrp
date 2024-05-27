@@ -43,26 +43,6 @@ mod_learn_interface_ui <- function(id){
         tags$p("Users can manually aggregate their raw data if the interface cannot preprocess it or if they want more control over the process. Users familiar with R can download the preprocessing code below and modifies it as needed. The preprocessed or aggregated data must have the categorical values as described above in the right format or it will not be accepted. It also must have the right column names (see table below) as the interface uses one to extract data from the input table but it can automatically fix minor deviations such as letter case."),
         tags$p("Below is a simulated dataset that exemplifies the expected aggregated data input."),
         tabsetPanel(
-          tabPanel("Cross-sectional",
-            tags$div(class = "pad_top",
-              DT::dataTableOutput(outputId = ns("example_cs"))
-            ),
-            tags$div(
-              class = "interface_buttons",
-              downloadButton(
-                outputId = ns("save_code_cs"),
-                label = "Preprocessing code"
-              ),
-              downloadButton(
-                outputId = ns("save_ex_w_state"),
-                label = "Example data (with states)"
-              ),
-              downloadButton(
-                outputId = ns("save_ex_wo_state"),
-                label = "Example data (without states)"
-              )
-            )
-          ),
           tabPanel("Spatio-temporal",
             tags$div(class = "pad_top",
               DT::dataTableOutput(outputId = ns("example_st"))
@@ -80,6 +60,26 @@ mod_learn_interface_ui <- function(id){
               downloadButton(
                 outputId = ns("save_week_table"),
                 label = "Week conversion table"
+              )
+            )
+          ),
+          tabPanel("Cross-sectional",
+            tags$div(class = "pad_top",
+              DT::dataTableOutput(outputId = ns("example_cs"))
+            ),
+            tags$div(
+              class = "interface_buttons",
+              downloadButton(
+                outputId = ns("save_code_cs"),
+                label = "Preprocessing code"
+              ),
+              downloadButton(
+                outputId = ns("save_ex_w_state"),
+                label = "Example data (with states)"
+              ),
+              downloadButton(
+                outputId = ns("save_ex_wo_state"),
+                label = "Example data (without states)"
               )
             )
           )
@@ -110,11 +110,11 @@ mod_learn_interface_server <- function(id, global){
     ns <- session$ns
 
     output$example_cs <- DT::renderDataTable({
-      read.csv(app_sys("extdata/example_cs_w_state.csv"))
+      read.csv(app_sys("extdata/data_cs_w_state.csv"))
     })
 
     output$example_st <- DT::renderDataTable({
-      read.csv(app_sys("extdata/example_st.csv"))
+      read.csv(app_sys("extdata/data_st.csv"))
     })
 
     output$save_code_cs <- downloadHandler(
@@ -132,23 +132,23 @@ mod_learn_interface_server <- function(id, global){
     )
 
     output$save_ex_w_state <- downloadHandler(
-      filename = function() { "example_cs_w_state.csv" },
+      filename = function() { "data_cs_w_state.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/example_cs_w_state.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/data_cs_w_state.csv")) |> write.csv(file, row.names = FALSE)
       }
     )
 
     output$save_ex_wo_state <- downloadHandler(
-      filename = function() { "example_cs_wo_state.csv" },
+      filename = function() { "data_cs_wo_state.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/example_cs_wo_state.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/data_cs_wo_state.csv")) |> write.csv(file, row.names = FALSE)
       }
     )
 
     output$save_ex_st <- downloadHandler(
-      filename = function() { "example_st.csv" },
+      filename = function() { "data_st.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/example_st.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/data_st.csv")) |> write.csv(file, row.names = FALSE)
       }
     )
 
