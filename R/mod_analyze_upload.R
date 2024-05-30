@@ -16,11 +16,14 @@ mod_analyze_upload_ui <- function(id){
         shinyWidgets::radioGroupButtons(
             inputId = ns("toggle_input"),
             label = NULL,
-            choiceNames = c("Individual Data", "Aggregated Data"),
-            choiceValues = c("indiv", "agg"),
+            choices = c("Individual Data" = "indiv", "Aggregated Data" = "agg"),
             selected = "agg",
             justified = TRUE,
-            size = "sm"
+            size = "sm",
+            checkIcon = list(
+              yes = tags$i(class = "fa fa-circle", style = "color: white"),
+              no = tags$i(class = "fa fa-circle-o", style = "color: white")
+            )
         ),
         fileInput(
           inputId = ns("input_data"),
@@ -28,13 +31,20 @@ mod_analyze_upload_ui <- function(id){
           accept = c(".csv", ".xlsx", ".sas7bdat")
         ),
         tags$div(class = "pad_bottom",
-          HTML("<details><summary>More options</summary>"),
-          tags$div(class = "pad_top",
+          HTML("<details><summary>Example</summary>"),
+          tags$div(class = "justify pad_top",
             actionButton(
-              inputId = ns("use_example"),
-              label = "Use example aggregated data",
-              icon = icon("table", class = "fa button_icon")
-            )
+              inputId = ns("use_indiv_example"),
+              label = "Invididual data",
+              icon = icon("table", class = "fa button_icon"),
+              width = "49.5%"
+            ),
+            actionButton(
+              inputId = ns("use_agg_example"),
+              label = "Aggregated data",
+              icon = icon("table", class = "fa button_icon"),
+              width = "49.5%"
+            ),
           ),
           HTML("</details>"),
         ),
@@ -84,18 +94,24 @@ mod_analyze_upload_server <- function(id, global){
       req(rawdata())
 
       tagList(
-        tags$div(
-          class = "justify",
+        tags$div(class = "justify",
           shinyWidgets::radioGroupButtons(
             inputId = ns("toggle_table"),
             label = NULL,
-            choiceNames = c("Raw", "Preprocessed"),
-            choiceValues = c("raw", "prep")
+            choices = c("Raw" = "raw", "Preprocessed" = "prep"),
+            checkIcon = list(
+              yes = tags$i(class = "fa fa-circle", style = "color: white"),
+              no = tags$i(class = "fa fa-circle-o", style = "color: white")
+            )
           ),
           shinyBS::bsTooltip(ns("toggle_table"), "\"Preprocessed\" table only shows when data has been preprocessed properly", placement = "right"),
           tags$p("*The table only shows a subset of the data")
         ),
-        DT::dataTableOutput(outputId = ns("table"))
+        DT::dataTableOutput(outputId = ns("table")),
+        downloadButton(
+          outputId = ns("download_data"),
+          label = "Download"
+        )
       )
     })
 
@@ -115,6 +131,11 @@ mod_analyze_upload_server <- function(id, global){
 
     observeEvent(input$input_data, {
 
+      # reset variables
+      global$data <- NULL
+      global$mrp_input <- NULL
+      global$plotdata <- NULL
+
       # read in data
       path <- input$input_data$datapath
       if(stringr::str_ends(path, "csv")) {
@@ -124,6 +145,12 @@ mod_analyze_upload_server <- function(id, global){
       } else if (stringr::str_ends(path, "sas7bdat")) {
         haven::read_sas(path) |> rawdata()
       } # else no necessary due to fileInput constraint
+
+
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
 
 
       if(input$toggle_input == "indiv") {
@@ -262,14 +289,93 @@ mod_analyze_upload_server <- function(id, global){
         }
       }
 
+      waiter::waiter_hide()
+
     })
 
-    observeEvent(input$use_example, {
+    observeEvent(input$use_indiv_example, {
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
+
       if(global$covid) {
-        readr::read_csv(app_sys("extdata/data_st.csv"), show_col_types = FALSE) |> rawdata()
+        readr::read_csv(app_sys("extdata/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
+
+        global$data <- rawdata() |>
+          aggregate_covid(age_bounds = global$static$bounds$covid$age) |>
+          prep(list(), to_char = c("zip"))
+      } else {
+        readr::read_csv(app_sys("extdata/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
+
+        global$data <- rawdata() |>
+          aggregate_poll(age_bounds = global$static$bounds$poll$age)
+      }
+
+
+      if(global$covid) {
+        c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
+            global$data,
+            global$extdata$covid$tract_data,
+            global$extdata$covid$zip_tract
+          )
+
+        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_covid(
+            patient,
+            pstrat_data,
+            covariates,
+            global$static$levels$covid
+          )
+
+        global$mrp_input <- list(
+          brms_input = brms_input,
+          brms_new = brms_new,
+          levels = levels,
+          vars = vars
+        )
+
+        global$plotdata <- list(
+          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
+          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp_input$levels$county),
+          raw_covariates = raw_covariates
+        )
+
+      } else {
+        global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
+
+        covariates <- get_state_predictors(global$data)
+        covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
+
+        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_poll(
+          global$data,
+          global$extdata$poll$pstrat_data,
+          covariates,
+          global$static$levels$poll
+        )
+
+        global$mrp_input <- list(
+          brms_input = brms_input,
+          brms_new = brms_new,
+          levels = levels,
+          vars = vars
+        )
+
+        if("state" %in% names(global$data)) {
+          global$plotdata <- list(
+            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp_input$levels$state)
+          )
+        }
+      }
+
+      waiter::waiter_hide()
+    })
+
+    observeEvent(input$use_agg_example, {
+      if(global$covid) {
+        readr::read_csv(app_sys("extdata/covid_test_records_aggregated.csv"), show_col_types = FALSE) |> rawdata()
         global$data <- rawdata() |> mutate(zip = as.character(zip))
       } else {
-        readr::read_csv(app_sys("extdata/data_cs_w_state.csv"), show_col_types = FALSE) |> rawdata()
+        readr::read_csv(app_sys("extdata/CES_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
         global$data <- rawdata()
       }
 
@@ -343,5 +449,18 @@ mod_analyze_upload_server <- function(id, global){
       )
     })
 
+    output$download_data <- downloadHandler(
+      filename = function() { if(input$toggle_table == "raw") "raw_data.csv" else "preprocessed_data.csv" },
+      content = function(file) {
+        df <- if(input$toggle_table == "raw") rawdata() else global$data
+
+        if(is.null(df)) {
+          readr::write_csv(data.frame(), file)
+        } else {
+          readr::write_csv(df, file)
+        }
+
+      }
+    )
   })
 }

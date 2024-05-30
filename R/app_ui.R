@@ -61,7 +61,7 @@ app_ui <- function(request) {
     ),
     tags$a(
       "Feedback",
-      href = "https://github.com/mrp-interface/shinymrp/issues",
+      href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
       target = "_blank",
       class = "btn btn-info feedback"
     )
