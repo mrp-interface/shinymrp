@@ -389,7 +389,7 @@ mod_analyze_model_server <- function(id, global){
           waiter::waiter_hide()
 
           return(res$diffs)
-        })
+        }, rownames = TRUE)
       }
 
       return(ui)
@@ -416,7 +416,7 @@ mod_analyze_model_server <- function(id, global){
             }
           ),
           purrr::map(1:length(structs), ~ list(
-            HTML(paste0("<h4><u>Model ", .x, "</u>", ": ", structs[[.x]], "</h4>")),
+            HTML(paste0("<h4><u>", selected_names[.x], "</u>", ": ", structs[[.x]], "</h4>")),
             plotOutput(ns(paste0("compare_ppc", .x)))
           ))
         )
