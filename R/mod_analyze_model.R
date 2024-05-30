@@ -311,18 +311,18 @@ mod_analyze_model_server <- function(id, global){
           )
         ),
         HTML("</details>"),
-        HTML("<details><summary class='collapsible'>Upload Model Estimation</summary>"),
+        HTML("<details><summary class='collapsible'>Upload Estimation Results</summary>"),
         tags$div(style = "margin-top: 10px",
           fileInput(
             inputId = ns("fit_upload"),
             label = "Select a RDS file containing a model estimation",
             accept = ".RDS"
           ),
-          HTML("<details><summary>More options</summary>"),
+          HTML("<details><summary>Example</summary>"),
           tags$div(class = "pad_top",
             actionButton(
               inputId = ns("use_example"),
-              label = " Use example model estimation",
+              label = "Example estimation result",
               icon = icon("table", lib = "font-awesome", class = "button_icon")
             )
           ),
@@ -425,6 +425,8 @@ mod_analyze_model_server <- function(id, global){
 
 
     observeEvent(input$diagnos_btn, {
+      # show_alert("This functionality is currently not available for the web version of the MRP interface.", global$session)
+
       selected_names <- input$model_select
 
       if(length(selected_names) > 0) {
@@ -468,6 +470,8 @@ mod_analyze_model_server <- function(id, global){
 
     # add model
     observeEvent(input$add_btn, {
+      # show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+
       n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
       n_chains <- input$chain_select
 
@@ -573,7 +577,7 @@ mod_analyze_model_server <- function(id, global){
                       column(width = 2,
                         downloadButton(
                           outputId = ns(model$IDs$save_btn),
-                          label = "Save estimation",
+                          label = "Save result",
                           style = "padding: 6px auto; width: 100%;"
                         )
                       )
@@ -754,7 +758,7 @@ mod_analyze_model_server <- function(id, global){
                   column(width = 2,
                     downloadButton(
                       outputId = ns(model$IDs$save_btn),
-                      label = "Save estimation",
+                      label = "Save result",
                       style = "padding: 6px auto; width: 100%;"
                     )
                   )
@@ -923,7 +927,7 @@ mod_analyze_model_server <- function(id, global){
                 column(width = 2,
                   downloadButton(
                     outputId = ns(model$IDs$save_btn),
-                    label = "Save estimation",
+                    label = "Save result",
                     style = "padding: 6px auto; width: 100%;"
                   )
                 )

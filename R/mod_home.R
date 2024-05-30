@@ -18,12 +18,7 @@ mod_home_ui <- function(id){
           tags$div(class = "panel-heading landing_panel_heading", "Spatio-temporal Data"),
           tags$div(class = "panel-body landing_panel_body",
             tags$p("Collected over time and by geography", style = "font-style: italic"),
-            tags$p(tags$u("Example"), ": COVID-19 hospital test records", style = "display: inline"),
-            downloadButton(
-              outputId = ns("save_st_data"),
-              label = NULL,
-              style = "padding: 0 2px"
-            ),
+            tags$p(tags$u("Example"), ": COVID-19 hospital test records"),
             actionButton(
               inputId = ns("set_covid"),
               label = "Start"
@@ -34,12 +29,7 @@ mod_home_ui <- function(id){
           tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data"),
           tags$div(class = "panel-body landing_panel_body",
             tags$p("Collected at a single time point", style = "font-style: italic"),
-            tags$p(tags$u("Example"), ": the Cooperative Election Study data", style = "display: inline"),
-            downloadButton(
-              outputId = ns("save_cs_data"),
-              label = NULL,
-              style = "padding: 0 2px"
-            ),
+            tags$p(tags$u("Example"), ": the Cooperative Election Study data"),
             actionButton(
               inputId = ns("set_poll"),
               label = "Start"
@@ -60,23 +50,9 @@ mod_home_server <- function(id, global){
 
     # shinyWidgets::sendSweetAlert(
     #   title = "Information",
-    #   text = "This web app currently only serves as a demo. We are working to provide computation and memory support for the Bayesian model estimation.",
+    #   text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
     #   type = "info"
     # )
-
-    output$save_cs_data <- downloadHandler(
-      filename = function() { "data_cs_w_state.csv" },
-      content = function(file) {
-        read.csv(app_sys("extdata/data_cs_w_state.csv")) |> write.csv(file, row.names = FALSE)
-      }
-    )
-
-    output$save_st_data <- downloadHandler(
-      filename = function() { "data_st.csv" },
-      content = function(file) {
-        read.csv(app_sys("extdata/data_st.csv")) |> write.csv(file, row.names = FALSE)
-      }
-    )
 
     observeEvent(input$set_poll, {
       updateNavbarPage(global$session,
