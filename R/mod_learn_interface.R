@@ -110,11 +110,11 @@ mod_learn_interface_server <- function(id, global){
     ns <- session$ns
 
     output$example_cs <- DT::renderDataTable({
-      read.csv(app_sys("extdata/data_cs_w_state.csv"))
+      read.csv(app_sys("extdata/CES_data_aggregated.csv"))
     })
 
     output$example_st <- DT::renderDataTable({
-      read.csv(app_sys("extdata/data_st.csv"))
+      read.csv(app_sys("extdata/covid_test_records_aggregated.csv"))
     })
 
     output$save_code_cs <- downloadHandler(
@@ -132,30 +132,30 @@ mod_learn_interface_server <- function(id, global){
     )
 
     output$save_ex_w_state <- downloadHandler(
-      filename = function() { "data_cs_w_state.csv" },
+      filename = function() { "CES_data_aggregated.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/data_cs_w_state.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/CES_data_aggregated.csv")) |> readr::write_csv(file)
       }
     )
 
     output$save_ex_wo_state <- downloadHandler(
-      filename = function() { "data_cs_wo_state.csv" },
+      filename = function() { "CES_data_aggregated_wo_state.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/data_cs_wo_state.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/CES_data_aggregated_wo_state.csv")) |> readr::write_csv(file)
       }
     )
 
     output$save_ex_st <- downloadHandler(
-      filename = function() { "data_st.csv" },
+      filename = function() { "covid_test_records_aggregated.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/data_st.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/covid_test_records_aggregated.csv")) |> readr::write_csv(file)
       }
     )
 
     output$save_week_table <- downloadHandler(
       filename = function() { "week_conversion.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/week_conversion.csv")) |> write.csv(file, row.names = FALSE)
+        read.csv(app_sys("extdata/week_conversion.csv")) |> readr::write_csv(file)
       }
     )
 
