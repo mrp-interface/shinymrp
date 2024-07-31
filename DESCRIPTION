@@ -5,7 +5,7 @@ Authors@R: person('Toan', 'Tran', email = 'tntoan@umich.edu', role = c('cre', 'a
 Description: A GUI designed for intuitive applications of Multilevel Regression and Poststratification to cross-sectional and spatio-temporal datasets.
 License: What license is it under?
 Imports: 
-    brms,
+    cmdstanr,
     config (>= 0.3.2),
     dplyr,
     DT,

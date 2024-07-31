@@ -12,7 +12,17 @@ check_prior_syntax <- function(s) {
     return(FALSE)
   }
 
-  return(TRUE)
+  patterns <- list(
+    normal = "^normal\\([1-5], [1-5]\\)$"
+  )
+
+  dist <- strsplit(s, '\\(')[[1]][1]
+
+  if(dist %in% names(patterns)) {
+    return(grepl(patterns[[dist]], s))
+  } else {
+    return(FALSE)
+  }
 }
 
 create_interactions <- function(effects) {
@@ -217,8 +227,8 @@ run_stan <- function(
   scode <- make_stancode(effects)
   sdata <<- make_standata(dat, effects)
 
-  # writeLines(scode, "/Users/tntoan/Downloads/model.stan")
-  mod <- cmdstanr::cmdstan_model("/Users/tntoan/Downloads/model.stan", cpp_options = list(stan_threads = TRUE))
+  writeLines(scode, "model.stan")
+  mod <- cmdstanr::cmdstan_model("model.stan", cpp_options = list(stan_threads = TRUE))
 
   fit <<- mod$sample(
     data = sdata,
