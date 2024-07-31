@@ -21,7 +21,7 @@ mod_analyze_upload_ui <- function(id){
             justified = TRUE,
             size = "sm",
             checkIcon = list(
-              yes = tags$i(class = "fa fa-circle", style = "color: white"),
+              yes = tags$i(class = "fa fa-circle-check", style = "color: white"),
               no = tags$i(class = "fa fa-circle-o", style = "color: white")
             )
         ),
@@ -100,7 +100,7 @@ mod_analyze_upload_server <- function(id, global){
             label = NULL,
             choices = c("Raw" = "raw", "Preprocessed" = "prep"),
             checkIcon = list(
-              yes = tags$i(class = "fa fa-circle", style = "color: white"),
+              yes = tags$i(class = "fa fa-circle-check", style = "color: white"),
               no = tags$i(class = "fa fa-circle-o", style = "color: white")
             )
           ),

@@ -59,6 +59,31 @@ to_factor <- function(values, levels, other = NA) {
   return(values)
 }
 
+stan_factor <- function(df, revert = FALSE) {
+  View(df)
+  levels <- list(
+    sex = c("male", "female"),
+    race = c("white", "black", "other"),
+    age = c("0-17", "18-34", "35-64", "65-74", "75+")
+  )
+
+  if(revert) {
+    df <- df |> mutate(
+      sex = factor(sex, levels = c(0, 1), labels = levels$sex),
+      race = factor(race, levels = 1:length(levels$race), labels = levels$race),
+      age = factor(age, levels = 1:length(levels$age), labels = levels$age)
+    )
+  } else {
+    df <- df |> mutate(
+      sex = factor(sex, levels = levels$sex, labels = c(0, 1)) |> as.numeric(),
+      race = factor(race, levels = levels$race, labels = 1:length(levels$race)) |> as.numeric(),
+      age = factor(age, levels = levels$age, labels = 1:length(levels$age)) |> as.numeric()
+    )
+  }
+
+  return(df)
+}
+
 prep <- function(
     df,
     expected_values,
