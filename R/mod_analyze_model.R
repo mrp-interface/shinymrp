@@ -435,7 +435,6 @@ mod_analyze_model_server <- function(id, global){
       for(type in c("fixed", "varying", "interaction")) {
         for(v in input[[type]]) {
           all_priors[[type]][[v]] <- global$static$default_priors[[type]]
-          print(global$static$default_priors[[type]])
         }
       }
 
@@ -455,18 +454,18 @@ mod_analyze_model_server <- function(id, global){
       scode <<- make_stancode(all_priors)
       sdata <<- make_standata(stan_factor(global$mrp_input$brms_input), all_priors)
 
-      # writeLines(scode, app_sys("extdata/model.stan"))
-      mod <- cmdstanr::cmdstan_model(app_sys("extdata/model.stan"), cpp_options = list(stan_threads = TRUE))
+      writeLines(scode, "/Users/tntoan/Downloads/model.stan")
+      mod <- cmdstanr::cmdstan_model("/Users/tntoan/Downloads/model.stan", cpp_options = list(stan_threads = TRUE))
 
-      # fit <<- mod$sample(
-      #   data = sdata,
-      #   iter_warmup = 1000,
-      #   iter_sampling = 1000,
-      #   chains = 4,
-      #   parallel_chains = 4,
-      #   threads_per_chain = 1,
-      #   refresh = 200
-      # )
+      fit <<- mod$sample(
+        data = sdata,
+        iter_warmup = 1000,
+        iter_sampling = 1000,
+        chains = 4,
+        parallel_chains = 4,
+        threads_per_chain = 1,
+        refresh = 200
+      )
 
       # n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
       # n_chains <- input$chain_select

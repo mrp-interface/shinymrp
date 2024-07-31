@@ -60,7 +60,6 @@ to_factor <- function(values, levels, other = NA) {
 }
 
 stan_factor <- function(df, revert = FALSE) {
-  View(df)
   levels <- list(
     sex = c("male", "female"),
     race = c("white", "black", "other"),
