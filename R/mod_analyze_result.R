@@ -22,7 +22,7 @@ mod_analyze_result_server <- function(id, global){
 
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_result") {
-        if(is.null(global$mrp_input)) {
+        if(is.null(global$mrp)) {
           showModal(
             modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
@@ -74,7 +74,7 @@ mod_analyze_result_server <- function(id, global){
       if(global$covid) {
 
         output$ui <- renderUI({
-          fips_df <- global$extdata$covid$fips |> filter(fips %in% global$mrp_input$levels$county)
+          fips_df <- global$extdata$covid$fips |> filter(fips %in% global$mrp$levels$county)
           counties <- sort(fips_df$county)
 
           tags$div(class = "pad_top",
@@ -127,7 +127,7 @@ mod_analyze_result_server <- function(id, global){
           req(names(global$models))
 
           plot_prev(
-            global$mrp_input$brms_input,
+            global$mrp$input,
             global$plotdata$dates,
             global$models[[input$model_select]]$overall
           )
@@ -141,7 +141,7 @@ mod_analyze_result_server <- function(id, global){
             global$plotdata$dates
           )
 
-        }, height = function() global$static$ui$subplot_height * (length(global$mrp_input$levels$sex) + 1))
+        }, height = function() global$static$ui$subplot_height * (length(global$mrp$levels$sex) + 1))
 
         output$est_race <- renderPlot({
           req(names(global$models))
@@ -151,7 +151,7 @@ mod_analyze_result_server <- function(id, global){
             global$plotdata$dates
           )
 
-        }, height = function() global$static$ui$subplot_height * (length(global$mrp_input$levels$race) + 1))
+        }, height = function() global$static$ui$subplot_height * (length(global$mrp$levels$race) + 1))
 
         output$est_age <- renderPlot({
           req(names(global$models))
@@ -161,7 +161,7 @@ mod_analyze_result_server <- function(id, global){
             global$plotdata$dates
           )
 
-        }, height = function() global$static$ui$subplot_height * (length(global$mrp_input$levels$age) + 1))
+        }, height = function() global$static$ui$subplot_height * (length(global$mrp$levels$age) + 1))
 
         output$est_county_map <- plotly::renderPlotly({
           req(names(global$models))
@@ -248,7 +248,7 @@ mod_analyze_result_server <- function(id, global){
               upper = est + std
             ) |>
             select(data, lower, median, upper) |>
-            plot_support(global$mrp_input$brms_input)
+            plot_support(global$mrp$input)
         })
 
         output$est_sex <- renderPlot({

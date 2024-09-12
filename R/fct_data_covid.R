@@ -222,6 +222,19 @@ check_covid_data <- function(df, expected_columns, na_threshold = 0.5) {
   return(errors)
 }
 
+
+stan_factor_covid <- function(df, levels) {
+  df <- df |> mutate(
+    sex = factor(sex, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
+    race = factor(race, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
+    age = factor(age, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
+    time = as.integer(time),
+    zip = as.factor(zip) |> as.integer()
+  )
+
+  return(df)
+}
+
 get_dates <- function(df) {
   df$date |>
     na.omit() |>
@@ -341,7 +354,7 @@ link_ACS <- function(
   return(list(patient, pstrat_data, covariates, raw_covariates))
 }
 
-prepare_brms_covid <- function(
+prepare_data_covid <- function(
     patient,
     pstrat_data,
     covariates,
@@ -354,6 +367,8 @@ prepare_brms_covid <- function(
 
   input_data <- patient |>
     left_join(covariates, by = "zip")
+
+  input_data_stan <- input_data
 
   new_data <- tidyr::expand_grid(
     sex  = demo_levels$sex,
@@ -378,10 +393,15 @@ prepare_brms_covid <- function(
 
   # list of variables for model specification
   vars <- list(
-    `Individual-level Predictor` = c("sex", "race", "age", "time"),
-    `Geographic Predictor` = names(covariates) |> setdiff(c("zip", "county")),
-    `Geographic Indicator` = "zip",
-    `Interaction` = c("sex:time", "race:time", "age:time")
+    fixed = list(
+      "Individual-level Predictor" = c("sex", "race", "age", "time"),
+      "Geographic Predictor" = names(covariates) |> setdiff(c("zip", "county")),
+      "Geographic Indicator" = c("zip")
+    ),
+    varying = list(
+      "Individual-level Predictor" = c("race", "age", "time"),
+      "Geographic Indicator" = c("zip")
+    )
   )
 
   return(list(input_data, new_data, levels, vars))
@@ -411,7 +431,6 @@ collapse <- function(
     print("Invalid bounds!")
   }
   else {
-
     for(i in 1:(N-1)) {
       i_beg <- indices[i]
       i_end <- indices[i + 1]
