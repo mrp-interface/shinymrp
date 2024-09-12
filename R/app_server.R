@@ -43,6 +43,12 @@ app_server <- function(input, output, session) {
         chain_range = c(1, 8),
         plot_height = 500,
         subplot_height = 300
+      ),
+      default_priors = list(
+        Intercept = "normal(0, 5)",
+        fixed = "normal(0, 3)",
+        varying = "normal(0, 3)",
+        interaction = "normal(0, 3)"
       )
     ),
     extdata = list(
