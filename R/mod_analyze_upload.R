@@ -48,7 +48,7 @@ mod_analyze_upload_ui <- function(id){
           ),
           HTML("</details>"),
         ),
-        tags$p(
+        tags$p(class = "ref",
           "For ", tags$u("requirements for input data"), "and preprocessing code, go to the",
           actionLink(
             inputId = ns("to_interface"),
@@ -80,13 +80,37 @@ mod_analyze_upload_server <- function(id, global){
 
     rawdata <- reactiveVal()
 
+    observeEvent(global$input$navbar, {
+      if(global$input$navbar == "nav_analyze" & is.null(global$covid)) {
+          showModal(
+            modalDialog(
+              title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
+              "Please select a version of the interface.",
+              footer = actionButton(
+                inputId = ns("to_home"),
+                label = "Go to home"
+              )
+            )
+          )
+      }
+    })
+
+    observeEvent(input$to_home, {
+      updateTabsetPanel(global$session,
+        inputId = "navbar",
+        selected = "nav_home"
+      )
+
+      removeModal(global$session)
+    })
+
     observeEvent(global$covid, {
       shinyjs::reset("input_data")
       shinyjs::reset("toggle_input")
 
       rawdata(NULL)
       global$data <- NULL
-      global$mrp_input <- NULL
+      global$mrp <- NULL
       global$plotdata <- NULL
     })
 
@@ -133,7 +157,7 @@ mod_analyze_upload_server <- function(id, global){
 
       # reset variables
       global$data <- NULL
-      global$mrp_input <- NULL
+      global$mrp <- NULL
       global$plotdata <- NULL
 
       # read in data
@@ -241,23 +265,26 @@ mod_analyze_upload_server <- function(id, global){
               global$extdata$covid$zip_tract
             )
 
-          c(brms_input, brms_new, levels, vars) %<-% prepare_brms_covid(
+          c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
               patient,
               pstrat_data,
               covariates,
               global$static$levels$covid
             )
 
-          global$mrp_input <- list(
-            brms_input = brms_input,
-            brms_new = brms_new,
+
+          global$mrp <- list(
+            input = input_data,
+            input_stan = stan_factor_covid(input_data, global$static$levels$covid),
+            new = new_data,
+            new_stan = stan_factor_covid(new_data, global$static$levels$covid),
             levels = levels,
             vars = vars
           )
 
           global$plotdata <- list(
             dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-            geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp_input$levels$county),
+            geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
             raw_covariates = raw_covariates
           )
 
@@ -267,23 +294,25 @@ mod_analyze_upload_server <- function(id, global){
           covariates <- get_state_predictors(rawdata())
           covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
 
-          c(brms_input, brms_new, levels, vars) %<-% prepare_brms_poll(
+          c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
             global$data,
             global$extdata$poll$pstrat_data,
             covariates,
             global$static$levels$poll
           )
 
-          global$mrp_input <- list(
-            brms_input = brms_input,
-            brms_new = brms_new,
+          global$mrp <- list(
+            input = input_data,
+            input_stan = stan_factor_poll(input_data, global$static$levels$poll),
+            new = new_data,
+            new_stan = stan_factor_poll(new_data, global$static$levels$poll),
             levels = levels,
             vars = vars
           )
 
           if("state" %in% names(global$data)) {
             global$plotdata <- list(
-              geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp_input$levels$state)
+              geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
             )
           }
         }
@@ -320,23 +349,26 @@ mod_analyze_upload_server <- function(id, global){
             global$extdata$covid$zip_tract
           )
 
-        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_covid(
+        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
             patient,
             pstrat_data,
             covariates,
             global$static$levels$covid
           )
 
-        global$mrp_input <- list(
-          brms_input = brms_input,
-          brms_new = brms_new,
+
+        global$mrp <- list(
+          input = input_data,
+          input_stan = stan_factor_covid(input_data, global$static$levels$covid),
+          new = new_data,
+          new_stan = stan_factor_covid(new_data, global$static$levels$covid),
           levels = levels,
           vars = vars
         )
 
         global$plotdata <- list(
           dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp_input$levels$county),
+          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
           raw_covariates = raw_covariates
         )
 
@@ -346,23 +378,25 @@ mod_analyze_upload_server <- function(id, global){
         covariates <- get_state_predictors(global$data)
         covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
 
-        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_poll(
+        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
           global$data,
           global$extdata$poll$pstrat_data,
           covariates,
           global$static$levels$poll
         )
 
-        global$mrp_input <- list(
-          brms_input = brms_input,
-          brms_new = brms_new,
+        global$mrp <- list(
+          input = input_data,
+          input_stan = stan_factor_poll(input_data, global$static$levels$poll),
+          new = new_data,
+          new_stan = stan_factor_poll(new_data, global$static$levels$poll),
           levels = levels,
           vars = vars
         )
 
         if("state" %in% names(global$data)) {
           global$plotdata <- list(
-            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp_input$levels$state)
+            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
           )
         }
       }
@@ -386,23 +420,26 @@ mod_analyze_upload_server <- function(id, global){
             global$extdata$covid$zip_tract
           )
 
-        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_covid(
+        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
             patient,
             pstrat_data,
             covariates,
             global$static$levels$covid
           )
 
-        global$mrp_input <- list(
-          brms_input = brms_input,
-          brms_new = brms_new,
+
+        global$mrp <- list(
+          input = input_data,
+          input_stan = stan_factor_covid(input_data, global$static$levels$covid),
+          new = new_data,
+          new_stan = stan_factor_covid(new_data, global$static$levels$covid),
           levels = levels,
           vars = vars
         )
 
         global$plotdata <- list(
           dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp_input$levels$county),
+          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
           raw_covariates = raw_covariates
         )
 
@@ -412,23 +449,25 @@ mod_analyze_upload_server <- function(id, global){
         covariates <- get_state_predictors(global$data)
         covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
 
-        c(brms_input, brms_new, levels, vars) %<-% prepare_brms_poll(
+        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
           global$data,
           global$extdata$poll$pstrat_data,
           covariates,
           global$static$levels$poll
         )
 
-        global$mrp_input <- list(
-          brms_input = brms_input,
-          brms_new = brms_new,
+        global$mrp <- list(
+          input = input_data,
+          input_stan = stan_factor_poll(input_data, global$static$levels$poll),
+          new = new_data,
+          new_stan = stan_factor_poll(new_data, global$static$levels$poll),
           levels = levels,
           vars = vars
         )
 
         if("state" %in% names(global$data)) {
           global$plotdata <- list(
-            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp_input$levels$state)
+            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
           )
         }
       }

@@ -359,6 +359,7 @@ plot_support <- function(
     yrep_est,
     raw
 ) {
+
   raw_mean <- sum(raw$positive) / sum(raw$total)
   plot_df <- rbind(
     data.frame(

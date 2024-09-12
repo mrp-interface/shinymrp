@@ -120,6 +120,18 @@ to_fips <- function(state_vec, fips_state) {
   return(fips)
 }
 
+stan_factor_poll <- function(df, levels) {
+  df <- df |> mutate(
+    sex = factor(sex, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
+    race = factor(race, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
+    age = factor(age, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
+    edu = factor(edu, levels = levels$edu, labels = 1:length(levels$edu)) |> as.character() |> as.integer(),
+    state = as.factor(state) |> as.integer()
+  )
+
+  return(df)
+}
+
 get_state_predictors <- function(df) {
   df <- janitor::clean_names(df)
   all_cols <- names(df)
@@ -146,7 +158,7 @@ get_state_predictors <- function(df) {
   return(state_preds)
 }
 
-prepare_brms_poll <- function(
+prepare_data_poll <- function(
     data,
     pstrat,
     covar,
@@ -172,7 +184,6 @@ prepare_brms_poll <- function(
 
   # append state-level predictors
   if(ncol(covar) > 1) {
-    data <- left_join(data, covar, by = "state")
     new_data <- left_join(new_data, covar, by = "state")
   }
 
@@ -184,12 +195,18 @@ prepare_brms_poll <- function(
 
   # list of variables for model specification
   vars <- list(
-    `Individual-level Predictor` = c("sex", "race", "age", "edu")
+    fixed = list(
+      "Individual-level Predictor" = c("sex", "race", "age", "edu")
+    ),
+    varying = list(
+      "Individual-level Predictor" = c("race", "age", "edu")
+    )
   )
 
   if(!is.null(states_in_data)) {
-    vars[["Geographic Indicator"]] <- "state"
-    vars[["Geographic Predictor"]] <- setdiff(names(covar), "state")
+    vars$fixed[["Geographic Predictor"]] <- setdiff(names(covar), "state")
+    vars$fixed[["Geographic Indicator"]] <- "state"
+    vars$varying[["Geographic Indicator"]] <- "state"
   }
 
 
