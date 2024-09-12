@@ -119,39 +119,39 @@ mod_analyze_visualize_server <- function(id, global){
         })
 
         output$indiv_sex <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = sex) |> select(demo, total),
-              global$mrp_input$brms_new |> filter(time == 1) |> mutate(demo = sex) |> select(demo, total),
-              global$mrp_input$levels$sex
+              global$mrp$input |> mutate(demo = sex) |> select(demo, total),
+              global$mrp$new |> filter(time == 1) |> mutate(demo = sex) |> select(demo, total),
+              global$mrp$levels$sex
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_race <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = race) |> select(demo, total),
-              global$mrp_input$brms_new |> filter(time == 1) |> mutate(demo = race) |> select(demo, total),
-              global$mrp_input$levels$race
+              global$mrp$input |> mutate(demo = race) |> select(demo, total),
+              global$mrp$new |> filter(time == 1) |> mutate(demo = race) |> select(demo, total),
+              global$mrp$levels$race
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_age <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = age) |> select(demo, total),
-              global$mrp_input$brms_new |> filter(time == 1) |> mutate(demo = age) |> select(demo, total),
-              global$mrp_input$levels$age
+              global$mrp$input |> mutate(demo = age) |> select(demo, total),
+              global$mrp$new |> filter(time == 1) |> mutate(demo = age) |> select(demo, total),
+              global$mrp$levels$age
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_area_map <- plotly::renderPlotly({
-          req(global$mrp_input, global$plotdata)
+          req(global$mrp, global$plotdata)
 
-          global$mrp_input$brms_input |>
+          global$mrp$input |>
             mutate(fips = county) |>
             get_sample_size(
               global$extdata$covid$fips,
@@ -167,9 +167,9 @@ mod_analyze_visualize_server <- function(id, global){
         })
 
         output$indiv_area_table <- DT::renderDataTable({
-          req(global$mrp_input, global$plotdata)
+          req(global$mrp, global$plotdata)
 
-          global$mrp_input$brms_input |>
+          global$mrp$input |>
             mutate(fips = county) |>
             group_by(fips) |>
             summarize(sample_size = sum(total)) |>
@@ -412,17 +412,17 @@ mod_analyze_visualize_server <- function(id, global){
         }, height = function() global$static$ui$plot_height)
 
         output$prev_overall <- renderPlot({
-          req(global$mrp_input)
+          req(global$mrp)
 
-          plot_prev(global$mrp_input$brms_input, global$plotdata$dates)
+          plot_prev(global$mrp$input, global$plotdata$dates)
 
         }, height = function() global$static$ui$plot_height)
 
         output$prev_county <- plotly::renderPlotly({
-          req(global$mrp_input)
+          req(global$mrp)
 
-          if("county" %in% names(global$mrp_input$brms_input)) {
-            global$mrp_input$brms_input |>
+          if("county" %in% names(global$mrp$input)) {
+            global$mrp$input |>
               mutate(fips = county) |>
               get_raw_weekly_prev(global$extdata$covid$fips) |>
               mutate(value = max_prev) |>
@@ -478,49 +478,49 @@ mod_analyze_visualize_server <- function(id, global){
         })
 
         output$indiv_sex <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = sex) |> select(demo, total),
-              global$mrp_input$brms_new |> mutate(demo = sex) |> select(demo, total),
-              global$mrp_input$levels$sex
+              global$mrp$input |> mutate(demo = sex) |> select(demo, total),
+              global$mrp$new |> mutate(demo = sex) |> select(demo, total),
+              global$mrp$levels$sex
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_race <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = race) |> select(demo, total),
-              global$mrp_input$brms_new |> mutate(demo = race) |> select(demo, total),
-              global$mrp_input$levels$race
+              global$mrp$input |> mutate(demo = race) |> select(demo, total),
+              global$mrp$new |> mutate(demo = race) |> select(demo, total),
+              global$mrp$levels$race
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_age <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = age) |> select(demo, total),
-              global$mrp_input$brms_new |> mutate(demo = age) |> select(demo, total),
-              global$mrp_input$levels$age
+              global$mrp$input |> mutate(demo = age) |> select(demo, total),
+              global$mrp$new |> mutate(demo = age) |> select(demo, total),
+              global$mrp$levels$age
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_edu <- renderPlot({
-          req(global$mrp_input$brms_input)
+          req(global$mrp$input)
 
             plot_individual(
-              global$mrp_input$brms_input |> mutate(demo = edu) |> select(demo, total),
-              global$mrp_input$brms_new |> mutate(demo = edu) |> select(demo, total),
-              global$mrp_input$levels$edu
+              global$mrp$input |> mutate(demo = edu) |> select(demo, total),
+              global$mrp$new |> mutate(demo = edu) |> select(demo, total),
+              global$mrp$levels$edu
             )
         }, height = function() global$static$ui$plot_height)
 
         output$indiv_area_map <- plotly::renderPlotly({
-          req(global$mrp_input, global$plotdata)
+          req(global$mrp, global$plotdata)
 
-          global$mrp_input$brms_input |>
+          global$mrp$input |>
             mutate(fips = state) |>
             get_sample_size(
               global$extdata$poll$fips,
@@ -536,9 +536,9 @@ mod_analyze_visualize_server <- function(id, global){
         })
 
         output$indiv_area_table <- DT::renderDataTable({
-          req(global$mrp_input, global$plotdata)
+          req(global$mrp, global$plotdata)
 
-          global$mrp_input$brms_input |>
+          global$mrp$input |>
             mutate(fips = state) |>
             group_by(fips) |>
             summarize(sample_size = sum(total)) |>
@@ -557,10 +557,10 @@ mod_analyze_visualize_server <- function(id, global){
         })
 
         output$support_map <- plotly::renderPlotly({
-          req(global$mrp_input)
+          req(global$mrp)
 
-          if("state" %in% names(global$mrp_input$brms_input)) {
-            global$mrp_input$brms_input |>
+          if("state" %in% names(global$mrp$input)) {
+            global$mrp$input |>
               mutate(fips = state) |>
               get_raw_support(global$extdata$poll$fips) |>
               mutate(value = support) |>
@@ -579,7 +579,7 @@ mod_analyze_visualize_server <- function(id, global){
 
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_visualize") {
-        if(is.null(global$mrp_input)) {
+        if(is.null(global$mrp)) {
           showModal(
             modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
