@@ -411,7 +411,7 @@ run_stan <- function(
   n_chains,
   sens,
   spec,
-  stan_path = "/Users/tntoan/Downloads/model_temp.stan"
+  stan_path = "model_temp.stan"
 ) {
 
   stan_code <- make_stancode(effects)
