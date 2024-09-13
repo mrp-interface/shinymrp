@@ -53,3 +53,4 @@ inst/.DS_Store
 inst/extdata/.DS_Store
 
 .Rbuildignore
+.vscode/
