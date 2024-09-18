@@ -47,7 +47,7 @@ check_prior_syntax <- function(s) {
 }
 
 create_interactions <- function(effects, dat) {
-  if(length(effects) == 1) {
+  if(n_distinct(effects) == 1) {
     return(c())
   }
 
@@ -218,8 +218,16 @@ transformed_parameters_ <- function(effects) {
     ss <- strsplit(s, split = ':')[[1]]
     v <- paste0(ss[1], ss[2])
     if(int_varint[[s]] == "structured") {
-      scode <- paste0(scode, stringr::str_interp("
+      if(ss[1] == "sex") {
+        scode <- paste0(scode, stringr::str_interp("
+  real<lower=0> lambda_${v} = lambda_${ss[2]} * delta * tau;"))
+      } else if(ss[2] == "sex") {
+        scode <- paste0(scode, stringr::str_interp("
+  real<lower=0> lambda_${v} = lambda_${ss[1]} * delta * tau;"))
+      } else {
+        scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${v} = lambda_${ss[1]} * lambda_${ss[2]} * delta * tau;"))
+      }
     }
 
     scode <- paste0(scode, stringr::str_interp("
