@@ -93,7 +93,12 @@ mod_learn_interface_ui <- function(id){
           tags$li("Standard deviation: ", withMathJax("\\(normal_+(0, 3)\\)"))
         ),
         withMathJax("where \\(normal(0, 3)\\) is a normal distribution with mean 0 and standard deviation of 3, and \\(normal_+(0, 3)\\) is a normal distribution with mean 0 and standard deviation of 3 restricted to positive values."), tags$br(),
-        tags$p("The prior specification can be modified by users. Users can choose the structured prior distribution for the two-way interaction terms, developed by ", tags$a("Si et al. (2020)", href = "https://arxiv.org/abs/1707.08220", target = "_blank"), ". For example, the structured prior distribution for the two-way interaction of race and age is specified as below:"),
+        tags$p("The prior specification can be modified by users. The interface currently accepts the following distributions:"),
+        tags$ul(
+          tags$li(tags$code("normal(mu, sigma)")),
+          tags$li(tags$code("student_t(nu, mu, sigma)"))
+        ),
+        tags$p("The syntax imitates the ", tags$a("distribution statement", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), " in Stan. Additionally, users can choose the structured prior distribution for the two-way interaction terms, developed by ", tags$a("Si et al. (2020)", href = "https://arxiv.org/abs/1707.08220", target = "_blank"), ". For example, the structured prior distribution for the two-way interaction of race and age is specified as below:"),
         withMathJax("Main effect of race: \\(normal(0, \\lambda_1\\sigma_{race})\\)"), tags$br(),
         withMathJax("Main effect of age: \\(normal(0, \\lambda_1\\sigma_{age})\\)"), tags$br(),
         withMathJax("Interaction of race and age: \\(normal(0, \\lambda_1\\lambda_2\\sigma_{age}\\sigma_{race}\\))"), tags$br(),
