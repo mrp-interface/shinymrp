@@ -33,7 +33,8 @@ mod_about_ui <- function(id){
             tags$li(tags$a("L Covello, A Gelman, Y Si, and S Wang (2021). Routine Hospital-Based SARS-CoV-2 Testing Outperforms State-Based Data in Predicting Clinical Burden,  Epidemiology, 32(6), 792--799.", href = "https://journals.lww.com/epidem/abstract/2021/11000/routine_hospital_based_sars_cov_2_testing.4.aspx", target = "_blank")),
             tags$li(tags$a("A Gelman, and B Carpenter (2020), Bayesian analysis of tests with unknown specificity and sensitivity. Journal of the Royal Statistical Society C, Applied Statistics, 69, 1269--1284.", href = "https://academic.oup.com/jrsssc/article/69/5/1269/7058663", target = "_blank")),
             tags$li(tags$a("Y Si, R Trangucci, J Gabry, and A Gelman (2020). Bayesian Hierarchical Weighting Adjustment and Survey Inference, Survey Methodology, 46(2), 181--214.", href = "https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh", target = "_blank")),
-            tags$li(tags$a("J Lopez-Martin, J Phillips, and A Gelman (2022). Multilevel Regression and Poststratification Case Studies, bookdown.org/jl5522/MRP-case-studies.", href = "https://bookdown.org/jl5522/MRP-case-studies/", target = "_blank"))
+            tags$li(tags$a("J Lopez-Martin, J Phillips, and A Gelman (2022). Multilevel Regression and Poststratification Case Studies, bookdown.org/jl5522/MRP-case-studies.", href = "https://bookdown.org/jl5522/MRP-case-studies/", target = "_blank")),
+            tags$li(tags$a("Y Si, T Tran, J Gabry, M Morris, and A Gelman (2024). Multilevel Regression and Poststratification Interface: Application to Track Community-level COVID-19 Viral Transmission. arXiv preprint arXiv:2405.05909.", href = "https://arxiv.org/abs/2405.05909", target = "_blank"))
           )
         ),
         tags$div(style = "margin-top: 40px",
