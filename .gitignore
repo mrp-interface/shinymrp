@@ -54,3 +54,6 @@ inst/extdata/.DS_Store
 
 .Rbuildignore
 .vscode/
+
+model_temp
+model_temp.stan

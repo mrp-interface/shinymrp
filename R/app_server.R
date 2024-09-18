@@ -5,8 +5,13 @@
 #' @import shiny
 #' @noRd
 app_server <- function(input, output, session) {
-
+  # set file upload size limit
   options(shiny.maxRequestSize = 200*1024^2)
+
+  # install cmdstan
+  if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
+    cmdstanr::install_cmdstan(check_toolchain = TRUE, fix = TRUE)
+  }
 
   global <- reactiveValues(
     session = session,
