@@ -612,7 +612,7 @@ mod_analyze_model_server <- function(id, global){
                     create_text_box(
                       title = tags$b("Note"),
                       tags$ul(
-                        tags$li("Values for ", tags$code("Convergence"), " that are greater than 1.05 indicates the chains have not yet converged and it is necessary to run more iterations and/or set stronger priors."),
+                        tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
                         tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
                       )
                     ),
@@ -788,7 +788,7 @@ mod_analyze_model_server <- function(id, global){
               create_text_box(
                 title = tags$b("Note"),
                 tags$ul(
-                  tags$li("Values for ", tags$code("Convergence"), " that are greater than 1.05 indicates the chains have not yet converged and it is necessary to run more iterations and/or set stronger priors."),
+                  tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
                   tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
                 )
               ),
@@ -949,7 +949,7 @@ mod_analyze_model_server <- function(id, global){
             create_text_box(
               title = tags$b("Note"),
               tags$ul(
-                tags$li("Values for ", tags$code("Convergence"), " that are greater than 1.05 indicates the chains have not yet converged and it is necessary to run more iterations and/or set stronger priors."),
+                tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
                 tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
               )
             ),
