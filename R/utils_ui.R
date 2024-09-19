@@ -51,6 +51,11 @@ waiter_ui <- function(type = "") {
       waiter::spin_loaders(2, color = "black"),
       tags$h4("Running diagnostics...", style = "color: black")
     )
+  } else if (type == "setup") {
+    tagList(
+      waiter::spin_loaders(15, color = "black"),
+      tags$h4("Installing CmdStan...", style = "color: black")
+    )
   } else if (type == "wait") {
     tagList(
       waiter::spin_loaders(15, color = "black"),

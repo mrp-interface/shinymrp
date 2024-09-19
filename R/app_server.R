@@ -10,7 +10,13 @@ app_server <- function(input, output, session) {
 
   # install cmdstan
   if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-    cmdstanr::install_cmdstan(check_toolchain = TRUE, fix = TRUE)
+    waiter::waiter_show(
+      html = waiter_ui("setup"),
+      color = waiter::transparent(0.9)
+    )
+    cmdstanr::install_cmdstan()
+
+    waiter::waiter_hide()
   }
 
   global <- reactiveValues(
