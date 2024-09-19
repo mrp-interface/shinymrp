@@ -14,6 +14,7 @@ app_server <- function(input, output, session) {
       html = waiter_ui("setup"),
       color = waiter::transparent(0.9)
     )
+    cmdstanr::check_cmdstan_toolchain(fix = TRUE)
     cmdstanr::install_cmdstan()
 
     waiter::waiter_hide()
