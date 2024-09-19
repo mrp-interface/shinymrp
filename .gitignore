@@ -48,6 +48,7 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
+# Added
 .DS_Store
 inst/.DS_Store
 inst/extdata/.DS_Store
@@ -57,3 +58,5 @@ inst/extdata/.DS_Store
 
 model_temp
 model_temp.stan
+
+shinymrp.Rproj
