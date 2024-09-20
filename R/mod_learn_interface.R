@@ -96,9 +96,10 @@ mod_learn_interface_ui <- function(id){
         tags$p("The prior specification can be modified by users. The interface currently accepts the following distributions:"),
         tags$ul(
           tags$li(tags$code("normal(mu, sigma)")),
-          tags$li(tags$code("student_t(nu, mu, sigma)"))
+          tags$li(tags$code("student_t(nu, mu, sigma)")),
+          tags$li(tags$code("structured"))
         ),
-        tags$p("The syntax imitates the ", tags$a("distribution statement", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), " in Stan. Additionally, users can choose the structured prior distribution for the two-way interaction terms, developed by ", tags$a("Si et al. (2020)", href = "https://arxiv.org/abs/1707.08220", target = "_blank"), ". For example, the structured prior distribution for the two-way interaction of race and age is specified as below:"),
+        tags$p("The syntax imitates the ", tags$a("distribution statement", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), " in Stan. In addition to the standard distributions, we provide the structured prior distribution developed by ", tags$a("Si et al. (2020)", href = "https://arxiv.org/abs/1707.08220", target = "_blank"), " for two-way interaction terms comprised of at least one categorical variable with two or more levels. One constraint for the current implementation of structured prior is that a categorical variable must be included as a varying effect. Below is an example of the structured prior distribution for the two-way interaction of race and age:"),
         withMathJax("Main effect of race: \\(normal(0, \\lambda_1\\sigma_{race})\\)"), tags$br(),
         withMathJax("Main effect of age: \\(normal(0, \\lambda_1\\sigma_{age})\\)"), tags$br(),
         withMathJax("Interaction of race and age: \\(normal(0, \\lambda_1\\lambda_2\\sigma_{age}\\sigma_{race}\\))"), tags$br(),

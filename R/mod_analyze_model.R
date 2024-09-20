@@ -400,32 +400,35 @@ mod_analyze_model_server <- function(id, global){
 
 
     observeEvent(input$diagnos_btn, {
-      # show_alert("This functionality is currently not available for the web version of the MRP interface.", global$session)
 
-      selected_names <- input$model_select
+      if(global$web_version) {
+        show_alert("This functionality is currently not available for the web version of the MRP interface.", global$session)
+      } else {
+        selected_names <- input$model_select
 
-      if(length(selected_names) > 0) {
+        if(length(selected_names) > 0) {
 
-        yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
+          yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
 
-        purrr::map(1:length(yreps), function(i) {
-          output[[paste0("compare_ppc", i)]] <- renderPlot({
-            req(global$models)
+          purrr::map(1:length(yreps), function(i) {
+            output[[paste0("compare_ppc", i)]] <- renderPlot({
+              req(global$models)
 
-            if(global$covid) {
-              plot_ppc_covid_subset(
-                yreps[[i]],
-                global$mrp$input,
-                global$plotdata$dates
-              )
-            } else {
-              plot_ppc_poll(
-                yreps[[i]],
-                global$mrp$input
-              )
-            }
+              if(global$covid) {
+                plot_ppc_covid_subset(
+                  yreps[[i]],
+                  global$mrp$input,
+                  global$plotdata$dates
+                )
+              } else {
+                plot_ppc_poll(
+                  yreps[[i]],
+                  global$mrp$input
+                )
+              }
+            })
           })
-        })
+        }
       }
 
     })
@@ -460,249 +463,256 @@ mod_analyze_model_server <- function(id, global){
 
     # add model
     observeEvent(input$add_btn, {
-      # show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+      if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
+        if(global$web_version) {
+          show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+        } else {
+          show_alert(tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+        }
+      } else {
+       n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
+        n_chains <- input$chain_select
 
-      n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
-      n_chains <- input$chain_select
+        if(is.null(global$models)) {
+          global$models <- list()
+        }
 
-      if(is.null(global$models)) {
-        global$models <- list()
-      }
+        # check if number of iterations and number of chains are within defined range
+        c(within_range, msg_range) %<-% check_iter_chain(
+          n_iter, global$static$ui$iter_range,
+          n_chains, global$static$ui$chain_range
+        )
 
-      # check if number of iterations and number of chains are within defined range
-      c(within_range, msg_range) %<-% check_iter_chain(
-        n_iter, global$static$ui$iter_range,
-        n_chains, global$static$ui$chain_range
-      )
+        if(within_range) {
+          # check if maximum number of models is reached
+          if(length(global$models) <= global$static$ui$max_model) {
+            # check if the user selects nothing
+            if(length(c(input$fixed, input$varying, input$interaction)) > 0) {
 
-      if(within_range) {
-        # check if maximum number of models is reached
-        if(length(global$models) <= global$static$ui$max_model) {
-          # check if the user selects nothing
-          if(length(c(input$fixed, input$varying, input$interaction)) > 0) {
-
-            # assign default priors to all selected effects
-            all_priors <- list(Intercept = list(Intercept = global$static$default_priors$Intercept))
-            for(type in c("fixed", "varying", "interaction")) {
-              for(v in input[[type]]) {
-                all_priors[[type]][[v]] <- global$static$default_priors[[type]]
-              }
-            }
-
-            # assign user-specified priors
-            for(i in 1:(length(buffer()) + 1)) {
-              dist <- input[[paste0("prior_dist_", i)]]
-              eff <- input[[paste0("prior_eff_", i)]]
-              if(check_prior_syntax(dist)) {
-                for(s in eff) {
-                  ss <- strsplit(s, split = "_")[[1]]
-                  all_priors[[ss[1]]][[ss[2]]] <- dist
+              # assign default priors to all selected effects
+              all_priors <- list(Intercept = list(Intercept = global$static$default_priors$Intercept))
+              for(type in c("fixed", "varying", "interaction")) {
+                for(v in input[[type]]) {
+                  all_priors[[type]][[v]] <- global$static$default_priors[[type]]
                 }
               }
-            }
 
-            all_priors$interaction <- sort_interactions(all_priors$interaction, global$mrp$input_stan)
-
-            if(!("structured" %in% c(all_priors$Intercept, all_priors$fixed, all_priors$varying, all_priors$interaction$fixed_slope))) {
-              waiter::waiter_show(
-                html = waiter_ui("fit"),
-                color = waiter::transparent(0.9)
-              )
-
-              # create a list to store model info
-              model_name <- paste0("Model ", length(global$models) + 1)
-              model <- list()
-              model$covid <- global$covid
-              model$formula <- create_formula(all_priors, global$mrp$input)
-              model$n_iter <- n_iter
-              model$n_chains <- n_chains
-
-              # fit model
-              c(model$fit, pred_mat, yrep_mat, model$code) %<-% run_stan(
-                input_data = global$mrp$input_stan,
-                new_data = global$mrp$new_stan,
-                effects = all_priors,
-                n_iter = model$n_iter,
-                n_chains = model$n_chains,
-                sens = if(global$covid) input$sens_kb else 1,
-                spec = if(global$covid) input$spec_kb else 1
-              )
-
-              c(model$fixed, model$varying) %<-% extract_parameters(model$fit, all_priors)
-
-              # data for prediction plots
-              for(v in names(global$mrp$levels)) {
-                model[[v]] <- global$mrp$new |>
-                  mutate(factor = global$mrp$new[[v]]) |>
-                  process_pred(pred_mat, global$covid)
+              # assign user-specified priors
+              for(i in 1:(length(buffer()) + 1)) {
+                dist <- input[[paste0("prior_dist_", i)]]
+                eff <- input[[paste0("prior_eff_", i)]]
+                if(check_prior_syntax(dist)) {
+                  for(s in eff) {
+                    ss <- strsplit(s, split = "_")[[1]]
+                    all_priors[[ss[1]]][[ss[2]]] <- dist
+                  }
+                }
               }
 
-              model$overall <- global$mrp$new |>
-                mutate(factor = 1) |>
-                process_pred(pred_mat, global$covid)
+              all_priors$interaction <- sort_interactions(all_priors$interaction, global$mrp$input_stan)
 
-              # data for PPC plots
-              model$yrep <- process_yrep(
-                yrep_mat,
-                global$mrp$input,
-                global$covid
-              )
-
-              # UI element IDs
-              model$IDs <- list(
-                fixed = paste0("fixed", global$model_count),
-                varying = paste0("varying", global$model_count),
-                ppc = paste0("ppc", global$model_count),
-                tab = paste0("tab", global$model_count),
-                title = paste0("title", global$model_count),
-                rm_btn = paste0("rm_btn", global$model_count),
-                save_fit_btn = paste0("save_fit_btn", global$model_count),
-                save_code_btn = paste0("save_code_btn", global$model_count)
-              )
-
-              # create new tab
-              tab_header <- tags$div(
-                class = "model_tab_header",
-                textOutput(
-                  outputId = ns(model$IDs$title),
-                  inline = TRUE
-                ),
-                actionButton(
-                  inputId = ns(model$IDs$rm_btn),
-                  label = NULL,
-                  icon = icon("remove", lib = "glyphicon"),
-                  class = "btn-xs remove_model"
+              if(!("structured" %in% c(all_priors$Intercept, all_priors$fixed, all_priors$varying, all_priors$interaction$fixed_slope))) {
+                waiter::waiter_show(
+                  html = waiter_ui("fit"),
+                  color = waiter::transparent(0.9)
                 )
-              )
 
-              appendTab("navbar_model",
-                select = TRUE,
-                tabPanel(title = tab_header,
-                  value = model$IDs$tab,
-                  tags$div(class = "pad_top",
-                    fluidRow(
-                      column(width = 10,
-                        HTML(paste0("<h4>", "Formula: ", model$formula, "</h4>"))
-                      ),
-                      column(width = 2,
-                        tags$div(style = "float: right;",
-                          dropdown(
-                            label = "Save Model",
-                            circle = FALSE,
-                            block = TRUE,
-                            width = "100%",
-                            downloadButton(
-                              outputId = ns(model$IDs$save_code_btn),
-                              label = "Code",
-                              icon = icon("download", "fa"),
-                              style = "width: 100%; margin-bottom: 5px; padding: 0px auto;"
-                            ),
-                            downloadButton(
-                              outputId = ns(model$IDs$save_fit_btn),
-                              label = "Result",
-                              icon = icon("download", "fa"),
-                              style = "width: 100%; padding: 0px auto;"
+                # create a list to store model info
+                model_name <- paste0("Model ", length(global$models) + 1)
+                model <- list()
+                model$covid <- global$covid
+                model$formula <- create_formula(all_priors, global$mrp$input)
+                model$n_iter <- n_iter
+                model$n_chains <- n_chains
+
+                # fit model
+                c(model$fit, pred_mat, yrep_mat, model$code) %<-% run_stan(
+                  input_data = global$mrp$input_stan,
+                  new_data = global$mrp$new_stan,
+                  effects = all_priors,
+                  n_iter = model$n_iter,
+                  n_chains = model$n_chains,
+                  sens = if(global$covid) input$sens_kb else 1,
+                  spec = if(global$covid) input$spec_kb else 1
+                )
+
+                c(model$fixed, model$varying) %<-% extract_parameters(model$fit, all_priors)
+
+                # data for prediction plots
+                for(v in names(global$mrp$levels)) {
+                  model[[v]] <- global$mrp$new |>
+                    mutate(factor = global$mrp$new[[v]]) |>
+                    process_pred(pred_mat, global$covid)
+                }
+
+                model$overall <- global$mrp$new |>
+                  mutate(factor = 1) |>
+                  process_pred(pred_mat, global$covid)
+
+                # data for PPC plots
+                model$yrep <- process_yrep(
+                  yrep_mat,
+                  global$mrp$input,
+                  global$covid
+                )
+
+                # UI element IDs
+                model$IDs <- list(
+                  fixed = paste0("fixed", global$model_count),
+                  varying = paste0("varying", global$model_count),
+                  ppc = paste0("ppc", global$model_count),
+                  tab = paste0("tab", global$model_count),
+                  title = paste0("title", global$model_count),
+                  rm_btn = paste0("rm_btn", global$model_count),
+                  save_fit_btn = paste0("save_fit_btn", global$model_count),
+                  save_code_btn = paste0("save_code_btn", global$model_count)
+                )
+
+                # create new tab
+                tab_header <- tags$div(
+                  class = "model_tab_header",
+                  textOutput(
+                    outputId = ns(model$IDs$title),
+                    inline = TRUE
+                  ),
+                  actionButton(
+                    inputId = ns(model$IDs$rm_btn),
+                    label = NULL,
+                    icon = icon("remove", lib = "glyphicon"),
+                    class = "btn-xs remove_model"
+                  )
+                )
+
+                appendTab("navbar_model",
+                  select = TRUE,
+                  tabPanel(title = tab_header,
+                    value = model$IDs$tab,
+                    tags$div(class = "pad_top",
+                      fluidRow(
+                        column(width = 10,
+                          HTML(paste0("<h4>", "Formula: ", model$formula, "</h4>"))
+                        ),
+                        column(width = 2,
+                          tags$div(style = "float: right;",
+                            dropdown(
+                              label = "Save Model",
+                              circle = FALSE,
+                              block = TRUE,
+                              width = "100%",
+                              downloadButton(
+                                outputId = ns(model$IDs$save_code_btn),
+                                label = "Code",
+                                icon = icon("download", "fa"),
+                                style = "width: 100%; margin-bottom: 5px; padding: 0px auto;"
+                              ),
+                              downloadButton(
+                                outputId = ns(model$IDs$save_fit_btn),
+                                label = "Result",
+                                icon = icon("download", "fa"),
+                                style = "width: 100%; padding: 0px auto;"
+                              )
                             )
                           )
                         )
-                      )
-                    ),
-                    tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
-                                   "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
-                    create_text_box(
-                      title = tags$b("Note"),
-                      tags$ul(
-                        tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
-                        tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
-                      )
-                    ),
-                    tags$h4("Fixed Effects", class = "break_title"),
-                    tags$hr(class = "break_line"),
-                    tableOutput(ns(model$IDs$fixed)),
-                    tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
-                    tags$hr(class = "break_line"),
-                    tableOutput(ns(model$IDs$varying)),
-                    tags$h4("Posterior Predictive Check", class = "break_title"),
-                    tags$hr(class = "break_line"),
-                    create_text_box(
-                      title = tags$b("Note"),
-                      if(global$covid) {
-                        tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
-                      } else {
-                        tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
-                      }
-                    ),
-                    plotOutput(outputId = ns(model$IDs$ppc))
+                      ),
+                      tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
+                                     "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
+                      create_text_box(
+                        title = tags$b("Note"),
+                        tags$ul(
+                          tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
+                          tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
+                        )
+                      ),
+                      tags$h4("Fixed Effects", class = "break_title"),
+                      tags$hr(class = "break_line"),
+                      tableOutput(ns(model$IDs$fixed)),
+                      tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
+                      tags$hr(class = "break_line"),
+                      tableOutput(ns(model$IDs$varying)),
+                      tags$h4("Posterior Predictive Check", class = "break_title"),
+                      tags$hr(class = "break_line"),
+                      create_text_box(
+                        title = tags$b("Note"),
+                        if(global$covid) {
+                          tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+                        } else {
+                          tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+                        }
+                      ),
+                      plotOutput(outputId = ns(model$IDs$ppc))
+                    )
                   )
                 )
-              )
 
-              # changeable tab title
-              output[[model$IDs$title]] <- renderText(model_name)
+                # changeable tab title
+                output[[model$IDs$title]] <- renderText(model_name)
 
-              # render fixed effect table
-              output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE)
+                # render fixed effect table
+                output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE)
 
-              # render varying effect tables
-              output[[model$IDs$varying]] <- renderTable(model$varying, rownames = TRUE)
+                # render varying effect tables
+                output[[model$IDs$varying]] <- renderTable(model$varying, rownames = TRUE)
 
-              # render ppc plot
-              output[[model$IDs$ppc]] <- renderPlot(
-                if(global$covid) {
-                  plot_ppc_covid_subset(
-                    model$yrep,
-                    global$mrp$input,
-                    global$plotdata$dates
-                  )
-                } else {
-                  plot_ppc_poll(
-                    model$yrep,
-                    global$mrp$input
-                  )
-                }
-              )
+                # render ppc plot
+                output[[model$IDs$ppc]] <- renderPlot(
+                  if(global$covid) {
+                    plot_ppc_covid_subset(
+                      model$yrep,
+                      global$mrp$input,
+                      global$plotdata$dates
+                    )
+                  } else {
+                    plot_ppc_poll(
+                      model$yrep,
+                      global$mrp$input
+                    )
+                  }
+                )
 
-              observeEvent(input[[model$IDs$rm_btn]], {
-                # remove model object and tab
-                global$models[[model_name]] <- NULL
-                removeTab("navbar_model", model$IDs$tab, session)
+                observeEvent(input[[model$IDs$rm_btn]], {
+                  # remove model object and tab
+                  global$models[[model_name]] <- NULL
+                  removeTab("navbar_model", model$IDs$tab, session)
 
-                # re-index model objects and tabs
-                names(global$models) <- if(length(global$models) > 0) paste0("Model ", 1:length(global$models)) else character()
-                purrr::map(names(global$models), function(name) {
-                  output[[global$models[[name]]$IDs$title]] <- renderText(name)
+                  # re-index model objects and tabs
+                  names(global$models) <- if(length(global$models) > 0) paste0("Model ", 1:length(global$models)) else character()
+                  purrr::map(names(global$models), function(name) {
+                    output[[global$models[[name]]$IDs$title]] <- renderText(name)
+                  })
                 })
-              })
 
-              output[[model$IDs$save_fit_btn]] <- downloadHandler(
-                filename = function() { "model_fit.RDS" },
-                content = function(file) {
-                  saveRDS(model, file)
-                }
-              )
+                output[[model$IDs$save_fit_btn]] <- downloadHandler(
+                  filename = function() { "model_fit.RDS" },
+                  content = function(file) {
+                    saveRDS(model, file)
+                  }
+                )
 
-              output[[model$IDs$save_code_btn]] <- downloadHandler(
-                filename = function() { "model.stan" },
-                content = function(file) {
-                  writeLines(model$code, file)
-                }
-              )
+                output[[model$IDs$save_code_btn]] <- downloadHandler(
+                  filename = function() { "model.stan" },
+                  content = function(file) {
+                    writeLines(model$code, file)
+                  }
+                )
 
-              global$models[[model_name]] <- model
-              global$model_count <- global$model_count + 1
-              waiter::waiter_hide()
+                global$models[[model_name]] <- model
+                global$model_count <- global$model_count + 1
+                waiter::waiter_hide()
+              } else {
+                show_alert("Structured prior can only be assigned to interactions (excluding interactions between fixed effects).", global$session)
+              }
             } else {
-              show_alert("Structured prior can only be assigned to interactions (excluding interactions between fixed effects).", global$session)
+              show_alert("No predictor has been selected. Please include at least one.", global$session)
             }
           } else {
-            show_alert("No predictor has been selected. Please include at least one.", global$session)
+            show_alert("Maximum number of models reached. Please removed existing models to add more.", global$session)
           }
         } else {
-          show_alert("Maximum number of models reached. Please removed existing models to add more.", global$session)
+          show_alert(msg_range, global$session)
         }
-      } else {
-        show_alert(msg_range, global$session)
       }
+
     })
 
     observeEvent(input$fit_upload, {
