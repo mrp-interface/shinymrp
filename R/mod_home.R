@@ -48,11 +48,40 @@ mod_home_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
-    # shinyWidgets::sendSweetAlert(
-    #   title = "Information",
-    #   text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
-    #   type = "info"
-    # )
+    observe({
+      if(!global$web_version) {
+        # check if CmdStan is installed and prompt user
+        if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
+          shinyWidgets::ask_confirmation(
+            inputId = ns("setup_popup"),
+            title = "Confirm",
+            text = "The interface requires CmdStan to operate. Do you want to proceed with the installation?",
+            btn_labels = c("No", "Yes")
+          )
+        }
+
+        # install CmdStan if user agrees
+        observeEvent(input$setup_popup, {
+          if(input$setup_popup) {
+            waiter::waiter_show(
+              html = waiter_ui("setup"),
+              color = waiter::transparent(0.9)
+            )
+
+            cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+            cmdstanr::install_cmdstan(check_toolchain = FALSE)
+
+            waiter::waiter_hide()
+          }
+        })
+      } else {
+        shinyWidgets::sendSweetAlert(
+          title = "Information",
+          text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
+          type = "info"
+        )
+      }
+    })
 
     observeEvent(input$set_poll, {
       updateNavbarPage(global$session,
