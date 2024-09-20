@@ -375,7 +375,7 @@ mod_analyze_upload_server <- function(id, global){
       } else {
         global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
 
-        covariates <- get_state_predictors(global$data)
+        covariates <- get_state_predictors(rawdata())
         covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
 
         c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
@@ -446,7 +446,7 @@ mod_analyze_upload_server <- function(id, global){
       } else {
         global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
 
-        covariates <- get_state_predictors(global$data)
+        covariates <- get_state_predictors(rawdata())
         covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
 
         c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
