@@ -8,32 +8,8 @@ app_server <- function(input, output, session) {
   # set file upload size limit
   options(shiny.maxRequestSize = 200*1024^2)
 
-  # check if CmdStan is installed and prompt user
-  if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-    shinyWidgets::ask_confirmation(
-      inputId = "setup_popup",
-      title = "Confirm",
-      text = "The interface requires CmdStan to operate. Do you want to proceed with the installation?",
-      btn_labels = c("No", "Yes")
-    )
-  }
-
-  # install CmdStan if user agrees
-  observeEvent(input$setup_popup, {
-    if(input$setup_popup) {
-      waiter::waiter_show(
-        html = waiter_ui("setup"),
-        color = waiter::transparent(0.9)
-      )
-
-      cmdstanr::check_cmdstan_toolchain(fix = TRUE)
-      cmdstanr::install_cmdstan(check_toolchain = FALSE)
-
-      waiter::waiter_hide()
-    }
-  })
-
   global <- reactiveValues(
+    web_version = FALSE,
     session = session,
     input = input,
     static = list(
