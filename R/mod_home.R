@@ -55,7 +55,7 @@ mod_home_server <- function(id, global){
           shinyWidgets::ask_confirmation(
             inputId = ns("setup_popup"),
             title = "Confirm",
-            text = "The interface requires CmdStan to operate. Do you want to proceed with the installation?",
+            text = "CmdStan is required to fit user-defined models but not necessary for testing the interface via example results. Do you want to proceed with the installation?",
             btn_labels = c("No", "Yes")
           )
         }
