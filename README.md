@@ -4,7 +4,7 @@
 
 ### Prerequisites:  C++ Toolchain
 
-shinymrp requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”) for compiling Stan programs. These vary by operating system.
+shinymrp requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”) for compiling Stan programs. These vary by different operating systems.
 
 
 #### Linux
@@ -51,7 +51,7 @@ xcode-select --install
 
 #### Windows
 
-For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Select the appropriate version based on the version of R on your machine.
+For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Install the appropriate version based on the version of R on your machine.
 
 ### shinymrp Installation
 R version 4.1.0 or beyond is required. Install the app by executing the R code below:
