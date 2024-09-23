@@ -344,7 +344,7 @@ mod_analyze_model_server <- function(id, global){
         ui <- tagList(
           create_text_box(
             title = tags$b("Note"),
-            tags$p("Generally, ", tags$code("elpd_diff"), "beng less than 4 indicates small difference in the predictive power between models. For values of ", tags$code("elpd_diff"), "greater than 4, ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), "can account for the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), ".")
+            tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), ".")
           ),
           tableOutput(outputId = ns("loo_table"))
         )
