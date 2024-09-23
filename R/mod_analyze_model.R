@@ -330,41 +330,42 @@ mod_analyze_model_server <- function(id, global){
     })
 
     output$loo_ui <- renderUI({
-      req(isolate(global$models))
       global$covid
       input$diagnos_btn
-
       selected_names <- isolate(input$model_select)
 
-      if(length(selected_names) == 0) {
-        ui <- NULL
-      } else if(length(selected_names) == 1) {
-        ui <- tags$p("*Two or more models are required")
-      } else {
-        ui <- tagList(
-          create_text_box(
-            title = tags$b("Note"),
-            tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), ".")
-          ),
-          tableOutput(outputId = ns("loo_table"))
-        )
-
-        output$loo_table <- renderTable({
-          waiter::waiter_show(
-            html = waiter_ui("loo"),
-            color = waiter::transparent(0.9)
+      ui <- NULL
+      if(!is.null(isolate(global$models))) {
+        if(length(selected_names) == 0) {
+          ui <- NULL
+        } else if(length(selected_names) == 1) {
+          ui <- tags$p("*Two or more models are required")
+        } else {
+          ui <- tagList(
+            create_text_box(
+              title = tags$b("Note"),
+              tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), ".")
+            ),
+            tableOutput(outputId = ns("loo_table"))
           )
 
-          df <- isolate(global$models[selected_names]) |>
-            purrr::map(function(m) m$loo) |>
-            loo::loo_compare() |>
-            as.data.frame() |>
-            select(elpd_diff, se_diff)
+          output$loo_table <- renderTable({
+            waiter::waiter_show(
+              html = waiter_ui("loo"),
+              color = waiter::transparent(0.9)
+            )
 
-          waiter::waiter_hide()
+            df <- isolate(global$models[selected_names]) |>
+              purrr::map(function(m) m$loo) |>
+              loo::loo_compare() |>
+              as.data.frame() |>
+              select(elpd_diff, se_diff)
 
-          return(df)
-        }, rownames = TRUE)
+            waiter::waiter_hide()
+
+            return(df)
+          }, rownames = TRUE)
+        }
       }
 
       return(ui)
@@ -372,13 +373,12 @@ mod_analyze_model_server <- function(id, global){
 
     # PPC plots
     output$ppc_plots <- renderUI({
-      req(isolate(global$models))
       global$covid
       input$diagnos_btn
 
       selected_names <- isolate(input$model_select)
 
-      if(length(selected_names) > 0) {
+      if(length(selected_names) > 0 & !is.null(isolate(global$models))) {
         formulas <- purrr::map(isolate(global$models[selected_names]), function(m) m$formula)
 
         tagList(
@@ -412,19 +412,19 @@ mod_analyze_model_server <- function(id, global){
 
           purrr::map(1:length(yreps), function(i) {
             output[[paste0("compare_ppc", i)]] <- renderPlot({
-              req(isolate(global$models))
-
-              if(global$covid) {
-                plot_ppc_covid_subset(
-                  yreps[[i]],
-                  global$mrp$input,
-                  global$plotdata$dates
-                )
-              } else {
-                plot_ppc_poll(
-                  yreps[[i]],
-                  global$mrp$input
-                )
+              if(!is.null(isolate(global$models))) {
+                if(global$covid) {
+                  plot_ppc_covid_subset(
+                    yreps[[i]],
+                    global$mrp$input,
+                    global$plotdata$dates
+                  )
+                } else {
+                  plot_ppc_poll(
+                    yreps[[i]],
+                    global$mrp$input
+                  )
+                }
               }
             })
           })

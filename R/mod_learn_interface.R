@@ -108,7 +108,7 @@ mod_learn_interface_ui <- function(id){
         withMathJax("Local scale (\\(\\lambda_2\\)): \\(normal_+(0, 1)\\)"), tags$br(),
         withMathJax("where \\(cauchy_+(0, 1)\\) is a Cauchy distribution with mean 0 and standard deviation of 1 restricted to positive values."), tags$br(),
         tags$h3("Model Fitting"),
-        tags$p("The interface relies on a Bayesian framework and implements the Markov chain Monte Carlo (MCMC) algorithm for posterior computation via Stan. The MCMC chains are run in parallel for computational efficiency, and the interface automatically uses one core for one chain. We recommend the users to carefully specify the number of MCMC chains based on the available computing resource."),
+        tags$p("The interface relies on a Bayesian framework and implements the Markov chain Monte Carlo (MCMC) algorithm for posterior computation via Stan. The MCMC chains are run in parallel for computational efficiency, and the interface automatically uses one core for one chain. We recommend that users carefully specify the number of MCMC chains based on the available computing resources."),
         tags$p("The model details for the spatio-temporal data (accounting for outcome measurement sensitivity and specification) and the cross-sectional data are available on the ",
         actionLink(
           inputId = ns("to_mrp"),
