@@ -330,7 +330,7 @@ mod_analyze_model_server <- function(id, global){
     })
 
     output$loo_ui <- renderUI({
-      req(global$models)
+      req(isolate(global$models))
       global$covid
       input$diagnos_btn
 
@@ -356,7 +356,7 @@ mod_analyze_model_server <- function(id, global){
           )
 
           df <- isolate(global$models[selected_names]) |>
-            purrr::map(function(m) m$fit$loo()) |>
+            purrr::map(function(m) m$loo) |>
             loo::loo_compare() |>
             as.data.frame() |>
             select(elpd_diff, se_diff)
@@ -372,7 +372,7 @@ mod_analyze_model_server <- function(id, global){
 
     # PPC plots
     output$ppc_plots <- renderUI({
-      req(global$models)
+      req(isolate(global$models))
       global$covid
       input$diagnos_btn
 
@@ -412,7 +412,7 @@ mod_analyze_model_server <- function(id, global){
 
           purrr::map(1:length(yreps), function(i) {
             output[[paste0("compare_ppc", i)]] <- renderPlot({
-              req(global$models)
+              req(isolate(global$models))
 
               if(global$covid) {
                 plot_ppc_covid_subset(
@@ -526,7 +526,7 @@ mod_analyze_model_server <- function(id, global){
                 model$n_chains <- n_chains
 
                 # fit model
-                c(model$fit, pred_mat, yrep_mat, model$code) %<-% run_stan(
+                c(fit, pred_mat, yrep_mat, model$code) %<-% run_stan(
                   input_data = global$mrp$input_stan,
                   new_data = global$mrp$new_stan,
                   effects = all_priors,
@@ -536,7 +536,8 @@ mod_analyze_model_server <- function(id, global){
                   spec = if(global$covid) input$spec_kb else 1
                 )
 
-                c(model$fixed, model$varying) %<-% extract_parameters(model$fit, all_priors)
+                c(model$fixed, model$varying) %<-% extract_parameters(fit, all_priors)
+                model$loo <- fit$loo()
 
                 # data for prediction plots
                 for(v in names(global$mrp$levels)) {
