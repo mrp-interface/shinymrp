@@ -197,9 +197,13 @@ transformed_parameters_ <- function(effects) {
 
   scode <- ""
 
-  struct_effects <- names(int_varint)[int_varint == "structured"] |>
-    purrr::map(function(s) strsplit(s, ':')[[1]]) %>%
-    do.call(c, .)
+  struct_effects <- c(
+    names(int_varslope)[int_varslope == "structured"] |>
+      purrr::map(function(s) strsplit(s, ':')[[1]][1]),
+    names(int_varint)[int_varint == "structured"] |>
+      purrr::map(function(s) strsplit(s, ':')[[1]]) %>%
+      do.call(c, .)
+  )
 
   for(s in names(varying)) {
     if(s %in% struct_effects) {
@@ -278,7 +282,7 @@ model_ <- function(effects) {
   paste(purrr::map(names(int_varslope_nostruct), ~ stringr::str_interp("\n  lambda2_${strsplit(.x, split = ':')[[1]][1]} ~ ${int_varslope[[.x]]};")), collapse = "")
   )
 
-  if("structured" %in% int_varint) {
+  if("structured" %in% c(int_varslope, int_varint)) {
     scode <- paste0(scode, "
   tau ~ cauchy(0 , 1);
   delta ~ normal(0, 1);")
@@ -407,7 +411,7 @@ make_standata <- function(
       }
     }
   }
-  sdata <<- stan_data
+
   return(stan_data)
 }
 
@@ -453,68 +457,6 @@ run_stan <- function(
 
 
   return(list(fit, pred_mat, yrep_mat, stan_code))
-}
-
-stan_predict <- function(fit, pstrat, effects) {
-  main_fixed <- names(effects$fixed)
-  main_varying <-names(effects$varying)
-  int_fixed <- names(effects$interaction$fixed_slope)
-  int_varslope <- names(effects$interaction$varying_slope)
-  int_varint <- names(effects$interaction$varying_intercept)
-
-  ## Create data for prediction
-  # main effects
-  df <- pstrat |> select(all_of(c(main_fixed, main_varying)))
-
-  # fixed interaction
-  for(s in int_fixed) {
-    ss <- strsplit(s, split = ':')[[1]]
-    df[[paste0(ss[1], ss[2])]] <- df[[ss[1]]] * df[[ss[2]]]
-  }
-
-  # varying-intercept interaction
-  for(s in int_varint) {
-    ss <- strsplit(s, split = ':')[[1]]
-    c(levels, numcat) %<-% interaction_levels(df[[ss[1]]], df[[ss[2]]])
-    df[[paste0(ss[1], ss[2])]] <- levels
-  }
-
-  ## Extract posterior draws
-  varying_intercept <- paste0("a_", c(main_varying, gsub(':', '', int_varint)))
-  varying_slope <- paste0("b_", purrr::map(int_varslope, function(s) strsplit(s, ':')[[1]][1]))
-
-  draws_fixed <- fit$draws(variables = "beta", format = "draws_matrix")
-  draws_varying <- fit$draws(variables = c(varying_intercept, varying_slope), format = "draws_matrix")
-  n_draws <- nrow(draws_fixed)
-
-  ## compute prediction
-  pred <- lapply(1:nrow(df), function(i) {
-    # row <- df[i, , drop = FALSE]
-    rowSums(draws_varying)
-    # fixed
-    # vars <- c(main_fixed, gsub(':', '', int_fixed))
-    # dt <- as.numeric(row[, vars])
-    # fixed_mat <- draws_fixed * rep(dt, each = n_draws)
-    #
-    # # varying intercept
-    # vars <- c(main_varying, gsub(':', '', int_varint))
-    # dt <- as.numeric(row[, vars])
-    # varint_mat <- data.matrix(draws_varying[, paste0("a_", vars, '[', dt, ']')])
-    #
-    # # varying slope
-    # splits <- strsplit(int_varslope, split = ':')
-    # varying <- sapply(splits, function(s) s[1])
-    # fixed <- sapply(splits, function(s) s[2])
-    # dt_fixed <- as.numeric(row[, fixed])
-    # dt_varying <- as.numeric(row[, varying])
-    # varslope_mat <- data.matrix(draws_varying[, paste0("b_", varying, '[', dt_varying, ']')]) * rep(dt_fixed, each = n_draws)
-    #
-    # cbind(fixed_mat, varint_mat, varslope_mat) |> rowSums()
-  })
-
-  pred <- do.call(rbind, pred)
-
-  return(pred)
 }
 
 extract_parameters <- function(fit, effects) {
