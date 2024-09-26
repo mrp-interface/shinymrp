@@ -50,30 +50,18 @@ mod_home_server <- function(id, global){
 
     observe({
       if(!global$web_version) {
-        # check if CmdStan is installed and prompt user
+        # install CmdStan if not installed already
         if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-          shinyWidgets::ask_confirmation(
-            inputId = ns("setup_popup"),
-            title = "Confirm",
-            text = "CmdStan is required to fit user-defined models but not necessary for testing the interface via example results. Do you want to proceed with the installation?",
-            btn_labels = c("No", "Yes")
+          waiter::waiter_show(
+            html = waiter_ui("setup"),
+            color = waiter::transparent(0.9)
           )
+
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+          cmdstanr::install_cmdstan(check_toolchain = FALSE)
+
+          waiter::waiter_hide()
         }
-
-        # install CmdStan if user agrees
-        observeEvent(input$setup_popup, {
-          if(input$setup_popup) {
-            waiter::waiter_show(
-              html = waiter_ui("setup"),
-              color = waiter::transparent(0.9)
-            )
-
-            cmdstanr::check_cmdstan_toolchain(fix = TRUE)
-            cmdstanr::install_cmdstan(check_toolchain = FALSE)
-
-            waiter::waiter_hide()
-          }
-        })
       } else {
         shinyWidgets::sendSweetAlert(
           title = "Information",

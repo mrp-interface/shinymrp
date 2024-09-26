@@ -368,7 +368,6 @@ prepare_data_covid <- function(
   input_data <- patient |>
     left_join(covariates, by = "zip")
 
-  input_data_stan <- input_data
 
   new_data <- tidyr::expand_grid(
     sex  = demo_levels$sex,
@@ -394,9 +393,8 @@ prepare_data_covid <- function(
   # list of variables for model specification
   vars <- list(
     fixed = list(
-      "Individual-level Predictor" = c("sex", "race", "age", "time"),
-      "Geographic Predictor" = names(covariates) |> setdiff(c("zip", "county")),
-      "Geographic Indicator" = c("zip")
+      "Individual-level Predictor" = c("sex"),
+      "Geographic Predictor" = names(covariates) |> setdiff(c("zip", "county"))
     ),
     varying = list(
       "Individual-level Predictor" = c("race", "age", "time"),
