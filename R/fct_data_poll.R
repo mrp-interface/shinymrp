@@ -196,7 +196,7 @@ prepare_data_poll <- function(
   # list of variables for model specification
   vars <- list(
     fixed = list(
-      "Individual-level Predictor" = c("sex", "race", "age", "edu")
+      "Individual-level Predictor" = list("sex")
     ),
     varying = list(
       "Individual-level Predictor" = c("race", "age", "edu")
@@ -204,8 +204,8 @@ prepare_data_poll <- function(
   )
 
   if(!is.null(states_in_data)) {
-    vars$fixed[["Geographic Predictor"]] <- setdiff(names(covar), "state")
-    vars$fixed[["Geographic Indicator"]] <- "state"
+    # NOTE: current implementation only accepts continuous covariates
+    vars$fixed[["Geographic Predictor"]] <- names(covar)[sapply(covar, is.numeric)]
     vars$varying[["Geographic Indicator"]] <- "state"
   }
 
