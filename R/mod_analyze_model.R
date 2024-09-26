@@ -195,15 +195,6 @@ mod_analyze_model_server <- function(id, global){
             session = global$session
           )
         } else {
-          updateVirtualSelect(
-            inputId = "fixed",
-            choices = global$mrp$vars$fixed
-          )
-
-          updateVirtualSelect(
-            inputId = "varying",
-            choices = global$mrp$vars$varying
-          )
         }
       }
     })
@@ -401,34 +392,30 @@ mod_analyze_model_server <- function(id, global){
 
     observeEvent(input$diagnos_btn, {
 
-      if(global$web_version) {
-        show_alert("This functionality is currently not available for the web version of the MRP interface.", global$session)
-      } else {
-        selected_names <- input$model_select
+      selected_names <- input$model_select
 
-        if(length(selected_names) > 0) {
+      if(length(selected_names) > 0) {
 
-          yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
+        yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
 
-          purrr::map(1:length(yreps), function(i) {
-            output[[paste0("compare_ppc", i)]] <- renderPlot({
-              if(!is.null(isolate(global$models))) {
-                if(global$covid) {
-                  plot_ppc_covid_subset(
-                    yreps[[i]],
-                    global$mrp$input,
-                    global$plotdata$dates
-                  )
-                } else {
-                  plot_ppc_poll(
-                    yreps[[i]],
-                    global$mrp$input
-                  )
-                }
+        purrr::map(1:length(yreps), function(i) {
+          output[[paste0("compare_ppc", i)]] <- renderPlot({
+            if(!is.null(isolate(global$models))) {
+              if(global$covid) {
+                plot_ppc_covid_subset(
+                  yreps[[i]],
+                  global$mrp$input,
+                  global$plotdata$dates
+                )
+              } else {
+                plot_ppc_poll(
+                  yreps[[i]],
+                  global$mrp$input
+                )
               }
-            })
+            }
           })
-        }
+        })
       }
 
     })
@@ -1049,12 +1036,12 @@ mod_analyze_model_server <- function(id, global){
 
       updateVirtualSelect(
         inputId = "fixed",
-        choices = list()
+        choices = global$mrp$vars$fixed
       )
 
       updateVirtualSelect(
         inputId = "varying",
-        choices = list()
+        choices = global$mrp$vars$varying
       )
 
       updateVirtualSelect(
