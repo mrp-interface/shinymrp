@@ -49,7 +49,13 @@ mod_home_server <- function(id, global){
     ns <- session$ns
 
     observe({
-      if(!global$web_version) {
+      if(global$web_version) {
+        shinyWidgets::sendSweetAlert(
+          title = "Information",
+          text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
+          type = "info"
+        )
+      } else {
         # install CmdStan if not installed already
         if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
           waiter::waiter_show(
@@ -62,12 +68,6 @@ mod_home_server <- function(id, global){
 
           waiter::waiter_hide()
         }
-      } else {
-        shinyWidgets::sendSweetAlert(
-          title = "Information",
-          text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
-          type = "info"
-        )
       }
     })
 

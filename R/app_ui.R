@@ -59,12 +59,15 @@ app_ui <- function(request) {
         mod_about_ui(module_ids$about)
       )
     ),
-    tags$a(
-      "Feedback",
-      href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
-      target = "_blank",
-      class = "btn btn-info feedback"
+    tags$div(class = "feedback_container",
+      tags$a(
+        "Feedback",
+        href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
+        target = "_blank",
+        class = "btn btn-info feedback"
+      )
     )
+
   )
 }
 

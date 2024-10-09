@@ -15,7 +15,7 @@ mod_analyze_model_ui <- function(id){
     sidebarLayout(
       sidebarPanel(width = 3,
         tagList(
-          HTML("<details open='true'><summary class='collapsible'>Model Specification</summary>"),
+          HTML("<details open='true'><summary class='summary' style='font-size: 1.25em;'>Model Specification</summary>"),
           tags$div(style = "margin-top: 10px",
             tags$p(tags$u("Step 1"), ": Select main effects and interactions"),
             virtualSelectInput(
@@ -127,14 +127,14 @@ mod_analyze_model_ui <- function(id){
             )
           ),
           HTML("</details>"),
-          HTML("<details><summary class='collapsible'>Upload Estimation Results</summary>"),
+          HTML("<details><summary class='summary' style='font-size: 1.25em;'>Upload Estimation Results</summary>"),
           tags$div(style = "margin-top: 10px",
             fileInput(
               inputId = ns("fit_upload"),
               label = "Select a RDS file containing a model estimation",
               accept = ".RDS"
             ),
-            HTML("<details><summary>Example</summary>"),
+            HTML("<details><summary class='summary'>Example</summary>"),
             tags$div(class = "pad_top",
               actionButton(
                 inputId = ns("use_example"),
