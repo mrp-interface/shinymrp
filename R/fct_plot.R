@@ -215,9 +215,7 @@ plot_individual <- function(
       expand = c(0, 0)
     ) &
     labs(x = "", y = "") &
-    theme_bw() &
     theme(
-      text = element_text(size = 18),
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
       plot.margin = margin(1, 1, 1, 1, "cm")
@@ -253,9 +251,7 @@ plot_geographic <- function(
       caption = definition,
       x = name, y = "Number of zip codes"
     ) +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       plot.subtitle = element_text(size = 15, hjust = 0),
       plot.caption = element_text(size = 15, hjust = 0.5),
       plot.margin = margin(1, 1, 1, 1, "cm")
@@ -343,9 +339,7 @@ plot_prev <- function(
     scale_color_manual(
       values = c("Raw" = raw_color, "MRP" = mrp_color)
     ) +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       legend.title = element_blank(),
       legend.position = if(is.null(estimate)) "none" else "bottom",
       plot.margin = margin(1, 1, 1, 1, "cm")
@@ -384,9 +378,7 @@ plot_support <- function(
       labels = scales::percent
     ) +
     labs(x = "", y = "Positive Response Rate") +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
       plot.margin = margin(1, 1, 1, 1, "cm")
@@ -455,9 +447,7 @@ plot_ppc_covid_subset <- function(
     scale_color_manual(
       values = c("Raw" = raw_color, "Replicated" = yrep_color)
     ) +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       legend.title = element_blank(),
       plot.margin = margin(1, 1, 1, 1, "cm")
     )
@@ -533,9 +523,7 @@ plot_ppc_covid_all <- function(
     scale_color_manual(
       values = c("Raw" = raw_color, "Replicated" = yrep_color)
     ) +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       legend.title = element_blank(),
       plot.margin = margin(1, 1, 1, 1, "cm")
     )
@@ -574,9 +562,7 @@ plot_ppc_poll <- function(
       labels = scales::percent
     ) +
     labs(x = "", y = "Positive Response Rate") +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
@@ -662,9 +648,7 @@ plot_est_covid <- function(df, dates) {
         limits = limits,
         expand = expansion(mult = c(5e-3, 0.1))
       ) +
-      theme_bw() +
       theme(
-        text = element_text(size = 18),
         legend.title = element_blank(),
         legend.position = "right",
         plot.margin = margin(0, 1, 0, 1, "cm")
@@ -705,9 +689,7 @@ plot_est_poll <- function(plot_df) {
       labels = scales::percent
     ) +
     labs(x = "", y = "Positive Response Rate") +
-    theme_bw() +
     theme(
-      text = element_text(size = 18),
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
       axis.text.x = element_text(angle = if(n_distinct(plot_df$factor) > 20) 90 else 0),
