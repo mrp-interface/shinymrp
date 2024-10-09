@@ -16,6 +16,10 @@
     font-size: 1.05em;
   }
 
+  text {
+    font-family: helvetica,arial,sans-serif;
+  }
+
   .pad_top {
     margin-top: 15px;
     width: 100%;
@@ -136,15 +140,29 @@
     font-size: 1.05em;
   }
 
-  .feedback {
+  .feedback_container {
     position: fixed;
     top: 0.6%;
     left: 94%;
     z-index: 1000;
+    width: 5.5%;
   }
 
-  .collapsible {
-    font-size: 1.25em;
+  .feedback {
+    float: right;
+  }
+
+  .footnote_container {
+    position: fixed;
+    top: 96%;
+    left: 94%;
+    z-index: 1000;
+    float: right;
+    width: 5.8%;
+  }
+
+  .footnote {
+    float: right;
   }
 
   .button_icon {
@@ -154,3 +172,8 @@
   .ref {
     font-size: 0.9em;
   }
+
+  .summary {
+    display: list-item;
+  }
+

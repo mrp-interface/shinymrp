@@ -1,9 +1,14 @@
 Package: shinymrp
 Title: Point-and-click Interface for MRP
 Version: 0.0.1
-Authors@R: person('Toan', 'Tran', email = 'tntoan@umich.edu', role = c('cre', 'aut'))
+Authors@R: c(
+    person("Toan", "Tran", , "tntoan@umich.edu", role = c("cre", "aut")),
+    person("Jonah", "Gabry", , "jgabry@gmail.com", role = "aut"),
+    person("Yajuan", "Si", , "yajuan@umich.edu", role = "aut"),
+    person("Mitzi", "Morris", , "mitzi212@gmail.com", role = "aut")
+  )
 Description: A GUI designed for intuitive applications of Multilevel Regression and Poststratification to cross-sectional and spatio-temporal datasets.
-License: What license is it under?
+License: MIT + file LICENSE
 Imports: 
     cmdstanr,
     config (>= 0.3.2),
