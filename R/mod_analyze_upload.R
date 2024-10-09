@@ -31,7 +31,7 @@ mod_analyze_upload_ui <- function(id){
           accept = c(".csv", ".xlsx", ".sas7bdat")
         ),
         tags$div(class = "pad_bottom",
-          HTML("<details><summary>Example</summary>"),
+          HTML("<details><summary class=summary>Example</summary>"),
           tags$div(class = "justify pad_top",
             actionButton(
               inputId = ns("use_indiv_example"),
