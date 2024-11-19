@@ -121,13 +121,25 @@ to_fips <- function(state_vec, fips_state) {
 }
 
 stan_factor_poll <- function(df, levels) {
-  df <- df |> mutate(
-    sex = factor(sex, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
-    race = factor(race, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
-    age = factor(age, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
-    edu = factor(edu, levels = levels$edu, labels = 1:length(levels$edu)) |> as.character() |> as.integer(),
-    state = as.factor(state) |> as.integer()
-  )
+  # rename raw columns
+  df <- df |>
+    rename(
+      "sex_raw" = "sex",
+      "race_raw" = "race",
+      "age_raw" = "age",
+      "edu_raw" = "edu",
+      "state_raw" = "state"
+    )
+
+  # add Stan-dardized columns
+  df <- df |>
+    mutate(
+      sex = factor(sex_raw, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
+      race = factor(race_raw, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
+      age = factor(age_raw, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
+      edu = factor(edu_raw, levels = levels$edu, labels = 1:length(levels$edu)) |> as.character() |> as.integer(),
+      state = as.factor(state_raw) |> as.integer()
+    )
 
   return(df)
 }
@@ -196,7 +208,7 @@ prepare_data_poll <- function(
   # list of variables for model specification
   vars <- list(
     fixed = list(
-      "Individual-level Predictor" = list("sex")
+      "Individual-level Predictor" = c("sex", "race", "age", "edu")
     ),
     varying = list(
       "Individual-level Predictor" = c("race", "age", "edu")
@@ -205,7 +217,8 @@ prepare_data_poll <- function(
 
   if(!is.null(states_in_data)) {
     # NOTE: current implementation only accepts continuous covariates
-    vars$fixed[["Geographic Predictor"]] <- names(covar)[sapply(covar, is.numeric)]
+    vars$fixed[["Geographic Predictor"]] <- names(covar) |> setdiff("state")
+    vars$fixed[["Geographic Indicator"]] <- "state"
     vars$varying[["Geographic Indicator"]] <- "state"
   }
 

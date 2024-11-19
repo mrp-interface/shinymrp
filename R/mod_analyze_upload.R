@@ -275,7 +275,6 @@ mod_analyze_upload_server <- function(id, global){
 
           global$mrp <- list(
             input = input_data,
-            input_stan = stan_factor_covid(input_data, global$static$levels$covid),
             new = new_data,
             new_stan = stan_factor_covid(new_data, global$static$levels$covid),
             levels = levels,
@@ -303,9 +302,7 @@ mod_analyze_upload_server <- function(id, global){
 
           global$mrp <- list(
             input = input_data,
-            input_stan = stan_factor_poll(input_data, global$static$levels$poll),
             new = new_data,
-            new_stan = stan_factor_poll(new_data, global$static$levels$poll),
             levels = levels,
             vars = vars
           )
@@ -359,9 +356,7 @@ mod_analyze_upload_server <- function(id, global){
 
         global$mrp <- list(
           input = input_data,
-          input_stan = stan_factor_covid(input_data, global$static$levels$covid),
           new = new_data,
-          new_stan = stan_factor_covid(new_data, global$static$levels$covid),
           levels = levels,
           vars = vars
         )
@@ -387,9 +382,7 @@ mod_analyze_upload_server <- function(id, global){
 
         global$mrp <- list(
           input = input_data,
-          input_stan = stan_factor_poll(input_data, global$static$levels$poll),
           new = new_data,
-          new_stan = stan_factor_poll(new_data, global$static$levels$poll),
           levels = levels,
           vars = vars
         )
@@ -430,9 +423,7 @@ mod_analyze_upload_server <- function(id, global){
 
         global$mrp <- list(
           input = input_data,
-          input_stan = stan_factor_covid(input_data, global$static$levels$covid),
           new = new_data,
-          new_stan = stan_factor_covid(new_data, global$static$levels$covid),
           levels = levels,
           vars = vars
         )
@@ -458,9 +449,7 @@ mod_analyze_upload_server <- function(id, global){
 
         global$mrp <- list(
           input = input_data,
-          input_stan = stan_factor_poll(input_data, global$static$levels$poll),
           new = new_data,
-          new_stan = stan_factor_poll(new_data, global$static$levels$poll),
           levels = levels,
           vars = vars
         )
