@@ -224,13 +224,25 @@ check_covid_data <- function(df, expected_columns, na_threshold = 0.5) {
 
 
 stan_factor_covid <- function(df, levels) {
-  df <- df |> mutate(
-    sex = factor(sex, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
-    race = factor(race, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
-    age = factor(age, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
-    time = as.integer(time),
-    zip = as.factor(zip) |> as.integer()
-  )
+  # rename raw columns
+  df <- df |>
+    rename(
+      "sex_raw" = "sex",
+      "race_raw" = "race",
+      "age_raw" = "age",
+      "time_raw" = "time",
+      "zip_raw" = "zip"
+    )
+
+  # add Stan-dardized columns
+  df <- df |>
+    mutate(
+      sex = factor(sex_raw, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
+      race = factor(race_raw, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
+      age = factor(age_raw, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
+      time = as.integer(time_raw),
+      zip = as.factor(zip_raw) |> as.integer()
+    )
 
   return(df)
 }
@@ -393,7 +405,8 @@ prepare_data_covid <- function(
   # list of variables for model specification
   vars <- list(
     fixed = list(
-      "Individual-level Predictor" = c("sex"),
+      "Individual-level Predictor" = c("sex", "race", "age", "time"),
+      "Geographic Indicator" = c("zip"),
       "Geographic Predictor" = names(covariates) |> setdiff(c("zip", "county"))
     ),
     varying = list(

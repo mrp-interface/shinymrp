@@ -59,6 +59,28 @@ to_factor <- function(values, levels, other = NA) {
   return(values)
 }
 
+data_type <- function(col, num = FALSE) {
+  if(is.numeric(col)) {
+    if(all(as.integer(col) == col)) {
+      if(n_distinct(col) == 2) {
+        type <- if(num) 1 else "bin"
+      } else {
+        type <- if(num) 2 else "cat"
+      }
+    } else {
+      type <- if(num) 3 else "cont"
+    }
+  } else {
+    if(n_distinct(col) == 2) {
+      type <- if(num) 1 else "bin"
+    } else {
+      type <- if(num) 2 else "cat"
+    }
+  }
+
+  return(type)
+}
+
 prep <- function(
     df,
     expected_values,

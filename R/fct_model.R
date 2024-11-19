@@ -7,6 +7,8 @@
 #' @noRd
 #'
 #' @import dplyr
+#' @import purrr
+#' @import stringr
 create_formula <- function(effects, dat) {
   fixed <- c(names(effects$fixed), names(effects$interaction$fixed_slope))
   varying_intercept <- c(names(effects$varying), names(effects$interaction$varying_intercept))
@@ -14,7 +16,7 @@ create_formula <- function(effects, dat) {
 
   s_fixed <- if(length(fixed) > 0) paste(paste0(" + ", fixed), collapse = '') else ''
   s_varying_intercept <- if(length(varying_intercept) > 0) paste(paste0(" + (1 | ", varying_intercept, ")"), collapse = '') else ''
-  s_varying_slope <- if(length(varying_slope) > 0) paste(purrr::map(varying_slope, function(s) {
+  s_varying_slope <- if(length(varying_slope) > 0) paste(map(varying_slope, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     return(paste0(" + (", ss[2], " | ", ss[1], ')'))
   }), collapse = '') else ''
@@ -46,19 +48,36 @@ check_prior_syntax <- function(s) {
   }
 }
 
+check_effects <- function(effects) {
+  # TODO
+  # check prior syntax
+
+  # check if fixed effect of categorical variables are included in interactions
+  return(TRUE)
+}
+
 create_interactions <- function(effects, dat) {
   if(n_distinct(effects) == 1) {
     return(c())
   }
 
   # create unique pairs
-  df <- expand.grid(eff1 = effects, eff2 = effects)
-  df <- df |> filter(eff1 != eff2)
+  df <- expand.grid(
+    eff1 = effects,
+    eff2 = effects
+  ) |>
+    mutate_all(as.character) |>
+    filter(eff1 != eff2)
+
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
 
-  # reverse if cont:cat
+  # keep interaction in expected order for Stan code generation
+  # binary < categorical < continuous
   for(i in 1:nrow(df)) {
-    if(is.double(dat[[df$eff1[i]]]) & is.integer(dat[[df$eff2[i]]])) {
+    type1 <- data_type(dat[[df$eff1[i]]], num = TRUE)
+    type2 <- data_type(dat[[df$eff2[i]]], num = TRUE)
+
+    if(type1 > type2) {
       temp <- df$eff1[i]
       df$eff1[i] <- df$eff2[i]
       df$eff2[i] <- temp
@@ -68,27 +87,6 @@ create_interactions <- function(effects, dat) {
   int <- paste0(df$eff1, ":", df$eff2)
 
   return(int)
-}
-
-sort_interactions <- function(interactions, dat) {
-  categorized <- list()
-
-  for(s in names(interactions)) {
-    ss <- strsplit(s, split = ':')[[1]]
-    col1 <- dat[[ss[1]]]
-    col2 <- dat[[ss[2]]]
-    if((is.double(col1) & is.double(col2)) |
-       (is.double(col1) & n_distinct(col2) == 2) |
-       (is.double(col2) & n_distinct(col1) == 2)) {
-      categorized$fixed_slope[[s]] <- interactions[[s]]
-    } else if (is.double(col2) & n_distinct(col1) > 2) {
-      categorized$varying_slope[[s]] <- interactions[[s]]
-    } else {
-      categorized$varying_intercept[[s]] <- interactions[[s]]
-    }
-  }
-
-  return(categorized)
 }
 
 interaction_levels <- function(levels1, levels2) {
@@ -105,6 +103,117 @@ interaction_levels <- function(levels1, levels2) {
   return(levels_interaction)
 }
 
+group_fixed <- function(fixed, dat) {
+  out <- list(
+    cat = list(),
+    bincont = list()
+  )
+
+  for(s in names(fixed)) {
+    if(data_type(dat[[s]]) == "cat") {
+      s_raw <- paste0(s, "_raw")
+      freq <- dat |>
+        select(all_of(c(s_raw, "total"))) |>
+        group_by(!!sym(s_raw)) |>
+        summarize(n = sum(total)) |>
+        arrange(n) |>
+        pull(!!sym(s_raw))
+
+      dummy <- paste0(s, ".", freq[2:length(freq)])
+      for(d in dummy) {
+        out$cat[[d]] <- fixed[[s]]
+      }
+    } else {
+      out$bincont[[s]] <- fixed[[s]]
+    }
+  }
+
+  return(out)
+}
+
+group_interactions <- function(interactions, dat) {
+  out <- list(
+    fixed_slope = list(),
+    varying_slope = list(),
+    varying_intercept = list(),
+    varying_intercept_special = list()
+  )
+
+  for(s in names(interactions)) {
+    ss <- strsplit(s, split = ':')[[1]]
+    type1 <- data_type(dat[[ss[1]]])
+    type2 <- data_type(dat[[ss[2]]])
+
+    # binary x continuous or continuous x continuous
+    if((type1 == "cont" & type2 == "cont") |
+       (type1 == "bin" & type2 == "bin") |
+       (type1 == "cont" & type2 == "bin") |
+       (type1 == "bin" & type2 == "cont")) {
+      out$fixed_slope[[s]] <- interactions[[s]]
+
+      # categorical x continuous
+    } else if (type1 == "cat" & type2 == "cont") {
+      out$varying_slope[[s]] <- interactions[[s]]
+
+      # categorical x categorical
+    } else if (type1 == "cat" & type2 == "cat") {
+      out$varying_intercept[[s]] <- interactions[[s]]
+
+      # binary x categorical
+    } else if (type1 == "bin" & type2 == "cat") {
+      out$varying_intercept_special[[s]] <- interactions[[s]]
+    } else {
+      print("Unrecognized interaction")
+    }
+  }
+
+  return(out)
+}
+
+group_effects <- function(effects, dat) {
+  out <- list()
+
+  # global intercept
+  out$Intercept <- effects$Intercept
+
+  # fixed main effects
+  out$fixed <- group_fixed(effects$fixed, dat)
+
+  # varying main effects
+  out$varying <- effects$varying
+
+  # interactions without structured priors
+  wo_struct <- effects$interaction[effects$interaction != "structured"]
+  out$interaction <- group_interactions(wo_struct, dat)
+
+  # interactions with structured priors
+  w_struct <- effects$interaction[effects$interaction == "structured"]
+  out$structured <- group_interactions(w_struct, dat)
+
+
+  return(out)
+}
+
+ungroup_effects <- function(effects) {
+  # for cleaner code
+  out <- list(
+    Intercept = effects$Intercept,
+    m_fix_bc = effects$fixed$bincont,
+    m_fix_c = effects$fixed$cat,
+    m_var = effects$varying,
+    i_fixsl = effects$interaction$fixed_slope,
+    i_varsl = effects$interaction$varying_slope,
+    i_varit = effects$interaction$varying_intercept,
+    i_varits = effects$interaction$varying_intercept_special,
+    s_varsl = effects$structured$varying_slope,
+    s_varit = effects$structured$varying_intercept,
+    s_varits = effects$structured$varying_intercept_special
+  )
+
+  return(out)
+}
+
+
 
 # Stan code and data generation functions
 data_ <- function(effects) {
@@ -118,16 +227,17 @@ data_ <- function(effects) {
   int<lower=0> K_pop;
   matrix[N_pop, K_pop] X_pop;"
 
-  for(s in names(effects$varying)) {
-    scode <- paste0(scode, stringr::str_interp("
+  for(s in names(effects$m_var)) {
+    scode <- paste0(scode, str_interp("
   int<lower=1> N_${s};
   array[N] int<lower=1, upper=N_${s}> J_${s};
   int<lower=1> N_${s}_pop;
   array[N_pop] int<lower=1, upper=N_${s}_pop> J_${s}_pop;"))
   }
 
-  for(s in gsub(':', '', names(effects$interaction$varying_intercept))) {
-    scode <- paste0(scode, stringr::str_interp("
+  int <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  for(s in gsub(':', '', names(int))) {
+    scode <- paste0(scode, str_interp("
   int<lower=1> N_${s};
   array[N] int<lower=1, upper=N_${s}> J_${s};
   int<lower=1> N_${s}_pop;
@@ -143,44 +253,50 @@ data_ <- function(effects) {
 }
 
 parameters_ <- function(effects) {
-  varying <- effects$varying
-  int_varslope <- effects$interaction$varying_slope
-  int_varint <- effects$interaction$varying_intercept
-
   scode <- "
   real Intercept;
   vector[K] beta;"
 
-  for(s in names(varying)) {
-    scode <- paste0(scode, stringr::str_interp("
+  # varying main effect
+  for(s in names(effects$m_var)) {
+    scode <- paste0(scode, str_interp("
   real<lower=0> lambda_${s};
   vector[N_${s}] z_${s};"))
   }
 
-  for(s in names(int_varslope)) {
-    ss <- strsplit(s, split = ':')[[1]]
-
-    if(int_varslope[[s]] != "structured") {
-      scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> lambda2_${ss[1]};"))
-    }
-
-    scode <- paste0(scode, stringr::str_interp("
-  vector[N_${ss[1]}] z2_${ss[1]};"))
-  }
-
-  for(s in names(int_varint)) {
+  # varying-intercept interaction without structured prior
+  for(s in names(c(effects$i_varit, effects$i_varits))) {
     v <- gsub(':', '', s)
-    if(int_varint[[s]] != "structured") {
-      scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> lambda_${v};"))
-    }
-
-    scode <- paste0(scode, stringr::str_interp("
+    scode <- paste0(scode, str_interp("
+  real<lower=0> lambda_${v};
   vector[N_${v}] z_${v};"))
   }
 
-  if("structured" %in% c(int_varint, int_varslope)) {
+  # varying-slope interaction without structured prior
+  for(s in names(effects$i_varsl)) {
+    ss <- strsplit(s, split = ':')[[1]]
+    scode <- paste0(scode, str_interp("
+  real<lower=0> lambda2_${ss[1]};
+  vector[N_${ss[1]}] z2_${ss[1]};"))
+  }
+
+  # varying-intercept interaction with structured prior
+  for(s in names(c(effects$s_varit, effects$s_varits))) {
+    v <- gsub(':', '', s)
+    scode <- paste0(scode, str_interp("
+  vector[N_${v}] z_${v};"))
+  }
+
+  # varying-slope interaction with structured prior
+  for(s in names(effects$s_varsl)) {
+    ss <- strsplit(s, split = ':')[[1]]
+    scode <- paste0(scode, str_interp("
+  vector[N_${ss[1]}] z2_${ss[1]};"))
+  }
+
+  # include the parameters below if structured prior is used
+  int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
+  if(length(int_struct) > 0) {
     scode <- paste0(scode, "
   real<lower=0> tau;
   real<lower=0> delta;")
@@ -190,99 +306,109 @@ parameters_ <- function(effects) {
 }
 
 transformed_parameters_ <- function(effects) {
-  fixed <- effects$fixed
-  varying <- effects$varying
-  int_varslope <- effects$interaction$varying_slope
-  int_varint <- effects$interaction$varying_intercept
-
   scode <- ""
 
   struct_effects <- c(
-    names(int_varslope)[int_varslope == "structured"] |>
-      purrr::map(function(s) strsplit(s, ':')[[1]][1]),
-    names(int_varint)[int_varint == "structured"] |>
-      purrr::map(function(s) strsplit(s, ':')[[1]]) %>%
+    names(effects$s_varsl) |>
+      map(function(s) strsplit(s, ':')[[1]][1]),
+    names(c(effects$s_varit, effects$s_varits)) |>
+      map(function(s) strsplit(s, ':')[[1]]) %>%
       do.call(c, .)
   )
 
-  for(s in names(varying)) {
+  # varying main effects
+  for(s in names(effects$m_var)) {
     if(s %in% struct_effects) {
-      scode <- paste0(scode, stringr::str_interp("
+      scode <- paste0(scode, str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s} * tau;"))
     } else {
-      scode <- paste0(scode, stringr::str_interp("
+      scode <- paste0(scode, str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s};"))
     }
 
-    scode <- paste0(scode, stringr::str_interp("
+    scode <- paste0(scode, str_interp("
   vector[N_${s}] a_${s} = z_${s} * scaled_lambda_${s};"))
   }
 
-  for(s in names(int_varint)) {
-    ss <- strsplit(s, split = ':')[[1]]
-    v <- paste0(ss[1], ss[2])
-    if(int_varint[[s]] == "structured") {
-      if(ss[1] == "sex") {
-        scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> lambda_${v} = lambda_${ss[2]} * delta * tau;"))
-      } else if(ss[2] == "sex") {
-        scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> lambda_${v} = lambda_${ss[1]} * delta * tau;"))
-      } else {
-        scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> lambda_${v} = lambda_${ss[1]} * lambda_${ss[2]} * delta * tau;"))
-      }
-    }
-
-    scode <- paste0(scode, stringr::str_interp("
+  # varying-intercept interaction without structured prior
+  for(s in names(c(effects$i_varit, effects$i_varits))) {
+    v <- gsub(':', '', s)
+    scode <- paste0(scode, str_interp("
   vector[N_${v}] a_${v} = z_${v} * lambda_${v};"))
   }
 
-  for(s in names(int_varslope)) {
+  # varying-slope interaction without structured prior
+  for(s in names(effects$i_varsl)) {
     ss <- strsplit(s, split = ':')[[1]]
-    if(int_varslope[[s]] == "structured") {
-      scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> lambda2_${ss[1]} = lambda_${ss[1]} * delta * tau;"))
-    }
-
-    scode <- paste0(scode, stringr::str_interp("
+    scode <- paste0(scode, str_interp("
   vector[N_${ss[1]}] b_${ss[1]} = z2_${ss[1]} * lambda2_${ss[1]};"))
   }
+
+  # varying-intercept interaction with structured prior
+  for(s in names(c(effects$s_varit))) {
+    ss <- strsplit(s, split = ':')[[1]]
+    v <- paste0(ss[1], ss[2])
+    scode <- paste0(scode, str_interp("
+  real<lower=0> lambda_${v} = lambda_${ss[1]} * lambda_${ss[2]} * delta * tau;
+  vector[N_${v}] a_${v} = z_${v} * lambda_${v};"))
+  }
+
+  # varying-intercept interaction with structured prior (with binary variable)
+  for(s in names(c(effects$s_varits))) {
+    ss <- strsplit(s, split = ':')[[1]]
+    v <- paste0(ss[1], ss[2])
+    scode <- paste0(scode, str_interp("
+  real<lower=0> lambda_${v} = lambda_${ss[2]} * delta * tau;
+  vector[N_${v}] a_${v} = z_${v} * lambda_${v};"))
+  }
+
+  # varying-slope interaction with structured prior
+  for(s in names(effects$s_varsl)) {
+    ss <- strsplit(s, split = ':')[[1]]
+    scode <- paste0(scode, str_interp("
+  real<lower=0> lambda2_${ss[1]} = lambda_${ss[1]} * delta * tau;
+  vector[N_${ss[1]}] b_${ss[1]} = z2_${ss[1]} * lambda2_${ss[1]};"))
+  }
+
+
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  int_varsl <- c(effects$i_varsl, effects$s_varsl)
 
   scode <- paste0(scode, sprintf("
   vector<lower=0, upper=1>[N] p = inv_logit(Intercept + X * beta%s%s%s);
   vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);",
-  paste(purrr::map(names(varying), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
-  paste(purrr::map(gsub(':', '', names(int_varint)), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
-  paste(purrr::map(names(int_varslope), function(s) {
+  paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
+  paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
+  paste(map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    return(stringr::str_interp(" + b_${ss[1]}[J_${ss[1]}] .* X[:, ${which(names(fixed) == ss[2])}]"))
+    return(str_interp(" + b_${ss[1]}[J_${ss[1]}] .* X[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
   }), collapse = "")))
 
   return(scode)
 }
 
 model_ <- function(effects) {
-  fixed <- c(effects$fixed, effects$interaction$fixed_slope)
-  varying <- effects$varying
-  int_varslope <- effects$interaction$varying_slope
-  int_varslope_nostruct <- int_varslope[int_varslope != "structured"]
-  int_varint <- effects$interaction$varying_intercept
-  int_varint_nostruct <- int_varint[int_varint != "structured"]
+  fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
+  int_varsl <- c(effects$i_varsl, effects$s_varsl)
+  int_varsl_wo_struct <- effects$i_varsl
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  int_varit_wo_struct <- c(effects$i_varit, effects$i_varits)
 
   scode <- paste0("
   y ~ binomial(n_sample, p_sample);",
-  stringr::str_interp("\n  Intercept ~ ${effects$Intercept};"),
-  if(!is.null(fixed)) paste(purrr::map(1:length(fixed), ~ stringr::str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
-  paste(purrr::map(names(varying), ~ stringr::str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
-  paste(purrr::map(names(int_varint), ~ stringr::str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
-  paste(purrr::map(names(int_varslope), ~ stringr::str_interp("\n  z2_${strsplit(.x, split = ':')[[1]][1]} ~ std_normal();")), collapse = ""),
-  paste(purrr::map(names(varying), ~ stringr::str_interp("\n  lambda_${.x} ~ ${varying[[.x]]};")), collapse = ""),
-  paste(purrr::map(names(int_varint_nostruct), ~ stringr::str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varint[[.x]]};")), collapse = ""),
-  paste(purrr::map(names(int_varslope_nostruct), ~ stringr::str_interp("\n  lambda2_${strsplit(.x, split = ':')[[1]][1]} ~ ${int_varslope[[.x]]};")), collapse = "")
+  str_interp("\n  Intercept ~ ${effects$Intercept$Intercept};"),
+  if(length(fixed) > 0) paste(map(1:length(fixed), ~ str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
+  paste(map(names(effects$m_var), ~ str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
+  paste(map(names(int_varit), ~ str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
+  paste(map(names(int_varsl), ~ str_interp("\n  z2_${strsplit(.x, split = ':')[[1]][1]} ~ std_normal();")), collapse = ""),
+  paste(map(names(effects$m_var), ~ str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
+  paste(map(names(int_varit_wo_struct), ~ str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varit[[.x]]};")), collapse = ""),
+  paste(map(names(int_varsl_wo_struct), ~ str_interp("\n  lambda2_${strsplit(.x, split = ':')[[1]][1]} ~ ${int_varsl[[.x]]};")), collapse = "")
   )
 
-  if("structured" %in% c(int_varslope, int_varint)) {
+  # include the parameters below if structured prior is used
+  int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
+  if(length(int_struct) > 0) {
     scode <- paste0(scode, "
   tau ~ cauchy(0 , 1);
   delta ~ normal(0, 1);")
@@ -292,16 +418,12 @@ model_ <- function(effects) {
 }
 
 generated_quantities_ <- function(effects) {
-  fixed <- effects$fixed
-  varying <- effects$varying
-  int_varslope <- effects$interaction$varying_slope
-  int_varint <- effects$interaction$varying_intercept
-
-
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  int_varsl <- c(effects$i_varsl, effects$s_varsl)
   scode <- ""
 
-  for(s in gsub(':', '', names(int_varint))) {
-    scode <- paste0(scode, stringr::str_interp("
+  for(s in gsub(':', '', names(int_varit))) {
+    scode <- paste0(scode, str_interp("
   vector[N_${s}_pop] a_${s}_pop;
   if(N_${s} == N_${s}_pop) {
     a_${s}_pop = a_${s};
@@ -311,14 +433,13 @@ generated_quantities_ <- function(effects) {
   }"))
   }
 
-
   scode <- paste0(scode, sprintf("
   vector<lower=0, upper=1>[N_pop] p_pop = inv_logit(Intercept + X_pop * beta%s%s%s);",
-  paste(purrr::map(names(varying), ~ stringr::str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = ""),
-  paste(purrr::map(gsub(':', '', names(int_varint)), ~ stringr::str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = ""),
-  paste(purrr::map(names(int_varslope), function(s) {
+  paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = ""),
+  paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = ""),
+  paste(map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    return(stringr::str_interp(" + b_${ss[1]}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(fixed) == ss[2])}]"))
+    return(str_interp(" + b_${ss[1]}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
   }), collapse = "")))
 
 
@@ -334,7 +455,7 @@ generated_quantities_ <- function(effects) {
 
 make_stancode <- function(effects) {
 
-  scode <- stringr::str_interp("
+  scode <- str_interp("
 data { ${data_(effects)}
 }
 
@@ -358,10 +479,9 @@ make_standata <- function(
   input_data,
   new_data,
   effects,
-  sens = 0.7,
-  spec = 0.999
+  sens,
+  spec
 ) {
-
   stan_data <- list(
     N = nrow(input_data),
     N_pop = nrow(new_data),
@@ -380,34 +500,49 @@ make_standata <- function(
     dat <- holder[[name]]
     subfix <- if(name == "input") '' else "_pop"
 
-    # fixed effects & interaction between fixed effects
-    X <- dat |> select(all_of(names(effects$fixed)))
-    for(s in names(effects$interaction$fixed_slope)) {
-      ss <- strsplit(s, split = ':')[[1]]
-      X[[s]] <- dat[[ss[1]]] * dat[[ss[2]]]
-    }
+    # fixed main effects (continuous & binary)
+    X_cont <- dat |>
+      select(all_of(names(effects$m_fix_bc))) |>
+      data.matrix()
 
-    stan_data[[paste0('X', subfix)]] <- data.matrix(X)
+    # fixed main effects (categorical)
+    X_cat <- map(names(effects$m_fix_c), function(s) {
+      ss <- strsplit(s, split = '\\.')[[1]]
+      return(as.integer(dat[[paste0(ss[1], "_raw")]] == ss[2]))
+    }) %>%
+      do.call(cbind, .)
+
+    # interaction between fixed effects
+    X_int <- map(names(effects$i_fixsl), function(s) {
+      ss <- strsplit(s, split = ':')[[1]]
+      return(dat[[ss[1]]] * dat[[ss[2]]])
+    }) %>%
+      do.call(cbind, .)
+
+    # all fixed effects
+    X <- cbind(X_cont, X_cat, X_int)
+    stan_data[[paste0('X', subfix)]] <- X
     stan_data[[paste0('K', subfix)]] <- ncol(X)
 
-    # varying effects
-    for(s in names(effects$varying)) {
-      stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
-      stan_data[[stringr::str_interp("J_${s}${subfix}")]] <- dat[[s]]
+    # varying main effects
+    for(s in names(c(effects$m_var))) {
+      stan_data[[str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
+      stan_data[[str_interp("J_${s}${subfix}")]] <- dat[[s]]
     }
 
     # interactions
-    for(s in names(effects$interaction$varying_intercept)) {
+    int <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+    for(s in names(int)) {
       ss <- strsplit(s, split = ':')[[1]]
       v <- paste0(ss[1], ss[2])
       int_lvls <- interaction_levels(dat[[ss[1]]], dat[[ss[2]]])
       unq_int_lvls <- sort(unique(int_lvls))
       n_int_lvls <- length(unq_int_lvls)
-      stan_data[[stringr::str_interp("N_${v}${subfix}")]] <- n_int_lvls
-      stan_data[[stringr::str_interp("J_${v}${subfix}")]] <- factor(int_lvls, levels = unq_int_lvls, labels = 1:n_int_lvls) |> as.numeric()
+      stan_data[[str_interp("N_${v}${subfix}")]] <- n_int_lvls
+      stan_data[[str_interp("J_${v}${subfix}")]] <- factor(int_lvls, levels = unq_int_lvls, labels = 1:n_int_lvls) |> as.numeric()
 
       if(name == "input") {
-        stan_data[[stringr::str_interp("I_${v}")]] <- unq_int_lvls
+        stan_data[[str_interp("I_${v}")]] <- unq_int_lvls
       }
     }
   }
@@ -419,18 +554,24 @@ run_stan <- function(
   input_data,
   new_data,
   effects,
-  n_iter,
-  n_chains,
-  sens,
-  spec,
-  stan_path = "model_temp.stan"
+  n_iter = 1000,
+  n_chains = 4,
+  sens = 0.7,
+  spec = 0.999,
+  code_fout = NULL
 ) {
 
   stan_code <- make_stancode(effects)
   stan_data <- make_standata(input_data, new_data, effects, sens, spec)
 
-  writeLines(stan_code, stan_path)
-  mod <- cmdstanr::cmdstan_model(stan_path, cpp_options = list(stan_threads = TRUE))
+  if(!is.null(code_fout)) {
+    writeLines(stan_code, code_fout)
+  }
+
+  mod <- cmdstanr::cmdstan_model(
+    stan_file = cmdstanr::write_stan_file(stan_code),
+    cpp_options = list(stan_threads = TRUE)
+  )
 
   fit <- mod$sample(
     data = stan_data,
@@ -442,6 +583,11 @@ run_stan <- function(
     refresh = n_iter / 10
   )
 
+
+  return(list(fit, stan_code))
+}
+
+extract_predict <- function(fit, ppc_samples=10) {
   pred_mat <- fit$draws(
     variables = "p_pop",
     format = "draws_matrix"
@@ -453,47 +599,44 @@ run_stan <- function(
     format = "draws_matrix"
   )|> t()
 
-  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), 10)]
+  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), ppc_samples)]
 
-
-  return(list(fit, pred_mat, yrep_mat, stan_code))
+  return(list(pred_mat, yrep_mat))
 }
 
 extract_parameters <- function(fit, effects) {
-  main_fixed <- effects$fixed
-  main_varying <- effects$varying
-  int_fixed <- effects$interaction$fixed_slope
-  int_varslope <- effects$interaction$varying_slope
-  int_varint <- effects$interaction$varying_intercept
+  fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  int_varsl <- c(effects$i_varsl, effects$s_varsl)
 
-  # data for fixed-effect table
+  # fixed main effects + fixed-slope interaction
   df_fixed <- data.frame()
-  if(length(main_fixed) > 0) {
+  if(length(fixed) > 0) {
     df_fixed <- fit$summary(variables = c("Intercept", "beta")) |>
       select(mean, sd, q5, q95, rhat, ess_bulk, ess_tail) |>
       as.data.frame()
 
     names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "Convergence", "Bulk_ESS", "Tail_ESS")
-    row.names(df_fixed) <- c("Intercept", names(main_fixed), names(int_fixed))
+    row.names(df_fixed) <- c("Intercept", names(fixed))
   }
 
-  # data for varying-effect table
+  # varying effects
   df_varying <- data.frame()
   row_names <- c()
 
-  if(length(main_varying) > 0) {
-    df_varying <- rbind(df_varying, fit$summary(variables = paste0("scaled_lambda_", names(main_varying))))
-    row_names <- c(row_names, paste0(names(main_varying), " (intercept)"))
+  if(length(effects$m_var)) {
+    df_varying <- rbind(df_varying, fit$summary(variables = paste0("scaled_lambda_", names(effects$m_var))))
+    row_names <- c(row_names, paste0(names(effects$m_var), " (intercept)"))
   }
 
-  if(length(int_varint) > 0) {
-    df_varying <- rbind(df_varying, fit$summary(variables = paste0("lambda_", gsub(':', '', names(int_varint)))))
-    row_names <- c(row_names, paste0(names(int_varint), " (intercept)"))
+  if(length(int_varit) > 0) {
+    df_varying <- rbind(df_varying, fit$summary(variables = paste0("lambda_", gsub(':', '', names(int_varit)))))
+    row_names <- c(row_names, paste0(names(int_varit), " (intercept)"))
   }
 
-  if(length(int_varslope) > 0) {
-    df_varying <- rbind(df_varying, fit$summary(variables = paste0("lambda2_", unlist(purrr::map(names(int_varslope), function(s) strsplit(s, split = ':')[[1]][1])))))
-    row_names <- c(row_names, paste0(names(int_varslope), " (slope)"))
+  if(length(int_varsl) > 0) {
+    df_varying <- rbind(df_varying, fit$summary(variables = paste0("lambda2_", sapply(names(int_varsl), function(s) strsplit(s, split = ':')[[1]][1]))))
+    row_names <- c(row_names, paste0(names(int_varsl), " (slope)"))
   }
 
   if(nrow(df_varying) > 0) {

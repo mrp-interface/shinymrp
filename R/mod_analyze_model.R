@@ -253,7 +253,7 @@ mod_analyze_model_server <- function(id, global){
             inputId = "interaction",
             choices = create_interactions(
               c(input$fixed, input$varying),
-              global$mrp$input_stan
+              global$mrp$input
             )
           )
         }
@@ -277,6 +277,32 @@ mod_analyze_model_server <- function(id, global){
 
       })
     })
+
+
+    observe({
+      purrr::map(1:(length(buffer()) + 1), function(i) {
+        observeEvent(input[[paste0("prior_dist_", i)]], {
+          if(input[[paste0("prior_dist_", i)]] == "structured") {
+            interaction <- setNames(as.list(input$interaction), input$interaction)
+            interaction <- group_interactions(interaction, global$mrp$input)
+            interaction <- c(interaction$varying_slope, interaction$varying_intercept)
+
+            updateVirtualSelect(
+              inputId = paste0("prior_eff_", i),
+              choices = list(
+                "Intercept" = c(),
+                "Fixed Effect" = c(),
+                "Varying Effect" = c(),
+                "Interaction" = if(length(interaction) > 0) setNames(paste0("interaction_", interaction), interaction)
+              )
+            )
+          }
+        })
+      })
+    })
+
+
+
 
    output$prior_spec_ui <- renderUI({
       holder <- buffer()
@@ -496,8 +522,6 @@ mod_analyze_model_server <- function(id, global){
                 }
               }
 
-              all_priors$interaction <- sort_interactions(all_priors$interaction, global$mrp$input_stan)
-
               if(!("structured" %in% c(all_priors$Intercept, all_priors$fixed, all_priors$varying, all_priors$interaction$fixed_slope))) {
                 waiter::waiter_show(
                   html = waiter_ui("fit"),
@@ -512,19 +536,34 @@ mod_analyze_model_server <- function(id, global){
                 model$n_iter <- n_iter
                 model$n_chains <- n_chains
 
+                # convert non-numeric categorical data to numeric for Stan
+                if(global$covid) {
+                  input_data = stan_factor_covid(global$mrp$input, global$static$levels$covid)
+                  new_data = stan_factor_covid(global$mrp$new, global$static$levels$covid)
+                } else {
+                  input_data = stan_factor_poll(global$mrp$input, global$static$levels$poll)
+                  new_data = stan_factor_poll(global$mrp$new, global$static$levels$poll)
+                }
+
+                # classify effects
+                all_priors <- all_priors |> group_effects(input_data) |> ungroup_effects()
+
                 # fit model
-                c(fit, pred_mat, yrep_mat, model$code) %<-% run_stan(
-                  input_data = global$mrp$input_stan,
-                  new_data = global$mrp$new_stan,
+                c(fit, model$code) %<-% run_stan(
+                  input_data = input_data,
+                  new_data = new_data,
                   effects = all_priors,
                   n_iter = model$n_iter,
                   n_chains = model$n_chains,
                   sens = if(global$covid) input$sens_kb else 1,
-                  spec = if(global$covid) input$spec_kb else 1
+                  spec = if(global$covid) input$spec_kb else 1,
+                  code_fout = "/Users/tntoan/Downloads/model.stan"
                 )
 
                 c(model$fixed, model$varying) %<-% extract_parameters(fit, all_priors)
+                c(pred_mat, yrep_mat) %<-% extract_predict(fit)
                 model$loo <- fit$loo()
+
 
                 # data for prediction plots
                 for(v in names(global$mrp$levels)) {
@@ -683,7 +722,8 @@ mod_analyze_model_server <- function(id, global){
                     writeLines(model$code, file)
                   }
                 )
-
+                model$pstrat <- global$mrp$new
+                model_global <<- model
                 global$models[[model_name]] <- model
                 global$model_count <- global$model_count + 1
                 waiter::waiter_hide()

@@ -9,7 +9,7 @@ app_server <- function(input, output, session) {
   options(shiny.maxRequestSize = 200*1024^2)
 
   # set ggplot2 theme
-  ggplot2::theme_set(theme_bw(base_family = "Arial", base_size = 18))
+  ggplot2::theme_set(theme_light(base_family = "Arial", base_size = 18))
 
   global <- reactiveValues(
     web_version = FALSE,
