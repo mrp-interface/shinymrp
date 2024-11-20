@@ -17,8 +17,7 @@ mod_home_ui <- function(id){
         tags$div(class = "panel panel-primary landing_panel",
           tags$div(class = "panel-heading landing_panel_heading", "Spatio-temporal Data"),
           tags$div(class = "panel-body landing_panel_body",
-            tags$p("Collected over time and by geography", style = "font-style: italic"),
-            tags$p(tags$u("Example"), ": COVID-19 hospital test records"),
+            tags$p("Collected over time and by geography", style = "font-style: italic; text-align: center;"),
             actionButton(
               inputId = ns("set_covid"),
               label = "Start"
@@ -28,8 +27,7 @@ mod_home_ui <- function(id){
         tags$div(class = "panel panel-primary landing_panel",
           tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data"),
           tags$div(class = "panel-body landing_panel_body",
-            tags$p("Collected at a single time point", style = "font-style: italic"),
-            tags$p(tags$u("Example"), ": the Cooperative Election Study data"),
+            tags$p("Collected at a single time point", style = "font-style: italic;  text-align: center;"),
             actionButton(
               inputId = ns("set_poll"),
               label = "Start"

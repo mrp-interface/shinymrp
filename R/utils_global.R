@@ -18,5 +18,6 @@ module_ids <- list(
     preprocess = "learn_preprocess",
     mrp = "learn_mrp"
   ),
-  about = "about"
+  about = "about",
+  persist = "persist"
 )

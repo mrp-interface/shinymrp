@@ -50,14 +50,6 @@ mod_analyze_visualize_server <- function(id, global){
               ),
               tabPanel("Geographic Characteristics",
                 tabsetPanel(
-                  tabPanel("Urbanicity",
-                    column(width = 9,
-                      plotOutput(outputId = ns("geo_urban_plot"))
-                    ),
-                    column(width = 3,
-                      DT::dataTableOutput(outputId = ns("geo_urban_table"))
-                    )
-                  ),
                   tabPanel("Education",
                     column(width = 9,
                       plotOutput(outputId = ns("geo_edu_plot"))
@@ -90,7 +82,14 @@ mod_analyze_visualize_server <- function(id, global){
                       DT::dataTableOutput(outputId = ns("geo_income_table"))
                     )
                   ),
-
+                  tabPanel("Urbanicity",
+                    column(width = 9,
+                      plotOutput(outputId = ns("geo_urban_plot"))
+                    ),
+                    column(width = 3,
+                      DT::dataTableOutput(outputId = ns("geo_urban_table"))
+                    )
+                  ),
                   tabPanel("ADI",
                     column(width = 9,
                       plotOutput(outputId = ns("geo_adi_plot"))
