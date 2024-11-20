@@ -157,11 +157,22 @@
     top: 96%;
     left: 94%;
     z-index: 1000;
-    float: right;
     width: 5.8%;
   }
 
   .footnote {
+    float: right;
+  }
+  
+  .help_btn_container {
+    position: fixed;
+    top: 94.5%;
+    left: 96.5%;
+    z-index: 1000;
+    width: 5.8%;
+  }
+
+  .help_btn {
     float: right;
   }
 

@@ -12,11 +12,11 @@ mod_analyze_upload_ui <- function(id){
   tags$div(class = "pad_top",
     sidebarLayout(
       sidebarPanel(width = 3,
-        tags$p("Indicate input data format then select a file (CSV/Excel/SAS)"),
+        tags$p("Upload individual-level or aggregated data (examples below)"),
         shinyWidgets::radioGroupButtons(
             inputId = ns("toggle_input"),
             label = NULL,
-            choices = c("Individual Data" = "indiv", "Aggregated Data" = "agg"),
+            choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
             selected = "agg",
             justified = TRUE,
             size = "sm",
@@ -30,8 +30,24 @@ mod_analyze_upload_ui <- function(id){
           label = NULL,
           accept = c(".csv", ".xlsx", ".sas7bdat")
         ),
-        tags$div(class = "pad_bottom",
-          HTML("<details><summary class=summary>Example</summary>"),
+        tags$p(class = "ref",
+          "For ", tags$u("requirements for input data"), "and preprocessing code, open the",
+          actionLink(
+            inputId = ns("open_guide"),
+            label = "Guide",
+            class = "action_link"
+          ),
+          "window. For a detailed description of the prepropressing procedure, go to the",
+          actionLink(
+            inputId = ns("to_preprocess"),
+            label = "Preprocessing",
+            class = "action_link"
+          ),
+          "page."
+        ),
+        tags$hr(class = "break_line"),
+        tags$div(class = "pad_top",
+          uiOutput(ns("example_text")),
           tags$div(class = "justify pad_top",
             actionButton(
               inputId = ns("use_indiv_example"),
@@ -45,23 +61,7 @@ mod_analyze_upload_ui <- function(id){
               icon = icon("table", class = "fa button_icon"),
               width = "49.5%"
             ),
-          ),
-          HTML("</details>"),
-        ),
-        tags$p(class = "ref",
-          "For ", tags$u("requirements for input data"), "and preprocessing code, go to the",
-          actionLink(
-            inputId = ns("to_interface"),
-            label = "Interface",
-            class = "action_link"
-          ),
-          "page. For a detailed description of the prepropressing procedure, go to the",
-          actionLink(
-            inputId = ns("to_preprocess"),
-            label = "Preprocessing",
-            class = "action_link"
-          ),
-          "page."
+          )
         )
       ),
       mainPanel(width = 9,
@@ -114,6 +114,14 @@ mod_analyze_upload_server <- function(id, global){
       global$plotdata <- NULL
     })
 
+    output$example_text <- renderUI({
+      if(global$covid) {
+        tags$p("Example: COVID-19 hospital test records")
+      } else {
+        tags$p("Example: The Cooperative Election Study data")
+      }
+    })
+    
     output$main_panel <- renderUI({
       req(rawdata())
 
@@ -132,10 +140,10 @@ mod_analyze_upload_server <- function(id, global){
           tags$p("*The table only shows a subset of the data")
         ),
         DT::dataTableOutput(outputId = ns("table")),
-        downloadButton(
-          outputId = ns("download_data"),
-          label = "Download"
-        )
+        # downloadButton(
+        #   outputId = ns("download_data"),
+        #   label = "Download"
+        # )
       )
     })
 
@@ -463,11 +471,8 @@ mod_analyze_upload_server <- function(id, global){
 
     })
 
-    observeEvent(input$to_interface, {
-      updateNavbarPage(global$session,
-        inputId = "navbar",
-        selected = "nav_learn_interface"
-      )
+    observeEvent(input$open_guide, {
+      show_guide("upload_data", session)
     })
 
     observeEvent(input$to_preprocess, {
@@ -477,18 +482,24 @@ mod_analyze_upload_server <- function(id, global){
       )
     })
 
-    output$download_data <- downloadHandler(
-      filename = function() { if(input$toggle_table == "raw") "raw_data.csv" else "preprocessed_data.csv" },
-      content = function(file) {
-        df <- if(input$toggle_table == "raw") rawdata() else global$data
-
-        if(is.null(df)) {
-          readr::write_csv(data.frame(), file)
-        } else {
-          readr::write_csv(df, file)
-        }
-
-      }
-    )
+    # output$download_data <- downloadHandler(
+    #   filename = function() {
+    #     if(input$toggle_table == "raw") {
+    #       "raw_data.csv"
+    #     } else {
+    #       "preprocessed_data.csv"
+    #     }
+    #   },
+    #   content = function(file) {
+    #     df <- if(input$toggle_table == "raw") rawdata() else global$data
+    # 
+    #     if(is.null(df)) {
+    #       readr::write_csv(data.frame(), file)
+    #     } else {
+    #       readr::write_csv(df, file)
+    #     }
+    # 
+    #   }
+    # )
   })
 }

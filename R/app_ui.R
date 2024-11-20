@@ -40,10 +40,10 @@ app_ui <- function(request) {
       ),
       navbarMenu("Learn",
         icon = icon("book", lib = "glyphicon"),
-        tabPanel("Interface",
-          value = "nav_learn_interface",
-          mod_learn_interface_ui(module_ids$learn$interface)
-        ),
+        # tabPanel("Interface",
+        #   value = "nav_learn_interface",
+        #   mod_learn_interface_ui(module_ids$learn$interface)
+        # ),
         tabPanel("Preprocess",
           value = "nav_learn_preprocess",
           mod_learn_preprocess_ui(module_ids$learn$preprocess)
@@ -59,15 +59,7 @@ app_ui <- function(request) {
         mod_about_ui(module_ids$about)
       )
     ),
-    tags$div(class = "feedback_container",
-      tags$a(
-        "Feedback",
-        href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
-        target = "_blank",
-        class = "btn btn-info feedback"
-      )
-    )
-
+    mod_persist_ui(module_ids$persist)
   )
 }
 

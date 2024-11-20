@@ -75,6 +75,7 @@ app_server <- function(input, output, session) {
   )
 
   mod_home_server(module_ids$home, global)
+  mod_persist_server(module_ids$persist,)
   mod_analyze_upload_server(module_ids$analyze$upload, global)
   mod_analyze_visualize_server(module_ids$analyze$visualize, global)
   mod_analyze_model_server(module_ids$analyze$model, global)

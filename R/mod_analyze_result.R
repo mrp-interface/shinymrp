@@ -120,19 +120,19 @@ mod_analyze_result_server <- function(id, global){
                 )
               )
             ),
-            tags$div(class = "footnote_container",
-              tags$div(class = "footnote",
-                shinyWidgets::dropdown(
-                  icon = icon("info-sign", lib = "glyphicon"),
-                  label = "Note",
-                  up = TRUE,
-                  right = TRUE,
-                  circle = TRUE,
-                  width = "200%",
-                  tags$p("The shaded areas represent ±1 SD of uncertainty")
-                )
-              )
-            )
+            # tags$div(class = "footnote_container",
+            #   tags$div(class = "footnote",
+            #     shinyWidgets::dropdown(
+            #       icon = icon("info-sign", lib = "glyphicon"),
+            #       label = "Note",
+            #       up = TRUE,
+            #       right = TRUE,
+            #       circle = TRUE,
+            #       width = "200%",
+            #       tags$p("The shaded areas represent ±1 SD of uncertainty")
+            #     )
+            #   )
+            # )
           )
         })
 
@@ -246,19 +246,19 @@ mod_analyze_result_server <- function(id, global){
                 )
               )
             ),
-            tags$div(class = "footnote_container",
-              tags$div(class = "footnote",
-                shinyWidgets::dropdown(
-                  icon = icon("info-sign", lib = "glyphicon"),
-                  label = "Note",
-                  up = TRUE,
-                  right = TRUE,
-                  circle = TRUE,
-                  width = "200%",
-                  tags$p("The error bars represent ±1 SD of uncertainty")
-                )
-              )
-            )
+            # tags$div(class = "footnote_container",
+            #   tags$div(class = "footnote",
+            #     shinyWidgets::dropdown(
+            #       icon = icon("info-sign", lib = "glyphicon"),
+            #       label = "Note",
+            #       up = TRUE,
+            #       right = TRUE,
+            #       circle = TRUE,
+            #       width = "200%",
+            #       tags$p("The error bars represent ±1 SD of uncertainty")
+            #     )
+            #   )
+            # )
           )
         })
 
