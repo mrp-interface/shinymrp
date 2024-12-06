@@ -585,7 +585,7 @@ mod_analyze_model_server <- function(id, global){
 
                 # classify effects
                 all_priors <- all_priors |> group_effects(input_data) |> ungroup_effects()
-                print(all_priors)
+
                 # fit model
                 c(fit, model$code) %<-% run_stan(
                   input_data = input_data,
