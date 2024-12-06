@@ -31,13 +31,13 @@ mod_analyze_upload_ui <- function(id){
           accept = c(".csv", ".xlsx", ".sas7bdat")
         ),
         tags$p(class = "ref",
-          "For ", tags$u("requirements for input data"), "and preprocessing code, open the",
+          "For ", tags$u("requirements for input data"), "and preprocessing code, open",
           actionLink(
-            inputId = ns("open_guide"),
-            label = "Guide",
+            inputId = ns("show_upload_guide"),
+            label = "Guide.",
             class = "action_link"
           ),
-          "window. For a detailed description of the prepropressing procedure, go to the",
+          "For a detailed description of the prepropressing procedure, go to the",
           actionLink(
             inputId = ns("to_preprocess"),
             label = "Preprocessing",
@@ -45,19 +45,25 @@ mod_analyze_upload_ui <- function(id){
           ),
           "page."
         ),
-        tags$hr(class = "break_line"),
-        tags$div(class = "pad_top",
-          uiOutput(ns("example_text")),
+        tags$div(style = "margin-top: 25px",
+          conditionalPanel(
+            condition = "output.covid",
+            tags$p("Example: COVID-19 hospital test records")
+          ),
+          conditionalPanel(
+            condition = "!output.covid",
+            tags$p("Example: The Cooperative Election Study data")
+          ),
           tags$div(class = "justify pad_top",
             actionButton(
               inputId = ns("use_indiv_example"),
-              label = "Invididual data",
+              label = "Invididual-level",
               icon = icon("table", class = "fa button_icon"),
               width = "49.5%"
             ),
             actionButton(
               inputId = ns("use_agg_example"),
-              label = "Aggregated data",
+              label = "Aggregated",
               icon = icon("table", class = "fa button_icon"),
               width = "49.5%"
             ),
@@ -113,18 +119,10 @@ mod_analyze_upload_server <- function(id, global){
       global$mrp <- NULL
       global$plotdata <- NULL
     })
-
-    output$example_text <- renderUI({
-      if(global$covid) {
-        tags$p("Example: COVID-19 hospital test records")
-      } else {
-        tags$p("Example: The Cooperative Election Study data")
-      }
-    })
     
     output$main_panel <- renderUI({
       req(rawdata())
-
+      
       tagList(
         tags$div(class = "justify",
           shinyWidgets::radioGroupButtons(
@@ -137,13 +135,9 @@ mod_analyze_upload_server <- function(id, global){
             )
           ),
           shinyBS::bsTooltip(ns("toggle_table"), "\"Preprocessed\" table only shows when data has been preprocessed properly", placement = "right"),
-          tags$p("*The table only shows a subset of the data")
+          tags$p(sprintf("*The preview only includes the first %d rows of the data", GLOBAL$ui$preview_size))
         ),
-        DT::dataTableOutput(outputId = ns("table")),
-        # downloadButton(
-        #   outputId = ns("download_data"),
-        #   label = "Download"
-        # )
+        DT::dataTableOutput(outputId = ns("table"))
       )
     })
 
@@ -152,11 +146,12 @@ mod_analyze_upload_server <- function(id, global){
       df <- if(input$toggle_table == "raw") rawdata() else global$data
 
       df |>
-        head(100) |>
+        head(GLOBAL$ui$preview_size) |>
         DT::datatable(
           options = list(
             scrollX = TRUE,
-            lengthChange = FALSE
+            lengthChange = FALSE,
+            searching = FALSE
           )
         )
     })
@@ -190,11 +185,11 @@ mod_analyze_upload_server <- function(id, global){
         out <- try({
           if(global$covid) {
             global$data <- rawdata() |>
-              aggregate_covid(age_bounds = global$static$bounds$covid$age) |>
+              aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
               prep(list(), to_char = c("zip"))
           } else {
             global$data <- rawdata() |>
-              aggregate_poll(age_bounds = global$static$bounds$poll$age)
+              aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
           }
         }, silent = TRUE)
 
@@ -208,37 +203,37 @@ mod_analyze_upload_server <- function(id, global){
         # check input aggregated data
         out <- try({
           if(global$covid) {
-            errors <- check_covid_data(rawdata(), global$static$expected_columns$covid)
+            errors <- check_covid_data(rawdata(), GLOBAL$expected_columns$covid)
 
             if(length(errors) == 0) {
               global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$covid) |>
-                prep(global$static$levels$covid,
+                find_columns(GLOBAL$expected_columns$covid) |>
+                prep(GLOBAL$levels$covid,
                   to_lower = c("sex", "race"),
                   to_char = c("zip")
                 )
             } else if(length(errors) == 1 & "date" %in% names(errors)) {
               global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$covid) |>
-                prep(global$static$levels$covid,
+                find_columns(GLOBAL$expected_columns$covid) |>
+                prep(GLOBAL$levels$covid,
                   to_lower = c("sex", "race"),
                   to_char = c("zip")
                 ) |>
                 select(-date)
             }
           } else {
-            errors <- check_poll_data(rawdata(), global$static$expected_columns$poll)
+            errors <- check_poll_data(rawdata(), GLOBAL$expected_columns$poll)
 
             if(length(errors) == 0) {
               global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$poll) |>
-                prep(global$static$levels$poll,
+                find_columns(GLOBAL$expected_columns$poll) |>
+                prep(GLOBAL$levels$poll,
                   to_lower = c("sex", "race", "edu")
                 )
             } else if(length(errors) == 1 & "state" %in% names(errors)) {
               global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$poll) |>
-                prep(global$static$levels$poll,
+                find_columns(GLOBAL$expected_columns$poll) |>
+                prep(GLOBAL$levels$poll,
                   to_lower = c("sex", "race", "edu")
                 ) |>
                 select(-state)
@@ -247,7 +242,7 @@ mod_analyze_upload_server <- function(id, global){
         }, silent = TRUE)
 
         if ("try-error" %in% class(out)) {
-          show_alert("Input data does not meet all requirements. Please check the Learn > Interface page for input data requirements.", global$session)
+          show_alert("Input data does not meet all requirements. Please check Guide (bottom right corner) for input data requirements.", global$session)
         } else {
           if(length(errors) == 0) {
             show_notif("All requirements are met. You may proceed to the next page.", global$session)
@@ -256,7 +251,8 @@ mod_analyze_upload_server <- function(id, global){
               tagList(
                 tags$ul(
                   purrr::map(unlist(errors), ~ tags$li(.x))
-                )
+                ),
+                tags$p("Please check Guide (bottom right corner) for input data requirements.")
               ),
               global$session
             )
@@ -277,14 +273,14 @@ mod_analyze_upload_server <- function(id, global){
               patient,
               pstrat_data,
               covariates,
-              global$static$levels$covid
+              GLOBAL$levels$covid
             )
 
 
           global$mrp <- list(
             input = input_data,
             new = new_data,
-            new_stan = stan_factor_covid(new_data, global$static$levels$covid),
+            new_stan = stan_factor_covid(new_data, GLOBAL$levels$covid),
             levels = levels,
             vars = vars
           )
@@ -305,7 +301,7 @@ mod_analyze_upload_server <- function(id, global){
             global$data,
             global$extdata$poll$pstrat_data,
             covariates,
-            global$static$levels$poll
+            GLOBAL$levels$poll
           )
 
           global$mrp <- list(
@@ -337,13 +333,13 @@ mod_analyze_upload_server <- function(id, global){
         readr::read_csv(app_sys("extdata/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
 
         global$data <- rawdata() |>
-          aggregate_covid(age_bounds = global$static$bounds$covid$age) |>
+          aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
           prep(list(), to_char = c("zip"))
       } else {
         readr::read_csv(app_sys("extdata/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
 
         global$data <- rawdata() |>
-          aggregate_poll(age_bounds = global$static$bounds$poll$age)
+          aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
       }
 
 
@@ -358,7 +354,7 @@ mod_analyze_upload_server <- function(id, global){
             patient,
             pstrat_data,
             covariates,
-            global$static$levels$covid
+            GLOBAL$levels$covid
           )
 
 
@@ -385,7 +381,7 @@ mod_analyze_upload_server <- function(id, global){
           global$data,
           global$extdata$poll$pstrat_data,
           covariates,
-          global$static$levels$poll
+          GLOBAL$levels$poll
         )
 
         global$mrp <- list(
@@ -425,7 +421,7 @@ mod_analyze_upload_server <- function(id, global){
             patient,
             pstrat_data,
             covariates,
-            global$static$levels$covid
+            GLOBAL$levels$covid
           )
 
 
@@ -452,7 +448,7 @@ mod_analyze_upload_server <- function(id, global){
           global$data,
           global$extdata$poll$pstrat_data,
           covariates,
-          global$static$levels$poll
+          GLOBAL$levels$poll
         )
 
         global$mrp <- list(
@@ -471,8 +467,8 @@ mod_analyze_upload_server <- function(id, global){
 
     })
 
-    observeEvent(input$open_guide, {
-      show_guide("upload_data", session)
+    observeEvent(input$show_upload_guide, {
+      show_guide("upload_data", global$session)
     })
 
     observeEvent(input$to_preprocess, {
@@ -481,25 +477,5 @@ mod_analyze_upload_server <- function(id, global){
         selected = "nav_learn_preprocess"
       )
     })
-
-    # output$download_data <- downloadHandler(
-    #   filename = function() {
-    #     if(input$toggle_table == "raw") {
-    #       "raw_data.csv"
-    #     } else {
-    #       "preprocessed_data.csv"
-    #     }
-    #   },
-    #   content = function(file) {
-    #     df <- if(input$toggle_table == "raw") rawdata() else global$data
-    # 
-    #     if(is.null(df)) {
-    #       readr::write_csv(data.frame(), file)
-    #     } else {
-    #       readr::write_csv(df, file)
-    #     }
-    # 
-    #   }
-    # )
   })
 }

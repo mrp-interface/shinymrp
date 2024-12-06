@@ -15,8 +15,8 @@ mod_analyze_model_ui <- function(id){
     sidebarLayout(
       sidebarPanel(width = 3,
         tagList(
-          HTML("<details open='true'><summary class='summary' style='font-size: 1.25em;'>Model Specification</summary>"),
-          tags$div(style = "margin-top: 10px",
+          HTML("<details open='true'><summary class='summary'>Model Specification</summary>"),
+          tags$div(style = "margin: 15px 10px",
             tags$p(tags$u("Step 1"), ": Select main effects and interactions"),
             virtualSelectInput(
               ns("fixed"),
@@ -24,7 +24,8 @@ mod_analyze_model_ui <- function(id){
               choices = NULL,
               showValueAsTags = TRUE,
               search = TRUE,
-              multiple = TRUE
+              multiple = TRUE,
+              hideClearButton = FALSE
             ),
             virtualSelectInput(
               ns("varying"),
@@ -32,7 +33,8 @@ mod_analyze_model_ui <- function(id){
               choices = NULL,
               showValueAsTags = TRUE,
               search = TRUE,
-              multiple = TRUE
+              multiple = TRUE,
+              hideClearButton = FALSE
             ),
             virtualSelectInput(
               ns("interaction"),
@@ -40,17 +42,18 @@ mod_analyze_model_ui <- function(id){
               choices = NULL,
               showValueAsTags = TRUE,
               search = TRUE,
-              multiple = TRUE
+              multiple = TRUE,
+              hideClearButton = FALSE
             ),
             tags$p(tags$u("Step 2"), ": Specify priors"),
             tags$p(class = "ref",
-              "All effects are automatically assigned default priors and can be changed below. Check ",
+              "All effects are automatically assigned default priors and can be changed below. Check this",
               actionLink(
-                inputId = ns("to_default_priors"),
-                label = "here",
+                inputId = ns("show_priors"),
+                label = "list",
                 class = "action_link"
               ),
-              " for the list of default priors."
+              "of available priors."
             ),
             uiOutput(ns("prior_spec_ui")),
             actionButton(
@@ -81,7 +84,13 @@ mod_analyze_model_ui <- function(id){
               min = 1, max = 8, step = 1,
               value = 4
             ),
-            conditionalPanel(ns = ns,
+            numericInput(
+              inputId = ns("seed_select"),
+              label = "Set seed",
+              min = 1, max = 100000, step = 1,
+              value = 123
+            ),
+            conditionalPanel(
               condition = "output.covid",
               fluidRow(
                 column(width = 6,
@@ -110,39 +119,35 @@ mod_analyze_model_ui <- function(id){
                 width = "49.5%"
               ),
               actionButton(
-                inputId = ns("add_btn"),
+                inputId = ns("add_model"),
                 label = "Fit model",
                 icon = icon("chart-line", lib = "font-awesome", class = "button_icon"),
                 width = "49.5%"
               )
             ),
             tags$p(class = "ref",
-              "For details about the model fitting process, go to ",
+              "For details about the model fitting process, open",
               actionLink(
-                inputId = ns("to_mrp"),
-                label = "Interface",
+                inputId = ns("show_fit_guide"),
+                label = "Guide.",
                 class = "action_link"
-              ),
-              "."
+              )
             )
           ),
           HTML("</details>"),
-          HTML("<details><summary class='summary' style='font-size: 1.25em;'>Upload Estimation Results</summary>"),
-          tags$div(style = "margin-top: 10px",
+          HTML("<details><summary class='summary'>Upload Estimation Results</summary>"),
+          tags$div(style = "margin: 15px 10px",
             fileInput(
               inputId = ns("fit_upload"),
               label = "Select a RDS file containing a model estimation",
               accept = ".RDS"
             ),
-            HTML("<details><summary class='summary'>Example</summary>"),
-            tags$div(class = "pad_top",
-              actionButton(
-                inputId = ns("use_example"),
-                label = "Example estimation result",
-                icon = icon("table", lib = "font-awesome", class = "button_icon")
-              )
-            ),
-            HTML("</details>")
+            tags$p("Or use example estimation result", class = "custom_label"),
+            actionButton(
+              inputId = ns("use_example"),
+              label = "Example estimation result",
+              icon = icon("table", lib = "font-awesome", class = "button_icon")
+            )
           ),
           HTML("</details>")
         )
@@ -153,11 +158,6 @@ mod_analyze_model_ui <- function(id){
             value = "nav_compare",
             tags$div(class = "pad_top",
               uiOutput(outputId = ns("model_select_ui")),
-              actionButton(
-                inputId = ns("diagnos_btn"),
-                label = "Run diagnostics",
-                icon = icon("gears", lib = "font-awesome", class = "button_icon")
-              ),
               tags$h4("Leave-one-out Cross-validation", class = "break_title"),
               tags$hr(class = "break_line"),
               uiOutput(outputId = ns("loo_ui")),
@@ -194,7 +194,6 @@ mod_analyze_model_server <- function(id, global){
             ),
             session = global$session
           )
-        } else {
         }
       }
     })
@@ -207,20 +206,16 @@ mod_analyze_model_server <- function(id, global){
       removeModal(global$session)
     })
 
-    observeEvent(input$to_default_priors, {
-      updateTabsetPanel(global$session,
-                        inputId = "navbar",
-                        selected = "nav_learn_interface")
+    observeEvent(input$show_priors, {
+      show_guide("model_select", session)
     })
 
-    observeEvent(input$to_mrp, {
-      updateTabsetPanel(global$session,
-                        inputId = "navbar",
-                        selected = "nav_learn_interface")
+    observeEvent(input$show_fit_guide, {
+      show_guide("model_fit", session)
     })
 
-    output$covid <- reactive(global$covid)
-    outputOptions(output, "covid", suspendWhenHidden = FALSE)
+    # output$covid <- reactive(global$covid)
+    # outputOptions(output, "covid", suspendWhenHidden = FALSE)
 
    observeEvent(input$add_prior, {
       holder <- purrr::map(1:(length(buffer()) + 1), ~ list(
@@ -244,63 +239,87 @@ mod_analyze_model_server <- function(id, global){
         )
       }
     })
+   
+   # create interaction and populate select input
+   observeEvent(input$interaction_open, {
+     if(input$interaction_open) {
+       updateVirtualSelect(
+         inputId = "interaction",
+         choices = create_interactions(
+           input$fixed,
+           input$varying,
+           global$mrp$input
+         ),
+         selected = input$interaction
+       )
+     }
+   })
+
+   # prevent a variable from being included as
+   # both a fixed effect and a varying effect
+   purrr::map(c("fixed", "varying"), function(id) {
+     observeEvent(input[[paste0(id, "_open")]], {
+       if(input[[paste0(id, "_open")]]) {
+         other_id <- setdiff(c("fixed", "varying"), id)
+         choices <- global$mrp$vars[[id]] |>
+           purrr::map(function(l) as.list(setdiff(l, input[[other_id]])))
+         selected = setdiff(input[[id]], input[[other_id]])
+         
+         updateVirtualSelect(
+           inputId = id,
+           choices = choices,
+           selected = selected
+         )
+       }
+     })
+   })
 
 
-    purrr::map(c("fixed", "varying"), function(id) {
-      observeEvent(input[[id]], {
-        if(!is.null(input$fixed) | !is.null(input$varying)) {
-          updateVirtualSelect(
-            inputId = "interaction",
-            choices = create_interactions(
-              c(input$fixed, input$varying),
-              global$mrp$input
-            )
-          )
-        }
 
-      })
-    })
+   observe({
+     purrr::map(1:(length(buffer()) + 1), function(i) {
+       dist_id <- paste0("prior_dist_", i)
+       eff_id <- paste0("prior_eff_", i)
+       eff_id_open <- paste0("prior_eff_", i, "_open")
+       
+       # update select inputs for prior assignment
+       observeEvent(input[[eff_id_open]], {
+         if(input[[eff_id_open]]) {
+           intercept <- setNames(c("Intercept_Intercept"), c("Intercept"))
+           fixed_effects <- if(length(input$fixed) > 0) setNames(paste0("fixed_", input$fixed), input$fixed)
+           varying_effects <- if(length(input$varying) > 0) setNames(paste0("varying_", input$varying), input$varying)
+           interactions <- if(length(input$interaction) > 0) setNames(paste0("interaction_", input$interaction), input$interaction)
+           
+           # filter effects for structred prior
+           if(input[[dist_id]] == "structured") {
+             intercept <- list()
+             fixed_effects <- list()
+             varying_effects <- list()
+             interactions <- list()
+             
+             if(length(input$interaction) > 0) {
+               interactions <- filter_interactions(input$interaction, input$fixed, global$mrp$input)
+               interactions <- setNames(paste0("interaction_", interactions), interactions)
+             }
+           }
 
-    purrr::map(c("fixed", "varying", "interaction"), function(eff) {
-      observeEvent(input[[eff]], {
-        for(i in 1:(length(buffer()) + 1)) {
-          updateVirtualSelect(
-            inputId = paste0("prior_eff_", i),
-            choices = list(
-              "Intercept" = setNames(c("Intercept_Intercept"), c("Intercept")),
-              "Fixed Effect" = if(length(input$fixed) > 0) setNames(paste0("fixed_", input$fixed), input$fixed),
-              "Varying Effect" = if(length(input$varying) > 0) setNames(paste0("varying_", input$varying), input$varying),
-              "Interaction" = if(length(input$interaction) > 0) setNames(paste0("interaction_", input$interaction), input$interaction)
-            )
-          )
-        }
-
-      })
-    })
-
-
-    observe({
-      purrr::map(1:(length(buffer()) + 1), function(i) {
-        observeEvent(input[[paste0("prior_dist_", i)]], {
-          if(input[[paste0("prior_dist_", i)]] == "structured") {
-            interaction <- setNames(as.list(input$interaction), input$interaction)
-            interaction <- group_interactions(interaction, global$mrp$input)
-            interaction <- c(interaction$varying_slope, interaction$varying_intercept)
-
-            updateVirtualSelect(
-              inputId = paste0("prior_eff_", i),
-              choices = list(
-                "Intercept" = c(),
-                "Fixed Effect" = c(),
-                "Varying Effect" = c(),
-                "Interaction" = if(length(interaction) > 0) setNames(paste0("interaction_", interaction), interaction)
-              )
-            )
-          }
-        })
-      })
-    })
-
+           
+           updateVirtualSelect(
+             inputId = eff_id,
+             choices = list(
+               "Intercept" = intercept,
+               "Fixed Effect" = fixed_effects,
+               "Varying Effect" = varying_effects,
+               "Interaction" = interactions
+             ),
+             selected = input[[eff_id]]
+           )
+         }
+       })
+      
+     })
+   })
+   
 
 
 
@@ -330,6 +349,7 @@ mod_analyze_model_server <- function(id, global){
             showValueAsTags = TRUE,
             search = TRUE,
             multiple = TRUE,
+            hideClearButton = FALSE,
             selected = holder[[.x]]$eff
           )
         )
@@ -338,11 +358,21 @@ mod_analyze_model_server <- function(id, global){
 
     # Model select input
     output$model_select_ui <- renderUI({
-      selectizeInput(
-        inputId = ns("model_select"),
-        label = "Select one or more models",
-        choices = names(global$models),
-        multiple = TRUE
+      tags$div(style = "display: flex; align-items: self-end; gap: 10px;",
+        selectizeInput(
+          inputId = ns("model_select"),
+          label = "Select one or more models",
+          choices = names(global$models),
+          multiple = TRUE
+        ),
+        tags$div(style = "margin-bottom: 15px",
+          actionButton(
+            inputId = ns("diagnos_btn"),
+            label = "Compare",
+            class = "btn btn-sm"
+          ) 
+        )
+
       )
     })
 
@@ -402,9 +432,9 @@ mod_analyze_model_server <- function(id, global){
           create_text_box(
             title = tags$b("Note"),
             if(global$covid) {
-              tags$p("The plots show the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+              tags$p("The plots show the weekly postive response rates computed from the observed data and 10 sets of replicated data.")
             } else {
-              tags$p("The plots show the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+              tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
             }
           ),
           purrr::map(1:length(formulas), ~ list(
@@ -475,7 +505,7 @@ mod_analyze_model_server <- function(id, global){
     })
 
     # add model
-    observeEvent(input$add_btn, {
+    observeEvent(input$add_model, {
       if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
         if(global$web_version) {
           show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
@@ -483,46 +513,54 @@ mod_analyze_model_server <- function(id, global){
           show_alert(tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
         }
       } else {
-       n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
+        n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
         n_chains <- input$chain_select
+        seed <- input$seed_select
 
         if(is.null(global$models)) {
           global$models <- list()
         }
 
         # check if number of iterations and number of chains are within defined range
-        c(within_range, msg_range) %<-% check_iter_chain(
-          n_iter, global$static$ui$iter_range,
-          n_chains, global$static$ui$chain_range
+        c(valid, errors) %<-% check_iter_chain(
+          n_iter, GLOBAL$ui$iter_range,
+          n_chains, GLOBAL$ui$chain_range,
+          seed
         )
 
-        if(within_range) {
+        if(valid) {
           # check if maximum number of models is reached
-          if(length(global$models) <= global$static$ui$max_model) {
+          if(length(global$models) <= GLOBAL$ui$max_model) {
             # check if the user selects nothing
             if(length(c(input$fixed, input$varying, input$interaction)) > 0) {
+              # check if prior syntax are correct
+              valid_priors <- purrr::map(1:(length(buffer()) + 1), function(i) {
+                check_prior_syntax(input[[paste0("prior_dist_", i)]])
+              }) |> unlist()
 
-              # assign default priors to all selected effects
-              all_priors <- list(Intercept = list(Intercept = global$static$default_priors$Intercept))
-              for(type in c("fixed", "varying", "interaction")) {
-                for(v in input[[type]]) {
-                  all_priors[[type]][[v]] <- global$static$default_priors[[type]]
-                }
-              }
+              if(all(valid_priors)) {
 
-              # assign user-specified priors
-              for(i in 1:(length(buffer()) + 1)) {
-                dist <- input[[paste0("prior_dist_", i)]]
-                eff <- input[[paste0("prior_eff_", i)]]
-                if(check_prior_syntax(dist)) {
-                  for(s in eff) {
-                    ss <- strsplit(s, split = "_")[[1]]
-                    all_priors[[ss[1]]][[ss[2]]] <- dist
+                # assign default priors to all selected effects
+                all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
+                for(type in c("fixed", "varying", "interaction")) {
+                  for(v in input[[type]]) {
+                    all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
                   }
                 }
-              }
-
-              if(!("structured" %in% c(all_priors$Intercept, all_priors$fixed, all_priors$varying, all_priors$interaction$fixed_slope))) {
+  
+                # assign user-specified priors
+                for(i in 1:(length(buffer()) + 1)) {
+                  dist <- input[[paste0("prior_dist_", i)]]
+                  eff <- input[[paste0("prior_eff_", i)]]
+                  if(dist != "") {
+                    for(s in eff) {
+                      ss <- strsplit(s, split = "_")[[1]]
+                      all_priors[[ss[1]]][[ss[2]]] <- dist
+                    }
+                  }
+                }
+  
+                
                 waiter::waiter_show(
                   html = waiter_ui("fit"),
                   color = waiter::transparent(0.9)
@@ -538,16 +576,16 @@ mod_analyze_model_server <- function(id, global){
 
                 # convert non-numeric categorical data to numeric for Stan
                 if(global$covid) {
-                  input_data = stan_factor_covid(global$mrp$input, global$static$levels$covid)
-                  new_data = stan_factor_covid(global$mrp$new, global$static$levels$covid)
+                  input_data = stan_factor_covid(global$mrp$input, GLOBAL$levels$covid)
+                  new_data = stan_factor_covid(global$mrp$new, GLOBAL$levels$covid)
                 } else {
-                  input_data = stan_factor_poll(global$mrp$input, global$static$levels$poll)
-                  new_data = stan_factor_poll(global$mrp$new, global$static$levels$poll)
+                  input_data = stan_factor_poll(global$mrp$input, GLOBAL$levels$poll)
+                  new_data = stan_factor_poll(global$mrp$new, GLOBAL$levels$poll)
                 }
 
                 # classify effects
                 all_priors <- all_priors |> group_effects(input_data) |> ungroup_effects()
-
+                print(all_priors)
                 # fit model
                 c(fit, model$code) %<-% run_stan(
                   input_data = input_data,
@@ -555,9 +593,9 @@ mod_analyze_model_server <- function(id, global){
                   effects = all_priors,
                   n_iter = model$n_iter,
                   n_chains = model$n_chains,
+                  seed = input$seed_select,
                   sens = if(global$covid) input$sens_kb else 1,
-                  spec = if(global$covid) input$spec_kb else 1,
-                  code_fout = "/Users/tntoan/Downloads/model.stan"
+                  spec = if(global$covid) input$spec_kb else 1
                 )
 
                 c(model$fixed, model$varying) %<-% extract_parameters(fit, all_priors)
@@ -642,7 +680,7 @@ mod_analyze_model_server <- function(id, global){
                           )
                         )
                       ),
-                      tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
+                      tags$h5(paste0("A binomial model with a logit function of the positive response rate. ",
                                      "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
                       create_text_box(
                         title = tags$b("Note"),
@@ -662,9 +700,9 @@ mod_analyze_model_server <- function(id, global){
                       create_text_box(
                         title = tags$b("Note"),
                         if(global$covid) {
-                          tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+                          tags$p("The plot shows the weekly positive response rate computed from the observed data and 10 sets of replicated data.")
                         } else {
-                          tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+                          tags$p("The plot shows the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
                         }
                       ),
                       plotOutput(outputId = ns(model$IDs$ppc))
@@ -722,13 +760,13 @@ mod_analyze_model_server <- function(id, global){
                     writeLines(model$code, file)
                   }
                 )
-                model$pstrat <- global$mrp$new
-                model_global <<- model
+
                 global$models[[model_name]] <- model
                 global$model_count <- global$model_count + 1
                 waiter::waiter_hide()
+                  
               } else {
-                show_alert("Structured prior can only be assigned to interactions (excluding interactions between fixed effects).", global$session)
+                show_alert("Invalid prior provided. Please check Guide (bottom right corner) for the list of available priors.", global$session)
               }
             } else {
               show_alert("No predictor has been selected. Please include at least one.", global$session)
@@ -737,7 +775,14 @@ mod_analyze_model_server <- function(id, global){
             show_alert("Maximum number of models reached. Please removed existing models to add more.", global$session)
           }
         } else {
-          show_alert(msg_range, global$session)
+          show_alert(
+            tagList(
+              tags$ul(
+                purrr::map(errors, ~ tags$li(.x))
+              )
+            ),
+            global$session
+          )
         }
       }
 
@@ -821,7 +866,7 @@ mod_analyze_model_server <- function(id, global){
                   )
                 )
               ),
-              tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
+              tags$h5(paste0("A binomial model with a logit function of the positive response rate. ",
                              "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
               create_text_box(
                 title = tags$b("Note"),
@@ -841,9 +886,9 @@ mod_analyze_model_server <- function(id, global){
               create_text_box(
                 title = tags$b("Note"),
                 if(global$covid) {
-                  tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+                  tags$p("The plot shows the weekly positive response rate computed from the observed data and 10 sets of replicated data.")
                 } else {
-                  tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+                  tags$p("The plot shows the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
                 }
               ),
               plotOutput(outputId = ns(model$IDs$ppc))
@@ -982,7 +1027,7 @@ mod_analyze_model_server <- function(id, global){
                 )
               )
             ),
-            tags$h5(paste0("A binomial model with a logit function of the prevalence. ",
+            tags$h5(paste0("A binomial model with a logit function of the positive response rate. ",
                            "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
             create_text_box(
               title = tags$b("Note"),
@@ -1002,9 +1047,9 @@ mod_analyze_model_server <- function(id, global){
             create_text_box(
               title = tags$b("Note"),
               if(global$covid) {
-                tags$p("The plot shows the weekly prevalence rates computed from the observed data and 10 sets of replicated data.")
+                tags$p("The plot shows the weekly positive response rate computed from the observed data and 10 sets of replicated data.")
               } else {
-                tags$p("The plot shows the percentage of positive response computed from the observed data and 10 sets of replicated data.")
+                tags$p("The plot shows the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
               }
             ),
             plotOutput(outputId = ns(model$IDs$ppc))

@@ -12,6 +12,7 @@ mod_learn_preprocess_ui <- function(id){
   fluidRow(
     column(width = 6, offset = 3,
       tags$div(class = "pad_top",
+        tags$img(src = "www/preprocess.pdf", width = "100%", style = "margin-bottom: 40px;"),
         tags$p("The input data for MRP consists of three components: the preprocessed survey/test data, the poststratification table, and geographic covariates. The survey/test data contains the geographic-demographic information about participants and their survey responses or test results. Inferring the relationship between them using regression models constitutes the first stage of MRP. Additionally, geographic covariates are included in these models to account for the structured difference among geographic areas such as states and counties. The second stage of MRP is poststratification, which involves adjusting the estimates based on the breakdown of the target population. Below are details about how these data components are prepared for both interfaces."),
         tags$h3("Data Preparation for Cross-sectional Data"),
         tags$h4("Survey/Test Data"),
@@ -34,6 +35,18 @@ mod_learn_preprocess_ui <- function(id){
         tags$p("Following this ", tags$a("guide", href = "https://bookdown.org/jl5522/MRP-case-studies/introduction-to-mister-p.html", target = "_blank"), " by Juan Lopez-Martin, we obtain the American Community Survey data through IPUMS, convert the raw values to the same categories as the input data, and then find the count for each of the subgroups corresponding to unique combinations of the demographic factors: sex, race, age, education. If the program can find states in the input data, it automatically includes them in the poststratification table and produces state-level estimates."),
         tags$h4("Geographic Covariates"),
         tags$p("Currently, we do not retrieve this information from external data sources but, if there are variables with values unique to each state in the input data, the program automatically extracts them and allows them to be included in the models. In the future, we may draw from external data relevant state-level covariates that can improve the predictive power of the models."),
+        tags$p("Below, you can download the preprocessing code and an example of the expected input data."),
+        tags$div(
+          class = "interface_buttons",
+          downloadButton(
+            outputId = ns("save_code_cs"),
+            label = "Preprocessing code"
+          ),
+          downloadButton(
+            outputId = ns("save_ex_cs"),
+            label = "Example data"
+          )
+        ),
         tags$h3("Data Preparation for Spatio-temporal Data"),
         tags$p("To account for the difference between ZIP code areas in the models, we need quantities that are defined at the ZIP code level. Because ACS data are not provided at the ZIP code level, we obtain relevant quantities at the tract level and then use the USPS crosswalk table to obtain the ZIP code level covariates. Specifically, one ZIP code can span multiple tracts so we find the overlapping tracts for each ZIP code and aggregate the values. How the values are aggregated depends on the quantities and is described in detail below."),
         tags$h4("Survey/Test Data"),
@@ -74,6 +87,22 @@ mod_learn_preprocess_ui <- function(id){
           tags$li("Employment rate of a zip code is defined as the percentage of the residing population who are employed as a part of the civilian labor force."),
           tags$li("Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts."),
           tags$li("Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts, weighted by tract population counts")
+        ),
+        tags$p("Below, you can download the preprocessing code, an example of the expected input data, and a table for converting dates to week indices."),
+        tags$div(
+          class = "interface_buttons",
+          downloadButton(
+            outputId = ns("save_code_st"),
+            label = "Preprocessing code"
+          ),
+          downloadButton(
+            outputId = ns("save_ex_st"),
+            label = "Example data"
+          ),
+          downloadButton(
+            outputId = ns("save_week_table"),
+            label = "Week conversion table"
+          )
         )
       )
     )
@@ -83,9 +112,44 @@ mod_learn_preprocess_ui <- function(id){
 #' learn_preprocess Server Functions
 #'
 #' @noRd
-mod_learn_preprocess_server <- function(id){
+mod_learn_preprocess_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+    
+    output$save_code_cs <- downloadHandler(
+      filename = function() { "preprocess_crosssectional.R" },
+      content = function(file) {
+        readLines(app_sys("extdata/preprocess_cs.R")) |> writeLines(file)
+      }
+    )
+    
+    output$save_code_st <- downloadHandler(
+      filename = function() { "preprocess_spatiotemporal.R" },
+      content = function(file) {
+        readLines(app_sys("extdata/preprocess_st.R")) |> writeLines(file)
+      }
+    )
+    
+    output$save_ex_cs <- downloadHandler(
+      filename = function() { "CES_data_aggregated.csv" },
+      content = function(file) {
+        read.csv(app_sys("extdata/CES_data_aggregated.csv")) |> readr::write_csv(file)
+      }
+    )
+    
+    output$save_ex_st <- downloadHandler(
+      filename = function() { "covid_test_records_aggregated.csv" },
+      content = function(file) {
+        read.csv(app_sys("extdata/covid_test_records_aggregated.csv")) |> readr::write_csv(file)
+      }
+    )
+    
+    output$save_week_table <- downloadHandler(
+      filename = function() { "week_conversion.csv" },
+      content = function(file) {
+        read.csv(app_sys("extdata/week_conversion.csv")) |> readr::write_csv(file)
+      }
+    )
 
   })
 }

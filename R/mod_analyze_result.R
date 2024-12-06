@@ -119,20 +119,7 @@ mod_analyze_result_server <- function(id, global){
                   )
                 )
               )
-            ),
-            # tags$div(class = "footnote_container",
-            #   tags$div(class = "footnote",
-            #     shinyWidgets::dropdown(
-            #       icon = icon("info-sign", lib = "glyphicon"),
-            #       label = "Note",
-            #       up = TRUE,
-            #       right = TRUE,
-            #       circle = TRUE,
-            #       width = "200%",
-            #       tags$p("The shaded areas represent ±1 SD of uncertainty")
-            #     )
-            #   )
-            # )
+            )
           )
         })
 
@@ -142,9 +129,10 @@ mod_analyze_result_server <- function(id, global){
           plot_prev(
             global$mrp$input,
             global$plotdata$dates,
-            global$models[[input$model_select]]$overall
+            global$models[[input$model_select]]$overall,
+            show_caption = TRUE
           )
-        }, height = function() global$static$ui$plot_height)
+        }, height = function() GLOBAL$ui$plot_height)
 
         output$est_sex <- renderPlot({
           req(names(global$models))
@@ -154,7 +142,7 @@ mod_analyze_result_server <- function(id, global){
             global$plotdata$dates
           )
 
-        }, height = function() global$static$ui$subplot_height * (length(global$mrp$levels$sex) + 1))
+        }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$sex) + 1))
 
         output$est_race <- renderPlot({
           req(names(global$models))
@@ -164,7 +152,7 @@ mod_analyze_result_server <- function(id, global){
             global$plotdata$dates
           )
 
-        }, height = function() global$static$ui$subplot_height * (length(global$mrp$levels$race) + 1))
+        }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$race) + 1))
 
         output$est_age <- renderPlot({
           req(names(global$models))
@@ -174,7 +162,7 @@ mod_analyze_result_server <- function(id, global){
             global$plotdata$dates
           )
 
-        }, height = function() global$static$ui$subplot_height * (length(global$mrp$levels$age) + 1))
+        }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$age) + 1))
 
         output$est_county_map <- plotly::renderPlotly({
           req(names(global$models))
@@ -188,8 +176,8 @@ mod_analyze_result_server <- function(id, global){
             mutate(value = est) |>
             choro_map(
               global$plotdata$geojson,
-              map_title = "Estimated Prevalence",
-              colorbar_title = "Prevalence",
+              map_title = "MRP Estimate of Positive Response Rate",
+              colorbar_title = "%",
               state = FALSE
             ) |> suppressWarnings()
         })
@@ -205,7 +193,7 @@ mod_analyze_result_server <- function(id, global){
             rename("factor" = "county") |>
             plot_est_covid(global$plotdata$dates)
 
-        }, height = function() global$static$ui$subplot_height * (length(input$counties_select) + 1))
+        }, height = function() GLOBAL$ui$subplot_height * (length(input$counties_select) + 1))
 
 
       } else {
@@ -245,20 +233,7 @@ mod_analyze_result_server <- function(id, global){
                   )
                 )
               )
-            ),
-            # tags$div(class = "footnote_container",
-            #   tags$div(class = "footnote",
-            #     shinyWidgets::dropdown(
-            #       icon = icon("info-sign", lib = "glyphicon"),
-            #       label = "Note",
-            #       up = TRUE,
-            #       right = TRUE,
-            #       circle = TRUE,
-            #       width = "200%",
-            #       tags$p("The error bars represent ±1 SD of uncertainty")
-            #     )
-            #   )
-            # )
+            )
           )
         })
 
@@ -282,28 +257,28 @@ mod_analyze_result_server <- function(id, global){
 
           plot_est_poll(global$models[[input$model_select]]$sex)
 
-        }, height = function() global$static$ui$plot_height)
+        }, height = function() GLOBAL$ui$plot_height)
 
         output$est_race <- renderPlot({
           req(names(global$models))
 
           plot_est_poll(global$models[[input$model_select]]$race)
 
-        }, height = function() global$static$ui$plot_height)
+        }, height = function() GLOBAL$ui$plot_height)
 
         output$est_age <- renderPlot({
           req(names(global$models))
 
           plot_est_poll(global$models[[input$model_select]]$age)
 
-        }, height = function() global$static$ui$plot_height)
+        }, height = function() GLOBAL$ui$plot_height)
 
         output$est_edu <- renderPlot({
           req(names(global$models))
 
           plot_est_poll(global$models[[input$model_select]]$edu)
 
-        }, height = function() global$static$ui$plot_height)
+        }, height = function() GLOBAL$ui$plot_height)
 
         output$est_state_point <- renderPlot({
           req(names(global$models), global$plotdata)
@@ -315,7 +290,7 @@ mod_analyze_result_server <- function(id, global){
             rename("factor" = "state") |>
             plot_est_poll()
 
-        }, height = function() global$static$ui$plot_height)
+        }, height = function() GLOBAL$ui$plot_height)
 
         output$est_state_map <- plotly::renderPlotly({
           req(names(global$models), global$plotdata)

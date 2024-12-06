@@ -172,8 +172,7 @@ check_covid_data <- function(df, expected_columns, na_threshold = 0.5) {
   # check for missing columns
   if(length(missing_names) > 1 | (length(missing_names) == 1 & !"date" %in% missing_names)) {
     errors$missing_column <- paste0("The following columns are missing: ",
-                                    paste(missing_names, collapse = ", "),
-                                    " (\"date\" column is optional and is only used for plotting)")
+                                    paste(missing_names, collapse = ", "))
   } else {
     # check data types
     expected_types <- c("character", "character", "character", "integer|numeric",
@@ -204,10 +203,10 @@ check_covid_data <- function(df, expected_columns, na_threshold = 0.5) {
 
         # check if dates are in the right format
         if("date" %in% missing_names) {
-          errors$date <- "Dates are not provided (\"date\" column is optional and is only used for plotting)"
+          errors$date <- "Dates are not provided. Plots will use week indices instead."
         } else {
           if (anyNA(as.Date(df$date, optional = TRUE))) {
-            errors$date <- "Provided dates are not in expected format (\"date\" column is optional and is only used for plotting)"
+            errors$date <- "Provided dates are not in expected format. Plots will use week indices instead."
           }
         }
 

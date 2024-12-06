@@ -30,7 +30,7 @@ create_formula <- function(effects, dat) {
 
 check_prior_syntax <- function(s) {
   if(s == "") {
-    return(FALSE)
+    return(TRUE)
   }
 
   patterns <- list(
@@ -48,44 +48,58 @@ check_prior_syntax <- function(s) {
   }
 }
 
-check_effects <- function(effects) {
-  # TODO
-  # check prior syntax
-
-  # check if fixed effect of categorical variables are included in interactions
-  return(TRUE)
+# filter interactions for structured prior
+filter_interactions <- function(interactions, fixed_effects, dat) {
+  bool <- map_lgl(interactions, function(s) {
+    ss <- strsplit(s, split = ':')[[1]]
+    type1 <- data_type(dat[[ss[1]]])
+    type2 <- data_type(dat[[ss[2]]])
+    
+    return((type1 == "cat" & !ss[1] %in% fixed_effects) |
+           (type2 == "cat" & !ss[2] %in% fixed_effects))
+  })
+  
+  return(interactions[bool])
 }
 
-create_interactions <- function(effects, dat) {
-  if(n_distinct(effects) == 1) {
-    return(c())
+# Keep interaction in expected order for Stan code generation:
+# binary first, then categorical, then continuous.
+# For interaction between 2 categorical variables,
+# the one included as a fixed effect comes first.
+sort_interactions <- function(interactions, fixed_effects, dat) {
+  interactions <- map_chr(interactions, function(s) {
+    ss <- strsplit(s, split = ':')[[1]]
+    type1 <- data_type(dat[[ss[1]]], num = TRUE)
+    type2 <- data_type(dat[[ss[2]]], num = TRUE)
+    
+    if(type1 > type2 | (type1 == 2 & type2 == 2 & ss[2] %in% fixed_effects)) {
+      s <- paste0(ss[2], ':', ss[1])
+    }
+    
+    return(s)
+  })
+  
+  return(interactions)
+}
+
+create_interactions <- function(fixed_effects, varying_effects, dat) {
+  main_effects <- c(fixed_effects, varying_effects)
+  
+  if(n_distinct(main_effects) <= 1) {
+    return(list())
   }
 
   # create unique pairs
   df <- expand.grid(
-    eff1 = effects,
-    eff2 = effects
+    eff1 = main_effects,
+    eff2 = main_effects 
   ) |>
     mutate_all(as.character) |>
     filter(eff1 != eff2)
 
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
-
-  # keep interaction in expected order for Stan code generation
-  # binary < categorical < continuous
-  for(i in 1:nrow(df)) {
-    type1 <- data_type(dat[[df$eff1[i]]], num = TRUE)
-    type2 <- data_type(dat[[df$eff2[i]]], num = TRUE)
-
-    if(type1 > type2) {
-      temp <- df$eff1[i]
-      df$eff1[i] <- df$eff2[i]
-      df$eff2[i] <- temp
-    }
-  }
-
   int <- paste0(df$eff1, ":", df$eff2)
-
+  
   return(int)
 }
 
@@ -112,14 +126,9 @@ group_fixed <- function(fixed, dat) {
   for(s in names(fixed)) {
     if(data_type(dat[[s]]) == "cat") {
       s_raw <- paste0(s, "_raw")
-      freq <- dat |>
-        select(all_of(c(s_raw, "total"))) |>
-        group_by(!!sym(s_raw)) |>
-        summarize(n = sum(total)) |>
-        arrange(n) |>
-        pull(!!sym(s_raw))
+      levels <- unique(dat[[s_raw]])
 
-      dummy <- paste0(s, ".", freq[2:length(freq)])
+      dummy <- paste0(s, ".", levels[2:length(levels)])
       for(d in dummy) {
         out$cat[[d]] <- fixed[[s]]
       }
@@ -131,7 +140,9 @@ group_fixed <- function(fixed, dat) {
   return(out)
 }
 
-group_interactions <- function(interactions, dat) {
+# Note: this function assumes the interaction terms are in the specific order
+# produced by create_interactions
+group_interactions <- function(interactions, fixed_effects, dat) {
   out <- list(
     fixed_slope = list(),
     varying_slope = list(),
@@ -154,14 +165,19 @@ group_interactions <- function(interactions, dat) {
       # categorical x continuous
     } else if (type1 == "cat" & type2 == "cont") {
       out$varying_slope[[s]] <- interactions[[s]]
-
-      # categorical x categorical
-    } else if (type1 == "cat" & type2 == "cat") {
-      out$varying_intercept[[s]] <- interactions[[s]]
-
+      
       # binary x categorical
     } else if (type1 == "bin" & type2 == "cat") {
       out$varying_intercept_special[[s]] <- interactions[[s]]
+      
+      # categorical x categorical
+    } else if (type1 == "cat" & type2 == "cat") {
+      if (ss[1] %in% names(fixed_effects)) {
+        out$varying_intercept_special[[s]] <- interactions[[s]]
+      } else {
+        out$varying_intercept[[s]] <- interactions[[s]]
+      }
+
     } else {
       print("Unrecognized interaction")
     }
@@ -181,14 +197,21 @@ group_effects <- function(effects, dat) {
 
   # varying main effects
   out$varying <- effects$varying
+  
+  # reorder terms in interactions
+  names(effects$interaction) <- sort_interactions(
+    names(effects$interaction),
+    names(effects$fixed),
+    dat
+  )
 
   # interactions without structured priors
   wo_struct <- effects$interaction[effects$interaction != "structured"]
-  out$interaction <- group_interactions(wo_struct, dat)
+  out$interaction <- group_interactions(wo_struct, effects$fixed, dat)
 
   # interactions with structured priors
   w_struct <- effects$interaction[effects$interaction == "structured"]
-  out$structured <- group_interactions(w_struct, dat)
+  out$structured <- group_interactions(w_struct, effects$fixed, dat)
 
 
   return(out)
@@ -409,9 +432,9 @@ model_ <- function(effects) {
   # include the parameters below if structured prior is used
   int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
   if(length(int_struct) > 0) {
-    scode <- paste0(scode, "
-  tau ~ cauchy(0 , 1);
-  delta ~ normal(0, 1);")
+    scode <- paste0(scode, str_interp("
+  tau ~ ${GLOBAL$default_priors$global_scale};
+  delta ~ ${GLOBAL$default_priors$local_scale};"))
   }
 
   return(scode)
@@ -556,6 +579,7 @@ run_stan <- function(
   effects,
   n_iter = 1000,
   n_chains = 4,
+  seed = NULL,
   sens = 0.7,
   spec = 0.999,
   code_fout = NULL
@@ -580,7 +604,8 @@ run_stan <- function(
     chains = n_chains,
     parallel_chains = n_chains,
     threads_per_chain = 1,
-    refresh = n_iter / 10
+    refresh = n_iter / 10,
+    seed = seed
   )
 
 

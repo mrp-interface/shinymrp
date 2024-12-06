@@ -10,7 +10,9 @@
 mod_persist_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$div(class = "feedback_container",
+    tags$div(
+      id = ns("feedback"),
+      class = "feedback_container",
       tags$a(
         "Feedback",
         href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
@@ -22,10 +24,16 @@ mod_persist_ui <- function(id) {
       shinyWidgets::actionBttn(
         inputId = ns("show_guide"),
         style = "material-circle",
+        color = "success",
         label = NULL,
         icon = icon("question", "fa")
       )         
-    )
+    ),
+    tags$script(HTML(sprintf("
+    $(window).on('scroll', function() {
+      var atTop = ($(this).scrollTop() <= 10); // Boolean: true if at top, false otherwise
+      Shiny.setInputValue('%s', atTop);
+    });", ns("at_top"))))
   )
 }
     
@@ -37,7 +45,15 @@ mod_persist_server <- function(id, global){
     ns <- session$ns
  
     observeEvent(input$show_guide, {
-      show_guide("workflow", session)
+      show_guide("workflow", global$session)
+    })
+    
+    observeEvent(input$at_top, {
+      if(input$at_top) {
+        shinyjs::show("feedback", anim = TRUE, animType = "fade", time = 0.1) 
+      } else {
+        shinyjs::hide("feedback", anim = TRUE, animType = "fade", time = 0.1)
+      }
     })
   })
 }
