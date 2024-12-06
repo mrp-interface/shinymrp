@@ -27,13 +27,13 @@ mod_analyze_visualize_server <- function(id, global){
               tabPanel("Individual Characteristics",
                 tabsetPanel(
                   tabPanel("Sex",
-                    plotOutput(outputId = ns("indiv_sex"))
+                    plotOutput(outputId = ns("indiv_sex"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("Race",
-                    plotOutput(outputId = ns("indiv_race"))
+                    plotOutput(outputId = ns("indiv_race"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("Age",
-                    plotOutput(outputId = ns("indiv_age"))
+                    plotOutput(outputId = ns("indiv_age"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("County",
                     tags$div(class = "pad_top",
@@ -52,7 +52,7 @@ mod_analyze_visualize_server <- function(id, global){
                 tabsetPanel(
                   tabPanel("Education",
                     column(width = 9,
-                      plotOutput(outputId = ns("geo_edu_plot"))
+                      plotOutput(outputId = ns("geo_edu_plot"), height = GLOBAL$ui$plot_height)
                     ),
                     column(width = 3,
                       DT::dataTableOutput(outputId = ns("geo_edu_table"))
@@ -60,7 +60,7 @@ mod_analyze_visualize_server <- function(id, global){
                   ),
                   tabPanel("Poverty",
                     column(width = 9,
-                      plotOutput(outputId = ns("geo_poverty_plot"))
+                      plotOutput(outputId = ns("geo_poverty_plot"), height = GLOBAL$ui$plot_height)
                     ),
                     column(width = 3,
                       DT::dataTableOutput(outputId = ns("geo_poverty_table"))
@@ -68,7 +68,7 @@ mod_analyze_visualize_server <- function(id, global){
                   ),
                   tabPanel("Employment",
                     column(width = 9,
-                      plotOutput(outputId = ns("geo_employ_plot"))
+                      plotOutput(outputId = ns("geo_employ_plot"), height = GLOBAL$ui$plot_height)
                     ),
                     column(width = 3,
                       DT::dataTableOutput(outputId = ns("geo_employ_table"))
@@ -76,7 +76,7 @@ mod_analyze_visualize_server <- function(id, global){
                   ),
                   tabPanel("Income",
                     column(width = 9,
-                      plotOutput(outputId = ns("geo_income_plot"))
+                      plotOutput(outputId = ns("geo_income_plot"), height = GLOBAL$ui$plot_height)
                     ),
                     column(width = 3,
                       DT::dataTableOutput(outputId = ns("geo_income_table"))
@@ -84,7 +84,7 @@ mod_analyze_visualize_server <- function(id, global){
                   ),
                   tabPanel("Urbanicity",
                     column(width = 9,
-                      plotOutput(outputId = ns("geo_urban_plot"))
+                      plotOutput(outputId = ns("geo_urban_plot"), height = GLOBAL$ui$plot_height)
                     ),
                     column(width = 3,
                       DT::dataTableOutput(outputId = ns("geo_urban_table"))
@@ -92,7 +92,7 @@ mod_analyze_visualize_server <- function(id, global){
                   ),
                   tabPanel("ADI",
                     column(width = 9,
-                      plotOutput(outputId = ns("geo_adi_plot"))
+                      plotOutput(outputId = ns("geo_adi_plot"), height = GLOBAL$ui$plot_height)
                     ),
                     column(width = 3,
                       DT::dataTableOutput(outputId = ns("geo_adi_table"))
@@ -100,10 +100,10 @@ mod_analyze_visualize_server <- function(id, global){
                   )
                 )
               ),
-              tabPanel("Positivity",
+              tabPanel("Positive Response Rate",
                 tabsetPanel(
                   tabPanel("Overall",
-                    plotOutput(outputId = ns("prev_overall"))
+                    plotOutput(outputId = ns("prev_overall"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("By county",
                     tags$div(class = "pad_top",
@@ -125,7 +125,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> filter(time == 1) |> mutate(demo = sex) |> select(demo, total),
               global$mrp$levels$sex
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_race <- renderPlot({
           req(global$mrp$input)
@@ -135,7 +135,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> filter(time == 1) |> mutate(demo = race) |> select(demo, total),
               global$mrp$levels$race
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_age <- renderPlot({
           req(global$mrp$input)
@@ -145,7 +145,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> filter(time == 1) |> mutate(demo = age) |> select(demo, total),
               global$mrp$levels$age
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_area_map <- plotly::renderPlotly({
           req(global$mrp, global$plotdata)
@@ -308,7 +308,7 @@ mod_analyze_visualize_server <- function(id, global){
               name = "Urbanicity"
             )
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$geo_edu_plot <- renderPlot({
           req(global$plotdata$raw_covariates)
@@ -328,7 +328,7 @@ mod_analyze_visualize_server <- function(id, global){
               name = "Higher education measure"
             )
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$geo_poverty_plot <- renderPlot({
           req(global$plotdata$raw_covariates)
@@ -348,7 +348,7 @@ mod_analyze_visualize_server <- function(id, global){
               name = "Poverty measure"
             )
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$geo_employ_plot <- renderPlot({
           req(global$plotdata$raw_covariates)
@@ -368,7 +368,7 @@ mod_analyze_visualize_server <- function(id, global){
               name = "Employment rate"
             )
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$geo_income_plot <- renderPlot({
           req(global$plotdata$raw_covariates)
@@ -388,7 +388,7 @@ mod_analyze_visualize_server <- function(id, global){
               name = "Average of median household income"
             )
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$geo_adi_plot <- renderPlot({
           req(global$plotdata$raw_covariates)
@@ -404,22 +404,23 @@ mod_analyze_visualize_server <- function(id, global){
               breaks = seq(0, 100, 5),
               description = sprintf("\n%d zip codes out of %d (%.2f%%) have ADI over %d.",
                                     count, total, perc*100, threshold),
-              definition = "Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts\nweighted by tract population counts.",
+              definition = "Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts\nweighted by tract population counts (refer to Learn > Preprocess page for the definition of ADI).",
               name = "Area Deprivation Index"
             )
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$prev_overall <- renderPlot({
           req(global$mrp)
 
           plot_prev(global$mrp$input, global$plotdata$dates)
 
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$prev_county <- plotly::renderPlotly({
           req(global$mrp)
-
+          input_global <<- global$mrp$input
+          fips_global <<- global$extdata$covid$fips
           if("county" %in% names(global$mrp$input)) {
             global$mrp$input |>
               mutate(fips = county) |>
@@ -427,8 +428,8 @@ mod_analyze_visualize_server <- function(id, global){
               mutate(value = max_prev) |>
               choro_map(
                 global$plotdata$geojson,
-                map_title = "Positivity Across Weeks",
-                colorbar_title = "Highest\nWeekly\nPositivity",
+                map_title = "Positive Response Rate Across Weeks",
+                colorbar_title = "Highest\nWeekly\nPositive\nResponse\nRate",
                 state = FALSE
               )
           }
@@ -442,16 +443,16 @@ mod_analyze_visualize_server <- function(id, global){
               tabPanel("Individual Characteristics",
                 tabsetPanel(
                   tabPanel("Sex",
-                    plotOutput(outputId = ns("indiv_sex"))
+                    plotOutput(outputId = ns("indiv_sex"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("Race",
-                    plotOutput(outputId = ns("indiv_race"))
+                    plotOutput(outputId = ns("indiv_race"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("Age",
-                    plotOutput(outputId = ns("indiv_age"))
+                    plotOutput(outputId = ns("indiv_age"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("Education",
-                    plotOutput(outputId = ns("indiv_edu"))
+                    plotOutput(outputId = ns("indiv_edu"), height = GLOBAL$ui$plot_height)
                   ),
                   tabPanel("State",
                     tags$div(class = "pad_top",
@@ -466,7 +467,7 @@ mod_analyze_visualize_server <- function(id, global){
                   )
                 )
               ),
-              tabPanel("Response",
+              tabPanel("Positive Response Rate",
                 tags$div(class = "pad_top",
                   plotly::plotlyOutput(outputId = ns("support_map"),
                                        height = "700px")
@@ -484,7 +485,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> mutate(demo = sex) |> select(demo, total),
               global$mrp$levels$sex
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_race <- renderPlot({
           req(global$mrp$input)
@@ -494,7 +495,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> mutate(demo = race) |> select(demo, total),
               global$mrp$levels$race
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_age <- renderPlot({
           req(global$mrp$input)
@@ -504,7 +505,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> mutate(demo = age) |> select(demo, total),
               global$mrp$levels$age
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_edu <- renderPlot({
           req(global$mrp$input)
@@ -514,7 +515,7 @@ mod_analyze_visualize_server <- function(id, global){
               global$mrp$new |> mutate(demo = edu) |> select(demo, total),
               global$mrp$levels$edu
             )
-        }, height = function() global$static$ui$plot_height)
+        })
 
         output$indiv_area_map <- plotly::renderPlotly({
           req(global$mrp, global$plotdata)
@@ -565,13 +566,11 @@ mod_analyze_visualize_server <- function(id, global){
               mutate(value = support) |>
               choro_map(
                 global$plotdata$geojson,
-                map_title = "Percentage of Positive Response",
+                map_title = "Proportion of Positive Responses",
                 colorbar_title = "%",
                 state = TRUE
               )
           }
-
-
         })
       }
     })
@@ -602,7 +601,6 @@ mod_analyze_visualize_server <- function(id, global){
 
       removeModal(global$session)
     })
-
 
   })
 }

@@ -79,7 +79,7 @@ get_raw_weekly_prev <- function(
     brms_input,
     fips_code
 ) {
-  # calculate weekly prevalence and test counts for each county
+  # calculate weekly positive response rate and test counts for each county
   plot_df <- brms_input |>
     group_by(fips, time) |>
     summarize(
@@ -88,7 +88,7 @@ get_raw_weekly_prev <- function(
     ) |>
     ungroup()
 
-  # compute max and min weekly prevalence for each county
+  # compute max and min weekly positive response rate for each county
   plot_df <- plot_df |>
     group_by(fips) |>
     summarize(
@@ -97,7 +97,7 @@ get_raw_weekly_prev <- function(
       max_prev_sample = tests[which.max(prev)],
       min_prev_sample = tests[which.min(prev)]
     ) |>
-    full_join(fips_code, by = "fips") |>
+    left_join(fips_code, by = "fips") |>
     mutate(hover = paste0(
       state_name, '\n',
       county, '\n',
@@ -264,6 +264,7 @@ plot_prev <- function(
   raw,
   dates,
   estimate = NULL,
+  show_caption = FALSE,
   raw_color = "darkblue",
   mrp_color = "darkorange"
 ) {
@@ -326,7 +327,8 @@ plot_prev <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = if(is.null(estimate)) "Positivity" else "Prevalence"
+      y = "Positive Response Rate",
+      caption = if(show_caption) "*The shaded areas represent ±1 SD of uncertainty" else NULL
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -342,6 +344,7 @@ plot_prev <- function(
     theme(
       legend.title = element_blank(),
       legend.position = if(is.null(estimate)) "none" else "bottom",
+      plot.caption = element_text(hjust = 0.5),
       plot.margin = margin(1, 1, 1, 1, "cm")
     )
 
@@ -638,7 +641,7 @@ plot_est_covid <- function(df, dates) {
     plot_list[[i]] <- plot_list[[i]] +
       labs(title = "",
            x = if(is.null(dates)) "Week index" else "",
-           y = "Prevalence") +
+           y = "Positive Response Rate") +
       scale_x_continuous(
         breaks = xticks,
         labels = xticklabels,
@@ -655,9 +658,13 @@ plot_est_covid <- function(df, dates) {
       )
   }
 
-  p <- patchwork::wrap_plots(plot_list,
-                             ncol = 1,
-                             nrow = length(levels) + 1)
+  p <- patchwork::wrap_plots(
+    plot_list,
+    ncol = 1,
+    nrow = length(levels) + 1
+  ) +
+    patchwork::plot_annotation(caption = "*The shaded areas represent ±1 SD of uncertainty") &
+    theme(plot.caption = element_text(hjust = 0.5))
 
   return(p)
 }
@@ -707,7 +714,7 @@ choro_map <- function(
     colorbar_title,
     state
 ) {
-
+  df_global <<- plot_df
   g <- list(
     fitbounds = if(state) NULL else "geojson",
     scope = "usa",

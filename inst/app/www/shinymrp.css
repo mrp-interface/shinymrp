@@ -10,6 +10,11 @@
   p {
     text-align: justify;
     font-size: 1.03em;
+    line-height: 1.8em;
+  }
+  
+  ul {
+    line-height: 2em;
   }
 
   h1 h2 h3 h4 h5 {
@@ -18,6 +23,11 @@
 
   text {
     font-family: helvetica,arial,sans-serif;
+  }
+  
+  summary {
+    display: list-item;
+    font-size: 1.4em;
   }
 
   .pad_top {
@@ -102,12 +112,13 @@
   .interface_buttons {
     width: 100%;
     margin-top: 10px;
-    margin-bottom: 50px;
+    margin-bottom: 40px;
+  }
+  
+  .interface_buttons a {
+    margin-right: 1em;
   }
 
-  .interface_buttons a {
-    width: 33%;
-  }
 
   .model_spec_buttons {
     width: 25%;
@@ -167,13 +178,8 @@
   .help_btn_container {
     position: fixed;
     top: 94.5%;
-    left: 96.5%;
+    left: 97%;
     z-index: 1000;
-    width: 5.8%;
-  }
-
-  .help_btn {
-    float: right;
   }
 
   .button_icon {
@@ -183,8 +189,31 @@
   .ref {
     font-size: 0.9em;
   }
-
-  .summary {
-    display: list-item;
+  
+  .guide_section_body * {
+    margin: 5px 15px 5px 15px; 
+  }
+  
+  .guide_math {
+    margin: 10px 15px;
+  }
+  
+  .guide_subheader {
+    margin-top: 25px;
+    font-size: 1.15em;
+  }
+  
+  .learn_math {
+    margin-bottom: 10px;
+  }
+  
+  .learn_math * {
+    line-height: 1.5em;
+  }
+  
+  .custom_label {
+    font-weight: bolder;
+    font-size: 1em;
+    margin-bottom: 2px;
   }
 

@@ -40,10 +40,6 @@ app_ui <- function(request) {
       ),
       navbarMenu("Learn",
         icon = icon("book", lib = "glyphicon"),
-        # tabPanel("Interface",
-        #   value = "nav_learn_interface",
-        #   mod_learn_interface_ui(module_ids$learn$interface)
-        # ),
         tabPanel("Preprocess",
           value = "nav_learn_preprocess",
           mod_learn_preprocess_ui(module_ids$learn$preprocess)
