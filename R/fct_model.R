@@ -199,11 +199,13 @@ group_effects <- function(effects, dat) {
   out$varying <- effects$varying
   
   # reorder terms in interactions
-  names(effects$interaction) <- sort_interactions(
-    names(effects$interaction),
-    names(effects$fixed),
-    dat
-  )
+  if(!is.null(effects$interaction)) {
+    names(effects$interaction) <- sort_interactions(
+      names(effects$interaction),
+      names(effects$fixed),
+      dat
+    ) 
+  }
 
   # interactions without structured priors
   wo_struct <- effects$interaction[effects$interaction != "structured"]
