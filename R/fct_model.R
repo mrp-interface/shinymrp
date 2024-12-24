@@ -9,20 +9,25 @@
 #' @import dplyr
 #' @import purrr
 #' @import stringr
-create_formula <- function(effects, dat) {
-  fixed <- c(names(effects$fixed), names(effects$interaction$fixed_slope))
-  varying_intercept <- c(names(effects$varying), names(effects$interaction$varying_intercept))
-  varying_slope <- names(effects$interaction$varying_slope)
+create_formula <- function(effects) {
+  m_fix_c <- names(effects$m_fix_c) |>
+    purrr::map_chr(function(s) strsplit(s, "\\.")[[1]][1]) |>
+    unique()
+
+  fixed <- c(names(effects$m_fix_bc), m_fix_c, names(effects$i_fixsl))
+  varsl <- c(names(effects$i_varsl), names(effects$s_varsl))
+  varit <- c(names(effects$m_var), names(effects$i_varit), names(effects$i_varits), names(effects$s_varit), names(effects$s_varits))
+  
 
   s_fixed <- if(length(fixed) > 0) paste(paste0(" + ", fixed), collapse = '') else ''
-  s_varying_intercept <- if(length(varying_intercept) > 0) paste(paste0(" + (1 | ", varying_intercept, ")"), collapse = '') else ''
-  s_varying_slope <- if(length(varying_slope) > 0) paste(map(varying_slope, function(s) {
+  s_varit <- if(length(varit) > 0) paste(paste0(" + (1 | ", varit, ")"), collapse = '') else ''
+  s_varsl <- if(length(varsl) > 0) paste(map(varsl, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    return(paste0(" + (", ss[2], " | ", ss[1], ')'))
+    return(paste0(" + (0 + ", ss[2], " | ", ss[1], ')'))
   }), collapse = '') else ''
 
 
-  formula <- paste0("1", s_fixed, s_varying_intercept, s_varying_slope)
+  formula <- paste0("1", s_fixed, s_varit, s_varsl)
 
   return(formula)
 }
@@ -126,7 +131,7 @@ group_fixed <- function(fixed, dat) {
   for(s in names(fixed)) {
     if(data_type(dat[[s]]) == "cat") {
       s_raw <- paste0(s, "_raw")
-      levels <- unique(dat[[s_raw]])
+      levels <- sort(unique(dat[[s_raw]]))
 
       dummy <- paste0(s, ".", levels[2:length(levels)])
       for(d in dummy) {
@@ -279,8 +284,11 @@ data_ <- function(effects) {
 
 parameters_ <- function(effects) {
   scode <- "
-  real Intercept;
-  vector[K] beta;"
+  real Intercept;"
+  
+  if(length(c(effects$m_fix_bc, effects$m_fix_c)) > 0) {
+    scode <- paste0(scode, "\n  vector[K] beta;")
+  }
 
   # varying main effect
   for(s in names(effects$m_var)) {
@@ -395,13 +403,14 @@ transformed_parameters_ <- function(effects) {
   vector[N_${ss[1]}] b_${ss[1]} = z2_${ss[1]} * lambda2_${ss[1]};"))
   }
 
-
+  fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
 
   scode <- paste0(scode, sprintf("
-  vector<lower=0, upper=1>[N] p = inv_logit(Intercept + X * beta%s%s%s);
+  vector<lower=0, upper=1>[N] p = inv_logit(Intercept%s%s%s%s);
   vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);",
+  if(length(fixed) > 0) " + X * beta" else "",
   paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
   paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
   paste(map(names(int_varsl), function(s) {
@@ -443,6 +452,7 @@ model_ <- function(effects) {
 }
 
 generated_quantities_ <- function(effects) {
+  fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
   scode <- ""
@@ -459,7 +469,8 @@ generated_quantities_ <- function(effects) {
   }
 
   scode <- paste0(scode, sprintf("
-  vector<lower=0, upper=1>[N_pop] p_pop = inv_logit(Intercept + X_pop * beta%s%s%s);",
+  vector<lower=0, upper=1>[N_pop] p_pop = inv_logit(Intercept%s%s%s%s);",
+  if(length(fixed) > 0) " + X_pop * beta" else "",
   paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = ""),
   paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = ""),
   paste(map(names(int_varsl), function(s) {
@@ -617,7 +628,7 @@ run_stan <- function(
 extract_predict <- function(fit, ppc_samples=10) {
   pred_mat <- fit$draws(
     variables = "p_pop",
-    format = "draws_matrix"
+    format = "list"
   )|> t()
 
   # generate replicated data
@@ -639,8 +650,13 @@ extract_parameters <- function(fit, effects) {
   # fixed main effects + fixed-slope interaction
   df_fixed <- data.frame()
   if(length(fixed) > 0) {
-    df_fixed <- fit$summary(variables = c("Intercept", "beta")) |>
-      select(mean, sd, q5, q95, rhat, ess_bulk, ess_tail) |>
+    df_fixed <- fit$summary(
+      variables = c("Intercept", "beta"),
+      posterior::default_summary_measures()[1:4],
+      quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
+      posterior::default_convergence_measures()
+    ) |>
+      select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
       as.data.frame()
 
     names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "Convergence", "Bulk_ESS", "Tail_ESS")
@@ -652,23 +668,47 @@ extract_parameters <- function(fit, effects) {
   row_names <- c()
 
   if(length(effects$m_var)) {
-    df_varying <- rbind(df_varying, fit$summary(variables = paste0("scaled_lambda_", names(effects$m_var))))
+    df_varying <- rbind(
+      df_varying,
+      fit$summary(
+        variables = paste0("scaled_lambda_", names(effects$m_var)),
+        posterior::default_summary_measures()[1:4],
+        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
+        posterior::default_convergence_measures()
+      )
+    )
     row_names <- c(row_names, paste0(names(effects$m_var), " (intercept)"))
   }
 
   if(length(int_varit) > 0) {
-    df_varying <- rbind(df_varying, fit$summary(variables = paste0("lambda_", gsub(':', '', names(int_varit)))))
+    df_varying <- rbind(
+      df_varying, 
+      fit$summary(
+        variables = paste0("lambda_", gsub(':', '', names(int_varit))),
+        posterior::default_summary_measures()[1:4],
+        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
+        posterior::default_convergence_measures()
+      )
+    )
     row_names <- c(row_names, paste0(names(int_varit), " (intercept)"))
   }
 
   if(length(int_varsl) > 0) {
-    df_varying <- rbind(df_varying, fit$summary(variables = paste0("lambda2_", sapply(names(int_varsl), function(s) strsplit(s, split = ':')[[1]][1]))))
+    df_varying <- rbind(
+      df_varying, 
+      fit$summary(
+        variables = paste0("lambda2_", sapply(names(int_varsl), function(s) strsplit(s, split = ':')[[1]][1])),
+        posterior::default_summary_measures()[1:4],
+        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
+        posterior::default_convergence_measures()
+      )
+    )
     row_names <- c(row_names, paste0(names(int_varsl), " (slope)"))
   }
 
   if(nrow(df_varying) > 0) {
     df_varying <- df_varying |>
-      select(mean, sd, q5, q95, rhat, ess_bulk, ess_tail) |>
+      select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
       as.data.frame()
 
     names(df_varying) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "Convergence", "Bulk_ESS", "Tail_ESS")

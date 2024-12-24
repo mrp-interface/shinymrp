@@ -1,4 +1,4 @@
-create_test_data <- function(N=10, seed=sample(1:10000)) {
+create_test_data <- function(N=10, seed=sample(1:10000, 1)) {
   set.seed(seed)
   dat <- data.frame(
     cont1 = runif(N, 0, 10),
@@ -27,9 +27,7 @@ compile <- function(effects, dat) {
     cmdstanr::cmdstan_model()
 }
 
-
-
-test_that("models compile", {
+test_that("all models compile", {
   data <- create_test_data(seed = 123)
   intercept_prior <- "normal(0, 5)"
   effect_prior <- "normal(0, 3)"

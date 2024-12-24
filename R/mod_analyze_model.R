@@ -539,6 +539,10 @@ mod_analyze_model_server <- function(id, global){
               }) |> unlist()
 
               if(all(valid_priors)) {
+                waiter::waiter_show(
+                  html = waiter_ui("fit"),
+                  color = waiter::transparent(0.9)
+                )
 
                 # assign default priors to all selected effects
                 all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
@@ -559,21 +563,7 @@ mod_analyze_model_server <- function(id, global){
                     }
                   }
                 }
-  
                 
-                waiter::waiter_show(
-                  html = waiter_ui("fit"),
-                  color = waiter::transparent(0.9)
-                )
-
-                # create a list to store model info
-                model_name <- paste0("Model ", length(global$models) + 1)
-                model <- list()
-                model$covid <- global$covid
-                model$formula <- create_formula(all_priors, global$mrp$input)
-                model$n_iter <- n_iter
-                model$n_chains <- n_chains
-
                 # convert non-numeric categorical data to numeric for Stan
                 if(global$covid) {
                   input_data = stan_factor_covid(global$mrp$input, GLOBAL$levels$covid)
@@ -582,10 +572,20 @@ mod_analyze_model_server <- function(id, global){
                   input_data = stan_factor_poll(global$mrp$input, GLOBAL$levels$poll)
                   new_data = stan_factor_poll(global$mrp$new, GLOBAL$levels$poll)
                 }
-
+                
                 # classify effects
                 all_priors <- all_priors |> group_effects(input_data) |> ungroup_effects()
 
+                # create a list to store model info
+                model_name <- paste0("Model ", length(global$models) + 1)
+                model <- list()
+                model$covid <- global$covid
+                model$formula <- create_formula(all_priors)
+                model$n_iter <- n_iter
+                model$n_chains <- n_chains
+
+                print(nrow(input_data))
+                start_time <- Sys.time()
                 # fit model
                 c(fit, model$code) %<-% run_stan(
                   input_data = input_data,
@@ -597,11 +597,14 @@ mod_analyze_model_server <- function(id, global){
                   sens = if(global$covid) input$sens_kb else 1,
                   spec = if(global$covid) input$spec_kb else 1
                 )
-
+                print(Sys.time() - start_time)
                 c(model$fixed, model$varying) %<-% extract_parameters(fit, all_priors)
+                print(Sys.time() - start_time)
                 c(pred_mat, yrep_mat) %<-% extract_predict(fit)
+                pred_mat_global <<- pred_mat
+                print(Sys.time() - start_time)
                 model$loo <- fit$loo()
-
+                print(Sys.time() - start_time)
 
                 # data for prediction plots
                 for(v in names(global$mrp$levels)) {
