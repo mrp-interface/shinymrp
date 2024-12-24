@@ -23,6 +23,7 @@ Imports:
     patchwork,
     pkgload,
     plotly,
+    posterior,
     purrr,
     RColorBrewer,
     readr,
