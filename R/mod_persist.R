@@ -24,6 +24,7 @@ mod_persist_ui <- function(id) {
       shinyWidgets::actionBttn(
         inputId = ns("show_guide"),
         style = "material-circle",
+        size = "m",
         color = "success",
         label = NULL,
         icon = icon("question", "fa")
@@ -43,6 +44,9 @@ mod_persist_ui <- function(id) {
 mod_persist_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
+    
+    shinyjs::addClass("show_guide", "flicker")
+    shinyjs::delay(3000, shinyjs::removeClass("show_guide", "flicker"))
  
     observeEvent(input$show_guide, {
       show_guide("workflow", global$session)

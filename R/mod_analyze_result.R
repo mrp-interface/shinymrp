@@ -19,6 +19,8 @@ mod_analyze_result_ui <- function(id){
 mod_analyze_result_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+    
+    selected_model <- reactive(global$postprocessed_models[[input$model_select]])
 
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_result") {
@@ -36,11 +38,13 @@ mod_analyze_result_server <- function(id, global){
           )
         }
 
-        if(length(global$models) == 0) {
+        global$postprocessed_models <- purrr::keep(global$models, ~ !is.null(.x$fit_gq))
+
+        if(length(global$postprocessed_models) == 0) {
           showModal(
             modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "No model detected.",
+              "This requires at least one model with postprocessing results.",
               footer = actionButton(
                 inputId = ns("to_model"),
                 label = "Go to model page"
@@ -83,7 +87,7 @@ mod_analyze_result_server <- function(id, global){
                 selectInput(
                   inputId = ns("model_select"),
                   label = "Select a model",
-                  choices = names(global$models)
+                  choices = names(global$postprocessed_models)
                 )
               ),
               tabPanel("Raw vs MRP",
@@ -129,7 +133,7 @@ mod_analyze_result_server <- function(id, global){
           plot_prev(
             global$mrp$input,
             global$plotdata$dates,
-            global$models[[input$model_select]]$overall,
+            selected_model()$est$overall,
             show_caption = TRUE
           )
         }, height = function() GLOBAL$ui$plot_height)
@@ -138,7 +142,7 @@ mod_analyze_result_server <- function(id, global){
           req(names(global$models))
 
           plot_est_covid(
-            global$models[[input$model_select]]$sex,
+            selected_model()$est$sex,
             global$plotdata$dates
           )
 
@@ -148,7 +152,7 @@ mod_analyze_result_server <- function(id, global){
           req(names(global$models))
 
           plot_est_covid(
-            global$models[[input$model_select]]$race,
+            selected_model()$est$race,
             global$plotdata$dates
           )
 
@@ -158,7 +162,7 @@ mod_analyze_result_server <- function(id, global){
           req(names(global$models))
 
           plot_est_covid(
-            global$models[[input$model_select]]$age,
+            selected_model()$est$age,
             global$plotdata$dates
           )
 
@@ -167,7 +171,7 @@ mod_analyze_result_server <- function(id, global){
         output$est_county_map <- plotly::renderPlotly({
           req(names(global$models))
 
-          global$models[[input$model_select]]$county |>
+          selected_model()$est$county |>
             mutate(fips = factor) |>
           get_est_weekly_prev(
             global$extdata$covid$fips,
@@ -185,7 +189,7 @@ mod_analyze_result_server <- function(id, global){
         output$est_county_line <- renderPlot({
           req(names(global$models))
 
-          global$models[[input$model_select]]$county |>
+          selected_model()$est$county |>
             mutate(fips = factor) |>
             left_join(global$extdata$covid$fips, by = "fips") |>
             select(time, county, est, std) |>
@@ -204,7 +208,7 @@ mod_analyze_result_server <- function(id, global){
                 selectInput(
                   inputId = ns("model_select"),
                   label = "Select a model",
-                  choices = names(global$models)
+                  choices = names(global$postprocessed_models)
                 )
               ),
               tabPanel("Raw vs MRP",
@@ -241,7 +245,7 @@ mod_analyze_result_server <- function(id, global){
         output$est_overall <- renderPlot({
           req(names(global$models))
 
-          global$models[[input$model_select]]$overall |>
+          selected_model()$est$overall |>
             mutate(
               data = "Estimate",
               lower = est - std,
@@ -255,35 +259,35 @@ mod_analyze_result_server <- function(id, global){
         output$est_sex <- renderPlot({
           req(names(global$models))
 
-          plot_est_poll(global$models[[input$model_select]]$sex)
+          plot_est_poll(selected_model()$est$sex)
 
         }, height = function() GLOBAL$ui$plot_height)
 
         output$est_race <- renderPlot({
           req(names(global$models))
 
-          plot_est_poll(global$models[[input$model_select]]$race)
+          plot_est_poll(selected_model()$est$race)
 
         }, height = function() GLOBAL$ui$plot_height)
 
         output$est_age <- renderPlot({
           req(names(global$models))
 
-          plot_est_poll(global$models[[input$model_select]]$age)
+          plot_est_poll(selected_model()$est$age)
 
         }, height = function() GLOBAL$ui$plot_height)
 
         output$est_edu <- renderPlot({
           req(names(global$models))
 
-          plot_est_poll(global$models[[input$model_select]]$edu)
+          plot_est_poll(selected_model()$est$edu)
 
         }, height = function() GLOBAL$ui$plot_height)
 
         output$est_state_point <- renderPlot({
           req(names(global$models), global$plotdata)
 
-          global$models[[input$model_select]]$state |>
+          selected_model()$est$state |>
             mutate(fips = factor) |>
             left_join(global$extdata$poll$fips, by = "fips") |>
             select(state, est, std) |>
@@ -296,7 +300,7 @@ mod_analyze_result_server <- function(id, global){
           req(names(global$models), global$plotdata)
 
 
-          global$models[[input$model_select]]$state |>
+          selected_model()$est$state |>
             mutate(fips = factor) |>
             get_est_support(global$extdata$poll$fips) |>
             mutate(value = est) |>
