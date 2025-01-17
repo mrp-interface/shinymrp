@@ -276,11 +276,9 @@ mod_analyze_upload_server <- function(id, global){
               GLOBAL$levels$covid
             )
 
-
           global$mrp <- list(
             input = input_data,
             new = new_data,
-            new_stan = stan_factor_covid(new_data, GLOBAL$levels$covid),
             levels = levels,
             vars = vars
           )

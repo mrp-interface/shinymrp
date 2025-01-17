@@ -33,6 +33,7 @@ app_server <- function(input, output, session) {
     mrp_input = NULL,
     plotdata = NULL,
     models = NULL,
+    postprocessed_models = NULL,
     model_count = 0
   )
   

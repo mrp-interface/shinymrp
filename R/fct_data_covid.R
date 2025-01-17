@@ -230,7 +230,8 @@ stan_factor_covid <- function(df, levels) {
       "race_raw" = "race",
       "age_raw" = "age",
       "time_raw" = "time",
-      "zip_raw" = "zip"
+      "zip_raw" = "zip",
+      "county_raw" = "county"
     )
 
   # add Stan-dardized columns
@@ -240,7 +241,8 @@ stan_factor_covid <- function(df, levels) {
       race = factor(race_raw, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
       age = factor(age_raw, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
       time = as.integer(time_raw),
-      zip = as.factor(zip_raw) |> as.integer()
+      zip = as.factor(zip_raw) |> as.integer(),
+      county = as.factor(county_raw) |> as.integer()
     )
 
   return(df)

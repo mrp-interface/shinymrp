@@ -9,7 +9,7 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     navbarPage("Multilevel Regression & Poststratification",
-      theme = shinythemes::shinytheme("flatly"),
+      # theme = shinythemes::shinytheme("flatly"),
       id = "navbar",
       tabPanel("Home",
         value = "nav_home",

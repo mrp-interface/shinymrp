@@ -63,6 +63,11 @@ waiter_ui <- function(type = "") {
       waiter::spin_loaders(2, color = "black"),
       tags$h4("Fitting model...", style = "color: black")
     )
+  } else if(type == "postprocess") {
+    tagList(
+      waiter::spin_loaders(2, color = "black"),
+      tags$h4("Postprocessing...", style = "color: black")
+    )
   } else if(type == "loo") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
@@ -195,4 +200,133 @@ show_guide <- function(section, session) {
     ),
     session = session
   )
+}
+
+create_model_tab <- function(ns, model) {
+  
+  tab_header <- tags$div(
+    class = "model_tab_header",
+    textOutput(
+      outputId = ns(model$IDs$title),
+      inline = TRUE
+    ),
+    actionButton(
+      inputId = ns(model$IDs$rm_btn),
+      label = NULL,
+      icon = icon("remove", lib = "glyphicon"),
+      class = "btn-xs remove_model"
+    )
+  )
+  
+  appendTab("navbar_model",
+    select = TRUE,
+    tabPanel(title = tab_header,
+      value = model$IDs$tab,
+      tags$div(class = "pad_top",
+        fluidRow(
+          column(width = 10,
+            HTML(paste0("<h4>", "Formula: ", model$formula, "</h4>"))
+          ),
+          column(width = 2,
+            tags$div(style = "float: right;",
+              dropdown(
+                label = "Save Model",
+                circle = FALSE,
+                block = TRUE,
+                width = "100%",
+                downloadButton(
+                  outputId = ns(model$IDs$save_code_btn),
+                  label = "Code",
+                  icon = icon("download", "fa"),
+                  style = "width: 100%; margin-bottom: 5px; padding: 0px auto;"
+                ),
+                downloadButton(
+                  outputId = ns(model$IDs$save_fit_btn),
+                  label = "Result",
+                  icon = icon("download", "fa"),
+                  style = "width: 100%; padding: 0px auto;"
+                )
+              )
+            )
+          )
+        ),
+        tags$h5(paste0("A binomial model with a logit function of the positive response rate. ",
+                       "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
+        actionButton(
+          inputId = ns(model$IDs$postprocess_btn),
+          label = "Run postprocessing"
+        ),
+        tags$div(style = "margin-top: 30px",
+          create_text_box(
+           title = tags$b("Note"),
+           tags$ul(
+             tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
+             tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
+           )
+          ),
+          if(nrow(model$fixed) > 0) {
+            tags$div(
+              tags$h4("Fixed Effects", class = "break_title"),
+              tags$hr(class = "break_line"),
+              tableOutput(ns(model$IDs$fixed))
+            )
+          },
+          if(nrow(model$varying) > 0) {
+            tags$div(
+              tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
+              tags$hr(class = "break_line"),
+              tableOutput(ns(model$IDs$varying))  
+            )
+          }
+        ),
+        conditionalPanel(ns = ns,
+          condition = paste0("input.", model$IDs$postprocess_btn, " > 0"),
+          tags$div(
+            tags$h4("Posterior Predictive Check", class = "break_title"),
+            tags$hr(class = "break_line"),
+            conditionalPanel(
+              condition = "output.covid",
+              create_text_box(
+                title = tags$b("Note"),
+                tags$p("The plot shows the weekly positive response rate computed from the observed data and 10 sets of replicated data.") 
+              )
+            ),
+            conditionalPanel(
+              condition = "!output.covid",
+              create_text_box(
+                title = tags$b("Note"),
+                tags$p("The plot shows the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
+              )
+            ),
+            plotOutput(outputId = ns(model$IDs$ppc))
+          )
+        )
+      )
+    )
+  )
+  
+}
+
+reset_inputs <- function(vars) {
+  updateVirtualSelect(
+    inputId = "fixed",
+    choices = vars$fixed
+  )
+  
+  updateVirtualSelect(
+    inputId = "varying",
+    choices = vars$varying
+  )
+  
+  updateVirtualSelect(
+    inputId = "interaction",
+    choices = list()
+  )
+  
+  shinyjs::reset("predictor_select")
+  shinyjs::reset("iter_select")
+  shinyjs::reset("iter_kb")
+  shinyjs::reset("chain_select")
+  shinyjs::reset("spec_kb")
+  shinyjs::reset("sens_kb")
 }

@@ -216,4 +216,45 @@
     font-size: 1em;
     margin-bottom: 2px;
   }
+  
+  .alert {
+    background-color: red;
+  }
+  
+  .success {
+    background-color: #00b1fc;
+  }
 
+  .success:hover {
+      background-color: #008ecf; /* Darker shade for hover */
+  }
+
+  .success:active {
+      background-color: #006fa1; /* Even darker shade for clicked state */
+  }
+
+  .success:disabled {
+      background-color: #c4e4f8; /* Light shade for disabled state */
+      color: #a0a0a0;            /* Gray text to indicate disabled */
+      cursor: not-allowed;       /* Change cursor to indicate non-interactive */
+      opacity: 0.6;              /* Reduced opacity for visual cue */
+  }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .flicker {
+    animation: flicker 0.5s infinite;
+  }
+  
+  @keyframes vibrate {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+  }
+  .vibrate {
+    animation: vibrate 0.4s ease-in-out;
+  }

@@ -49,6 +49,10 @@ GLOBAL <- list(
     covid = c("sex", "race", "age", "zip", "time", "date", "total", "positive"),
     poll = c("sex", "race", "age", "edu", "state", "total", "positive")
   ),
+  pstrat_vars = list(
+    covid = c("sex", "race", "age", "county"),
+    poll = c("sex", "race", "age", "edu", "state")
+  ),
   ui = list(
     preview_size = 100,
     max_model = 5,
