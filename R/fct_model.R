@@ -477,7 +477,21 @@ model_ <- function(effects) {
   return(scode)
 }
 
-generated_quantities_ <- function(effects, gq_data) {
+
+gq_loo <- function() {
+  return("
+  vector[N] log_lik;
+  for (n in 1:N) {
+    log_lik[n] = binomial_lpmf(y[n] | n_sample[n], p_sample[n]);
+  }")
+}
+
+gq_ppc <- function() {
+  return("
+  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);")
+}
+
+gq_pstrat <- function(effects, gq_data) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -551,17 +565,11 @@ generated_quantities_ <- function(effects, gq_data) {
      ${est_marginal}
   }                
   "))
-  
-  scode <- paste0(scode, "
-  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);
-  
-  vector[N] log_lik;
-  for (n in 1:N) {
-    log_lik[n] = binomial_lpmf(y[n] | n_sample[n], p_sample[n]);
-  }")
+
   
   return(scode)
 }
+
 
 make_stancode_mcmc <- function(effects, gq_data) {
   
@@ -582,7 +590,13 @@ model { ${model_(effects)}
   return(scode)
 }
 
-make_stancode <- function(effects, gq_data) {
+make_stancode_gq <- function(effects, gq_data, gq_type) {
+  if(gq_type == "loo") {
+    gq <- gq_loo()
+  } else if (gq_type == "ppc") {
+    gq <- gq_ppc()
+  } else if (gq_type == "pstrat")
+    gq <- gq_pstrat(effects, gq_data)
   
   scode <- str_interp("
 data { ${data_(effects, gq_data)}
@@ -594,10 +608,7 @@ parameters { ${parameters_(effects)}
 transformed parameters { ${transformed_parameters_(effects)}
 }
 
-model { ${model_(effects)}
-}
-
-generated quantities { ${generated_quantities_(effects, gq_data)}
+generated quantities { ${gq}
 }
   ")
   
@@ -719,20 +730,25 @@ run_mcmc <- function(
     code_fout = NULL
 ) {
   
-  stan_code_mcmc <- make_stancode_mcmc(effects, gq_data)
-  stan_code <- make_stancode(effects, gq_data)
+  stan_code <- list()
+  stan_code$mcmc <- make_stancode_mcmc(effects, gq_data)
+  stan_code$ppc <- make_stancode_gq(effects, gq_data, "ppc")
+  stan_code$loo <- make_stancode_gq(effects, gq_data, "loo")
+  stan_code$pstrat <- make_stancode_gq(effects, gq_data, "pstrat")
+  
   stan_data <- make_standata(input_data, new_data, effects, gq_data, sens, spec)
   
   if(!is.null(code_fout)) {
-    writeLines(stan_code, code_fout)
+    writeLines(stan_code$mcmc, code_fout)
   }
   
   mod_mcmc <- cmdstanr::cmdstan_model(
-    stan_file = cmdstanr::write_stan_file(stan_code_mcmc),
+    stan_file = cmdstanr::write_stan_file(stan_code$mcmc),
     cpp_options = list(stan_threads = TRUE)
   )
   
-  fit_mcmc <- mod_mcmc$sample(
+  fit <- list()
+  fit$mcmc <- mod_mcmc$sample(
     data = stan_data,
     iter_warmup = n_iter/2,
     iter_sampling = n_iter/2,
@@ -743,19 +759,25 @@ run_mcmc <- function(
     seed = seed
   )
   
-  return(list(fit_mcmc, stan_data, stan_code))
+  return(list(fit, stan_data, stan_code))
 }
 
-run_gq <- function(holder) {
+run_gq <- function(
+    fit_mcmc,
+    code,
+    data,
+    n_chains
+  ) {
+  
   mod_gq <- cmdstanr::cmdstan_model(
-    stan_file = cmdstanr::write_stan_file(holder$code),
+    stan_file = cmdstanr::write_stan_file(code),
     cpp_options = list(stan_threads = TRUE)
   )
   
   fit_gq <- mod_gq$generate_quantities(
-    holder$fit_mcmc,
-    data = holder$data,
-    parallel_chains = holder$n_chains,
+    fit_mcmc,
+    data = data,
+    parallel_chains = n_chains,
     threads_per_chain = 1
   )
   

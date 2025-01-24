@@ -356,13 +356,12 @@ mod_analyze_model_server <- function(id, global){
 
     # Model select input
     output$model_select_ui <- renderUI({
-      global$postprocessed_models <- purrr::keep(global$models, ~ !is.null(.x$fit_gq))
       
       tags$div(style = "display: flex; align-items: self-end; gap: 10px;",
         selectizeInput(
           inputId = ns("model_select"),
           label = "Select one or more models",
-          choices = names(global$postprocessed_models),
+          choices = names(global$models),
           multiple = TRUE
         ),
         tags$div(style = "margin-bottom: 15px",
@@ -403,7 +402,7 @@ mod_analyze_model_server <- function(id, global){
             )
 
             df <- isolate(global$models[selected_names]) |>
-              purrr::map(function(m) loo::loo(m$fit_gq$draws("log_lik"))) |>
+              purrr::map(function(m) loo::loo(m$fit$loo$draws("log_lik"))) |>
               loo::loo_compare() |>
               as.data.frame() |>
               select(elpd_diff, se_diff)
@@ -567,7 +566,7 @@ mod_analyze_model_server <- function(id, global){
                 )
                 
                 # run MCMC
-                c(model$fit_mcmc, model$data, model$code) %<-% run_mcmc(
+                c(model$fit, model$data, model$code) %<-% run_mcmc(
                   input_data = input_data,
                   new_data = new_data,
                   effects = all_priors,
@@ -578,7 +577,7 @@ mod_analyze_model_server <- function(id, global){
                   sens = if(global$covid) input$sens_kb else 1,
                   spec = if(global$covid) input$spec_kb else 1
                 )
-
+                
                 model_buffer(model)
   
               } else {
@@ -605,7 +604,12 @@ mod_analyze_model_server <- function(id, global){
     })
 
     observeEvent(input$fit_upload, {
-      model <- readRDS(input$fit_upload$datapath)
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
+      
+      model <- qs::qread(input$fit_upload$datapath)
       
       if(!("covid" %in% names(model))) {
         show_alert("The uploaded RDS file does not contain a model estimation.", global$session)
@@ -616,33 +620,24 @@ mod_analyze_model_server <- function(id, global){
           show_alert(paste0("The uploaded RDS file contains model estimation for spatio-temporal data instead of cross-sectional data."), global$session)
         }
       } else {
-        waiter::waiter_show(
-          html = waiter_ui("wait"),
-          color = waiter::transparent(0.9)
-        )
-        
         model_buffer(model)
-        
-        waiter::waiter_hide()
       }
 
     })
 
     observeEvent(input$use_example, {
-      if(global$covid) {
-        model <- readRDS(app_sys("extdata/fit_st.RDS"))
-      } else {
-        model <- readRDS(app_sys("extdata/fit_cs.RDS"))
-      }
-      
       waiter::waiter_show(
         html = waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
+      
+      if(global$covid) {
+        model <- qs::qread(app_sys("extdata/fit_st.RDS"))
+      } else {
+        model <- qs::qread(app_sys("extdata/fit_cs.RDS"))
+      }
 
       model_buffer(model)
-      
-      waiter::waiter_hide()
     })
     
     # create new model tab
@@ -650,8 +645,32 @@ mod_analyze_model_server <- function(id, global){
       model <- model_buffer()
       
       # extract posterior summary of coefficients
-      c(model$fixed, model$varying) %<-% extract_parameters(model$fit_mcmc, model$priors)
+      c(model$fixed, model$varying) %<-% extract_parameters(model$fit$mcmc, model$priors)
       
+      # run standalone generated quantities for LOO
+      model$fit$loo %<-% run_gq(
+        fit_mcmc = model$fit$mcmc,
+        code = model$code$loo,
+        data = model$data,
+        n_chains = model$n_chains
+      )
+      
+      # run standalone generated quantities for PPC
+      model$fit$ppc %<-% run_gq(
+        fit_mcmc = model$fit$mcmc,
+        code = model$code$ppc,
+        data = model$data,
+        n_chains = model$n_chains
+      )
+   
+      # data for PPC plots
+      model$yrep <- extract_yrep(
+        model$fit$ppc,
+        global$mrp$input,
+        global$covid
+      )
+ 
+
       waiter::waiter_hide()
       
       model_name <- paste0("Model ", length(global$models) + 1)
@@ -671,7 +690,7 @@ mod_analyze_model_server <- function(id, global){
       
       # create new model tab
       create_model_tab(ns, model)
-      
+
       # changeable tab title
       output[[model$IDs$title]] <- renderText(model_name)
       
@@ -692,61 +711,67 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE)
       output[[model$IDs$varying]] <- renderTable(model$varying, rownames = TRUE)
       
+      # render ppc plot
+      output[[model$IDs$ppc]] <- renderPlot({
+        req(model$yrep)
+        
+        if(global$covid) {
+          plot_ppc_covid_subset(
+            model$yrep,
+            global$mrp$input,
+            global$plotdata$dates
+          )
+        } else {
+          plot_ppc_poll(
+            model$yrep,
+            global$mrp$input
+          )
+        }
+      })
+      
       # postprocessing
       observeEvent(input[[model$IDs$postprocess_btn]], {
-        
-        if(is.null(global$models[[model_name]]$fit_gq)) {
+
+        if(is.null(global$models[[model_name]]$fit$pstrat)) {
           waiter::waiter_show(
-            html = waiter_ui("postprocess"),
+            html = waiter_ui("pstrat"),
             color = waiter::transparent(0.9)
           )
           
           model <- global$models[[model_name]]
           
-          model$fit_gq <- run_gq(model)
+          model$fit$pstrat %<-% run_gq(
+            fit_mcmc = model$fit$mcmc,
+            code = model$code$pstrat,
+            data = model$data,
+            n_chains = model$n_chains
+          )
           
           model$est <- extract_est(
-            model$fit_gq,
+            model$fit$pstrat,
             global$mrp$new,
             global$covid
           )
 
-          # data for PPC plots
-          model$yrep <- extract_yrep(
-            model$fit_gq,
-            global$mrp$input,
-            global$covid
-          )
-          
           # update reactiveValues
           global$models[[model_name]] <- model
           
           waiter::waiter_hide()
         }
         
-        # render ppc plot
-        output[[model$IDs$ppc]] <- renderPlot({
-          req(model$fit_gq)
-          
-          if(global$covid) {
-            plot_ppc_covid_subset(
-              model$yrep,
-              global$mrp$input,
-              global$plotdata$dates
-            )
-          } else {
-            plot_ppc_poll(
-              model$yrep,
-              global$mrp$input
-            )
-          }
-        })
-        
         # download fit result after postprocessing
         output[[model$IDs$save_fit_btn]] <- downloadHandler(
           filename = function() { "model_fit_w_postprocess.RDS" },
           content = function(file) {
-            saveRDS(model, file)
+            waiter::waiter_show(
+              html = waiter_ui("wait"),
+              color = waiter::transparent(0.9)
+            )
+            
+            model$fit$mcmc$draws()
+            qs::qsave(model, file)
+            
+            waiter::waiter_hide()
           }
         )
         
@@ -758,7 +783,15 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$save_fit_btn]] <- downloadHandler(
         filename = function() { "model_fit_wo_postprocess.RDS" },
         content = function(file) {
-          saveRDS(model, file)
+          waiter::waiter_show(
+            html = waiter_ui("wait"),
+            color = waiter::transparent(0.9)
+          )
+          
+          model$fit$mcmc$draws()
+          qs::qsave(model, file)
+          
+          waiter::waiter_hide()
         }
       )
       
@@ -766,12 +799,12 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$save_code_btn]] <- downloadHandler(
         filename = function() { "model.stan" },
         content = function(file) {
-          writeLines(model$code, file)
+          writeLines(model$code$mcmc, file)
         }
       )
       
       # show whole page if object contains postprocessing results
-      if(!is.null(model$fit_gq)) {
+      if(!is.null(model$fit$pstrat)) {
         shinyjs::delay(100, shinyjs::click(model$IDs$postprocess_btn))
       }
       
@@ -807,7 +840,7 @@ mod_analyze_model_server <- function(id, global){
 
       # clear model object list
       global$models <- NULL
-      global$postprocessed_models <- NULL
+      global$poststratified_models <- NULL
 
     })
   })
