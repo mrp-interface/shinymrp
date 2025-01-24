@@ -177,8 +177,8 @@
   
   .help_btn_container {
     position: fixed;
-    top: 94.5%;
-    left: 97%;
+    top: 94%;
+    left: 96.5%;
     z-index: 1000;
   }
 
@@ -240,6 +240,7 @@
       opacity: 0.6;              /* Reduced opacity for visual cue */
   }
 
+  /* ANIMATION EFFECTS */
   @keyframes flicker {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
@@ -257,4 +258,15 @@
   }
   .vibrate {
     animation: vibrate 0.4s ease-in-out;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotateY(0deg); }
+    25% { transform: rotateY(90deg); }
+    50% { transform: rotateY(180deg); }
+    75% { transform: rotateY(270deg); }
+    100% { transform: rotateY(360deg); }
+  }
+  .spin {
+    animation: spin 0.5s infinite;  /* 1-second spin */
   }

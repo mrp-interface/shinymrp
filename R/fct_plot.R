@@ -714,7 +714,7 @@ choro_map <- function(
     colorbar_title,
     state
 ) {
-  df_global <<- plot_df
+
   g <- list(
     fitbounds = if(state) NULL else "geojson",
     scope = "usa",

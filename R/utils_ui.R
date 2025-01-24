@@ -63,10 +63,10 @@ waiter_ui <- function(type = "") {
       waiter::spin_loaders(2, color = "black"),
       tags$h4("Fitting model...", style = "color: black")
     )
-  } else if(type == "postprocess") {
+  } else if(type == "pstrat") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Postprocessing...", style = "color: black")
+      tags$h4("Running poststratification...", style = "color: black")
     )
   } else if(type == "loo") {
     tagList(
@@ -254,7 +254,7 @@ create_model_tab <- function(ns, model) {
                        "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each.")),
         actionButton(
           inputId = ns(model$IDs$postprocess_btn),
-          label = "Run postprocessing"
+          label = "Run poststratification"
         ),
         tags$div(style = "margin-top: 30px",
           create_text_box(
@@ -277,10 +277,7 @@ create_model_tab <- function(ns, model) {
               tags$hr(class = "break_line"),
               tableOutput(ns(model$IDs$varying))  
             )
-          }
-        ),
-        conditionalPanel(ns = ns,
-          condition = paste0("input.", model$IDs$postprocess_btn, " > 0"),
+          },
           tags$div(
             tags$h4("Posterior Predictive Check", class = "break_title"),
             tags$hr(class = "break_line"),
@@ -327,6 +324,7 @@ reset_inputs <- function(vars) {
   shinyjs::reset("iter_select")
   shinyjs::reset("iter_kb")
   shinyjs::reset("chain_select")
+  shinyjs::reset("seed_select")
   shinyjs::reset("spec_kb")
   shinyjs::reset("sens_kb")
 }

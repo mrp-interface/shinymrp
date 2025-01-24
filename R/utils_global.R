@@ -26,7 +26,8 @@ module_ids <- list(
 GLOBAL <- list(
   bounds = list(
     covid = list(
-      age = c(0, 18, 35, 65, 75)
+      age = c(0, 18, 35, 65, 75),
+      poverty = c(0, 1, 2)
     ),
     poll = list(
       age = c(18, 30, 40, 50, 60, 70)

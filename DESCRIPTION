@@ -25,6 +25,7 @@ Imports:
     plotly,
     posterior,
     purrr,
+    qs,
     RColorBrewer,
     readr,
     readxl,

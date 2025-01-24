@@ -21,6 +21,10 @@ mod_analyze_visualize_server <- function(id, global){
 
     observeEvent(global$covid, {
       if(global$covid) {
+        # prevent rendering errors when users switch interface
+        output$indiv_edu <- renderPlot(NULL)
+        
+        
         output$ui <- renderUI({
           tags$div(class = "pad_top",
             navlistPanel(widths = c(3, 9),
@@ -419,8 +423,7 @@ mod_analyze_visualize_server <- function(id, global){
 
         output$prev_county <- plotly::renderPlotly({
           req(global$mrp)
-          input_global <<- global$mrp$input
-          fips_global <<- global$extdata$covid$fips
+
           if("county" %in% names(global$mrp$input)) {
             global$mrp$input |>
               mutate(fips = county) |>
@@ -437,6 +440,9 @@ mod_analyze_visualize_server <- function(id, global){
         })
 
       } else {
+        # prevent rendering errors when users switch interface
+        output$prev_overall <- renderPlot(NULL)
+        
         output$ui <- renderUI({
           tags$div(class = "pad_top",
             navlistPanel(widths = c(3, 9),

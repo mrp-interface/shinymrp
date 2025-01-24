@@ -20,7 +20,7 @@ mod_analyze_result_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
     
-    selected_model <- reactive(global$postprocessed_models[[input$model_select]])
+    selected_model <- reactive(global$poststratified_models[[input$model_select]])
 
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_result") {
@@ -38,13 +38,13 @@ mod_analyze_result_server <- function(id, global){
           )
         }
 
-        global$postprocessed_models <- purrr::keep(global$models, ~ !is.null(.x$fit_gq))
+        global$poststratified_models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
 
-        if(length(global$postprocessed_models) == 0) {
+        if(length(global$poststratified_models) == 0) {
           showModal(
             modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "This requires at least one model with postprocessing results.",
+              "This requires at least one model with poststratification results.",
               footer = actionButton(
                 inputId = ns("to_model"),
                 label = "Go to model page"
@@ -76,7 +76,11 @@ mod_analyze_result_server <- function(id, global){
 
     observeEvent(global$covid, {
       if(global$covid) {
-
+        # prevent rendering errors when users switch interface
+        output$est_edu <- renderPlot(NULL)
+        output$est_state_map <- plotly::renderPlotly(NULL)
+        output$est_state_point <- renderPlot(NULL)
+        
         output$ui <- renderUI({
           fips_df <- global$extdata$covid$fips |> filter(fips %in% global$mrp$levels$county)
           counties <- sort(fips_df$county)
@@ -87,7 +91,7 @@ mod_analyze_result_server <- function(id, global){
                 selectInput(
                   inputId = ns("model_select"),
                   label = "Select a model",
-                  choices = names(global$postprocessed_models)
+                  choices = names(global$poststratified_models)
                 )
               ),
               tabPanel("Raw vs MRP",
@@ -201,6 +205,10 @@ mod_analyze_result_server <- function(id, global){
 
 
       } else {
+        # prevent rendering errors when users switch interface
+        output$est_county_map <- plotly::renderPlotly(NULL)
+        output$est_county_line <- renderPlot(NULL)
+        
         output$ui <- renderUI({
           tags$div(class = "pad_top",
             navlistPanel(widths = c(3, 9),
@@ -208,7 +216,7 @@ mod_analyze_result_server <- function(id, global){
                 selectInput(
                   inputId = ns("model_select"),
                   label = "Select a model",
-                  choices = names(global$postprocessed_models)
+                  choices = names(global$poststratified_models)
                 )
               ),
               tabPanel("Raw vs MRP",
