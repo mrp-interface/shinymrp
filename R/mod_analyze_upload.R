@@ -30,6 +30,7 @@ mod_analyze_upload_ui <- function(id){
           label = NULL,
           accept = c(".csv", ".xlsx", ".sas7bdat")
         ),
+        uiOutput(outputId = ns("input_feedback")),
         tags$p(class = "ref",
           "For ", tags$u("requirements for input data"), "and preprocessing code, open",
           actionLink(
@@ -85,6 +86,8 @@ mod_analyze_upload_server <- function(id, global){
     ns <- session$ns
 
     rawdata <- reactiveVal()
+    try_error <- reactiveVal()
+    input_error <- reactiveVal()
 
     observeEvent(global$input$navbar, {
       if(global$input$navbar == "nav_analyze" & is.null(global$covid)) {
@@ -118,6 +121,40 @@ mod_analyze_upload_server <- function(id, global){
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
+    })
+    
+    output$input_feedback <- renderUI({
+      req(rawdata())
+      
+      ui <- NULL
+      if ("try-error" %in% class(try_error()) | length(input_error()) > 0) {
+        ui <- tags$div(
+          class = "panel panel-warning",
+          tags$div(
+            class = "panel-heading",
+            tags$p("Warning")
+          ),
+          tags$div(
+            class = "panel-body",
+            tags$p("Input data does not meet all requirements. Please check Guide (bottom right corner) for input data requirements.")
+          )
+        )
+          
+      } else {
+        ui <- tags$div(
+          class = "panel panel-success",
+          tags$div(
+            class = "panel-heading",
+            tags$p("Success")
+          ),
+          tags$div(
+            class = "panel-body",
+            tags$p("All requirements are met. You may proceed to the next page.")
+          )
+        )
+      }
+      
+      return(ui)
     })
     
     output$main_panel <- renderUI({
@@ -157,8 +194,11 @@ mod_analyze_upload_server <- function(id, global){
     })
 
     observeEvent(input$input_data, {
-
-      # reset variables
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
+      
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
@@ -173,16 +213,9 @@ mod_analyze_upload_server <- function(id, global){
         haven::read_sas(path) |> rawdata()
       } # else no necessary due to fileInput constraint
 
-
-      waiter::waiter_show(
-        html = waiter_ui("wait"),
-        color = waiter::transparent(0.9)
-      )
-
-
       if(input$toggle_input == "indiv") {
         # aggregate raw data
-        out <- try({
+        try({
           if(global$covid) {
             global$data <- rawdata() |>
               aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
@@ -191,28 +224,22 @@ mod_analyze_upload_server <- function(id, global){
             global$data <- rawdata() |>
               aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
           }
-        }, silent = TRUE)
-
-        if ("try-error" %in% class(out)) {
-          show_alert("Unsuccessful data processing. Please check the Learn > Interface page for input data requirements.", global$session)
-        } else {
-          show_notif("Input data has been preprocessed. You may proceed to the next page.", global$session)
-        }
+        }, silent = TRUE) |> try_error()
 
       } else {
         # check input aggregated data
-        out <- try({
+        try({
           if(global$covid) {
-            errors <- check_covid_data(rawdata(), GLOBAL$expected_columns$covid)
+            check_covid_data(rawdata(), GLOBAL$expected_columns$covid) |> input_error()
 
-            if(length(errors) == 0) {
+            if(length(input_error()) == 0) {
               global$data <- rawdata() |>
                 find_columns(GLOBAL$expected_columns$covid) |>
                 prep(GLOBAL$levels$covid,
                   to_lower = c("sex", "race"),
                   to_char = c("zip")
                 )
-            } else if(length(errors) == 1 & "date" %in% names(errors)) {
+            } else if(length(input_error()) == 1 & "date" %in% names(input_error())) {
               global$data <- rawdata() |>
                 find_columns(GLOBAL$expected_columns$covid) |>
                 prep(GLOBAL$levels$covid,
@@ -222,15 +249,15 @@ mod_analyze_upload_server <- function(id, global){
                 select(-date)
             }
           } else {
-            errors <- check_poll_data(rawdata(), GLOBAL$expected_columns$poll)
+            check_poll_data(rawdata(), GLOBAL$expected_columns$poll) |> input_error()
 
-            if(length(errors) == 0) {
+            if(length(input_error()) == 0) {
               global$data <- rawdata() |>
                 find_columns(GLOBAL$expected_columns$poll) |>
                 prep(GLOBAL$levels$poll,
                   to_lower = c("sex", "race", "edu")
                 )
-            } else if(length(errors) == 1 & "state" %in% names(errors)) {
+            } else if(length(input_error()) == 1 & "state" %in% names(input_error())) {
               global$data <- rawdata() |>
                 find_columns(GLOBAL$expected_columns$poll) |>
                 prep(GLOBAL$levels$poll,
@@ -239,86 +266,11 @@ mod_analyze_upload_server <- function(id, global){
                 select(-state)
             }
           }
-        }, silent = TRUE)
-
-        if ("try-error" %in% class(out)) {
-          show_alert("Input data does not meet all requirements. Please check Guide (bottom right corner) for input data requirements.", global$session)
-        } else {
-          if(length(errors) == 0) {
-            show_notif("All requirements are met. You may proceed to the next page.", global$session)
-          } else {
-            show_alert(
-              tagList(
-                tags$ul(
-                  purrr::map(unlist(errors), ~ tags$li(.x))
-                ),
-                tags$p("Please check Guide (bottom right corner) for input data requirements.")
-              ),
-              global$session
-            )
-          }
-        }
+    
+        }, silent = TRUE) |> try_error()
       }
-
-      # prepare data for model fitting and plotting
-      if(!is.null(global$data)) {
-        if(global$covid) {
-          c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
-              global$data,
-              global$extdata$covid$tract_data,
-              global$extdata$covid$zip_tract
-            )
-
-          c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-              patient,
-              pstrat_data,
-              covariates,
-              GLOBAL$levels$covid
-            )
-
-          global$mrp <- list(
-            input = input_data,
-            new = new_data,
-            levels = levels,
-            vars = vars
-          )
-
-          global$plotdata <- list(
-            dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-            geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
-            raw_covariates = raw_covariates
-          )
-
-        } else {
-          global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
-
-          covariates <- get_state_predictors(rawdata())
-          covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
-
-          c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-            global$data,
-            global$extdata$poll$pstrat_data,
-            covariates,
-            GLOBAL$levels$poll
-          )
-
-          global$mrp <- list(
-            input = input_data,
-            new = new_data,
-            levels = levels,
-            vars = vars
-          )
-
-          if("state" %in% names(global$data)) {
-            global$plotdata <- list(
-              geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
-            )
-          }
-        }
-      }
-
+      
       waiter::waiter_hide()
-
     })
 
     observeEvent(input$use_indiv_example, {
@@ -339,63 +291,10 @@ mod_analyze_upload_server <- function(id, global){
         global$data <- rawdata() |>
           aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
       }
-
-
-      if(global$covid) {
-        c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
-            global$data,
-            global$extdata$covid$tract_data,
-            global$extdata$covid$zip_tract
-          )
-
-        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-            patient,
-            pstrat_data,
-            covariates,
-            GLOBAL$levels$covid
-          )
-
-
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars
-        )
-
-        global$plotdata <- list(
-          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
-          raw_covariates = raw_covariates
-        )
-
-      } else {
-        global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
-
-        covariates <- get_state_predictors(rawdata())
-        covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
-
-        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-          global$data,
-          global$extdata$poll$pstrat_data,
-          covariates,
-          GLOBAL$levels$poll
-        )
-
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars
-        )
-
-        if("state" %in% names(global$data)) {
-          global$plotdata <- list(
-            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
-          )
-        }
-      }
-
+      
+      try_error(NULL)
+      input_error(NULL)
+      
       waiter::waiter_hide()
     })
 
@@ -407,62 +306,63 @@ mod_analyze_upload_server <- function(id, global){
         readr::read_csv(app_sys("extdata/CES_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
         global$data <- rawdata()
       }
-
-      if(global$covid) {
-        c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
+      
+      try_error(NULL)
+      input_error(NULL)
+    })
+    
+    observeEvent(global$data, {
+      # prepare data for model fitting and plotting
+      if(!is.null(global$data)) {
+        if(global$covid) {
+          
+          c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
             global$data,
-            global$extdata$covid$tract_data,
-            global$extdata$covid$zip_tract
-          )
-
-        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-            patient,
-            pstrat_data,
-            covariates,
+            global$extdata$covid$pstrat_all,
+            global$extdata$covid$covar_all,
             GLOBAL$levels$covid
           )
-
-
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars
-        )
-
-        global$plotdata <- list(
-          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
-          raw_covariates = raw_covariates
-        )
-
-      } else {
-        global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
-
-        covariates <- get_state_predictors(rawdata())
-        covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
-
-        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-          global$data,
-          global$extdata$poll$pstrat_data,
-          covariates,
-          GLOBAL$levels$poll
-        )
-
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars
-        )
-
-        if("state" %in% names(global$data)) {
-          global$plotdata <- list(
-            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
+          
+          global$mrp <- list(
+            input = input_data,
+            new = new_data,
+            levels = levels,
+            vars = vars
           )
+          
+          global$plotdata <- list(
+            dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
+            geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
+            raw_covariates = global$extdata$covid$covar_all |> filter(zip %in% global$data$zip)
+          )
+          
+        } else {
+          global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
+          
+          covariates <- get_state_predictors(rawdata())
+          covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
+          
+          c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
+            global$data,
+            global$extdata$poll$pstrat_data,
+            covariates,
+            GLOBAL$levels$poll
+          )
+          
+          global$mrp <- list(
+            input = input_data,
+            new = new_data,
+            levels = levels,
+            vars = vars
+          )
+          
+          if("state" %in% names(global$data)) {
+            global$plotdata <- list(
+              geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
+            )
+          }
         }
       }
-
     })
 
     observeEvent(input$show_upload_guide, {

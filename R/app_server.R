@@ -19,8 +19,8 @@ app_server <- function(input, output, session) {
     session = session,
     extdata = list(
       covid = list(
-        zip_tract = readr::read_csv(app_sys("extdata/zip_tract.csv"), show_col_types = FALSE, col_types = readr::cols(.default = "c")),
-        tract_data = readr::read_csv(app_sys("extdata/acs_data.csv"), show_col_types = FALSE),
+        pstrat_all = readr::read_csv(app_sys("extdata/pstrat_all.csv"), show_col_types = FALSE) |> mutate(zip = as.character(zip)),
+        covar_all = readr::read_csv(app_sys("extdata/covariates_all.csv"), show_col_types = FALSE) |> mutate(zip = as.character(zip)),
         map_geojson = readRDS(app_sys("extdata/county_geojson.RDS")),
         fips = readr::read_csv(app_sys("extdata/fips.csv"), show_col_types = FALSE)
       ),
@@ -40,7 +40,6 @@ app_server <- function(input, output, session) {
   # make interface selection flag available for conditionalPanel
   output$covid <- reactive(global$covid)
   outputOptions(output, "covid", suspendWhenHidden = FALSE)
-
   mod_home_server(module_ids$home, global)
   mod_persist_server(module_ids$persist, global)
   mod_analyze_upload_server(module_ids$analyze$upload, global)
