@@ -645,30 +645,38 @@ mod_analyze_model_server <- function(id, global){
       model <- model_buffer()
       
       # extract posterior summary of coefficients
-      c(model$fixed, model$varying) %<-% extract_parameters(model$fit$mcmc, model$priors)
+      if (is.null(model$fixed) || is.null(model$varying)) {
+        c(model$fixed, model$varying) %<-% extract_parameters(model$fit$mcmc, model$priors)
+      }
       
       # run standalone generated quantities for LOO
-      model$fit$loo %<-% run_gq(
-        fit_mcmc = model$fit$mcmc,
-        code = model$code$loo,
-        data = model$data,
-        n_chains = model$n_chains
-      )
+      if (is.null(model$fit$loo)) {
+        model$fit$loo %<-% run_gq(
+          fit_mcmc = model$fit$mcmc,
+          code = model$code$loo,
+          data = model$data,
+          n_chains = model$n_chains
+        )
+      }
       
       # run standalone generated quantities for PPC
-      model$fit$ppc %<-% run_gq(
-        fit_mcmc = model$fit$mcmc,
-        code = model$code$ppc,
-        data = model$data,
-        n_chains = model$n_chains
-      )
-   
+      if (is.null(model$fit$ppc)) {
+        model$fit$ppc %<-% run_gq(
+          fit_mcmc = model$fit$mcmc,
+          code = model$code$ppc,
+          data = model$data,
+          n_chains = model$n_chains
+        )
+      }
+      
       # data for PPC plots
-      model$yrep <- extract_yrep(
-        model$fit$ppc,
-        global$mrp$input,
-        global$covid
-      )
+      if (is.null(model$yrep)) {
+        model$yrep <- extract_yrep(
+          model$fit$ppc,
+          global$mrp$input,
+          global$covid
+        )
+      }
  
 
       waiter::waiter_hide()
