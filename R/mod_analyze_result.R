@@ -10,7 +10,52 @@
 #' @import dplyr
 mod_analyze_result_ui <- function(id){
   ns <- NS(id)
-  uiOutput(outputId = ns("ui"))
+  tags$div(class = "pad_top",
+    navlistPanel(widths = c(3, 9),
+      tabPanel(
+        selectInput(
+          inputId = ns("model_select"),
+          label = "Select a model",
+          choices = NULL
+        )
+      ),
+      tabPanel("Raw vs MRP",
+        plotOutput(outputId = ns("est_overall"))
+      ),
+      tabPanel("By subgroup",
+        tabsetPanel(
+          tabPanel("Sex",
+            plotOutput(outputId = ns("est_sex"))
+          ),
+          tabPanel("Race",
+            plotOutput(outputId = ns("est_race"))
+          ),
+          tabPanel("Age",
+            plotOutput(outputId = ns("est_age"))
+          ),
+          tabPanel("Geography",
+            tags$div(class = "pad_top",
+              plotly::plotlyOutput(outputId = ns("est_geo_map"),
+                                   height = "700px")
+            ),
+            conditionalPanel(
+              condition = "output.covid",
+              tags$div(class = "pad_top",
+                selectizeInput(
+                 inputId = ns("county_select"),
+                 label = "Select one or more counties (max = 5)",
+                 choices = NULL,
+                 multiple = TRUE,
+                 options = list(maxItems = 5)
+                )
+              ) 
+            ),
+            plotOutput(outputId = ns("est_geo_plot"))
+          )
+        )
+      )
+    )
+  )
 }
 
 #' analyze_result Server Functions
@@ -21,7 +66,8 @@ mod_analyze_result_server <- function(id, global){
     ns <- session$ns
     
     selected_model <- reactive(global$poststratified_models[[input$model_select]])
-
+    model_select_buffer <- reactiveVal()
+    
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_result") {
         if(is.null(global$mrp)) {
@@ -38,7 +84,27 @@ mod_analyze_result_server <- function(id, global){
           )
         }
 
+        # omit pre-poststratification models
         global$poststratified_models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
+        
+        # update model select
+        updateSelectInput(session,
+          inputId = "model_select",
+          choices = names(global$poststratified_models),
+          selected = if(model_select_buffer() %in% names(global$poststratified_models)) model_select_buffer() else NULL
+        )
+        
+        # update county select
+        fips_df <- global$extdata$covid$fips |> filter(fips %in% global$mrp$levels$county)
+        counties <- sort(fips_df$county)
+        
+        updateSelectInput(session,
+          inputId = "county_select",
+          choices = counties,
+          selected = counties[1]
+        )
+        
+
 
         if(length(global$poststratified_models) == 0) {
           showModal(
@@ -73,63 +139,13 @@ mod_analyze_result_server <- function(id, global){
 
       removeModal(global$session)
     })
+    
+    observeEvent(input$model_select, {
+      model_select_buffer(input$model_select)
+    })
 
     observeEvent(global$covid, {
       if(global$covid) {
-        # prevent rendering errors when users switch interface
-        output$est_edu <- renderPlot(NULL)
-        output$est_state_map <- plotly::renderPlotly(NULL)
-        output$est_state_point <- renderPlot(NULL)
-        
-        output$ui <- renderUI({
-          fips_df <- global$extdata$covid$fips |> filter(fips %in% global$mrp$levels$county)
-          counties <- sort(fips_df$county)
-
-          tags$div(class = "pad_top",
-            navlistPanel(widths = c(3, 9),
-              tabPanel(
-                selectInput(
-                  inputId = ns("model_select"),
-                  label = "Select a model",
-                  choices = names(global$poststratified_models)
-                )
-              ),
-              tabPanel("Raw vs MRP",
-                plotOutput(outputId = ns("est_overall"))
-              ),
-              tabPanel("By subgroup",
-                tabsetPanel(
-                  tabPanel("Sex",
-                    plotOutput(outputId = ns("est_sex"))
-                  ),
-                  tabPanel("Race",
-                    plotOutput(outputId = ns("est_race"))
-                  ),
-                  tabPanel("Age",
-                    plotOutput(outputId = ns("est_age"))
-                  ),
-                  tabPanel("County",
-                    tags$div(class = "pad_top",
-                      plotly::plotlyOutput(outputId = ns("est_county_map"),
-                                           height = "700px")
-                    ),
-                    tags$div(class = "pad_top",
-                      selectizeInput(
-                        inputId = ns("counties_select"),
-                        label = "Select one or more counties (max = 5)",
-                        choices = counties,
-                        selected = counties[1],
-                        multiple = TRUE,
-                        options = list(maxItems = 5)
-                      ),
-                      plotOutput(outputId = ns("est_county_line"))
-                    )
-                  )
-                )
-              )
-            )
-          )
-        })
 
         output$est_overall <- renderPlot({
           req(names(global$models))
@@ -172,7 +188,7 @@ mod_analyze_result_server <- function(id, global){
 
         }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$age) + 1))
 
-        output$est_county_map <- plotly::renderPlotly({
+        output$est_geo_map <- plotly::renderPlotly({
           req(names(global$models))
 
           selected_model()$est$county |>
@@ -190,66 +206,22 @@ mod_analyze_result_server <- function(id, global){
             ) |> suppressWarnings()
         })
 
-        output$est_county_line <- renderPlot({
+        output$est_geo_plot <- renderPlot({
           req(names(global$models))
 
           selected_model()$est$county |>
             mutate(fips = factor) |>
             left_join(global$extdata$covid$fips, by = "fips") |>
             select(time, county, est, std) |>
-            filter(county %in% input$counties_select) |>
+            filter(county %in% input$county_select) |>
             rename("factor" = "county") |>
             plot_est_covid(global$plotdata$dates)
 
-        }, height = function() GLOBAL$ui$subplot_height * (length(input$counties_select) + 1))
+        }, height = function() GLOBAL$ui$subplot_height * (length(input$county_select) + 1))
 
 
       } else {
-        # prevent rendering errors when users switch interface
-        output$est_county_map <- plotly::renderPlotly(NULL)
-        output$est_county_line <- renderPlot(NULL)
         
-        output$ui <- renderUI({
-          tags$div(class = "pad_top",
-            navlistPanel(widths = c(3, 9),
-              tabPanel(
-                selectInput(
-                  inputId = ns("model_select"),
-                  label = "Select a model",
-                  choices = names(global$poststratified_models)
-                )
-              ),
-              tabPanel("Raw vs MRP",
-                plotOutput(outputId = ns("est_overall"))
-              ),
-              tabPanel("By subgroup",
-                tabsetPanel(
-                  tabPanel("Sex",
-                    plotOutput(outputId = ns("est_sex"))
-                  ),
-                  tabPanel("Race",
-                    plotOutput(outputId = ns("est_race"))
-                  ),
-                  tabPanel("Age",
-                    plotOutput(outputId = ns("est_age"))
-                  ),
-                  tabPanel("Education",
-                    plotOutput(outputId = ns("est_edu"))
-                  ),
-                  tabPanel("State",
-                    tags$div(class = "pad_top",
-                      plotly::plotlyOutput(outputId = ns("est_state_map"),
-                                           height = "700px")
-                    ),
-                    plotOutput(outputId = ns("est_state_point"))
-                  )
-                )
-              )
-            )
-          )
-        })
-
-
         output$est_overall <- renderPlot({
           req(names(global$models))
 
@@ -285,14 +257,7 @@ mod_analyze_result_server <- function(id, global){
 
         }, height = function() GLOBAL$ui$plot_height)
 
-        output$est_edu <- renderPlot({
-          req(names(global$models))
-
-          plot_est_poll(selected_model()$est$edu)
-
-        }, height = function() GLOBAL$ui$plot_height)
-
-        output$est_state_point <- renderPlot({
+        output$est_geo_plot <- renderPlot({
           req(names(global$models), global$plotdata)
 
           selected_model()$est$state |>
@@ -304,7 +269,7 @@ mod_analyze_result_server <- function(id, global){
 
         }, height = function() GLOBAL$ui$plot_height)
 
-        output$est_state_map <- plotly::renderPlotly({
+        output$est_geo_map <- plotly::renderPlotly({
           req(names(global$models), global$plotdata)
 
 
