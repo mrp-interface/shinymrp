@@ -126,12 +126,10 @@ group_fixed <- function(fixed, dat) {
     cat = list(),
     bincont = list()
   )
-  
+
   for(s in names(fixed)) {
     if(data_type(dat[[s]]) == "cat") {
-      s_raw <- paste0(s, "_raw")
-      levels <- sort(unique(dat[[s_raw]]))
-      
+      levels <- sort(unique(dat[[s]]))
       dummy <- paste0(s, ".", levels[2:length(levels)])
       for(d in dummy) {
         out$cat[[d]] <- fixed[[s]]
@@ -285,7 +283,7 @@ data_ <- function(effects, gq_data) {
   vector<lower=0, upper=1>[N_pop] P_overall_pstrat;
   ")
   
-  for(s in gq_data$pstrat_vars) {
+  for(s in gq_data$subgroups) {
     scode <- paste0(scode, str_interp("
   int<lower=1> N_${s}_pstrat;
   array[N_pop] int<lower=1, upper=N_${s}_pstrat> J_${s}_pstrat;
@@ -293,7 +291,7 @@ data_ <- function(effects, gq_data) {
   ")) 
   }
   
-  if(gq_data$covid) {
+  if(gq_data$temporal) {
     scode <- paste0(scode, "
   int<lower=1> N_time_pstrat;
   array[N_pop] int<lower=1, upper=N_time_pstrat> J_time_pstrat;
@@ -510,13 +508,13 @@ gq_pstrat <- function(effects, gq_data) {
   }
   
   # poststratification
-  if(gq_data$covid) {
+  if(gq_data$temporal) {
     init_overall <- "vector<lower=0, upper=1>[N_time_pstrat] p_overall_pop = rep_vector(0, N_time_pstrat);"
-    init_marginal <- paste(map(gq_data$pstrat_vars, ~ str_interp("
+    init_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
   matrix<lower=0, upper=1>[N_${.x}_pstrat, N_time_pstrat] p_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
   } else {
     init_overall <- "real<lower=0, upper=1> p_overall_pop;"
-    init_marginal <- paste(map(gq_data$pstrat_vars, ~ str_interp("
+    init_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
   vector<lower=0, upper=1>[N_${.x}_pstrat] p_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
   }
   
@@ -533,14 +531,14 @@ gq_pstrat <- function(effects, gq_data) {
                    }), collapse = "")
   )
   
-  if(gq_data$covid) {
+  if(gq_data$temporal) {
     est_overall <- "
     p_pop_scaled = p_pop .* P_overall_pstrat;
     for (i in 1:N_pop) {
       p_overall_pop[J_time_pstrat[i]] += p_pop_scaled[i];
     }"
     
-    est_marginal <- paste(map(gq_data$pstrat_vars, ~ str_interp("
+    est_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
     p_pop_scaled = p_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
       p_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += p_pop_scaled[i];
@@ -550,7 +548,7 @@ gq_pstrat <- function(effects, gq_data) {
     p_pop_scaled = p_pop .* P_overall_pstrat;
     p_overall_pop = sum(p_pop_scaled);")
     
-    est_marginal <- paste(map(gq_data$pstrat_vars, ~ str_interp("
+    est_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
     p_pop_scaled = p_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
       p_${.x}_pop[J_${.x}_pstrat[i]] += p_pop_scaled[i];
@@ -590,7 +588,8 @@ model { ${model_(effects)}
   return(scode)
 }
 
-make_stancode_gq <- function(effects, gq_data, gq_type) {
+make_stancode_gq <- function(effects, gq_data, gq_type = c("loo", "ppc", "pstrat")) {
+  gq_type <- match.arg(gq_type)
   if(gq_type == "loo") {
     gq <- gq_loo()
   } else if (gq_type == "ppc") {
@@ -623,7 +622,7 @@ make_standata <- function(
     sens,
     spec
 ) {
-  
+
   stan_data <- list(
     N = nrow(input_data),
     N_pop = nrow(new_data),
@@ -688,15 +687,15 @@ make_standata <- function(
       }
     }
   }
-  
+
   # poststratification
   pstrat_data <- new_data |> 
     mutate(
       sex = sex + 1,
       overall = 1
     )
-  for(s in c("overall", gq_data$pstrat_vars)) {
-    group_cols <- if(gq_data$covid) c("time", s) else c(s)
+  for(s in c("overall", gq_data$subgroups)) {
+    group_cols <- if(gq_data$temporal) c("time", s) else c(s)
     
     pop_prop <- pstrat_data |>
       group_by(!!!syms(group_cols)) |>
@@ -709,7 +708,7 @@ make_standata <- function(
     stan_data[[str_interp("P_${s}_pstrat")]] <- pop_prop$prop
   }
   
-  if(gq_data$covid) {
+  if(gq_data$temporal) {
     stan_data$N_time_pstrat <- n_distinct(new_data$time)
     stan_data$J_time_pstrat <- new_data$time
   }
@@ -725,8 +724,8 @@ run_mcmc <- function(
     n_iter = 1000,
     n_chains = 4,
     seed = NULL,
-    sens = 0.7,
-    spec = 0.999,
+    sens = 1,
+    spec = 1,
     code_fout = NULL
 ) {
   
@@ -746,7 +745,9 @@ run_mcmc <- function(
     stan_file = cmdstanr::write_stan_file(stan_code$mcmc),
     cpp_options = list(stan_threads = TRUE)
   )
-  
+
+  effects_global <<- effects
+  stan_data_global <<- stan_data
   fit <- list()
   fit$mcmc <- mod_mcmc$sample(
     data = stan_data,
@@ -764,19 +765,19 @@ run_mcmc <- function(
 
 run_gq <- function(
     fit_mcmc,
-    code,
-    data,
+    stan_code,
+    stan_data,
     n_chains
   ) {
   
   mod_gq <- cmdstanr::cmdstan_model(
-    stan_file = cmdstanr::write_stan_file(code),
+    stan_file = cmdstanr::write_stan_file(stan_code),
     cpp_options = list(stan_threads = TRUE)
   )
   
   fit_gq <- mod_gq$generate_quantities(
     fit_mcmc,
-    data = data,
+    data = stan_data,
     parallel_chains = n_chains,
     threads_per_chain = 1
   )
@@ -879,23 +880,22 @@ extract_parameters <- function(fit, effects) {
 
 extract_est <- function(
   fit,
-  pstrat_data,
-  temporal
+  new_data,
+  gq_data
 ) {
 
-  pstrat_vars <- if(temporal) GLOBAL$pstrat_vars$covid else GLOBAL$pstrat_vars$poll
-  pstrat_data <- pstrat_data |> mutate(overall = 1)
+  new_data <- new_data |> mutate(overall = 1)
   est <- list()
-    
-  for(s in c("overall", pstrat_vars)) {
+
+  for(s in c("overall", gq_data$subgroups)) {
     pred_mat <- fit$draws(
       variables = str_interp("p_${s}_pop"),
       format = "draws_matrix"
     ) |> t()
     
-    cols <- if(temporal) c("time", s) else c(s)
+    cols <- if(gq_data$temporal) c("time", s) else c(s)
     
-    est[[s]] <- pstrat_data |>
+    est[[s]] <- new_data |>
       distinct(!!!syms(cols)) |>
       mutate(
         est = pred_mat |> apply(1, mean),
@@ -909,8 +909,8 @@ extract_est <- function(
 
 extract_yrep <- function(
   fit,
-  brms_input,
-  temporal,
+  input_data,
+  gq_data,
   N = 10,
   summarize = FALSE,
   pred_interval = 0.95
@@ -927,12 +927,12 @@ extract_yrep <- function(
   qlower <- (1 - pred_interval) / 2
   qupper <- 1 - qlower
 
-  if(temporal) {
+  if(gq_data$temporal) {
     agg_df <- yrep_mat |>
       as.data.frame() |>
       mutate(
-        time = brms_input$time,
-        total = brms_input$total
+        time = input_data$time,
+        total = input_data$total
       ) |>
       group_by(time) |>
       summarise_all(sum) |>
@@ -957,7 +957,7 @@ extract_yrep <- function(
     }
 
   } else {
-    est <- colSums(yrep_mat) / sum(brms_input$total)
+    est <- colSums(yrep_mat) / sum(input_data$total)
 
     if(summarize) {
       est <- data.frame(

@@ -34,7 +34,7 @@ GLOBAL <- list(
     )
   ),
   levels = list(
-    covid = list(
+    general = list(
       sex = c("male", "female"),
       race = c("white", "black", "other"),
       age = c("0-17", "18-34", "35-64", "65-74", "75+")
@@ -46,13 +46,44 @@ GLOBAL <- list(
       edu = c("no hs", "hs", "some college", "4-year college", "post-grad")
     )
   ),
-  expected_columns = list(
-    covid = c("sex", "race", "age", "zip", "time", "date", "total", "positive"),
-    poll = c("sex", "race", "age", "edu", "state", "total", "positive")
+  expected_types = list(
+    temporal_covid = list(
+      sex = "bin",
+      race = "cat",
+      age = "cat",
+      zip = "cat",
+      time = "cat",
+      total = "ignore",
+      positive = "ignore"
+    ),
+    temporal_other = list(
+      sex = "bin",
+      race = "cat",
+      age = "cat",
+      time = "cat",
+      total = "ignore",
+      positive = "ignore"
+    ),
+    static_poll = list(
+      sex = "bin",
+      race = "cat",
+      age = "cat",
+      edu = "cat",
+      total = "ignore",
+      positive = "ignore"
+    ),
+    static_other = list(
+      sex = "bin",
+      race = "cat",
+      age = "cat",
+      total = "ignore",
+      positive = "ignore"
+    )
   ),
-  pstrat_vars = list(
-    covid = c("sex", "race", "age", "county"),
-    poll = c("sex", "race", "age", "edu", "state")
+  vars = list(
+    subgroups = c("sex", "race", "age", "edu", "county", "state"),
+    geo = c("zip", "county", "state"),
+    ignore = c("date", "total", "positive")
   ),
   ui = list(
     preview_size = 100,
@@ -60,7 +91,9 @@ GLOBAL <- list(
     iter_range = c(100, 5000),
     chain_range = c(1, 8),
     plot_height = 500,
-    subplot_height = 300
+    subplot_height = 300,
+    small_map_height = 500,
+    large_map_height = 700
   ),
   default_priors = list(
     Intercept = "normal(0, 5)",

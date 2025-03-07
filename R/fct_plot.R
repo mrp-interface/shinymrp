@@ -9,84 +9,94 @@
 #' @import dplyr
 #' @import ggplot2
 
-get_sample_size <- function(
-    brms_input,
-    fips_code,
-    state
-) {
+prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"), for_map = TRUE) {
+  geo <- match.arg(geo)
 
-  total_count <- sum(brms_input$total)
-  plot_df <- brms_input |>
+  input_data <- input_data |> mutate(fips = input_data[[geo]])
+
+  total_count <- sum(input_data$total)
+  plot_df <- input_data |>
     group_by(fips) |>
     summarize(
       count = sum(total),
       perc = (sum(total) / total_count) * 100
     ) |>
-    left_join(fips_code, by = "fips")
+    left_join(fips_codes, by = "fips")
 
-  if(state) {
+  if(for_map) {
+    if(geo == "state") {
+      plot_df <- plot_df |> mutate(
+        hover = sprintf("%s: %d (%.2f%%)",
+                        state, count, perc)
+      )
+    } else {
+      plot_df <- plot_df |> mutate(
+        hover = sprintf("%s\n%s\nSample size: %d (%.2f%%)",
+                        state_name, county, count, perc)
+      )
+    }
+  } else {
+    if(geo == "county") {
+      plot_df <- plot_df |> mutate(county = gsub(" county", "", county))
+    }
+    
+    plot_df <- plot_df |>
+      select(-c(fips, perc, state_name)) |>
+      select(-count, count) |>
+      arrange(desc(count))
+  }
+
+
+  return(plot_df)
+}
+
+prep_raw_support <- function(    
+    input_data,
+    fips_codes,
+    geo = c("county", "state")
+) {
+  geo <- match.arg(geo)
+
+  input_data <- input_data |> mutate(fips = input_data[[geo]])
+
+  plot_df <- input_data |>
+    group_by(fips) |>
+    summarize(
+      num = sum(positive),
+      denom = sum(total),
+      support = round(sum(positive) / sum(total), 4)
+    ) |>
+    left_join(fips_codes, by = "fips")
+
+  if(geo == "state") {
     plot_df <- plot_df |> mutate(
-      hover = sprintf("%s: %d (%.2f%%)",
-                      state, count, perc)
+      hover = paste0(state, ": ", support, "\n(", num, "/", denom, ")")
     )
   } else {
     plot_df <- plot_df |> mutate(
-        hover = sprintf("%s\n%s\nSample size: %d (%.2f%%)",
-                        state_name, county, count, perc)
+      hover = paste0(county, " (", state, "):\n", support, " (", num, "/", denom, ")")
     )
   }
 
   return(plot_df)
 }
 
-get_raw_support <- function(brms_input, fips_code) {
-  plot_df <- brms_input |>
-    group_by(fips) |>
-    summarize(
-      num = sum(positive),
-      denom = sum(total),
-      support = round(sum(positive) / sum(total) * 100, 2)
-    ) |>
-    left_join(fips_code, by = "fips") |>
-    mutate(
-      hover = paste0(state, ": ", support, "%\n(", num, "/", denom, ")")
-    )
-
-  return(plot_df)
-}
-
-get_est_support <- function(
-    brms_est,
-    fips_code
+prep_raw_prev <- function(
+    input_data,
+    fips_codes,
+    geo = c("county", "state")
 ) {
+  geo <- match.arg(geo)
 
-  plot_df <- brms_est |>
-    left_join(fips_code, by = "fips") |>
-    mutate(
-      est = round(est * 100, 2),
-      std = round(std * 100, 2)
-    ) |>
-    mutate(hover = paste0(
-      state_name, '\n',
-      "Estimate: ",  est, "%\n",
-      "Standard error: ", std, '%'
-    ))
+  input_data <- input_data |> mutate(fips = input_data[[geo]])
 
-  return(plot_df)
-}
-
-get_raw_weekly_prev <- function(
-    brms_input,
-    fips_code
-) {
-  # calculate weekly positive response rate and test counts for each county
-  plot_df <- brms_input |>
+  # calculate weekly positive response rate and test counts for each county/state
+  plot_df <- input_data |>
     group_by(fips, time) |>
     summarize(
       prev = sum(positive) / sum(total),
       tests = sum(total)
-    ) |>
-    ungroup()
+    )
 
   # compute max and min weekly positive response rate for each county
   plot_df <- plot_df |>
@@ -97,8 +107,20 @@ get_raw_weekly_prev <- function(
       max_prev_sample = tests[which.max(prev)],
       min_prev_sample = tests[which.min(prev)]
     ) |>
-    left_join(fips_code, by = "fips") |>
-    mutate(hover = paste0(
+    left_join(fips_codes, by = "fips")
+
+  if(geo == "state") {
+    plot_df <- plot_df |> mutate(
+      hover = paste0(
+        state_name, '\n',
+        "Highest: ", round(max_prev, 4),
+        " (", round(max_prev_sample * max_prev), '/', max_prev_sample, ")\n",
+        "Lowest: ", round(min_prev, 4),
+        " (", round(min_prev_sample * min_prev), '/', min_prev_sample, ")\n"
+      )
+    )
+  } else {
+    plot_df <- plot_df |> mutate(hover = paste0(
       state_name, '\n',
       county, '\n',
       "Highest: ", round(max_prev, 4),
@@ -106,60 +128,77 @@ get_raw_weekly_prev <- function(
       "Lowest: ", round(min_prev, 4),
       " (", round(min_prev_sample * min_prev), '/', min_prev_sample, ")\n"
     ))
+  }
 
   return(plot_df)
 }
 
-get_est_weekly_prev <- function(
-    df,
-    fips_code,
-    dates
+prep_est <- function(
+    est_df,
+    fips_codes,
+    geo = c("county", "state"),
+    dates = NULL
 ) {
+  geo <- match.arg(geo)
 
-  sq <- 1:max(df$time, na.rm = TRUE)
-
-  plot_df <- df |>
-    left_join(fips_code, by = "fips") |>
-    mutate(
-      hover = paste0(
-        state_name, '\n',
-        county, '\n',
-        "Estimate: ", round(est, 4), '\n',
-        "Standard error: ", round(std, 4)
-      ),
+  est_df <- est_df |> mutate(fips = factor)
+  if("time" %in% names(est_df)) {
+    sq <- 1:max(est_df$time, na.rm = TRUE)
+    est_df <- est_df |> mutate(
       time = factor(
         time,
         levels = sq,
         labels = if(!is.null(dates)) dates else paste0("Week ", sq)
       )
     )
+  }
+
+  plot_df <- est_df |> left_join(fips_codes, by = "fips")
+
+  if(geo == "state") {
+    plot_df <- plot_df |> mutate(
+      hover = paste0(
+        state_name, '\n',
+        "Estimate: ", round(est, 4), '\n',
+        "Standard error: ", round(std, 4)
+      )
+    )
+  } else {
+    plot_df <- plot_df |> mutate(
+      hover = paste0(
+        state_name, '\n',
+        county, '\n',
+        "Estimate: ", round(est, 4), '\n',
+        "Standard error: ", round(std, 4)
+      )
+    )
+  }
 
   return(plot_df)
 }
 
 
-plot_individual <- function(
-    brms_input,
-    brms_new,
+plot_demographic <- function(
+    input_data,
+    new_data,
     levels,
     separate = TRUE
 ) {
 
-  total_input <- sum(brms_input$total)
-  input <- brms_input |>
+  total_input <- sum(input_data$total)
+  input <- input_data |>
     group_by(demo) |>
     summarize(perc = sum(total) / total_input)
 
-  total_new <- sum(brms_new$total)
-  new <- brms_new |>
+  total_new <- sum(new_data$total)
+  new <- new_data |>
     group_by(demo) |>
     summarize(perc = sum(total) / total_new)
-
-  plot_df <- rbind(input, new)
+  
   datasets <- c("Input Data", "ACS Data")
-  plot_df <- plot_df |> mutate(
-    dataset = rep(datasets, each = length(levels)),
-    demo = factor(demo, levels = levels)
+  plot_df <- rbind(input, new) |> mutate(
+    dataset = rep(datasets, each = nrow(input)),
+    demo = factor(demo, levels = new$demo)
   )
 
   if(separate) {
@@ -173,7 +212,7 @@ plot_individual <- function(
       ) +
       labs(
         title = datasets[1],
-        caption = sprintf("Sample size: %d", total_input)
+        caption = sprintf("Sample size: %s", format(total_input, big.mark = ","))
       )
 
     p2 <- ggplot(
@@ -187,7 +226,7 @@ plot_individual <- function(
       ) +
       labs(
         title = datasets[2],
-        caption = sprintf("Sample size: %d", total_new)
+        caption = sprintf("Sample size: %s", format(total_new, big.mark = ","))
       )
 
     p <- patchwork::wrap_plots(p1, p2)
@@ -207,9 +246,11 @@ plot_individual <- function(
       )
   }
 
-  p <- p & scale_x_discrete(
-      labels = tools::toTitleCase(as.character(levels))
-    ) & scale_y_continuous(
+  p <- p &
+    scale_x_discrete(
+      labels = tools::toTitleCase
+    ) & 
+    scale_y_continuous(
       labels = scales::percent,
       limits = c(0, 1),
       expand = c(0, 0)
@@ -327,7 +368,7 @@ plot_prev <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Positive Response Rate",
+      y = "Positive\nResponse Rate",
       caption = if(show_caption) "*The shaded areas represent ±1 SD of uncertainty" else NULL
     ) +
     scale_x_continuous(
@@ -380,7 +421,7 @@ plot_support <- function(
     scale_y_continuous(
       labels = scales::percent
     ) +
-    labs(x = "", y = "Positive Response Rate") +
+    labs(x = "", y = "Positive\nResponse Rate") +
     theme(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
@@ -397,6 +438,9 @@ plot_ppc_covid_subset <- function(
     yrep_color = "darkorange",
     raw_color = "darkblue"
 ) {
+  if(is.null(yrep) || is.null(raw)) {
+    return(NULL)
+  }
 
   raw <- raw |>
     group_by(time) |>
@@ -464,6 +508,9 @@ plot_ppc_covid_all <- function(
     yrep_color = "darkorange",
     raw_color = "darkblue"
 ) {
+  if(is.null(yrep) || is.null(raw)) {
+    return(NULL)
+  }
 
   plot_df <- raw |>
     group_by(time) |>
@@ -540,6 +587,10 @@ plot_ppc_poll <- function(
     yrep_color = "darkorange",
     raw_color = "darkblue"
 ) {
+  if(is.null(yrep) || is.null(raw)) {
+    return(NULL)
+  }
+
   plot_df <- rbind(
     data.frame(
       name = "Replicated",
@@ -564,7 +615,7 @@ plot_ppc_poll <- function(
     scale_y_continuous(
       labels = scales::percent
     ) +
-    labs(x = "", y = "Positive Response Rate") +
+    labs(x = "", y = "Positive\nResponse Rate") +
     theme(
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5),
@@ -573,7 +624,11 @@ plot_ppc_poll <- function(
     )
 }
 
-plot_est_covid <- function(df, dates) {
+plot_est_temporal <- function(df, dates) {
+  if(is.null(df) || nrow(df) == 0) {
+    return(NULL)
+  }
+
   levels <- unique(df$factor) |> sort()
   labels <- levels |> as.character() |> tools::toTitleCase()
 
@@ -641,7 +696,7 @@ plot_est_covid <- function(df, dates) {
     plot_list[[i]] <- plot_list[[i]] +
       labs(title = "",
            x = if(is.null(dates)) "Week index" else "",
-           y = "Positive Response Rate") +
+           y = "Positive\nResponse Rate") +
       scale_x_continuous(
         breaks = xticks,
         labels = xticklabels,
@@ -669,10 +724,7 @@ plot_est_covid <- function(df, dates) {
   return(p)
 }
 
-plot_est_poll <- function(plot_df) {
-  levels <- unique(plot_df$factor) |> sort()
-  labels <- levels |> as.character() |> tools::toTitleCase()
-
+plot_est_static <- function(plot_df) {
   p <- ggplot(data = plot_df) +
     geom_point(
       aes(
@@ -690,12 +742,12 @@ plot_est_poll <- function(plot_df) {
       width = 0
     ) +
     scale_x_discrete(
-      labels = labels
+      labels = tools::toTitleCase
     ) +
     scale_y_continuous(
       labels = scales::percent
     ) +
-    labs(x = "", y = "Positive Response Rate") +
+    labs(x = "", y = "Positive\nResponse Rate") +
     theme(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
@@ -706,33 +758,20 @@ plot_est_poll <- function(plot_df) {
   return(p)
 }
 
-
 choro_map <- function(
     plot_df,
     map_geojson,
     map_title,
     colorbar_title,
-    state
+    geo
 ) {
+  
+  # Validate inputs
+  if (is.null(map_geojson) || is.null(plot_df)) {
+    stop("Missing required geojson or plot data")
+  }
 
-  g <- list(
-    fitbounds = if(state) NULL else "geojson",
-    scope = "usa",
-    projection = list(type = 'albers usa'),
-    visible = FALSE
-  )
-
-  fontstyle <- list(
-    size = 16,
-    color = "black"
-  )
-
-  label <- list(
-    bgcolor = "white",
-    bordercolor = "black",
-    font = fontstyle
-  )
-
+  # Create the plot
   fig <- plotly::plot_ly(
     frame = if("time" %in% names(plot_df)) plot_df$time else NULL
   ) |>
@@ -742,21 +781,29 @@ choro_map <- function(
       locations = plot_df$fips,
       z = plot_df$value,
       zmin = 0,
-      zmax = max(plot_df$value),
+      zmax = max(plot_df$value, na.rm = TRUE),
       featureidkey = "properties.GEOID",
       colorscale = "Electric",
       text = plot_df$hover,
       hoverinfo = "text"
     ) |>
     plotly::layout(
-      geo = g,
-      title = map_title
-    ) |>
-    plotly::style(
-      hoverlabel = label
+      geo = list(
+        fitbounds = if(geo == "state") NULL else "geojson",
+        scope = "usa",
+        projection = list(type = 'albers usa'),
+        visible = FALSE
+      ),
+      title = list(
+        text = map_title,
+        xref = "paper",
+        x = 0.5
+      ),
+      dragmode = FALSE
     ) |>
     plotly::colorbar(
-      title = colorbar_title
+      title = colorbar_title,
+      thickness = 25
     ) |>
     plotly::config(
       displayModeBar = FALSE

@@ -25,32 +25,49 @@ mod_analyze_result_ui <- function(id){
       tabPanel("By subgroup",
         tabsetPanel(
           tabPanel("Sex",
-            plotOutput(outputId = ns("est_sex"))
+            mod_est_plot_ui(ns("est_sex"))
           ),
           tabPanel("Race",
-            plotOutput(outputId = ns("est_race"))
+            mod_est_plot_ui(ns("est_race"))
           ),
           tabPanel("Age",
-            plotOutput(outputId = ns("est_age"))
+            mod_est_plot_ui(ns("est_age"))
           ),
           tabPanel("Geography",
-            tags$div(class = "pad_top",
-              plotly::plotlyOutput(outputId = ns("est_geo_map"),
-                                   height = "700px")
+            conditionalPanel(
+              condition = "output.no_geo",
+              tags$p("Map unavailable", class = "alt_text")
             ),
             conditionalPanel(
-              condition = "output.covid",
+              condition = "!output.no_geo",
               tags$div(class = "pad_top",
-                selectizeInput(
-                 inputId = ns("county_select"),
-                 label = "Select one or more counties (max = 5)",
-                 choices = NULL,
-                 multiple = TRUE,
-                 options = list(maxItems = 5)
-                )
-              ) 
-            ),
-            plotOutput(outputId = ns("est_geo_plot"))
+                conditionalPanel(
+                  condition = "output.data_format == 'temporal_other' ||
+                               output.data_format == 'static_other'",
+                  selectInput(
+                    inputId = ns("geo_scale_select"),
+                    label = "Select geographic scale",
+                    choices = NULL
+                  )
+                ),
+                plotly::plotlyOutput(outputId = ns("est_geo_map"),
+                                    height = "700px")
+              ),
+              tags$div(class = "pad_top",
+                conditionalPanel(
+                  condition = "output.data_format == 'temporal_covid' ||
+                               output.data_format == 'temporal_other'",
+                  selectizeInput(
+                    inputId = ns("geo_select"),
+                    label = "Select one or more counties (max = 5)",
+                    choices = NULL,
+                    multiple = TRUE,
+                    options = list(maxItems = 5)
+                  )
+                ),
+                plotOutput(outputId = ns("est_geo_plot"))
+              )
+            )
           )
         )
       )
@@ -66,10 +83,112 @@ mod_analyze_result_server <- function(id, global){
     ns <- session$ns
     
     selected_model <- reactive(global$poststratified_models[[input$model_select]])
+    selected_geo <- reactive(
+      if(global$data_format == "temporal_covid") {
+        "county"
+      } else if (global$data_format == "static_poll") {
+        "state"
+      } else {
+        input$geo_scale_select
+      }
+    )
     model_select_buffer <- reactiveVal()
     
+    # Initialize demographic plot modules
+    mod_est_plot_server("est_sex",
+      data = reactive(selected_model()$est$sex),
+      plotdata = list(
+        dates = global$plotdata$dates,
+        n_plots = if(global$data_format %in% c("temporal_covid", "temporal_other")) length(global$mrp$levels$sex) + 1 else 1
+      )
+    )
+
+    mod_est_plot_server("est_race",
+      data = reactive(selected_model()$est$race),
+      plotdata = list(
+        dates = global$plotdata$dates,
+        n_plots = if(global$data_format %in% c("temporal_covid", "temporal_other")) length(global$mrp$levels$race) + 1 else 1
+      )
+    )
+
+    mod_est_plot_server("est_age",
+      data = reactive(selected_model()$est$age),
+      plotdata = list(
+        dates = global$plotdata$dates,
+        n_plots = if(global$data_format %in% c("temporal_covid", "temporal_other")) length(global$mrp$levels$age) + 1 else 1
+      )
+    )
+
+    output$est_overall <- renderPlot({
+      req(selected_model())
+      
+      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+        plot_prev(
+          global$mrp$input,
+          global$plotdata$dates,
+          selected_model()$est$overall,
+          show_caption = TRUE
+        )
+      } else {
+        selected_model()$est$overall |>
+          mutate(
+            data = "Estimate",
+            lower = est - std,
+            median = est,
+            upper = est + std
+          ) |>
+          select(data, lower, median, upper) |>
+          plot_support(global$mrp$input)
+      }
+    }, height = function() GLOBAL$ui$plot_height)
+
+    output$est_geo_map <- plotly::renderPlotly({
+      req(selected_model())
+
+      selected_model()$est[[selected_geo()]] |>
+        prep_est(
+          fips_codes = global$extdata$fips[[selected_geo()]],
+          geo = selected_geo(),
+          dates = if("dates" %in% names(global$plotdata)) global$plotdata$dates else NULL
+        ) |>
+        mutate(value = est) |>
+        choro_map(
+          global$plotdata$geojson[[selected_geo()]],
+          map_title = "MRP Estimate of Positive Response Rate",
+          colorbar_title = "Positive\nResponse\nRate",
+          geo = selected_geo()
+        ) |>
+        suppressWarnings()
+    })
+
+    output$est_geo_plot <- renderPlot({
+      req(selected_model())
+
+      plof_df <- selected_model()$est[[selected_geo()]] |>
+        rename("fips" = "factor") |>
+        left_join(global$extdata$fips[[selected_geo()]], by = "fips") |>
+        rename("factor" = selected_geo())
+ 
+      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+        plof_df |>
+          filter(factor %in% input$geo_select) |>
+          plot_est_temporal(global$plotdata$dates)
+      } else {
+        plof_df |> plot_est_static()
+      }
+      
+    }, height = function() {
+      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+        GLOBAL$ui$subplot_height * (length(input$geo_select) + 1)
+      } else {
+        GLOBAL$ui$plot_height
+      }
+    })
+
     observeEvent(global$input$navbar_analyze, {
+      # When user navigates to "Results" page
       if(global$input$navbar_analyze == "nav_analyze_result") {
+
         if(is.null(global$mrp)) {
           showModal(
             modalDialog(
@@ -86,31 +205,12 @@ mod_analyze_result_server <- function(id, global){
 
         # omit pre-poststratification models
         global$poststratified_models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
-        
-        # update model select
-        updateSelectInput(session,
-          inputId = "model_select",
-          choices = names(global$poststratified_models),
-          selected = if(model_select_buffer() %in% names(global$poststratified_models)) model_select_buffer() else NULL
-        )
-        
-        # update county select
-        fips_df <- global$extdata$covid$fips |> filter(fips %in% global$mrp$levels$county)
-        counties <- sort(fips_df$county)
-        
-        updateSelectInput(session,
-          inputId = "county_select",
-          choices = counties,
-          selected = counties[1]
-        )
-        
-
 
         if(length(global$poststratified_models) == 0) {
           showModal(
             modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "This requires at least one model with poststratification results.",
+              "No model with poststratified estimates found. Make sure to run poststratification after fitting models.",
               footer = actionButton(
                 inputId = ns("to_model"),
                 label = "Go to model page"
@@ -119,6 +219,32 @@ mod_analyze_result_server <- function(id, global){
             session = global$session
           )
         }
+
+        # update model select
+        updateSelectInput(session,
+          inputId = "model_select",
+          choices = names(global$poststratified_models),
+          selected = if(model_select_buffer() %in% names(global$poststratified_models)) model_select_buffer() else NULL
+        )
+        
+        # update geographic scale select
+        choices <- intersect(names(global$mrp$levels), c("county", "state"))
+        updateSelectInput(session,
+          inputId = "geo_scale_select",
+          choices = choices,
+          selected = choices[1]
+        )
+
+        # update geographic region select
+        fips_df <- global$extdata$fips[[choices[1]]] |>
+          filter(fips %in% global$mrp$levels[[choices[1]]])
+        choices <- sort(fips_df[[selected_geo()]])
+        
+        updateSelectInput(session,
+          inputId = "geo_select",
+          choices = choices,
+          selected = choices[1]
+        )
       }
     })
 
@@ -144,146 +270,18 @@ mod_analyze_result_server <- function(id, global){
       model_select_buffer(input$model_select)
     })
 
-    observeEvent(global$covid, {
-      if(global$covid) {
-
-        output$est_overall <- renderPlot({
-          req(names(global$models))
-
-          plot_prev(
-            global$mrp$input,
-            global$plotdata$dates,
-            selected_model()$est$overall,
-            show_caption = TRUE
-          )
-        }, height = function() GLOBAL$ui$plot_height)
-
-        output$est_sex <- renderPlot({
-          req(names(global$models))
-
-          plot_est_covid(
-            selected_model()$est$sex,
-            global$plotdata$dates
-          )
-
-        }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$sex) + 1))
-
-        output$est_race <- renderPlot({
-          req(names(global$models))
-
-          plot_est_covid(
-            selected_model()$est$race,
-            global$plotdata$dates
-          )
-
-        }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$race) + 1))
-
-        output$est_age <- renderPlot({
-          req(names(global$models))
-
-          plot_est_covid(
-            selected_model()$est$age,
-            global$plotdata$dates
-          )
-
-        }, height = function() GLOBAL$ui$subplot_height * (length(global$mrp$levels$age) + 1))
-
-        output$est_geo_map <- plotly::renderPlotly({
-          req(names(global$models))
-
-          selected_model()$est$county |>
-            mutate(fips = factor) |>
-          get_est_weekly_prev(
-            global$extdata$covid$fips,
-            global$plotdata$dates
-          ) |>
-            mutate(value = est) |>
-            choro_map(
-              global$plotdata$geojson,
-              map_title = "MRP Estimate of Positive Response Rate",
-              colorbar_title = "%",
-              state = FALSE
-            ) |> suppressWarnings()
-        })
-
-        output$est_geo_plot <- renderPlot({
-          req(names(global$models))
-
-          selected_model()$est$county |>
-            mutate(fips = factor) |>
-            left_join(global$extdata$covid$fips, by = "fips") |>
-            select(time, county, est, std) |>
-            filter(county %in% input$county_select) |>
-            rename("factor" = "county") |>
-            plot_est_covid(global$plotdata$dates)
-
-        }, height = function() GLOBAL$ui$subplot_height * (length(input$county_select) + 1))
-
-
-      } else {
+    observeEvent(input$geo_scale_select, {
+      # update geographic region select when geographic scale changes
+      if(input$geo_scale_select != "") {
+        fips_df <- global$extdata$fips[[input$geo_scale_select]] |>
+          filter(fips %in% global$mrp$levels[[input$geo_scale_select]])
+        choices <- sort(fips_df[[input$geo_scale_select]])
         
-        output$est_overall <- renderPlot({
-          req(names(global$models))
-
-          selected_model()$est$overall |>
-            mutate(
-              data = "Estimate",
-              lower = est - std,
-              median = est,
-              upper = est + std
-            ) |>
-            select(data, lower, median, upper) |>
-            plot_support(global$mrp$input)
-        })
-
-        output$est_sex <- renderPlot({
-          req(names(global$models))
-
-          plot_est_poll(selected_model()$est$sex)
-
-        }, height = function() GLOBAL$ui$plot_height)
-
-        output$est_race <- renderPlot({
-          req(names(global$models))
-
-          plot_est_poll(selected_model()$est$race)
-
-        }, height = function() GLOBAL$ui$plot_height)
-
-        output$est_age <- renderPlot({
-          req(names(global$models))
-
-          plot_est_poll(selected_model()$est$age)
-
-        }, height = function() GLOBAL$ui$plot_height)
-
-        output$est_geo_plot <- renderPlot({
-          req(names(global$models), global$plotdata)
-
-          selected_model()$est$state |>
-            mutate(fips = factor) |>
-            left_join(global$extdata$poll$fips, by = "fips") |>
-            select(state, est, std) |>
-            rename("factor" = "state") |>
-            plot_est_poll()
-
-        }, height = function() GLOBAL$ui$plot_height)
-
-        output$est_geo_map <- plotly::renderPlotly({
-          req(names(global$models), global$plotdata)
-
-
-          selected_model()$est$state |>
-            mutate(fips = factor) |>
-            get_est_support(global$extdata$poll$fips) |>
-            mutate(value = est) |>
-            choro_map(
-              global$plotdata$geojson,
-              map_title = "MRP Estimate of Positive Response Rate",
-              colorbar_title = "%",
-              state = TRUE
-            )
-        })
+        updateSelectInput(session,
+          inputId = "geo_select",
+          choices = choices,
+          selected = choices[1]
+        )
       }
     })
 

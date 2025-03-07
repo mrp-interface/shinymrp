@@ -91,7 +91,7 @@ mod_analyze_model_ui <- function(id){
               value = 123
             ),
             conditionalPanel(
-              condition = "output.covid",
+              condition = "output.data_format == 'temporal_covid'",
               fluidRow(
                 column(width = 6,
                   numericInput(
@@ -376,7 +376,7 @@ mod_analyze_model_server <- function(id, global){
     })
 
     output$loo_ui <- renderUI({
-      global$covid
+      global$data_format
       input$diagnos_btn
       selected_names <- isolate(input$model_select)
 
@@ -419,7 +419,7 @@ mod_analyze_model_server <- function(id, global){
 
     # PPC plots
     output$ppc_plots <- renderUI({
-      global$covid
+      global$data_format
       input$diagnos_btn
 
       selected_names <- isolate(input$model_select)
@@ -430,7 +430,7 @@ mod_analyze_model_server <- function(id, global){
         tagList(
           create_text_box(
             title = tags$b("Note"),
-            if(global$covid) {
+            if(global$data_format == "temporal_covid") {
               tags$p("The plots show the weekly postive response rates computed from the observed data and 10 sets of replicated data.")
             } else {
               tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
@@ -456,7 +456,7 @@ mod_analyze_model_server <- function(id, global){
         purrr::map(1:length(yreps), function(i) {
           output[[paste0("compare_ppc", i)]] <- renderPlot({
             if(!is.null(isolate(global$models))) {
-              if(global$covid) {
+              if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
                 plot_ppc_covid_subset(
                   yreps[[i]],
                   global$mrp$input,
@@ -538,44 +538,35 @@ mod_analyze_model_server <- function(id, global){
                     }
                   }
                 }
-                
-                # convert non-numeric categorical data to numeric for Stan
-                if(global$covid) {
-                  input_data = stan_factor_covid(global$mrp$input, GLOBAL$levels$covid)
-                  new_data = stan_factor_covid(global$mrp$new, GLOBAL$levels$covid)
-                } else {
-                  input_data = stan_factor_poll(global$mrp$input, GLOBAL$levels$poll)
-                  new_data = stan_factor_poll(global$mrp$new, GLOBAL$levels$poll)
-                }
-                
+
                 # classify effects
-                all_priors <- all_priors |> group_effects(input_data) |> ungroup_effects()
+                all_priors <- all_priors |>
+                  group_effects(global$mrp$input) |>
+                  ungroup_effects()
 
                 # create a list to store model info
                 model <- list()
-                model$covid <- global$covid
-                model$priors <- all_priors
+                model$data_format <- global$data_format
+                model$effects <- all_priors
                 model$formula <- create_formula(all_priors)
                 model$n_iter <- n_iter
                 model$n_chains <- n_chains
-                model$data <- input_data
-                
-                gq_data <- list(
-                  pstrat_vars = if(global$covid) GLOBAL$pstrat_vars$covid else GLOBAL$pstrat_vars$poll,
-                  covid = global$covid
+                model$gq_data <- list(
+                  subgroups = intersect(GLOBAL$vars$subgroups, names(global$mrp$new)),
+                  temporal = "time" %in% names(global$mrp$input)
                 )
-                
+
                 # run MCMC
-                c(model$fit, model$data, model$code) %<-% run_mcmc(
-                  input_data = input_data,
-                  new_data = new_data,
-                  effects = all_priors,
-                  gq_data = gq_data,
+                c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
+                  input_data = stan_factor(global$mrp$input, GLOBAL$vars$ignore),
+                  new_data = stan_factor(global$mrp$new, GLOBAL$vars$ignore),
+                  effects = model$effects,
+                  gq_data = model$gq_data,
                   n_iter = model$n_iter,
                   n_chains = model$n_chains,
                   seed = input$seed_select,
-                  sens = if(global$covid) input$sens_kb else 1,
-                  spec = if(global$covid) input$spec_kb else 1
+                  sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
+                  spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
                 )
                 
                 model_buffer(model)
@@ -611,10 +602,10 @@ mod_analyze_model_server <- function(id, global){
       
       model <- qs::qread(input$fit_upload$datapath)
       
-      if(!("covid" %in% names(model))) {
+      if(!("data_format" %in% names(model))) {
         show_alert("The uploaded RDS file does not contain a model estimation.", global$session)
-      } else if(model$covid != global$covid) {
-        if(global$covid) {
+      } else if(model$data_format != global$data_format) {
+        if(global$data_format == "temporal_covid") {
           show_alert(paste0("The uploaded RDS file contains model estimation for cross-sectional data instead of spatio-temporal data."), global$session)
         } else {
           show_alert(paste0("The uploaded RDS file contains model estimation for spatio-temporal data instead of cross-sectional data."), global$session)
@@ -631,7 +622,7 @@ mod_analyze_model_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
       
-      if(global$covid) {
+      if(global$data_format == "temporal_covid") {
         model <- qs::qread(app_sys("extdata/fit_st.RDS"))
       } else {
         model <- qs::qread(app_sys("extdata/fit_cs.RDS"))
@@ -646,15 +637,15 @@ mod_analyze_model_server <- function(id, global){
       
       # extract posterior summary of coefficients
       if (is.null(model$fixed) || is.null(model$varying)) {
-        c(model$fixed, model$varying) %<-% extract_parameters(model$fit$mcmc, model$priors)
+        c(model$fixed, model$varying) %<-% extract_parameters(model$fit$mcmc, model$effects)
       }
       
       # run standalone generated quantities for LOO
       if (is.null(model$fit$loo)) {
         model$fit$loo %<-% run_gq(
           fit_mcmc = model$fit$mcmc,
-          code = model$code$loo,
-          data = model$data,
+          stan_code = model$stan_code$loo,
+          stan_data = model$stan_data,
           n_chains = model$n_chains
         )
       }
@@ -663,8 +654,8 @@ mod_analyze_model_server <- function(id, global){
       if (is.null(model$fit$ppc)) {
         model$fit$ppc %<-% run_gq(
           fit_mcmc = model$fit$mcmc,
-          code = model$code$ppc,
-          data = model$data,
+          stan_code = model$stan_code$ppc,
+          stan_data = model$stan_data,
           n_chains = model$n_chains
         )
       }
@@ -674,7 +665,7 @@ mod_analyze_model_server <- function(id, global){
         model$yrep <- extract_yrep(
           model$fit$ppc,
           global$mrp$input,
-          global$covid
+          model$gq_data
         )
       }
  
@@ -723,7 +714,7 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$ppc]] <- renderPlot({
         req(model$yrep)
         
-        if(global$covid) {
+        if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
           plot_ppc_covid_subset(
             model$yrep,
             global$mrp$input,
@@ -750,15 +741,15 @@ mod_analyze_model_server <- function(id, global){
           
           model$fit$pstrat %<-% run_gq(
             fit_mcmc = model$fit$mcmc,
-            code = model$code$pstrat,
-            data = model$data,
+            stan_code = model$stan_code$pstrat,
+            stan_data = model$stan_data,
             n_chains = model$n_chains
           )
           
           model$est <- extract_est(
             model$fit$pstrat,
             global$mrp$new,
-            global$covid
+            model$gq_data
           )
 
           # update reactiveValues
@@ -785,6 +776,9 @@ mod_analyze_model_server <- function(id, global){
         
         # change fit result download button color to indicate inclusion of postprocessing results
         shinyjs::addClass(model$IDs$save_fit_btn, "success")
+
+        # disable postprocessing button
+        shinyjs::disable(model$IDs$postprocess_btn)
       })
       
       # download fit result before postprocessing
@@ -807,7 +801,7 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$save_code_btn]] <- downloadHandler(
         filename = function() { "model.stan" },
         content = function(file) {
-          writeLines(model$code$mcmc, file)
+          writeLines(model$stan_code$mcmc, file)
         }
       )
       
@@ -825,7 +819,8 @@ mod_analyze_model_server <- function(id, global){
     # when user switch interface
     reset_flag <- reactive({
       global$data
-      global$covid
+      global$data_format
+      global$link_data
     })
     
     observeEvent(reset_flag(), {

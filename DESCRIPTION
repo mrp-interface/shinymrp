@@ -18,7 +18,6 @@ Imports:
     golem (>= 0.4.1),
     haven,
     ISOweek,
-    janitor,
     loo,
     patchwork,
     pkgload,
