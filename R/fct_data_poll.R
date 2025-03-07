@@ -53,7 +53,8 @@ prepare_data_poll <- function(
   demo_levels,
   vars_global
 ) {
-
+  View(input_data)
+  View(fips_county_state)
   # convert geography names to FIPS codes
   link_geo <- "state"
   input_data[[link_geo]] <- input_data[[link_geo]] |> to_geocode(fips_county_state, link_geo)

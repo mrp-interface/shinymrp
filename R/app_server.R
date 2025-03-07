@@ -5,11 +5,6 @@
 #' @import shiny
 #' @noRd
 app_server <- function(input, output, session) {
-  # set file upload size limit
-  options(shiny.maxRequestSize = 200*1024^2)
-
-  # set ggplot2 theme
-  ggplot2::theme_set(theme_light(base_family = "Arial", base_size = 18))
 
   global <- reactiveValues(
     web_version = FALSE,
@@ -24,8 +19,8 @@ app_server <- function(input, output, session) {
       pstrat_poll = readr::read_csv(app_sys("extdata/pstrat_poll.csv"), show_col_types = FALSE),
       zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) |> to_lower_case(),
       fips = list(
-        county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE),
-        state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE)
+        county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE) |> to_lower_case(),
+        state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE) |> to_lower_case()
       ),
       geojson = list(
         county = readRDS(app_sys("extdata/geojson_county.RDS")),

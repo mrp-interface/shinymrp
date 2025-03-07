@@ -69,7 +69,7 @@ mod_home_ui <- function(id){
           tags$div(class = "panel panel-primary landing_panel",
             tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data with Education"),
             tags$div(class = "panel-body landing_panel_body",
-              tags$p("Data linking for poststratification data with education data", style = "font-style: italic; text-align: center;"),
+              tags$p("Data linking for state-level poststratification data with education data", style = "font-style: italic; text-align: center;"),
               actionButton(
                 inputId = ns("set_static_poll"),
                 label = "Start"

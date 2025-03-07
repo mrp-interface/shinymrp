@@ -140,6 +140,7 @@ mod_analyze_upload_server <- function(id, global){
     ns <- session$ns
 
     rawdata <- reactiveVal()
+    link_status <- reactiveVal()
     try_error <- reactiveVal()
     input_errors <- reactiveVal()
     input_warnings <- reactiveVal()
@@ -175,6 +176,7 @@ mod_analyze_upload_server <- function(id, global){
       shinyjs::reset("acs_year")
 
       rawdata(NULL)
+      link_status(NULL)
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
@@ -214,7 +216,7 @@ mod_analyze_upload_server <- function(id, global){
       return(ui)
     })
 
-    output$link_status <- renderText("")
+    output$link_status <- renderText(link_status())
     
     output$main_panel <- renderUI({
       req(rawdata())
@@ -340,16 +342,16 @@ mod_analyze_upload_server <- function(id, global){
     observeEvent(input$use_agg_example, {
       if(global$data_format == "temporal_covid") {
         readr::read_csv(app_sys("extdata/example/data/covid_test_records_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> fix_geocode()
+        global$data <- rawdata() |> clean_data()
       } else if(global$data_format == "temporal_other") {
         readr::read_csv(app_sys("extdata/example/data/timevarying_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> fix_geocode()
+        global$data <- rawdata() |> clean_data()
       } else if(global$data_format == "static_poll") {
         readr::read_csv(app_sys("extdata/example/data/CES_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata()
+        global$data <- rawdata() |> clean_data()
       } else if(global$data_format == "static_other") {
         readr::read_csv(app_sys("extdata/example/data/crosssectional_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata()
+        global$data <- rawdata() |> clean_data()
       }
       
       try_error(NULL)
@@ -357,6 +359,8 @@ mod_analyze_upload_server <- function(id, global){
     })
 
     observeEvent(global$data, {
+      link_status(NULL)
+
       if(!is.null(global$data)) {
 
         smallest_geo_index <- intersect(names(global$data), GLOBAL$vars$geo) |>
@@ -483,9 +487,7 @@ mod_analyze_upload_server <- function(id, global){
 
         global$plotdata <- if(length(plotdata) > 0) plotdata else NULL
 
-        output$link_status <- renderText({
-          "Linked Successfully"
-        })
+        link_status("Linked successfully")
 
         waiter::waiter_hide()
       }
@@ -501,5 +503,6 @@ mod_analyze_upload_server <- function(id, global){
         selected = "nav_learn_preprocess"
       )
     })
+
   })
 }
