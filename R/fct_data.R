@@ -450,8 +450,8 @@ prepare_data <- function(
   # append levels for other geographic predictors
   # NOTE: this must be done after new_data is created
   # as these levels are not used in the poststratification table
-  for(v in intersect(names(input_data), vars_global$geo)) {
-    levels[[v]] <- unique(input_data[[v]]) |> sort()
+  for(v in intersect(names(new_data), vars_global$geo)) {
+    levels[[v]] <- unique(new_data[[v]]) |> sort()
   }
 
   vars <- create_variable_list(input_data, covariates, vars_global)

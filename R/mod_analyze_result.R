@@ -12,6 +12,7 @@ mod_analyze_result_ui <- function(id){
   ns <- NS(id)
   tags$div(class = "pad_top",
     navlistPanel(widths = c(3, 9),
+      id = ns("navbar"),
       tabPanel(
         selectInput(
           inputId = ns("model_select"),
@@ -20,20 +21,31 @@ mod_analyze_result_ui <- function(id){
         )
       ),
       tabPanel("Raw vs MRP",
+        value = "nav_overall",
         plotOutput(outputId = ns("est_overall"))
       ),
       tabPanel("By subgroup",
+        value = "nav_subgroup",
         tabsetPanel(
+          id = ns("navbar_subgroup"),
           tabPanel("Sex",
+            value = "nav_subgroup_sex",
             mod_est_plot_ui(ns("est_sex"))
           ),
           tabPanel("Race",
+            value = "nav_subgroup_race",
             mod_est_plot_ui(ns("est_race"))
           ),
           tabPanel("Age",
+            value = "nav_subgroup_age",
             mod_est_plot_ui(ns("est_age"))
           ),
+          tabPanel("Education",
+            value = "nav_subgroup_edu",
+            mod_est_plot_ui(ns("est_edu"))
+          ),
           tabPanel("Geography",
+            value = "nav_subgroup_geo",
             conditionalPanel(
               condition = "output.no_geo",
               tags$p("Map unavailable", class = "alt_text")
@@ -119,6 +131,14 @@ mod_analyze_result_server <- function(id, global){
       )
     )
 
+    mod_est_plot_server("est_edu",
+      data = reactive(selected_model()$est$edu),
+      plotdata = list(
+        dates = global$plotdata$dates,
+        n_plots = if(global$data_format %in% c("temporal_covid", "temporal_other")) length(global$mrp$levels$edu) + 1 else 1
+      )
+    )
+
     output$est_overall <- renderPlot({
       req(selected_model())
       
@@ -185,6 +205,18 @@ mod_analyze_result_server <- function(id, global){
       }
     })
 
+    # Show/hide tabs based on data format
+    observeEvent(global$data_format, {
+      # show subgroup tabs
+      for(tab in c("nav_subgroup_sex", "nav_subgroup_race", "nav_subgroup_age", "nav_subgroup_edu", "nav_subgroup_geo")) {
+        showTab("navbar_subgroup", tab)
+      }
+
+      if (global$data_format != "static_poll") {
+        hideTab("navbar_subgroup", "nav_subgroup_edu")
+      }
+    })
+
     observeEvent(global$input$navbar_analyze, {
       # When user navigates to "Results" page
       if(global$input$navbar_analyze == "nav_analyze_result") {
@@ -218,33 +250,35 @@ mod_analyze_result_server <- function(id, global){
             ),
             session = global$session
           )
+        } else {
+          # update model select
+          updateSelectInput(session,
+            inputId = "model_select",
+            choices = names(global$poststratified_models),
+            selected = if(model_select_buffer() %in% names(global$poststratified_models)) model_select_buffer() else NULL
+          )
+          
+          # update geographic scale select
+          choices <- intersect(names(global$mrp$levels), c("county", "state"))
+          updateSelectInput(session,
+            inputId = "geo_scale_select",
+            choices = choices,
+            selected = choices[1]
+          )
+
+          # update geographic region select
+          fips_df <- global$extdata$fips[[choices[1]]] |>
+            filter(fips %in% global$mrp$levels[[choices[1]]])
+          choices <- sort(fips_df[[selected_geo()]])
+          
+          updateSelectInput(session,
+            inputId = "geo_select",
+            choices = choices,
+            selected = choices[1]
+          )
         }
 
-        # update model select
-        updateSelectInput(session,
-          inputId = "model_select",
-          choices = names(global$poststratified_models),
-          selected = if(model_select_buffer() %in% names(global$poststratified_models)) model_select_buffer() else NULL
-        )
-        
-        # update geographic scale select
-        choices <- intersect(names(global$mrp$levels), c("county", "state"))
-        updateSelectInput(session,
-          inputId = "geo_scale_select",
-          choices = choices,
-          selected = choices[1]
-        )
 
-        # update geographic region select
-        fips_df <- global$extdata$fips[[choices[1]]] |>
-          filter(fips %in% global$mrp$levels[[choices[1]]])
-        choices <- sort(fips_df[[selected_geo()]])
-        
-        updateSelectInput(session,
-          inputId = "geo_select",
-          choices = choices,
-          selected = choices[1]
-        )
       }
     })
 
@@ -265,6 +299,7 @@ mod_analyze_result_server <- function(id, global){
 
       removeModal(global$session)
     })
+    
     
     observeEvent(input$model_select, {
       model_select_buffer(input$model_select)

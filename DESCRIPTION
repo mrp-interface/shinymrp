@@ -10,6 +10,7 @@ Authors@R: c(
 Description: A GUI designed for intuitive applications of Multilevel Regression and Poststratification to cross-sectional and spatio-temporal datasets.
 License: MIT + file LICENSE
 Imports: 
+    bslib,
     cmdstanr,
     config (>= 0.3.2),
     dplyr,

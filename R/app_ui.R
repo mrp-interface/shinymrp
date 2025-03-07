@@ -9,7 +9,7 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     navbarPage("Multilevel Regression & Poststratification",
-      # theme = shinythemes::shinytheme("flatly"),
+    # theme = bslib::bs_theme(version = 5),
       id = "navbar",
       tabPanel("Home",
         value = "nav_home",
@@ -20,6 +20,26 @@ app_ui <- function(request) {
         value = "nav_analyze",
         icon = icon("stats", lib = "glyphicon"),
         tabsetPanel(id = "navbar_analyze",
+          # bslib::nav_item(
+          #   tags$span(
+          #     conditionalPanel(
+          #       condition = "output.data_format == 'temporal_covid'",
+          #       tags$p("Time-varying: COVID", style="margin: 5px 15px; background-color: #f8d7da; padding: 5px; border-radius: 5px;")
+          #     ),
+          #     conditionalPanel(
+          #       condition = "output.data_format == 'temporal_other'",
+          #       "Time-varying: General   "
+          #     ),
+          #     conditionalPanel(
+          #       condition = "output.data_format == 'static_poll'",
+          #       "Cross-sectional: With Education   "
+          #     ),
+          #     conditionalPanel(
+          #       condition = "output.data_format == 'static_other'",
+          #       "Cross-sectional: General   "
+          #     )
+          #   )
+          # ),
           tabPanel(tagList("Upload data", icon("chevron-right", "fa")),
             value = "nav_analyze_upload",
             mod_analyze_upload_ui(module_ids$analyze$upload)
