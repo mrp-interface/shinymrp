@@ -1,6 +1,33 @@
+#' Clean and standardize column names
+#' 
+#' @description
+#' This function takes column names and transforms them into a standardized format:
+#' - Converts to lowercase
+#' - Replaces non-alphanumeric characters with underscores
+#' - Removes repeated underscores
+#' - Removes leading and trailing underscores
+#'
+#' @param names A character vector of column names to be cleaned
+#'
+#' @return A character vector of cleaned column names
+#'
+#' @examples
+#' clean_names(c("First Name", "Last.Name", "EMAIL_ADDRESS"))
+#' # returns: c("first_name", "last_name", "email_address")
+#'
+#' @export
+clean_names <- function(names) {
+  names |> 
+    tolower() |> 
+    gsub("[^[:alnum:]]", "_", x = _) |>
+    gsub("_{2,}", "_", x = _) |>
+    gsub("^_|_$", "", x = _)
+}
+
+
 find_columns <- function(df, expected_columns) {
   # find columns using string search
-  df <- janitor::clean_names(df)
+  df <- clean_names(df)
   all_names <- names(df)
   old_names <- expected_columns |> sapply(function(s) all_names[grepl(s, all_names, ignore.case = TRUE)]) |> unlist()
 

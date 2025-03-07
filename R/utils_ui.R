@@ -281,19 +281,9 @@ create_model_tab <- function(ns, model) {
           tags$div(
             tags$h4("Posterior Predictive Check", class = "break_title"),
             tags$hr(class = "break_line"),
-            conditionalPanel(
-              condition = "output.covid",
-              create_text_box(
-                title = tags$b("Note"),
-                tags$p("The plot shows the weekly positive response rate computed from the observed data and 10 sets of replicated data.") 
-              )
-            ),
-            conditionalPanel(
-              condition = "!output.covid",
-              create_text_box(
-                title = tags$b("Note"),
-                tags$p("The plot shows the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
-              )
+            create_text_box(
+              title = tags$b("Note"),
+              tags$p("The plot shows the positive response rate/proportion computed from the observed data and 10 sets of replicated data.") 
             ),
             plotOutput(outputId = ns(model$IDs$ppc))
           )

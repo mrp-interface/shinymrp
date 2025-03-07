@@ -167,7 +167,7 @@
     position: fixed;
     top: 96%;
     left: 94%;
-    z-index: 1000;
+    z-index: 1001;
     width: 5.8%;
   }
 
@@ -177,9 +177,9 @@
   
   .help_btn_container {
     position: fixed;
-    top: 94%;
+    top: 93.5%;
     left: 96.5%;
-    z-index: 1000;
+    z-index: 1002;
   }
 
   .button_icon {
@@ -238,6 +238,14 @@
       color: #a0a0a0;            /* Gray text to indicate disabled */
       cursor: not-allowed;       /* Change cursor to indicate non-interactive */
       opacity: 0.6;              /* Reduced opacity for visual cue */
+  }
+
+  .alt_text {
+    font-size: 1.25em;
+    font-style: italic;
+    text-align: center;
+    display: block;  /* Ensures center alignment works */
+    margin: 1.25em auto;  /* Adds some vertical spacing */
   }
 
   /* ANIMATION EFFECTS */

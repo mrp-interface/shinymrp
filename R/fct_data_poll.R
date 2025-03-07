@@ -46,183 +46,35 @@ aggregate_poll <- function(df, age_bounds, threshold = 0) {
 }
 
 
-check_poll_data <- function(df, expected_columns, na_threshold = 0.5) {
-  errors <- list()
-
-  df <- find_columns(df, expected_columns)
-  missing <- df |> lapply(function(c) all(c == "")) |> unlist()
-  missing_names <- names(missing)[missing]
-
-  if(length(missing_names) > 1 | (length(missing_names) == 1 & !"state" %in% missing_names)) {
-    errors$missing_column <- paste0("The following columns are missing: ",
-                                    paste(missing_names, collapse = ", "),
-                                    "(\"state\" column is optional)")
-  } else {
-    # check data types
-    expected_types <- c("character", "character", "character", "character", "character|integer|numeric", "integer|numeric", "integer|numeric")
-    types <- df |> lapply(class) |> unlist()
-    valid <- mapply(grepl, types, expected_types)
-
-    if(any(!valid)) {
-      errors$data_type <- paste0("Columns corresponding to the following variables have inappropriate data types: ",
-                                 paste(expected_columns[!valid], collapse = ", "))
-    } else {
-      na_percents <- df |>
-        lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
-        unlist()
-      exceed <- na_percents > na_threshold
-
-      if(any(exceed)) {
-        errors$na <- paste0("Columns corresponding to the following variables have more than ",
-                            na_threshold * 100, " percent rows with missing data: ",
-                            paste(expected_columns[exceed], collapse = ", "))
-      } else {
-        # check if state column is missing
-        if("state" %in% missing_names) {
-          errors$state <- "States are not provided (\"state\" column is optional)"
-        }
-
-        # check if positive votes are less than or equal to total votes
-        if(any(df$positive > df$total)) {
-          errors$count <- "The number of supporting votes cannot be greater than the total number of votes"
-        }
-      }
-    }
-  }
-
-  return(errors)
-}
-
-mod_fips <- function(df) {
-
-  df <- df |>
-    mutate(fips = substr(fips, 1, 2)) |>
-    select(-county) |>
-    distinct(fips, .keep_all = TRUE)
-
-  return(df)
-}
-
-to_fips <- function(state_vec, fips_state) {
-  if(is.null(state_vec)) {
-    return(NULL)
-  }
-
-  counts <- fips_state |> apply(2, function(c) sum(c %in% state_vec))
-  colname <- names(counts)[which.max(counts)]
-
-  if(colname == "fips") {
-    fips <- if(is.numeric(state_vec)) sprintf("%02d", state_vec) else state_vec
-  } else {
-    fips <- fips_state$fips[match(state_vec, fips_state[[colname]])]
-  }
-
-  return(fips)
-}
-
-stan_factor_poll <- function(df, levels) {
-  # rename raw columns
-  df <- df |>
-    rename(
-      "sex_raw" = "sex",
-      "race_raw" = "race",
-      "age_raw" = "age",
-      "edu_raw" = "edu",
-      "state_raw" = "state"
-    )
-
-  # add Stan-dardized columns
-  df <- df |>
-    mutate(
-      sex = factor(sex_raw, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
-      race = factor(race_raw, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
-      age = factor(age_raw, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
-      edu = factor(edu_raw, levels = levels$edu, labels = 1:length(levels$edu)) |> as.character() |> as.integer(),
-      state = as.factor(state_raw) |> as.integer()
-    )
-
-  return(df)
-}
-
-get_state_predictors <- function(df) {
-  df <- janitor::clean_names(df)
-  all_cols <- names(df)
-  state_col <- all_cols[grepl("state", all_cols, ignore.case = TRUE)]
-
-  if(length(state_col) == 0) {
-    return(data.frame())
-  }
-
-  bool <- df |>
-    group_by(!!!syms(state_col)) |>
-    summarize_all(n_distinct) |>
-    lapply(function(c) all(c == 1)) |>
-    unlist()
-
-  state_pred_cols <- all_cols[bool]
-
-  state_preds <- df |>
-    select(all_of(c(state_col, state_pred_cols))) |>
-    distinct(!!!syms(state_col), .keep_all = TRUE)
-
-  names(state_preds)[1] <- "state"
-
-  return(state_preds)
-}
-
 prepare_data_poll <- function(
-    data,
-    pstrat,
-    covar,
-    demo_levels
+  input_data,
+  pstrat_data,
+  fips_county_state,
+  demo_levels,
+  vars_global
 ) {
 
-  states_in_data <- unique(data$state)
-  if(is.null(states_in_data)) {
-    new_data <- pstrat |>
-      group_by(sex, race, age, edu) |>
-      summarize(total = sum(total)) |>
-      ungroup()
-  } else {
-    new_data <- pstrat |> filter(state %in% states_in_data)
-  }
+  # convert geography names to FIPS codes
+  link_geo <- "state"
+  input_data[[link_geo]] <- input_data[[link_geo]] |> to_geocode(fips_county_state, link_geo)
+  pstrat_data[[link_geo]] <- pstrat_data[[link_geo]] |> to_geocode(fips_county_state, link_geo)
 
-  new_data <- new_data |> mutate(
-    sex  = factor(sex, levels = demo_levels$sex),
-    race = factor(race, levels = demo_levels$race),
-    age  = factor(age, levels = demo_levels$age),
-    edu  = factor(edu, levels = demo_levels$edu)
-  )
-
-  # append state-level predictors
-  if(ncol(covar) > 1) {
-    new_data <- left_join(new_data, covar, by = "state")
-  }
-
-  # create lists of all factor levels
+  # keep states in the input data
   levels <- demo_levels
-  if(!is.null(states_in_data)) {
-    levels$state <- states_in_data
+  levels$state <- unique(input_data$state) |> sort()
+  pstrat_data <- pstrat_data |> filter(state %in% levels$state)
+
+  # filter  convert demographic levels to factors
+  new_data <- pstrat_data |> as_factor(demo_levels)
+
+  # find geographic covariates
+  covariates <- get_geo_predictors(input_data, link_geo)
+  if(ncol(covariates) > 1) {
+    # append geographic predictors
+    new_data <- left_join(new_data, covariates, by = link_geo)
   }
 
-  # list of variables for model specification
-  vars <- list(
-    fixed = list(
-      "Individual-level Predictor" = c("sex", "race", "age", "edu")
-    ),
-    varying = list(
-      "Individual-level Predictor" = c("race", "age", "edu")
-    )
-  )
+  vars <- create_variable_list(input_data, covariates, vars_global)
 
-  if(!is.null(states_in_data)) {
-    # NOTE: current implementation only accepts continuous covariates
-    vars$fixed[["Geographic Predictor"]] <- names(covar) |> setdiff("state")
-    vars$fixed[["Geographic Indicator"]] <- "state"
-    vars$varying[["Geographic Indicator"]] <- "state"
-  }
-
-
-  return(list(data, new_data, levels, vars))
+  return(list(input_data, new_data, levels, vars))
 }
-

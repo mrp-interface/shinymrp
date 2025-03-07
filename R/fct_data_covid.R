@@ -88,8 +88,6 @@ get_week_indices <- function(strings) {
   return(list(weeks_accum, timeline_date))
 }
 
-
-
 to_factor_covid <- function(df, age_bounds) {
   is_pos <- grepl("positive|detected", df$result, ignore.case = TRUE)
   is_neg <- grepl("not|negative|undetected", df$result, ignore.case = TRUE)
@@ -296,62 +294,44 @@ filter_state_zip <- function(
 
 
 prepare_data_covid <- function(
-    patient,
+    input_data,
     pstrat_data,
     covariates,
-    demo_levels
+    demo_levels,
+    vars_global
 ) {
   
   # filter out state and zip codes with small sample sizes
-  patient <- filter_state_zip(patient, covariates)
-  
-  pstrat_data <- pstrat_data |> filter(zip %in% patient$zip)
+  input_data <- filter_state_zip(input_data, covariates)
+  covariates <- covariates |> filter(zip %in% input_data$zip)
+  pstrat_data <- pstrat_data |> filter(zip %in% input_data$zip)
   cell_counts <- pstrat_data[-c(1, 2)] |> t() |> c()
-  time_indices <- 1:max(patient$time)
-  n_time_indices <- length(time_indices)
   
-  
-  # standardize zip-level covariates
-  covariates <- covariates |>
-    filter(zip %in% patient$zip) |>
-    mutate(across(-c(zip, county), scale))
-  
-  input_data <- patient |>
-    left_join(covariates, by = "zip")
+  # # prevent duplicate columns
+  dup_cols <- intersect(names(input_data), names(covariates)) |> setdiff(c("zip"))
+  input_data <- input_data |> select(-all_of(dup_cols))
 
-  new_data <- tidyr::expand_grid(
-    sex  = demo_levels$sex,
-    race = demo_levels$race,
-    age  = demo_levels$age,
-    time = time_indices,
-    zip  = covariates$zip
-  ) |>
-    mutate(
-      sex  = factor(sex, levels = demo_levels$sex),
-      race = factor(race, levels = demo_levels$race),
-      age  = factor(age, levels = demo_levels$age)
-    ) |>
-    arrange(time, zip, sex, race, age) |>  # IMPORTANT: To match the cell order of poststratification data
-    mutate(total = rep(cell_counts, n_time_indices)) |>
+  input_data <- input_data |>
+    as_factor(demo_levels) |>
     left_join(covariates, by = "zip")
-
 
   # create lists of all factor levels
   levels <- demo_levels
+  levels$time <- unique(input_data$time) |> sort()
+  levels$zip <- pstrat_data$zip
+
+  new_data <- expand.grid(levels, stringsAsFactors = TRUE) |> # sex, race, age must be factors for later use in plotting
+    arrange(time, zip, sex, race, age) |>  # IMPORTANT: To match the cell order of poststratification data
+    mutate(total = rep(cell_counts, length(levels$time))) |>
+    left_join(covariates, by = "zip")
+
+  # append levels for other geographic predictors
+  # NOTE: this must be done after new_data is created
+  # as these levels are not used in the poststratification table
   levels$county <- pstrat_data$county |> unique()
 
   # list of variables for model specification
-  vars <- list(
-    fixed = list(
-      "Individual-level Predictor" = c("sex", "race", "age", "time"),
-      "Geographic Indicator" = c("zip"),
-      "Geographic Predictor" = names(covariates) |> setdiff(c("zip", "county"))
-    ),
-    varying = list(
-      "Individual-level Predictor" = c("race", "age", "time"),
-      "Geographic Indicator" = c("zip")
-    )
-  )
+  vars <- create_variable_list(input_data, covariates, vars_global)
 
   return(list(input_data, new_data, levels, vars))
 }
@@ -573,45 +553,3 @@ get_zip_tract <- function(key) {
   return(zip_tract)
 }
 
-combine_tracts <- function(
-    tract_data,
-    zip_tract
-) {
-  
-  # join tract-level data with zip-tract conversion table
-  # then group by zip
-  by_zip <- zip_tract |>
-    select(geoid, zip) |>
-    rename("GEOID" = "geoid") |>
-    inner_join(
-      tract_data,
-      by = "GEOID"
-    ) |>
-    mutate(county = substr(GEOID, 1, 5)) |>
-    group_by(zip)
-  
-  # compute zip-level population size by aggregating across overlapping tracts
-  all_colnames <- names(tract_data)
-  pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
-  pstrat_data <- by_zip |>
-    summarise(
-      county = first(county),
-      across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
-    )
-  
-  # omit zips with only NA then compute zip-level quantities
-  covar_colnames <- setdiff(all_colnames, pstrat_colnames)
-  covariates <- by_zip |>
-    filter(if_all(all_of(covar_colnames), ~ !all(is.na(.)))) |>
-    summarize(
-      county = first(county),
-      urbanicity  = 1 - sum((pop_size / sum(pop_size, na.rm = TRUE)) * (urbanicity == "N"), na.rm = TRUE),
-      college     = sum(above_college, na.rm = TRUE) / (sum(below_college, na.rm = TRUE) + sum(above_college, na.rm = TRUE)),
-      employment  = sum(employed, na.rm = TRUE) / (sum(employed, na.rm = TRUE) + sum(unemployed, na.rm = TRUE) + sum(other, na.rm = TRUE)),
-      poverty     = sum(`0-0.99`, na.rm = TRUE) / (sum(`0-0.99`, na.rm = TRUE) + sum(`1-1.99`, na.rm = TRUE) + sum(`2+`, na.rm = TRUE)),
-      income      = sum((pop_size / sum(pop_size, na.rm = TRUE)) * household_income, na.rm = TRUE),
-      ADI         = sum((pop_size / sum(pop_size, na.rm = TRUE)) * adi, na.rm = TRUE)
-    )
-  
-  return(list(pstrat_data, covariates))
-}

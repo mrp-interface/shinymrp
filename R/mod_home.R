@@ -13,24 +13,77 @@ mod_home_ui <- function(id){
     tags$div(class = "landing_container",
       tags$h1("M.R.P.", class = "landing_header"),
       tags$p("An interface for applying Multilevel Regression and Poststratification", class = "landing_subheader"),
-      tags$div(class = "landing_panels justify",
-        tags$div(class = "panel panel-primary landing_panel",
-          tags$div(class = "panel-heading landing_panel_heading", "Spatio-temporal Data"),
-          tags$div(class = "panel-body landing_panel_body",
-            tags$p("Collected over time and by geography", style = "font-style: italic; text-align: center;"),
-            actionButton(
-              inputId = ns("set_covid"),
-              label = "Start"
+      conditionalPanel(ns = ns,
+        condition = "output.panel_group == 'main'",
+        tags$div(class = "landing_panels justify",
+          tags$div(class = "panel panel-primary landing_panel",
+            tags$div(class = "panel-heading landing_panel_heading", "Time-varying Data"),
+            tags$div(class = "panel-body landing_panel_body",
+              tags$p("Collected over time", style = "font-style: italic; text-align: center;"),
+              actionButton(
+                inputId = ns("set_temporal"),
+                label = "Start"
+              )
+            )
+          ),
+          tags$div(class = "panel panel-primary landing_panel",
+            tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data"),
+            tags$div(class = "panel-body landing_panel_body",
+              tags$p("Collected at a single time point", style = "font-style: italic;  text-align: center;"),
+              actionButton(
+                inputId = ns("set_static"),
+                label = "Start"
+              )
             )
           )
-        ),
-        tags$div(class = "panel panel-primary landing_panel",
-          tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data"),
-          tags$div(class = "panel-body landing_panel_body",
-            tags$p("Collected at a single time point", style = "font-style: italic;  text-align: center;"),
-            actionButton(
-              inputId = ns("set_poll"),
-              label = "Start"
+        )
+      ),
+      conditionalPanel(ns = ns,
+        condition = "output.panel_group == 'temporal'",
+        tags$div(class = "landing_panels justify",
+          tags$div(class = "panel panel-primary landing_panel",
+            tags$div(class = "panel-heading landing_panel_heading", "COVID Data"),
+            tags$div(class = "panel-body landing_panel_body",
+              tags$p("Data linking for ZIP-code-level covariates and poststratification data", style = "font-style: italic; text-align: center;"),
+              actionButton(
+                inputId = ns("set_temporal_covid"),
+                label = "Start"
+              )
+            )
+          ),
+          tags$div(class = "panel panel-primary landing_panel",
+            tags$div(class = "panel-heading landing_panel_heading", "Other Time-varying Data"),
+            tags$div(class = "panel-body landing_panel_body",
+              tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data", style = "font-style: italic;  text-align: center;"),
+              actionButton(
+                inputId = ns("set_temporal_other"),
+                label = "Start"
+              )
+            )
+          )
+        )
+      ),
+      conditionalPanel(ns = ns,
+        condition = "output.panel_group == 'static'",
+        tags$div(class = "landing_panels justify",
+          tags$div(class = "panel panel-primary landing_panel",
+            tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data with Education"),
+            tags$div(class = "panel-body landing_panel_body",
+              tags$p("Data linking for poststratification data with education data", style = "font-style: italic; text-align: center;"),
+              actionButton(
+                inputId = ns("set_static_poll"),
+                label = "Start"
+              )
+            )
+          ),
+          tags$div(class = "panel panel-primary landing_panel",
+            tags$div(class = "panel-heading landing_panel_heading", "Other Cross-sectional Data"),
+            tags$div(class = "panel-body landing_panel_body",
+              tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data without education data", style = "font-style: italic;  text-align: center;"),
+              actionButton(
+                inputId = ns("set_static_other"),
+                label = "Start"
+              )
             )
           )
         )
@@ -46,6 +99,10 @@ mod_home_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
 
+    panel_group <- reactiveVal("main")
+    output$panel_group <- reactive(panel_group())
+    outputOptions(output, "panel_group", suspendWhenHidden = FALSE)
+    
     observe({
       if(global$web_version) {
         shinyWidgets::sendSweetAlert(
@@ -68,37 +125,67 @@ mod_home_server <- function(id, global){
         }
       }
     })
+    
+    observeEvent(global$input$navbar, {
+      if(global$input$navbar == "nav_home") {
+        panel_group("main")
+      }
+    })
 
-    observeEvent(input$set_poll, {
+    observeEvent(input$set_static, {
+      panel_group("static")
+    })
+
+    observeEvent(input$set_temporal, {
+      panel_group("temporal")
+    })
+
+    observeEvent(input$set_static_poll, {
       updateNavbarPage(global$session,
                        inputId = "navbar",
                        selected = "nav_analyze")
+      
+      updateNavbarPage(global$session,
+                       inputId = "navbar_analyze",
+                       selected = "nav_analyze_upload")
+                       
+      global$data_format <- "static_poll"
+    })
 
+    observeEvent(input$set_static_other, {
+      updateNavbarPage(global$session,
+                       inputId = "navbar",
+                       selected = "nav_analyze")
+      
       updateNavbarPage(global$session,
                        inputId = "navbar_analyze",
                        selected = "nav_analyze_upload")
 
-      # show_notif("Switched to interface for cross-sectional data", global$session)
-
-      global$covid <- FALSE
+      global$data_format <- "static_other"
     })
-
-
-    observeEvent(input$set_covid, {
+    
+    observeEvent(input$set_temporal_covid, {
       updateNavbarPage(global$session,
                        inputId = "navbar",
                        selected = "nav_analyze")
-
+      
       updateNavbarPage(global$session,
                        inputId = "navbar_analyze",
                        selected = "nav_analyze_upload")
 
-
-      # show_notif("Switched to interface for spatio-temporal data with measurement error", global$session)
-
-      global$covid <- TRUE
+      global$data_format <- "temporal_covid"
     })
 
+    observeEvent(input$set_temporal_other, {      
+      updateNavbarPage(global$session,
+                       inputId = "navbar",
+                       selected = "nav_analyze")
+      
+      updateNavbarPage(global$session,
+                       inputId = "navbar_analyze",
+                       selected = "nav_analyze_upload")
 
+      global$data_format <- "temporal_other"
+    })
   })
 }
