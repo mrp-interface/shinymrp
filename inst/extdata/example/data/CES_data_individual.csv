@@ -1,4 +1,4 @@
-sex,race,age,edu,state,response,repvote
+sex,race,age,edu,state,positive,repvote
 male,white,38,some college,NY,0,0.382275815
 female,white,65,hs,KY,0,0.65670629
 male,white,61,hs,GA,0,0.526611726

@@ -59,8 +59,8 @@ filter_interactions <- function(interactions, fixed_effects, dat) {
     type1 <- data_type(dat[[ss[1]]])
     type2 <- data_type(dat[[ss[2]]])
     
-    return((type1 == "cat" & !ss[1] %in% fixed_effects) |
-             (type2 == "cat" & !ss[2] %in% fixed_effects))
+    return((type1 == "cat" && !ss[1] %in% fixed_effects) |
+             (type2 == "cat" && !ss[2] %in% fixed_effects))
   })
   
   return(interactions[bool])
@@ -76,7 +76,7 @@ sort_interactions <- function(interactions, fixed_effects, dat) {
     type1 <- data_type(dat[[ss[1]]], num = TRUE)
     type2 <- data_type(dat[[ss[2]]], num = TRUE)
     
-    if(type1 > type2 | (type1 == 2 & type2 == 2 & ss[2] %in% fixed_effects)) {
+    if(type1 > type2 | (type1 == 2 && type2 == 2 && ss[2] %in% fixed_effects)) {
       s <- paste0(ss[2], ':', ss[1])
     }
     
@@ -158,22 +158,22 @@ group_interactions <- function(interactions, fixed_effects, dat) {
     type2 <- data_type(dat[[ss[2]]])
     
     # binary x continuous or continuous x continuous
-    if((type1 == "cont" & type2 == "cont") |
-       (type1 == "bin" & type2 == "bin") |
-       (type1 == "cont" & type2 == "bin") |
-       (type1 == "bin" & type2 == "cont")) {
+    if((type1 == "cont" && type2 == "cont") |
+       (type1 == "bin" && type2 == "bin") |
+       (type1 == "cont" && type2 == "bin") |
+       (type1 == "bin" && type2 == "cont")) {
       out$fixed_slope[[s]] <- interactions[[s]]
       
       # categorical x continuous
-    } else if (type1 == "cat" & type2 == "cont") {
+    } else if (type1 == "cat" && type2 == "cont") {
       out$varying_slope[[s]] <- interactions[[s]]
       
       # binary x categorical
-    } else if (type1 == "bin" & type2 == "cat") {
+    } else if (type1 == "bin" && type2 == "cat") {
       out$varying_intercept_special[[s]] <- interactions[[s]]
       
       # categorical x categorical
-    } else if (type1 == "cat" & type2 == "cat") {
+    } else if (type1 == "cat" && type2 == "cat") {
       if (ss[1] %in% names(fixed_effects)) {
         out$varying_intercept_special[[s]] <- interactions[[s]]
       } else {
@@ -640,12 +640,12 @@ make_standata <- function(
   for(name in names(holder)) {
     dat <- holder[[name]]
     subfix <- if(name == "input") '' else "_pop"
-    
-    # fixed main effects (continuous & binary)
+
+    # fixed main effects (continuous && binary)
     X_cont <- dat |>
       select(all_of(names(effects$m_fix_bc))) |>
       data.matrix()
-    
+
     # fixed main effects (categorical)
     X_cat <- map(names(effects$m_fix_c), function(s) {
       ss <- strsplit(s, split = '\\.')[[1]]
@@ -746,8 +746,6 @@ run_mcmc <- function(
     cpp_options = list(stan_threads = TRUE)
   )
 
-  effects_global <<- effects
-  stan_data_global <<- stan_data
   fit <- list()
   fit$mcmc <- mod_mcmc$sample(
     data = stan_data,
@@ -819,7 +817,7 @@ extract_parameters <- function(fit, effects) {
       select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
       as.data.frame()
 
-    names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "Convergence", "Bulk_ESS", "Tail_ESS")
+    names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
     row.names(df_fixed) <- c("Intercept", names(fixed))
   }
 
@@ -871,7 +869,7 @@ extract_parameters <- function(fit, effects) {
       select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
       as.data.frame()
 
-    names(df_varying) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "Convergence", "Bulk_ESS", "Tail_ESS")
+    names(df_varying) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
     row.names(df_varying) <- row_names
   }
 

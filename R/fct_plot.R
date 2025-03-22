@@ -9,11 +9,26 @@
 #' @import dplyr
 #' @import ggplot2
 
+fips_upper <- function(fips) {
+  has_county <- "county" %in% names(fips)
+
+  fips |> mutate(
+    state = toupper(state),
+    state_name = tools::toTitleCase(state_name),
+    county = if(has_county) tools::toTitleCase(county)
+  )
+}
+
 prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"), for_map = TRUE) {
   geo <- match.arg(geo)
 
-  input_data <- input_data |> mutate(fips = input_data[[geo]])
+  if(is.null(input_data)) {
+    return(NULL)
+  }
 
+  input_data <- input_data |> mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes |> fips_upper()
+  
   total_count <- sum(input_data$total)
   plot_df <- input_data |>
     group_by(fips) |>
@@ -37,7 +52,7 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
     }
   } else {
     if(geo == "county") {
-      plot_df <- plot_df |> mutate(county = gsub(" county", "", county))
+      plot_df <- plot_df |> mutate(county = gsub(" [Cc][Oo][Uu][Nn][Tt][Yy]", "", county))
     }
     
     plot_df <- plot_df |>
@@ -57,7 +72,12 @@ prep_raw_support <- function(
 ) {
   geo <- match.arg(geo)
 
+  if(is.null(input_data)) {
+    return(NULL)
+  }
+
   input_data <- input_data |> mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes |> fips_upper()
 
   plot_df <- input_data |>
     group_by(fips) |>
@@ -88,7 +108,12 @@ prep_raw_prev <- function(
 ) {
   geo <- match.arg(geo)
 
+  if(is.null(input_data)) {
+    return(NULL)
+  }
+
   input_data <- input_data |> mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes |> fips_upper()
 
   # calculate weekly positive response rate and test counts for each county/state
   plot_df <- input_data |>
@@ -141,7 +166,13 @@ prep_est <- function(
 ) {
   geo <- match.arg(geo)
 
+  if(is.null(est_df)) {
+    return(NULL)
+  }
+
   est_df <- est_df |> mutate(fips = factor)
+  fips_codes <- fips_codes |> fips_upper()
+  
   if("time" %in% names(est_df)) {
     sq <- 1:max(est_df$time, na.rm = TRUE)
     est_df <- est_df |> mutate(
@@ -184,6 +215,10 @@ plot_demographic <- function(
     levels,
     separate = TRUE
 ) {
+
+  if(is.null(input_data) || is.null(new_data)) {
+    return(NULL)
+  }
 
   total_input <- sum(input_data$total)
   input <- input_data |>
@@ -275,6 +310,10 @@ plot_geographic <- function(
     name
 ) {
 
+  if(is.null(covariates)) {
+    return(NULL)
+  }
+
   p <- ggplot(
     data = covariates,
     aes(x = covar)
@@ -309,6 +348,10 @@ plot_prev <- function(
   raw_color = "darkblue",
   mrp_color = "darkorange"
 ) {
+
+  if(is.null(raw)) {
+    return(NULL)
+  }
 
   plot_df <- raw |>
     group_by(time) |>
@@ -397,6 +440,9 @@ plot_support <- function(
     yrep_est,
     raw
 ) {
+  if(is.null(yrep_est) || is.null(raw)) {
+    return(NULL)
+  }
 
   raw_mean <- sum(raw$positive) / sum(raw$total)
   plot_df <- rbind(
@@ -508,6 +554,7 @@ plot_ppc_covid_all <- function(
     yrep_color = "darkorange",
     raw_color = "darkblue"
 ) {
+
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
   }
@@ -625,7 +672,7 @@ plot_ppc_poll <- function(
 }
 
 plot_est_temporal <- function(df, dates) {
-  if(is.null(df) || nrow(df) == 0) {
+  if(is.null(nullify(df))) {
     return(NULL)
   }
 
@@ -725,6 +772,10 @@ plot_est_temporal <- function(df, dates) {
 }
 
 plot_est_static <- function(plot_df) {
+  if(is.null(nullify(plot_df))) {
+    return(NULL)
+  }
+
   p <- ggplot(data = plot_df) +
     geom_point(
       aes(
@@ -765,10 +816,17 @@ choro_map <- function(
     colorbar_title,
     geo
 ) {
-  
+
   # Validate inputs
   if (is.null(map_geojson) || is.null(plot_df)) {
     stop("Missing required geojson or plot data")
+  }
+
+  has_ak_hi <- FALSE
+  if(geo == "state") {
+    states_in_data <- unique(plot_df$fips)
+    ak_hi <- c("02", "15")
+    has_ak_hi <- length(intersect(states_in_data, ak_hi)) > 0
   }
 
   # Create the plot
@@ -789,7 +847,7 @@ choro_map <- function(
     ) |>
     plotly::layout(
       geo = list(
-        fitbounds = if(geo == "state") NULL else "geojson",
+        fitbounds = if(has_ak_hi) NULL else "geojson",
         scope = "usa",
         projection = list(type = 'albers usa'),
         visible = FALSE

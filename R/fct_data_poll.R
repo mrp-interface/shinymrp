@@ -11,9 +11,9 @@ to_factor_poll <- function(df, age_bounds) {
               paste0(age_bounds[length(age_bounds)], '+'))
 
   df <- df |> mutate(
-    sex  = to_factor(sex, c("female"), other = "male"),
-    race = to_factor(race, c("white", "black"), other = "other"),
-    edu  = to_factor(edu, c("no hs", "some college", "4-year college", "post-grad"), other = "hs"),
+    sex  = recode_values(sex, c("female"), other = "male"),
+    race = recode_values(race, c("white", "black"), other = "other"),
+    edu  = recode_values(edu, c("no hs", "some college", "4-year college", "post-grad"), other = "hs"),
     age  = cut(df$age, breaks, labels) |> as.character()
   )
 
@@ -23,7 +23,7 @@ to_factor_poll <- function(df, age_bounds) {
 
 aggregate_poll <- function(df, age_bounds, threshold = 0) {
   # identify columns
-  df <- find_columns(df, expected_columns = c("sex", "race", "age", "edu", "state", "response"))
+  df <- find_columns(df, expected_columns = c("sex", "race", "age", "edu", "state", "positive"))
 
   # impute missing demographic data based on frequency
   df <- df |> mutate(across(c(sex, race, age, edu), impute))
@@ -38,7 +38,7 @@ aggregate_poll <- function(df, age_bounds, threshold = 0) {
     filter(n() >= threshold) |>
     summarize(
       total = n(),
-      positive = sum(response)
+      positive = sum(positive)
     ) |>
     ungroup()
 
@@ -53,8 +53,7 @@ prepare_data_poll <- function(
   demo_levels,
   vars_global
 ) {
-  View(input_data)
-  View(fips_county_state)
+
   # convert geography names to FIPS codes
   link_geo <- "state"
   input_data[[link_geo]] <- input_data[[link_geo]] |> to_geocode(fips_county_state, link_geo)

@@ -142,6 +142,7 @@ mod_analyze_model_ui <- function(id){
               label = "Select a RDS file containing a model estimation",
               accept = ".RDS"
             ),
+            uiOutput(ns("model_feedback")),
             tags$p("Or use example estimation result", class = "custom_label"),
             actionButton(
               inputId = ns("use_example"),
@@ -180,7 +181,8 @@ mod_analyze_model_server <- function(id, global){
     ns <- session$ns
     prior_buffer <- reactiveVal(list())
     model_buffer <- reactiveVal()
-    
+    model_feedback <- reactiveVal()
+
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_model") {
         if(is.null(global$mrp)) {
@@ -318,9 +320,6 @@ mod_analyze_model_server <- function(id, global){
      })
    })
    
-
-
-
    output$prior_spec_ui <- renderUI({
       holder <- prior_buffer()
       holder[[length(holder) + 1]] <- list(dist = "", eff = NULL)
@@ -424,7 +423,7 @@ mod_analyze_model_server <- function(id, global){
 
       selected_names <- isolate(input$model_select)
 
-      if(length(selected_names) > 0 & !is.null(isolate(global$models))) {
+      if(length(selected_names) > 0 && !is.null(isolate(global$models))) {
         formulas <- purrr::map(isolate(global$models[selected_names]), function(m) m$formula)
 
         tagList(
@@ -450,7 +449,7 @@ mod_analyze_model_server <- function(id, global){
       selected_names <- input$model_select
 
       if(length(selected_names) > 0) {
-
+        inputs <- purrr::map(global$models[selected_names], function(m) m$mrp$input)
         yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
 
         purrr::map(1:length(yreps), function(i) {
@@ -459,13 +458,13 @@ mod_analyze_model_server <- function(id, global){
               if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
                 plot_ppc_covid_subset(
                   yreps[[i]],
-                  global$mrp$input,
+                  inputs[[i]],
                   global$plotdata$dates
                 )
               } else {
                 plot_ppc_poll(
                   yreps[[i]],
-                  global$mrp$input
+                  inputs[[i]],
                 )
               }
             }
@@ -475,6 +474,35 @@ mod_analyze_model_server <- function(id, global){
 
     })
 
+  output$model_feedback <- renderUI({
+    if(!is.null(model_feedback())) {
+      if(model_feedback() == "") {
+        tags$div(
+          class = "panel panel-success",
+          tags$div(
+            class = "panel-heading",
+            tagList(icon("circle-check", "fa"), "Success")
+          ),
+          tags$div(
+            class = "panel-body",
+            tags$p("Estimation result loaded successfully.")
+          )
+        )
+      } else {
+        tags$div(
+          class = "panel panel-danger",
+          tags$div(
+            class = "panel-heading",
+            tagList(icon("circle-xmark", "fa"), "Error")
+          ),
+          tags$div(
+            class = "panel-body",
+            tags$p(model_feedback())
+          )
+        )
+      }
+    }
+  })
 
     # reset input fields
     observeEvent(input$reset_btn, {
@@ -551,15 +579,18 @@ mod_analyze_model_server <- function(id, global){
                 model$formula <- create_formula(all_priors)
                 model$n_iter <- n_iter
                 model$n_chains <- n_chains
+                model$mrp <- global$mrp
+                model$plotdata <- global$plotdata
+                model$link_data <- global$link_data
                 model$gq_data <- list(
-                  subgroups = intersect(GLOBAL$vars$subgroups, names(global$mrp$new)),
-                  temporal = "time" %in% names(global$mrp$input)
+                  subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
+                  temporal = "time" %in% names(model$mrp$input)
                 )
 
                 # run MCMC
                 c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
-                  input_data = stan_factor(global$mrp$input, GLOBAL$vars$ignore),
-                  new_data = stan_factor(global$mrp$new, GLOBAL$vars$ignore),
+                  input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
+                  new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
                   effects = model$effects,
                   gq_data = model$gq_data,
                   n_iter = model$n_iter,
@@ -601,17 +632,12 @@ mod_analyze_model_server <- function(id, global){
       )
       
       model <- qs::qread(input$fit_upload$datapath)
-      
-      if(!("data_format" %in% names(model))) {
-        show_alert("The uploaded RDS file does not contain a model estimation.", global$session)
-      } else if(model$data_format != global$data_format) {
-        if(global$data_format == "temporal_covid") {
-          show_alert(paste0("The uploaded RDS file contains model estimation for cross-sectional data instead of spatio-temporal data."), global$session)
-        } else {
-          show_alert(paste0("The uploaded RDS file contains model estimation for spatio-temporal data instead of cross-sectional data."), global$session)
-        }
-      } else {
+      check_fit_object(model, global$data_format) |> model_feedback()
+
+      if(model_feedback() == "") {
         model_buffer(model)
+      } else {
+        waiter::waiter_hide()
       }
 
     })
@@ -623,9 +649,9 @@ mod_analyze_model_server <- function(id, global){
       )
       
       if(global$data_format == "temporal_covid") {
-        model <- qs::qread(app_sys("extdata/fit_st.RDS"))
-      } else {
-        model <- qs::qread(app_sys("extdata/fit_cs.RDS"))
+        model <- qs::qread(app_sys("extdata/example/fit/fit_covid.RDS"))
+      } else if(global$data_format == "temporal_poll") {
+        model <- qs::qread(app_sys("extdata/example/fit/fit_poll.RDS"))
       }
 
       model_buffer(model)
@@ -664,7 +690,7 @@ mod_analyze_model_server <- function(id, global){
       if (is.null(model$yrep)) {
         model$yrep <- extract_yrep(
           model$fit$ppc,
-          global$mrp$input,
+          model$mrp$input,
           model$gq_data
         )
       }
@@ -717,13 +743,13 @@ mod_analyze_model_server <- function(id, global){
         if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
           plot_ppc_covid_subset(
             model$yrep,
-            global$mrp$input,
+            model$mrp$input,
             global$plotdata$dates
           )
         } else {
           plot_ppc_poll(
             model$yrep,
-            global$mrp$input
+            model$mrp$input
           )
         }
       })
@@ -748,7 +774,7 @@ mod_analyze_model_server <- function(id, global){
           
           model$est <- extract_est(
             model$fit$pstrat,
-            global$mrp$new,
+            model$mrp$new,
             model$gq_data
           )
 
@@ -805,7 +831,7 @@ mod_analyze_model_server <- function(id, global){
         }
       )
       
-      # show whole page if object contains postprocessing results
+      # if object contains poststratificaiton results
       if(!is.null(model$fit$pstrat)) {
         shinyjs::delay(100, shinyjs::click(model$IDs$postprocess_btn))
       }
@@ -826,6 +852,8 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(reset_flag(), {
       # reset input fields
       prior_buffer(list())
+      model_buffer(NULL)
+      model_feedback(NULL)
 
       reset_inputs(vars = list(
         fixed = list(),

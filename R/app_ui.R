@@ -9,7 +9,6 @@ app_ui <- function(request) {
     # Leave this function for adding external resources
     golem_add_external_resources(),
     navbarPage("Multilevel Regression & Poststratification",
-    # theme = bslib::bs_theme(version = 5),
       id = "navbar",
       tabPanel("Home",
         value = "nav_home",

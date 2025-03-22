@@ -49,12 +49,16 @@ mod_analyze_upload_ui <- function(id){
         ),
         tags$div(style = "margin-top: 25px",
           conditionalPanel(
-            condition = "output.data_format == 'temporal_covid' || output.data_format == 'temporal_other'",
+            condition = "output.data_format == 'temporal_covid'",
             tags$p("Example: COVID-19 hospital test records")
           ),
           conditionalPanel(
-            condition = "output.data_format == 'static_poll' || output.data_format == 'static_other'",
+            condition = "output.data_format == 'static_poll'",
             tags$p("Example: The Cooperative Election Study data")
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+            tags$p("Example")
           ),
           tags$div(class = "justify pad_top",
             actionButton(
@@ -146,7 +150,7 @@ mod_analyze_upload_server <- function(id, global){
     input_warnings <- reactiveVal()
 
     observeEvent(global$input$navbar, {
-      if(global$input$navbar == "nav_analyze" & is.null(global$data_format)) {
+      if(global$input$navbar == "nav_analyze" && is.null(global$data_format)) {
           showModal(
             modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
@@ -185,9 +189,8 @@ mod_analyze_upload_server <- function(id, global){
     output$input_feedback <- renderUI({
       req(rawdata())
       
-      ui <- NULL
       if ("try-error" %in% class(try_error()) | length(input_errors()) > 0) {
-        ui <- tags$div(
+        tags$div(
           class = "panel panel-danger",
           tags$div(
             class = "panel-heading",
@@ -200,7 +203,7 @@ mod_analyze_upload_server <- function(id, global){
         )
           
       } else {
-        ui <- tags$div(
+        tags$div(
           class = "panel panel-success",
           tags$div(
             class = "panel-heading",
@@ -212,8 +215,6 @@ mod_analyze_upload_server <- function(id, global){
           )
         )
       }
-      
-      return(ui)
     })
 
     output$link_status <- renderText(link_status())
@@ -232,7 +233,7 @@ mod_analyze_upload_server <- function(id, global){
               no = tags$i(class = "fa fa-circle-o", style = "color: white")
             )
           ),
-          shinyBS::bsTooltip(ns("toggle_table"), "\"Preprocessed\" table only shows when data has been preprocessed properly", placement = "right"),
+          shinyBS::bsTooltip(ns("toggle_table"), "\"Preprocessed\" table only shows when data has been preprocessed", placement = "right"),
           tags$p(sprintf("*The preview only includes the first %d rows of the data", GLOBAL$ui$preview_size))
         ),
         DT::dataTableOutput(outputId = ns("table"))
@@ -307,31 +308,29 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      show_notif("This functionality is currently unavailable", global$session)
+      if(global$data_format == "temporal_covid") {
+        readr::read_csv(app_sys("extdata/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
 
-      # if(global$data_format == "temporal_covid") {
-      #   readr::read_csv(app_sys("extdata/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
-
-      #   global$data <- rawdata() |>
-      #     aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
-      #     fix_geocode()
-      # } else if (global$data_format == "temporal_other") {
-      #   readr::read_csv(app_sys("extdata/example/data/timevarying_data_individual.csv"), show_col_types = FALSE) |> rawdata()
+        global$data <- rawdata() |>
+          aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
+          fix_geocode()
+      } else if (global$data_format == "temporal_other") {
+        readr::read_csv(app_sys("extdata/example/data/timevarying_data_individual.csv"), show_col_types = FALSE) |> rawdata()
         
-      #   global$data <- rawdata() |>
-      #     aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
-      #     fix_geocode()
-      # } else if(global$data_format == "static_poll") {
-      #   readr::read_csv(app_sys("extdata/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
+        global$data <- rawdata() |>
+          aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
+          fix_geocode()
+      } else if(global$data_format == "static_poll") {
+        readr::read_csv(app_sys("extdata/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
 
-      #   global$data <- rawdata() |>
-      #     aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
-      # } else if(global$data_format == "static_other") {
-      #   readr::read_csv(app_sys("extdata/example/data/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
+        global$data <- rawdata() |>
+          aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
+      } else if(global$data_format == "static_other") {
+        readr::read_csv(app_sys("extdata/example/data/crosssectional_data_individual.csv"), show_col_types = FALSE) |> rawdata()
 
-      #   global$data <- rawdata() |>
-      #     aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
-      # }
+        global$data <- rawdata() |>
+          aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
+      }
       
       try_error(NULL)
       input_errors(NULL)
@@ -389,7 +388,7 @@ mod_analyze_upload_server <- function(id, global){
           GLOBAL$levels$general,
           GLOBAL$vars
         )
-        
+
         global$mrp <- list(
           input = input_data,
           new = new_data,
