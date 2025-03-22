@@ -8,12 +8,12 @@
 nullify <- function(x) {
   # Return NULL if x is NULL
   if (is.null(x)) return(NULL)
-  
+
   # Check for NA
   if (length(x) == 1 && is.na(x)) return(NULL)
   
   # Check for empty string
-  if (is.character(x) && length(x) == 1 && x == "") return(NULL)
+  if (is.character(x) && x == "") return(NULL)
   
   # Check for empty vector
   if (length(x) == 0) return(NULL)
@@ -23,4 +23,13 @@ nullify <- function(x) {
   
   # If none of above, return x unchanged
   return(x)
+}
+
+data_format_label <- function(data_format) {
+  switch(data_format,
+         static_poll = "Cross-Sectional: Poll",
+         static_other = "Cross-Sectional: Other",
+         temporal_covid = "Time-Varying: COVID",
+         temporal_other = "Time-Varying: Other",
+         "Unknown Data Format")
 }

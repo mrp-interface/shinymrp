@@ -9,7 +9,7 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
   flag <- TRUE
   msg <- c()
   
-  if(is.numeric(n_iter) & is.numeric(n_chains) & is.numeric(seed)) {
+  if(is.numeric(n_iter) && is.numeric(n_chains) && is.numeric(seed)) {
     if(n_iter < n_iter_range[1] | n_iter > n_iter_range[2]) {
       msg <- c(msg, paste0("The number of iterations must be between ", n_iter_range[1], " and ", n_iter_range[2], "."))
       flag <- FALSE
@@ -38,6 +38,34 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
   return(list(flag, msg))
 }
 
+#' Check Model Fit Object
+#'
+#' Validates if the model's data format matches the expected format.
+#'
+#' @param model The model object to check
+#' @param expected_format The expected data format (e.g., "temporal_covid", "crosssectional")
+#'
+#' @return A list with two elements:
+#'   \item{valid}{Logical indicating if the format is valid}
+#'   \item{message}{Warning message if invalid, or NULL if valid}
+#' @noRd
+check_fit_object <- function(model, expected_format, expected_link_geo) {
+  message <- ""
+  
+  # Check if the model object has a data_format field
+  if(!("data_format" %in% names(model))) {
+    message <- "The uploaded file does not contain a model estimation result."
+  } 
+  # Check if the model's data_format matches the expected format
+  else if(model$data_format != expected_format) {
+    message <- sprintf("The uploaded file contains model estimation for %s instead of %s.",
+                        data_format_label(model$data_format),
+                        data_format_label(expected_format))
+
+  }
+  
+  return(message)
+}
 
 create_text_box <- function(title, content) {
   tags$div(
@@ -258,11 +286,11 @@ create_model_tab <- function(ns, model) {
         ),
         tags$div(style = "margin-top: 30px",
           create_text_box(
-           title = tags$b("Note"),
-           tags$ul(
-             tags$li("Large ", tags$code("Convergence"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
-             tags$li("Low values for ", tags$code("Bulk-ESS"), " and ", tags$code("Tail-ESS"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
-           )
+            title = tags$b("Note"),
+            tags$ul(
+              tags$li("Large ", tags$a("R-hat", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#r-hat", target = "_blank"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
+              tags$li("Low values for ", tags$a("Bulk-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " and ", tags$a("Tail-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
+            )      
           ),
           if(nrow(model$fixed) > 0) {
             tags$div(
@@ -317,4 +345,5 @@ reset_inputs <- function(vars) {
   shinyjs::reset("seed_select")
   shinyjs::reset("spec_kb")
   shinyjs::reset("sens_kb")
+  shinyjs::reset("fit_upload")
 }

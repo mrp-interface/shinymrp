@@ -22,7 +22,7 @@ find_columns_covid <- function(df) {
 
   df <- df |> select(all_of(old_names))
   new_names <- c("id", "sex", "race", "age", "zip",
-                 "result", "date")
+                 "positive", "date")
   names(df) <- new_names
 
   return(df)
@@ -89,17 +89,17 @@ get_week_indices <- function(strings) {
 }
 
 to_factor_covid <- function(df, age_bounds) {
-  is_pos <- grepl("positive|detected", df$result, ignore.case = TRUE)
-  is_neg <- grepl("not|negative|undetected", df$result, ignore.case = TRUE)
+  is_pos <- grepl("positive|detected", df$positive, ignore.case = TRUE)
+  is_neg <- grepl("not|negative|undetected", df$positive, ignore.case = TRUE)
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
   labels <- c(paste0(age_bounds[1:(length(age_bounds)-1)], '-', age_bounds[2:length(age_bounds)] - 1),
               paste0(age_bounds[length(age_bounds)], '+'))
 
   df <- df |> mutate(
-    sex = to_factor(sex, c("female"), other = "male"),
-    race = to_factor(race, c("white", "black"), other = "other"),
+    sex = recode_values(sex, c("female"), other = "male"),
+    race = recode_values(race, c("white", "black"), other = "other"),
     age = cut(df$age, breaks, labels) |> as.character(),
-    response = ifelse(is_neg, 0,
+    positive = ifelse(is_neg, 0,
                       ifelse(is_pos, 1, NA))
   )
 
@@ -138,7 +138,7 @@ aggregate_covid <- function(
     filter(n() >= threshold) |>
     summarize(
       total = n(),
-      positive = sum(response)
+      positive = sum(positive)
     ) |>
     ungroup()
 

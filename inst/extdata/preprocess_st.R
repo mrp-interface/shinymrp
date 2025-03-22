@@ -106,7 +106,7 @@ impute <- function(v) {
   return(v)
 }
 
-to_factor <- function(values, levels, other = NA) {
+recode_values <- function(values, levels, other = NA) {
   for(lvl in levels) {
     values[grepl(lvl, values, ignore.case = TRUE)] <- lvl
   }
@@ -124,10 +124,10 @@ to_factor_all <- function(df, age_bounds) {
               paste0(age_bounds[length(age_bounds)], '+'))
 
   df <- df |> mutate(
-    sex = to_factor(sex, c("female"), other = "male"),
-    race = to_factor(race, c("white", "black"), other = "other"),
+    sex = recode_values(sex, c("female"), other = "male"),
+    race = recode_values(race, c("white", "black"), other = "other"),
     age = cut(df$age, breaks, labels) |> as.character(),
-    response = ifelse(is_neg, 0,
+    positive = ifelse(is_neg, 0,
                       ifelse(is_pos, 1, NA))
   )
 
@@ -166,7 +166,7 @@ aggregate <- function(
     filter(n() >= threshold) |>
     summarize(
       total = n(),
-      positive = sum(response)
+      positive = sum(positive)
     ) |>
     ungroup()
 
