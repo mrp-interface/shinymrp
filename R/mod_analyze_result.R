@@ -286,7 +286,7 @@ mod_analyze_result_server <- function(id, global){
       if(geo != "") {
 
         fips_df <- global$extdata$fips[[geo]] |>
-          filter(fips %in% global$mrp$levels[[geo]])|>
+          filter(fips %in% selected_model()$mrp$levels[[geo]])|>
           fips_upper()
         choices <- sort(fips_df[[geo]])
         

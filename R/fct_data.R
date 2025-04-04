@@ -20,51 +20,60 @@ clean_names <- function(names) {
 
 clean_data <- function(
     df,
-    na_threshold = 0.5,
     na_strings = c("", "na", "n/a", "none", "null", "unknown")
 ) {
 
   # Clean column names
   names(df) <- clean_names(names(df))
-  
-  # Convert common NA strings to actual NA
-  df <- df |> 
-    mutate(across(everything(), 
-                 ~if_else(tolower(as.character(.x)) %in% na_strings, NA, .x)))
-  
-  # Remove columns with too many NAs
-  na_proportions <- colMeans(is.na(df))
-  df <- df |> select(which(na_proportions < na_threshold))
-  
+
+  # Remove duplicate column names (keeping first occurrence)
+  if (any(duplicated(names(df)))) {
+    df <- df[, !duplicated(names(df))]
+  }
+
   # Convert character columns to lowercase and trim whitespace
   df <- df |> 
     mutate(across(where(is.character), 
                  ~str_trim(tolower(.x))))
+  
+  # Convert common NA strings to actual NA
+  df <- df |> 
+    mutate(across(everything(), 
+                 ~if_else(.x %in% na_strings, NA, .x)))
 
-  # Fix ZIP codes
+  # Format geographic identifiers
   df <- fix_geocode(df)
   
   return(df)
 }
 
-find_columns <- function(df, expected_columns) {
-  # find columns using string search
-  df <- clean_names(df)
-  all_names <- names(df)
-  old_names <- expected_columns |> sapply(function(s) all_names[grepl(s, all_names, ignore.case = TRUE)]) |> unlist()
+rename_columns <- function(df) {
+  target_names <- c(
+    GLOBAL$vars$indiv,
+    GLOBAL$vars$geo,
+    GLOBAL$vars$ignore
+  )
 
-  df <- df |> select(all_of(old_names))
-  names(df) <- names(old_names)
-  missing <- setdiff(expected_columns, names(old_names))
-  df[, missing] <- ""
-  df <- df |> select(all_of(expected_columns))
-
-  return(df)
+  current_names <- names(df)
+  rename_map <- sapply(target_names, function(target) {
+    matches <- grep(target, current_names, ignore.case = TRUE, value = TRUE)
+    if(length(matches) > 0) matches[1] else NULL
+  })
+  
+  # Filter out NULLs and create rename specification
+  rename_map <- rename_map[!sapply(rename_map, is.null)]
+  if(length(rename_map) == 0) return(df)
+  
+  # Create the renaming specification (new_name = old_name)
+  rename_spec <- stats::setNames(rename_map, names(rename_map))
+  
+  # Apply renaming
+  dplyr::rename(df, !!!rename_spec)
 }
 
 impute <- function(v) {
-  cond <- is.na(v) | grepl("unknown", v, ignore.case=TRUE)
-
+  cond <- is.na(v)
+ 
   if(sum(cond) == 0) {
     return(v)
   }
@@ -98,41 +107,46 @@ to_lower_case <- function(df) {
     )
 }
 
-recode_values <- function(values, levels, other = NA) {
-  for(lvl in levels) {
-    values[grepl(lvl, values, ignore.case = TRUE)] <- lvl
-  }
 
-  values[!values %in% levels] <- other
-
-  return(values)
-}
-
-to_factor <- function(df, age_bounds) {
+recode_values <- function(df, expected_levels) {
+  # this function assumes that strings are already lower case
+  ranges <- expected_levels$age
+  age_bounds <- regmatches(
+    ranges,
+    regexpr("^\\d+", ranges)
+  ) |>
+    as.numeric()
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
-  labels <- c(paste0(age_bounds[1:(length(age_bounds)-1)], '-', age_bounds[2:length(age_bounds)] - 1),
-              paste0(age_bounds[length(age_bounds)], '+'))
+  colnames <- names(df)
 
   df <- df |> mutate(
-    sex  = recode_values(sex, c("female"), other = "male"),
-    race = recode_values(race, c("white", "black"), other = "other"),
-    age  = cut(df$age, breaks, labels) |> as.character(),
-    edu  = if("edu" %in% names(df)) recode_values(edu, c("no hs", "some college", "4-year college", "post-grad"), other = "hs")
+    sex  = if("sex" %in% colnames) if_else(sex %in% expected_levels$sex, sex, NA),
+    race = if("race" %in% colnames) if_else(race %in% c(expected_levels$race, NA), race, "other"),
+    age  = if("age" %in% colnames) cut(df$age, breaks, ranges) |> as.character(),
+    edu  = if("edu" %in% colnames) if_else(edu %in% expected_levels$edu, edu, NA),
+    positive = if("positive" %in% colnames) case_match(
+      as.character(positive),
+      c("positive", "detected", "yes", "y", "true", "1") ~ 1,
+      c("negative", "undetected", "no", "n", "false", "0") ~ 0
+    )
   )
 
   return(df)
 }
 
 as_factor <- function(df, levels) {
-  for(lvl in names(levels)) {
-    if(lvl %in% names(df)) {
-      df[[lvl]] <- factor(df[[lvl]], levels = levels[[lvl]])
+  # Find columns that exist in both df and have defined levels
+  cols_to_convert <- intersect(names(df), names(levels))
+  
+  # Apply factor conversion to each column
+  for(col in cols_to_convert) {
+    if(!is.null(levels[[col]])) {
+      df[[col]] <- factor(df[[col]], levels = levels[[col]])
     }
   }
-
+  
   return(df)
 }
-
 
 filter_geojson <- function(geojson, geoids, omit = FALSE) {
   if(is.null(geojson) | is.null(geoids)) {
@@ -247,7 +261,7 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
       dtype <- if(num) 2 else "cat"
     }
   } else {
-    if(n_distinct(col) == 2) {
+    if(n_distinct(col, na.rm = TRUE) == 2) {
       dtype <- if(num) 1 else "bin"
     } else {
       dtype <- if(num) 2 else "cat"
@@ -268,44 +282,46 @@ check_var_data <- function(col) {
 }
 
 
-check_data <- function(df,
-    expected_types,
-    na_threshold = 0.5,
-    na_strings = c("", "na", "n/a", "none", "null", "unknown")
-) {
-  
+check_data <- function(df, expected_types, na_threshold = 0.5) {
   errors <- list()
   warnings <- list()
   expected_columns <- names(expected_types)
-
-  # check if all expected columns are present
+  
+  # Check for missing columns
   missing <- setdiff(expected_columns, names(df))
   if(length(missing) > 0) {
     errors$missing_columns <- paste0("The following columns are missing: ",
                                     paste(missing, collapse = ", "))
-  } else {
-    # check data types
-    # Remove columns marked as "ignore" from expected_types
-    types <- df |> select(all_of(expected_columns)) |> lapply(data_type) |> unlist()
-    valid <- unlist(expected_types) == types
-    valid[expected_types == "ignore"] <- TRUE
+    # Return early if critical columns are missing
+    return(list(errors, warnings))
+  }
+  
+  # Check data types
 
-    if(any(!valid)) {
-      errors$invalid_type <- paste0("Columns corresponding to the following variables have inappropriate data types: ",
-                                 paste(expected_columns[!valid], collapse = ", "))
-    } else {
-      na_percents <- df |>
-        lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
-        unlist()
-
-      if(any(na_percents > na_threshold)) {
-        errors$na <- paste0("Columns corresponding to the following variables have more than ",
-                            na_threshold * 100, " percent rows with missing data: ",
-                            paste(expected_columns[na_percents > na_threshold], collapse = ", "))
-      }
+  types <- df |> select(all_of(expected_columns)) |> lapply(data_type) |> unlist()
+  valid <- unlist(expected_types) == types
+  valid[expected_types == "ignore"] <- TRUE
+  
+  if(any(!valid)) {
+    errors$invalid_type <- paste0("Columns corresponding to the following variables have inappropriate data types: ",
+                               paste(expected_columns[!valid], collapse = ", "))
+  }
+  
+  # Check for too many NAs - only if we don't already have type errors
+  if(length(errors) == 0) {
+    na_percents <- df |>
+      lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
+      unlist()
+    
+    high_na_cols <- expected_columns[na_percents[expected_columns] > na_threshold]
+    if(length(high_na_cols) > 0) {
+      errors$na <- paste0("Columns corresponding to the following variables have more than ",
+                        na_threshold * 100, "% rows with missing data: ",
+                        paste(high_na_cols, collapse = ", "))
     }
   }
-
+  
+  # Check date format - independent of other checks
   if("time" %in% expected_columns) {
     if("date" %in% names(df)) {
       if (anyNA(as.Date(na.omit(df$date), optional = TRUE))) {
@@ -315,31 +331,35 @@ check_data <- function(df,
       warnings$missing_date <- "Dates are not provided. Plots will use week indices instead."
     }
   }
-
+  
   return(list(errors, warnings))
 }
 
-prep_data <- function(
+aggregate_data <- function(
     df,
-    expected_columns,
-    age_bounds,
+    expected_levels,
     threshold = 0
 ) {
-  # identify columns
-  df <- find_columns(df, expected_columns)
+
+  # recode values to expected levels
+  df <- recode_values(df, expected_levels)
 
   # impute missing demographic data based on frequency
-  df <- df |> mutate(across(c(sex, race, age, edu), impute))
+  indiv_vars <- names(expected_levels)
+  df <- df |> mutate(across(all_of(indiv_vars), impute))
 
-  # # create factors from raw values
-  df <- to_factor(df, age_bounds)
+  all_geo_vars <- GLOBAL$vars$geo
+  geo_vars <- intersect(all_geo_vars, names(df))
+  smallest_geo <- all_geo_vars[min(match(geo_vars, all_geo_vars))]
+  group_vars <- c(indiv_vars, smallest_geo)
+  geo_covars <- setdiff(geo_vars, smallest_geo)
 
   # aggregate test records based on combinations of factors
-  # and omit cells with small number of tests
   df <- df |>
-    group_by(state, edu, age, race, sex) |>
-    filter(n() >= threshold) |>
+    group_by(!!!syms(group_vars)) |>
+    filter(n() >= threshold) |>   # omit cells with small number of tests
     summarize(
+      across(all_of(geo_covars), first),
       total = n(),
       positive = sum(positive)
     ) |>

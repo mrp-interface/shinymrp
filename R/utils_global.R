@@ -26,62 +26,101 @@ module_ids <- list(
 GLOBAL <- list(
   bounds = list(
     covid = list(
-      age = c(0, 18, 35, 65, 75),
       poverty = c(0, 1, 2)
-    ),
-    poll = list(
-      age = c(18, 30, 40, 50, 60, 70)
     )
   ),
   levels = list(
-    general = list(
+    temporal_covid = list(
       sex = c("male", "female"),
       race = c("white", "black", "other"),
-      age = c("0-17", "18-34", "35-64", "65-74", "75+")
+      age = c("0-17", "18-34", "35-64", "65-74", "75+"),
+      time = NULL
     ),
-    poll = list(
+    temporal_other = list(
+      sex = c("male", "female"),
+      race = c("white", "black", "other"),
+      age = c("0-17", "18-34", "35-64", "65-74", "75+"),
+      time = NULL
+    ),
+    static_poll = list(
       sex = c("male", "female"),
       race = c("white", "black", "other"),
       age = c("18-29", "30-39", "40-49", "50-59", "60-69", "70+"),
       edu = c("no hs", "hs", "some college", "4-year college", "post-grad")
+    ),
+    static_other = list(
+      sex = c("male", "female"),
+      race = c("white", "black", "other"),
+      age = c("0-17", "18-34", "35-64", "65-74", "75+")
     )
   ),
   expected_types = list(
-    temporal_covid = list(
-      sex = "bin",
-      race = "cat",
-      age = "cat",
-      zip = "cat",
-      time = "cat",
-      total = "ignore",
-      positive = "ignore"
+    indiv = list(
+      temporal_covid = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        zip = "cat",
+        positive = "ignore"
+      ),
+      temporal_other = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        positive = "ignore"
+      ),
+      static_poll = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        edu = "cat",
+        positive = "ignore"
+      ),
+      static_other = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        positive = "ignore"
+      )
     ),
-    temporal_other = list(
-      sex = "bin",
-      race = "cat",
-      age = "cat",
-      time = "cat",
-      total = "ignore",
-      positive = "ignore"
-    ),
-    static_poll = list(
-      sex = "bin",
-      race = "cat",
-      age = "cat",
-      edu = "cat",
-      total = "ignore",
-      positive = "ignore"
-    ),
-    static_other = list(
-      sex = "bin",
-      race = "cat",
-      age = "cat",
-      total = "ignore",
-      positive = "ignore"
+    agg = list(
+      temporal_covid = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        zip = "cat",
+        time = "cat",
+        total = "ignore",
+        positive = "ignore"
+      ),
+      temporal_other = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        time = "cat",
+        total = "ignore",
+        positive = "ignore"
+      ),
+      static_poll = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        edu = "cat",
+        total = "ignore",
+        positive = "ignore"
+      ),
+      static_other = list(
+        sex = "bin",
+        race = "cat",
+        age = "cat",
+        total = "ignore",
+        positive = "ignore"
+      )
     )
   ),
   vars = list(
     subgroups = c("sex", "race", "age", "edu", "county", "state"),
+    indiv = c("sex", "race", "age", "edu", "time"),
     geo = c("zip", "county", "state"),
     ignore = c("date", "total", "positive")
   ),

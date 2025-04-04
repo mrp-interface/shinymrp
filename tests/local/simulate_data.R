@@ -5,8 +5,8 @@ library(purrr)
 library(bayesplot)
 library(cmdstanr)
 
-source("/path/to/fct_data.R")
-source("/path/to/fct_model.R")
+source("/Users/tntoan/Desktop/repos/shinymrp/R/fct_data.R")
+source("/Users/tntoan/Desktop/repos/shinymrp/R/fct_model.R")
 
 #' Add Date Information to Dataset
 #'
@@ -319,8 +319,8 @@ run_simulation <- function(
     return(NULL)
   }
 
-  week_date <- readr::read_csv("/path/to/week_conversion.csv")
-  zip_county_state <- readr::read_csv("/path/to/zip_county_state.csv")
+  week_date <- readr::read_csv("/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/week_conversion.csv")
+  zip_county_state <- readr::read_csv("/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/zip_county_state.csv")
   
   # All individual and geographic variables
   indiv_vars_all <- c("sex", "race", "age", "edu", "time")
@@ -366,12 +366,24 @@ run_simulation <- function(
     seed = seed
   )
 
-  example_data_indiv <- base_data |> mutate(positive = sim_data$positive)
-  example_data_agg <- example_data_indiv |>
+  example_data_indiv <- base_data |>
+    mutate(
+      age = sapply(age, function(x) {
+        bounds <- if(grepl("\\+", x)) {
+          c(as.numeric(sub("\\+", "", x)), 100) 
+        } else 
+          as.numeric(strsplit(x, "-")[[1]])
+        sample(bounds[1]:bounds[2], 1)
+      }),
+      positive = sim_data$positive
+    )
+
+  example_data_agg <- base_data |>
+    mutate(positive = sim_data$positive) |>
     group_by(across(all_of(c(indiv_vars, geo_vars)))) |>
     summarise(
       date = if(include_date) first(date),
-      across(covar_vars, first),
+      across(all_of(covar_vars), first),
       total = n(),
       positive = sum(positive),
       .groups = "drop"
@@ -460,7 +472,7 @@ effects <- list(
   varying = list(
     race = "normal(0, 3)",
     age = "normal(0, 3)",
-    # time = "normal(0, 3)",
+    time = "normal(0, 3)",
     zip = "normal(0, 3)",
     county = "normal(0, 3)",
     state = "normal(0, 3)"
@@ -468,11 +480,11 @@ effects <- list(
 )
 
 params <- list(
-  Intercept = -0.05,
+  Intercept = -4.5,
   beta_sex = -0.25,
   lambda_race = 0.3,
   lambda_age = 0.4,
-  # lambda_time = 0.9,
+  lambda_time = 0.9,
   lambda_zip = 0.5
 )
 
@@ -481,7 +493,7 @@ c(data_indiv, data_agg, effects, true_coefs) %<-% run_simulation(
   params = params,
   covar_geo = "zip",
   include_date = FALSE,
-  save_path = "/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/example/data/crosssectional_"
+  save_path = "/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/example/data/timevarying_"
 )
 View(data_indiv)
 View(data_agg)
