@@ -6,7 +6,7 @@
 #'
 #' @noRd
 
-find_columns_covid <- function(df) {
+rename_columns_covid <- function(df) {
   all_names <- names(df)
   patterns <- c("encrypted|masked", "sex", "race", "age", "zip")
 
@@ -88,49 +88,28 @@ get_week_indices <- function(strings) {
   return(list(weeks_accum, timeline_date))
 }
 
-to_factor_covid <- function(df, age_bounds) {
-  is_pos <- grepl("positive|detected", df$positive, ignore.case = TRUE)
-  is_neg <- grepl("not|negative|undetected", df$positive, ignore.case = TRUE)
-  breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
-  labels <- c(paste0(age_bounds[1:(length(age_bounds)-1)], '-', age_bounds[2:length(age_bounds)] - 1),
-              paste0(age_bounds[length(age_bounds)], '+'))
-
-  df <- df |> mutate(
-    sex = recode_values(sex, c("female"), other = "male"),
-    race = recode_values(race, c("white", "black"), other = "other"),
-    age = cut(df$age, breaks, labels) |> as.character(),
-    positive = ifelse(is_neg, 0,
-                      ifelse(is_pos, 1, NA))
-  )
-
-  return(df)
-}
-
 aggregate_covid <- function(
     patient,
-    age_bounds,
+    expected_levels,
     threshold = 0
 ) {
 
-  # identify columns
-  patient <- find_columns_covid(patient)
-
   # remove rows w/ missing data
   patient <- patient |> filter(!is.na(date) & !is.na(zip))
-
+  
   # convert dates to week indices
   c(time_indices, timeline) %<-% get_week_indices(patient$date)
   patient$time <- time_indices
-
+  
   # remove all but one test of a patient in the same week
   patient <- patient |> distinct(id, time, .keep_all = TRUE)
+  
+  # create factors from raw values
+  patient <- recode_values(patient, expected_levels)
 
   # impute missing demographic data based on frequency
   patient <- patient |> mutate(across(c(sex, race, age), impute))
-
-  # create factors from raw values
-  patient <- to_factor_covid(patient, age_bounds)
-
+  
   # aggregate test records based on combinations of factors
   # and omit cells with small number of tests
   patient <- patient |>
@@ -159,92 +138,6 @@ aggregate_covid <- function(
   return(patient)
 }
 
-
-check_covid_data <- function(df, expected_columns, na_threshold = 0.5) {
-  errors <- list()
-
-  df <- find_columns(df, expected_columns)
-  missing <- df |> lapply(function(c) all(as.character(c) == "")) |> unlist()
-  missing_names <- names(missing)[missing]
-
-  # check for missing columns
-  if(length(missing_names) > 1 | (length(missing_names) == 1 & !"date" %in% missing_names)) {
-    errors$missing_column <- paste0("The following columns are missing: ",
-                                    paste(missing_names, collapse = ", "))
-  } else {
-    # check data types
-    expected_types <- c("character", "character", "character", "integer|numeric",
-                        "integer|numeric", "character|Date", "integer|numeric", "integer|numeric")
-    types <- df |> lapply(class) |> unlist()
-    valid <- mapply(grepl, types, expected_types)
-
-    if(any(!valid)) {
-      errors$data_type <- paste0("Columns corresponding to the following variables have inappropriate data types: ",
-                                 paste(expected_columns[!valid], collapse = ", "))
-    } else {
-      na_percents <- df |>
-        lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
-        unlist()
-      exceed <- na_percents > na_threshold
-
-      if(any(exceed)) {
-        errors$na <- paste0("Columns corresponding to the following variables have more than ",
-                            na_threshold * 100, " percent rows with missing data: ",
-                            paste(expected_columns[exceed], collapse = ", "))
-      } else {
-        df <- df |> na.omit()
-
-        # check if week indices start at 1
-        if(min(df$time) != 1) {
-          errors$week <- "The lowest week index must be 1"
-        }
-
-        # check if dates are in the right format
-        if("date" %in% missing_names) {
-          errors$date <- "Dates are not provided. Plots will use week indices instead."
-        } else {
-          if (anyNA(as.Date(df$date, optional = TRUE))) {
-            errors$date <- "Provided dates are not in expected format. Plots will use week indices instead."
-          }
-        }
-
-        # check if cases are less than or equal to cases
-        if(any(df$positive > df$total)) {
-          errors$count <- "The number of cases cannot be greater than the number of tests"
-        }
-      }
-    }
-  }
-
-  return(errors)
-}
-
-
-stan_factor_covid <- function(df, levels) {
-  # rename raw columns
-  df <- df |>
-    rename(
-      "sex_raw" = "sex",
-      "race_raw" = "race",
-      "age_raw" = "age",
-      "time_raw" = "time",
-      "zip_raw" = "zip",
-      "county_raw" = "county"
-    )
-
-  # add Stan-dardized columns
-  df <- df |>
-    mutate(
-      sex = factor(sex_raw, levels = levels$sex, labels = c(0, 1)) |> as.character() |> as.integer(),
-      race = factor(race_raw, levels = levels$race, labels = 1:length(levels$race)) |> as.character() |> as.integer(),
-      age = factor(age_raw, levels = levels$age, labels = 1:length(levels$age)) |> as.character() |> as.integer(),
-      time = as.integer(time_raw),
-      zip = as.factor(zip_raw) |> as.integer(),
-      county = as.factor(county_raw) |> as.integer()
-    )
-
-  return(df)
-}
 
 get_dates <- function(df) {
   df$date |>
@@ -300,7 +193,7 @@ prepare_data_covid <- function(
     demo_levels,
     vars_global
 ) {
-  
+
   # filter out state and zip codes with small sample sizes
   input_data <- filter_state_zip(input_data, covariates)
   covariates <- covariates |> filter(zip %in% input_data$zip)
@@ -357,7 +250,7 @@ collapse <- function(
   N <- length(indices)
 
   if(any(is.na(indices))) {
-    print("Invalid bounds!")
+    stop("Invalid bounds!")
   }
   else {
     for(i in 1:(N-1)) {
@@ -374,7 +267,7 @@ collapse <- function(
   df_out <- df_out |> select(-1)
 
   if(!identical(rowSums(df_in), rowSums(df_out))) {
-    print("Inconsistent row sums.")
+    stop("Inconsistent row sums.")
   }
 
   return(df_out)

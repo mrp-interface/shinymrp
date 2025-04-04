@@ -145,7 +145,6 @@ mod_analyze_upload_server <- function(id, global){
 
     rawdata <- reactiveVal()
     link_status <- reactiveVal()
-    try_error <- reactiveVal()
     input_errors <- reactiveVal()
     input_warnings <- reactiveVal()
 
@@ -189,7 +188,7 @@ mod_analyze_upload_server <- function(id, global){
     output$input_feedback <- renderUI({
       req(rawdata())
       
-      if ("try-error" %in% class(try_error()) | length(input_errors()) > 0) {
+      if (length(input_errors()) > 0) {
         tags$div(
           class = "panel panel-danger",
           tags$div(
@@ -261,45 +260,80 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
       
+      # Reset state
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
 
-      # read in data
-      path <- input$input_data$datapath
-      if(stringr::str_ends(path, "csv")) {
-        readr::read_csv(path, show_col_types = FALSE) |> rawdata()
-      } else if (stringr::str_ends(path, "(xlsx|xls)")) {
-        readxl::read_excel(path, guess_max = 5000) |> rawdata()
-      } else if (stringr::str_ends(path, "sas7bdat")) {
-        haven::read_sas(path) |> rawdata()
-      } # else no necessary due to fileInput constraint
+      # Read in data
+      tryCatch({
+        # Read in data first
+        path <- input$input_data$datapath
+        if(stringr::str_ends(path, "csv")) {
+          rawdata(readr::read_csv(path, show_col_types = FALSE))
+        } else if (stringr::str_ends(path, "(xlsx|xls)")) {
+          rawdata(readxl::read_excel(path, guess_max = 5000))
+        } else if (stringr::str_ends(path, "sas7bdat")) {
+          rawdata(haven::read_sas(path))
+        }
+        
+        errors <- list()
+        warnings <- list()
+        
+        # Process the data only if reading was successful
+        if(!is.null(rawdata())) {
+          # Clean data
+          data <- clean_data(rawdata())
 
-      try({
-        if(input$toggle_input == "indiv") {
-          if(global$data_format == "temporal_covid") {
-            global$data <- rawdata() |>
-              aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
-              prep(list(), to_char = c("zip"))
+          data <- if(global$data_format == "temporal_covid") {
+            rename_columns_covid(data)
           } else {
-            global$data <- rawdata() |>
-              aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
+            rename_columns(data)
           }
-        } else {
-          c(errors, warnings) %<-% check_data(rawdata(), GLOBAL$expected_types[[global$data_format]])
-          input_errors(errors)
-          input_warnings(warnings)
 
-          if(length(input_errors()) == 0) {
-            global$data <- rawdata() |> clean_data()
-            if(length(input_warnings()) > 0) {
-              global$data <- global$data |> select(-date)
+          # Aggregate if needed
+          if(input$toggle_input == "indiv") {
+            # Check for common dataframe issues
+            c(errors, warnings) %<-% check_data(
+              data,
+              GLOBAL$expected_types$indiv[[global$data_format]]
+            )
+            print(errors)
+
+            if(length(errors) == 0) {
+              if(global$data_format == "temporal_covid") {
+                data <- data |> aggregate_covid(GLOBAL$levels$temporal_covid)
+              } else {
+                data <- data |> aggregate_data(GLOBAL$levels[[global$data_format]])
+              }
             }
+          } else {
+            # Check for common dataframe issues
+            c(errors, warnings) %<-% check_data(
+              data, 
+              GLOBAL$expected_types$agg[[global$data_format]]
+            )
+          }
+          
+          # Update global data only if no errors
+          if(length(errors) == 0) {
+            global$data <- data
           }
         }
-      }, silent = FALSE) |> try_error()
-
-      waiter::waiter_hide()
+        
+        # Update reactives with validation results
+        input_errors(errors)
+        input_warnings(warnings)
+        
+      }, error = function(e) {
+        # Capture the actual error message
+        err_msg <- paste("Error processing data:", e$message)
+        input_errors(list(unexpected = err_msg))
+        warning(err_msg) # Log the error to console
+      }, finally = {
+        # Always hide the waiter
+        waiter::waiter_hide()
+      })
     })
 
     observeEvent(input$use_indiv_example, {
@@ -309,31 +343,29 @@ mod_analyze_upload_server <- function(id, global){
       )
 
       if(global$data_format == "temporal_covid") {
-        readr::read_csv(app_sys("extdata/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
-
+        readr::read_csv(app_sys("extdata/example/data/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
         global$data <- rawdata() |>
-          aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
-          fix_geocode()
+          clean_data() |>
+          aggregate_covid(expected_levels = GLOBAL$levels$temporal_covid)
       } else if (global$data_format == "temporal_other") {
         readr::read_csv(app_sys("extdata/example/data/timevarying_data_individual.csv"), show_col_types = FALSE) |> rawdata()
-        
         global$data <- rawdata() |>
-          aggregate_covid(age_bounds = GLOBAL$bounds$covid$age) |>
-          fix_geocode()
+          clean_data() |>
+          aggregate_data(expected_levels = GLOBAL$levels$temporal_other)
       } else if(global$data_format == "static_poll") {
-        readr::read_csv(app_sys("extdata/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
-
+        readr::read_csv(app_sys("extdata/example/data/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
         global$data <- rawdata() |>
-          aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
+          clean_data() |>
+          aggregate_data(expected_levels = GLOBAL$levels$static_poll)
       } else if(global$data_format == "static_other") {
         readr::read_csv(app_sys("extdata/example/data/crosssectional_data_individual.csv"), show_col_types = FALSE) |> rawdata()
-
         global$data <- rawdata() |>
-          aggregate_poll(age_bounds = GLOBAL$bounds$poll$age)
+          clean_data() |>
+          aggregate_data(expected_levels = GLOBAL$levels$static_other)
       }
       
-      try_error(NULL)
       input_errors(NULL)
+      input_warnings(NULL)
       
       waiter::waiter_hide()
     })
@@ -353,8 +385,8 @@ mod_analyze_upload_server <- function(id, global){
         global$data <- rawdata() |> clean_data()
       }
       
-      try_error(NULL)
       input_errors(NULL)
+      input_warnings(NULL)
     })
 
     observeEvent(global$data, {
@@ -362,75 +394,75 @@ mod_analyze_upload_server <- function(id, global){
 
       if(!is.null(global$data)) {
 
-        smallest_geo_index <- intersect(names(global$data), GLOBAL$vars$geo) |>
-          purrr::map_int(~which(GLOBAL$vars$geo == .x)) |>
-          min()
-        choices <- c(GLOBAL$vars$geo[smallest_geo_index:length(GLOBAL$vars$geo)], "Do not include geography")
+        if(global$data_format == "temporal_covid") {
+          c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
+            global$data,
+            global$extdata$pstrat_covid,
+            global$extdata$covar_covid,
+            GLOBAL$levels$temporal_covid,
+            GLOBAL$vars
+          )
+          
+          global$mrp <- list(
+            input = input_data,
+            new = new_data,
+            levels = levels,
+            vars = vars
+          )
 
-        updateSelectInput(session,
-          inputId = "link_geo",
-          choices = choices
-        )
-        
-        years <- 2019:2023
-        choices <- paste0(years - 4, "-", years)
-        updateSelectInput(session,
-          inputId = "acs_year",
-          choices = choices
-        )
-      }
+          global$plotdata <- list(
+            dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
+            geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
+            raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(input_data$zip))
+          )
+          
+          global$link_data <- list(
+            link_geo = "zip",
+            acs_year = NULL
+          )
 
-      if(global$data_format == "temporal_covid") {
-        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-          global$data,
-          global$extdata$pstrat_covid,
-          global$extdata$covar_covid,
-          GLOBAL$levels$general,
-          GLOBAL$vars
-        )
+        } else if (global$data_format == "static_poll") {
+          c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
+            global$data,
+            global$extdata$pstrat_poll,
+            global$extdata$fips$county,
+            GLOBAL$levels$static_poll,
+            GLOBAL$vars
+          )
+          
+          global$mrp <- list(
+            input = input_data,
+            new = new_data,
+            levels = levels,
+            vars = vars
+          )
 
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars
-        )
+          global$plotdata <- list(
+            geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
+          )
 
-        global$plotdata <- list(
-          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
-          raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(input_data$zip))
-        )
-        
-        global$link_data <- list(
-          link_geo = "zip",
-          acs_year = NULL
-        )
+          global$link_data <- list(
+            link_geo = "state",
+            acs_year = NULL
+          )
+        } else {
+          smallest_geo_index <- intersect(names(global$data), GLOBAL$vars$geo) |>
+            purrr::map_int(~which(GLOBAL$vars$geo == .x)) |>
+            min()
+          choices <- c(GLOBAL$vars$geo[smallest_geo_index:length(GLOBAL$vars$geo)], "Do not include geography")
 
-      } else if (global$data_format == "static_poll") {
-        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-          global$data,
-          global$extdata$pstrat_poll,
-          global$extdata$fips$county,
-          GLOBAL$levels$poll,
-          GLOBAL$vars
-        )
-        
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars
-        )
-
-        global$plotdata <- list(
-          geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
-        )
-
-        global$link_data <- list(
-          link_geo = "state",
-          acs_year = NULL
-        )
+          updateSelectInput(session,
+            inputId = "link_geo",
+            choices = choices
+          )
+          
+          years <- 2019:2023
+          choices <- paste0(years - 4, "-", years)
+          updateSelectInput(session,
+            inputId = "acs_year",
+            choices = choices
+          )
+        }
       }
 
       waiter::waiter_hide()
@@ -452,16 +484,13 @@ mod_analyze_upload_server <- function(id, global){
         
         # retrieve ACS data based on user's selection
         tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
-        
-        # demographic variables and levels
-        demo_levels <- if(global$data_format == "static_poll") GLOBAL$levels$poll else GLOBAL$levels$general
 
         c(input_data, new_data, levels, vars) %<-% prepare_data(
           input_data = global$data,
           tract_data = tract_data,
           zip_tract = global$extdata$zip_tract,
           zip_county_state = global$extdata$zip_county_state,
-          demo_levels = demo_levels,
+          demo_levels = GLOBAL$levels[[global$data_format]],
           vars_global = GLOBAL$vars,
           link_geo = global$link_data$link_geo
         )
