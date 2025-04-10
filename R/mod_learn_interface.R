@@ -133,11 +133,11 @@ mod_learn_interface_server <- function(id, global){
                         selected = "nav_learn_mrp")
     })
 
-    output$example_cs <- DT::renderDataTable({
+    output$example_cs <- DT::renderDT({
       read.csv(app_sys("extdata/CES_data_aggregated.csv"))
     })
 
-    output$example_st <- DT::renderDataTable({
+    output$example_st <- DT::renderDT({
       read.csv(app_sys("extdata/covid_test_records_aggregated.csv"))
     })
 

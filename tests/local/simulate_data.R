@@ -5,8 +5,8 @@ library(purrr)
 library(bayesplot)
 library(cmdstanr)
 
-source("/Users/tntoan/Desktop/repos/shinymrp/R/fct_data.R")
-source("/Users/tntoan/Desktop/repos/shinymrp/R/fct_model.R")
+source("/path/to/fct_data.R")
+source("/path/to/fct_model.R")
 
 #' Add Date Information to Dataset
 #'
@@ -319,8 +319,8 @@ run_simulation <- function(
     return(NULL)
   }
 
-  week_date <- readr::read_csv("/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/week_conversion.csv")
-  zip_county_state <- readr::read_csv("/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/zip_county_state.csv")
+  week_date <- readr::read_csv("/path/to/week_conversion.csv")
+  zip_county_state <- readr::read_csv("/path/to/zip_county_state.csv")
   
   # All individual and geographic variables
   indiv_vars_all <- c("sex", "race", "age", "edu", "time")
@@ -377,6 +377,7 @@ run_simulation <- function(
       }),
       positive = sim_data$positive
     )
+    
 
   example_data_agg <- base_data |>
     mutate(positive = sim_data$positive) |>
@@ -492,11 +493,10 @@ c(data_indiv, data_agg, effects, true_coefs) %<-% run_simulation(
   effects = effects,
   params = params,
   covar_geo = "zip",
-  include_date = FALSE,
-  save_path = "/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/example/data/timevarying_"
+  include_date = TRUE,
+  save_path = NULL
 )
-View(data_indiv)
-View(data_agg)
+
 # check_simulation_result(
 #   sim_data = data_agg,
 #   effects = effects,

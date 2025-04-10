@@ -181,7 +181,7 @@ group_interactions <- function(interactions, fixed_effects, dat) {
       }
       
     } else {
-      print("Unrecognized interaction")
+      stop("Unrecognized interaction")
     }
   }
   

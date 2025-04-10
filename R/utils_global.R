@@ -132,7 +132,7 @@ GLOBAL <- list(
     plot_height = 500,
     subplot_height = 300,
     small_map_height = 500,
-    large_map_height = 700
+    large_map_height = 800
   ),
   default_priors = list(
     Intercept = "normal(0, 5)",

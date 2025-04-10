@@ -9,8 +9,9 @@
 #' @importFrom shiny NS tagList
 mod_learn_preprocess_ui <- function(id){
   ns <- NS(id)
-  fluidRow(
-    column(width = 6, offset = 3,
+  bslib::page_fillable(
+    bslib::layout_columns(
+      col_widths = c(-3, 6),
       tags$div(class = "pad_top",
         tags$img(src = "www/preprocess.pdf", width = "100%", style = "margin-bottom: 40px;"),
         tags$p("The input data for MRP consists of three components: the preprocessed survey/test data, the poststratification table, and geographic covariates. The survey/test data contains the geographic-demographic information about participants and their survey responses or test results. Inferring the relationship between them using regression models constitutes the first stage of MRP. Additionally, geographic covariates are included in these models to account for the structured difference among geographic areas such as states and counties. The second stage of MRP is poststratification, which involves adjusting the estimates based on the breakdown of the target population. Below are details about how these data components are prepared for both interfaces."),

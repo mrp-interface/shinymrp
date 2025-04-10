@@ -9,13 +9,10 @@
 #' @importFrom shiny NS tagList 
 mod_geo_plot_ui <- function(id) {
   ns <- NS(id)
-  tagList(
-    column(width = 9,
-      plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot_height)
-    ),
-    column(width = 3,
-      DT::dataTableOutput(outputId = ns("table"))
-    )
+  bslib::layout_columns(
+    col_widths = c(9, 3),
+    plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot_height),
+    DT::dataTableOutput(outputId = ns("table"))
   )
 }
     
@@ -51,7 +48,7 @@ mod_geo_plot_server <- function(id, data, varname, config){
     })
     
     # Render the table
-    output$table <- DT::renderDataTable({
+    output$table <- DT::renderDT({
       req(data())
 
       decimal_places <- if(median(data()[[varname]]) > 100) 0 else 4
