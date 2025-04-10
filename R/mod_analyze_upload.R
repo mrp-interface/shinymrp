@@ -7,134 +7,74 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_analyze_upload_ui <- function(id){
+mod_analyze_upload_ui <- function(id) {
   ns <- NS(id)
-  tags$div(class = "pad_top",
-    sidebarLayout(
-      sidebarPanel(width = 3,
-        tags$h4(tags$u("Step 1"), " Upload data"),
-        tags$p("Upload individual-level or aggregated data (examples below)"),
-        shinyWidgets::radioGroupButtons(
-          inputId = ns("toggle_input"),
-          label = NULL,
-          choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
-          selected = "agg",
-          justified = TRUE,
-          size = "sm",
-          checkIcon = list(
-            yes = tags$i(class = "fa fa-circle-check", style = "color: white"),
-            no = tags$i(class = "fa fa-circle-o", style = "color: white")
-          )
+  
+  bslib::layout_sidebar(
+    sidebar = sidebar(
+      width = 350,
+      tags$p(tags$strong("Step 1: Upload individual-level or aggregated data (examples below)")),
+      shinyWidgets::radioGroupButtons(
+        inputId = ns("toggle_input"),
+        label = NULL,
+        choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
+        selected = "agg",
+        justified = TRUE,
+        size = "sm"
+      ),
+      fileInput(ns("input_data"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
+      uiOutput(ns("input_feedback")),
+      p(class = "mt-0 small",
+        "For", tags$u("requirements for input data"), "and preprocessing code, open",
+        actionLink(ns("show_upload_guide"), label = "Guide."),
+        "For a detailed description of the preprocessing procedure, go to the",
+        actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
+      ),
+      div(class = "mt-4",
+        conditionalPanel(
+          condition = "output.data_format == 'temporal_covid'",
+          p("Example: COVID-19 hospital test records", class = "fst-italic small")
         ),
-        fileInput(
-          inputId = ns("input_data"),
-          label = NULL,
-          accept = c(".csv", ".xlsx", ".sas7bdat")
+        conditionalPanel(
+          condition = "output.data_format == 'static_poll'",
+          p("Example: The Cooperative Election Study data", class = "fst-italic small")
         ),
-        uiOutput(outputId = ns("input_feedback")),
-        tags$p(class = "ref",
-          "For ", tags$u("requirements for input data"), "and preprocessing code, open",
-          actionLink(
-            inputId = ns("show_upload_guide"),
-            label = "Guide.",
-            class = "action_link"
-          ),
-          "For a detailed description of the prepropressing procedure, go to the",
-          actionLink(
-            inputId = ns("to_preprocess"),
-            label = "Preprocessing",
-            class = "action_link"
-          ),
-          "page."
+        conditionalPanel(
+          condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+          p("Example", class = "fst-italic small")
         ),
-        tags$div(style = "margin-top: 25px",
-          conditionalPanel(
-            condition = "output.data_format == 'temporal_covid'",
-            tags$p("Example: COVID-19 hospital test records")
-          ),
-          conditionalPanel(
-            condition = "output.data_format == 'static_poll'",
-            tags$p("Example: The Cooperative Election Study data")
-          ),
-          conditionalPanel(
-            condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
-            tags$p("Example")
-          ),
-          tags$div(class = "justify pad_top",
-            actionButton(
-              inputId = ns("use_indiv_example"),
-              label = "Invididual-level",
-              icon = icon("table", class = "fa button_icon"),
-              width = "49.5%"
-            ),
-            actionButton(
-              inputId = ns("use_agg_example"),
-              label = "Aggregated",
-              icon = icon("table", class = "fa button_icon"),
-              width = "49.5%"
-            ),
-          ),
-          tags$div(style = "margin-top: 40px",
-            tags$h4(tags$u("Step 2"), " Link to ACS data"),
-            conditionalPanel(
-              condition = "output.data_format == 'temporal_covid'",
-              tags$div(
-                class = "panel panel-info",
-                tags$div(
-                  class = "panel-heading",
-                  tagList(icon("circle-info", "fa"), "Note")
-                ),
-                tags$div(
-                  class = "panel-body",
-                  tags$p("Input data is automatically linked to 5-year ACS data (2017-2021) through ZIP codes")
-                )
-              )
-            ),
-            conditionalPanel(
-              condition = "output.data_format == 'static_poll'",
-              tags$div(
-                class = "panel panel-info",
-                tags$div(
-                  class = "panel-heading",
-                  tagList(icon("circle-info", "fa"), "Note")
-                ),
-                tags$div(
-                  class = "panel-body",
-                  tags$p("Input data is automatically linked to 5-year ACS data (2013-2018) through state")
-                )
-              )
-            ),
-            conditionalPanel(
-              condition = "output.data_format != 'temporal_covid' &&
-                           output.data_format != 'static_poll'", 
-              selectInput(
-                inputId = ns("link_geo"),
-                label = "Select geography level for poststratification",
-                choices = NULL
-              ),
-              selectInput(
-                inputId = ns("acs_year"),
-                label = "Select year 5-year ACS data to link to",
-                choices = NULL
-              ),
-                tags$div(class = "justify",
-                actionButton(
-                  inputId = ns("link_acs"),
-                  label = "Link",
-                  width = "30%"
-                ),
-                textOutput(ns("link_status"), inline = TRUE)
-                )
-            )
-          )
+        layout_column_wrap(
+          actionButton(ns("use_indiv_example"), "Individual-level", icon("table"), class = "w-100"),
+          actionButton(ns("use_agg_example"), "Aggregated", icon("table"), class = "w-100")
         )
       ),
-      mainPanel(width = 9,
-        uiOutput(outputId = ns("main_panel"))
+      tags$p(tags$strong("Step 2: Link to ACS Data")),
+      conditionalPanel(
+        condition = "output.data_format == 'temporal_covid'",
+        bslib::card(
+          card_header("Note", class = "bg-info text-dark"),
+          card_body("Input data is automatically linked to 5-year ACS data (2017-2021) through ZIP code.")
+        )
+      ),
+      conditionalPanel(
+        condition = "output.data_format == 'static_poll'",
+        bslib::card(
+          card_header("Note", class = "bg-info text-dark"),
+          card_body("Input data is automatically linked to 5-year ACS data (2013-2018) through state.")
+        )
+      ),
+      conditionalPanel(
+        condition = "output.data_format != 'temporal_covid' && output.data_format != 'static_poll'",
+        selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
+        selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
+        actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100"),
+        textOutput(ns("link_status"), inline = TRUE)
       )
-    )
+    ),
+    uiOutput(ns("main_panel"))
   )
 }
+
 
 #' analyze_upload Server Functions
 #'
@@ -222,25 +162,28 @@ mod_analyze_upload_server <- function(id, global){
       req(rawdata())
       
       tagList(
-        tags$div(class = "justify",
-          shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_table"),
-            label = NULL,
-            choices = c("Raw" = "raw", "Preprocessed" = "prep"),
-            checkIcon = list(
-              yes = tags$i(class = "fa fa-circle-check", style = "color: white"),
-              no = tags$i(class = "fa fa-circle-o", style = "color: white")
-            )
+        tags$div(class = "d-flex justify-content-between align-items-center mb-3",
+          # Wrap the element with the tooltip
+          bslib::tooltip(
+            shinyWidgets::radioGroupButtons(
+              inputId = ns("toggle_table"),
+              label = NULL,
+              size = "sm",
+              choices = c("Raw" = "raw", "Preprocessed" = "prep")
+            ),
+            "\"Preprocessed\" table only shows when data has been preprocessed", 
+            placement = "right"
           ),
-          shinyBS::bsTooltip(ns("toggle_table"), "\"Preprocessed\" table only shows when data has been preprocessed", placement = "right"),
-          tags$p(sprintf("*The preview only includes the first %d rows of the data", GLOBAL$ui$preview_size))
+          tags$p(sprintf("*The preview only includes the first %d rows of the data", 
+                        GLOBAL$ui$preview_size), 
+                class = "small text-muted m-0")
         ),
         DT::dataTableOutput(outputId = ns("table"))
       )
     })
 
 
-    output$table <- DT::renderDataTable({
+    output$table <- DT::renderDT({
       df <- if(input$toggle_table == "raw") rawdata() else global$data
 
       df |>
@@ -298,7 +241,6 @@ mod_analyze_upload_server <- function(id, global){
               data,
               GLOBAL$expected_types$indiv[[global$data_format]]
             )
-            print(errors)
 
             if(length(errors) == 0) {
               if(global$data_format == "temporal_covid") {
@@ -342,26 +284,22 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
+      file_name <- switch(global$data_format,
+        "temporal_covid" = "covid_data_individual.csv",
+        "temporal_other" = "timevarying_data_individual.csv",
+        "static_poll" = "ces_data_individual.csv",
+        "static_other" = "crosssectional_data_individual.csv"
+      )
+
+      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> rawdata()
+
+      cleaned_data <- rawdata() |> clean_data()
+
+      # Use the appropriate aggregation function
       if(global$data_format == "temporal_covid") {
-        readr::read_csv(app_sys("extdata/example/data/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |>
-          clean_data() |>
-          aggregate_covid(expected_levels = GLOBAL$levels$temporal_covid)
-      } else if (global$data_format == "temporal_other") {
-        readr::read_csv(app_sys("extdata/example/data/timevarying_data_individual.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |>
-          clean_data() |>
-          aggregate_data(expected_levels = GLOBAL$levels$temporal_other)
-      } else if(global$data_format == "static_poll") {
-        readr::read_csv(app_sys("extdata/example/data/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |>
-          clean_data() |>
-          aggregate_data(expected_levels = GLOBAL$levels$static_poll)
-      } else if(global$data_format == "static_other") {
-        readr::read_csv(app_sys("extdata/example/data/crosssectional_data_individual.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |>
-          clean_data() |>
-          aggregate_data(expected_levels = GLOBAL$levels$static_other)
+        global$data <- cleaned_data |> aggregate_covid(expected_levels = GLOBAL$levels$temporal_covid)
+      } else {
+        global$data <- cleaned_data |> aggregate_data(expected_levels = GLOBAL$levels[[global$data_format]])
       }
       
       input_errors(NULL)
@@ -371,22 +309,25 @@ mod_analyze_upload_server <- function(id, global){
     })
 
     observeEvent(input$use_agg_example, {
-      if(global$data_format == "temporal_covid") {
-        readr::read_csv(app_sys("extdata/example/data/covid_test_records_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> clean_data()
-      } else if(global$data_format == "temporal_other") {
-        readr::read_csv(app_sys("extdata/example/data/timevarying_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> clean_data()
-      } else if(global$data_format == "static_poll") {
-        readr::read_csv(app_sys("extdata/example/data/CES_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> clean_data()
-      } else if(global$data_format == "static_other") {
-        readr::read_csv(app_sys("extdata/example/data/crosssectional_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> clean_data()
-      }
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
+
+      file_name <- switch(global$data_format,
+        "temporal_covid" = "covid_data_aggregated.csv",
+        "temporal_other" = "timevarying_data_aggregated.csv",
+        "static_poll" = "ces_data_aggregated.csv",
+        "static_other" = "crosssectional_data_aggregated.csv"
+      )
+
+      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> rawdata()
+      global$data <- rawdata() |> clean_data()
       
       input_errors(NULL)
       input_warnings(NULL)
+
+      waiter::waiter_hide()
     })
 
     observeEvent(global$data, {
@@ -522,13 +463,14 @@ mod_analyze_upload_server <- function(id, global){
     })
 
     observeEvent(input$show_upload_guide, {
-      show_guide("upload_data", global$session)
+      bslib::toggle_sidebar("guide", session = global$session)
     })
 
     observeEvent(input$to_preprocess, {
-      updateNavbarPage(global$session,
-        inputId = "navbar",
-        selected = "nav_learn_preprocess"
+      bslib::nav_select(
+        id = "navbar",
+        selected = "nav_learn_preprocess",
+        session = global$session
       )
     })
 

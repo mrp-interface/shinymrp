@@ -27,9 +27,9 @@ app_server <- function(input, output, session) {
         state = readRDS(app_sys("extdata/geojson_state.RDS")) |> filter_geojson(c("11", "72"), omit = TRUE)
       )
     ),
-    mrp_input = NULL,
     link_data = NULL,
     plotdata = NULL,
+    uploaded_model = NULL,
     models = NULL,
     poststratified_models = NULL,
     model_count = 0
@@ -46,10 +46,13 @@ app_server <- function(input, output, session) {
 
   # initialize modules
   mod_home_server(module_ids$home, global)
-  mod_persist_server(module_ids$persist, global)
   mod_analyze_upload_server(module_ids$analyze$upload, global)
   mod_analyze_visualize_server(module_ids$analyze$visualize, global)
   mod_analyze_model_server(module_ids$analyze$model, global)
   mod_analyze_result_server(module_ids$analyze$result, global)
   mod_learn_preprocess_server(module_ids$learn$preprocess, global)
+
+  observeEvent(input$show_guide, {
+    bslib::toggle_sidebar("guide")
+  })
 }

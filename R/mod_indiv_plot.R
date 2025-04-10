@@ -9,7 +9,7 @@
 #' @importFrom shiny NS tagList 
 mod_indiv_plot_ui <- function(id) {
   ns <- NS(id)
-  plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot_height)
+  plotOutput(outputId = ns("plot"), width = "100%", height = GLOBAL$ui$plot_height)
 }
     
 #' indiv_plot Server Functions
@@ -19,7 +19,7 @@ mod_indiv_plot_server <- function(id, data, demo_var){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     output$plot <- renderPlot({
-      req(data())
+      req(data()$input[[demo_var]], data()$new[[demo_var]])
 
       input_data <- data()$input |>
         mutate(demo = !!sym(demo_var)) |>
@@ -32,8 +32,6 @@ mod_indiv_plot_server <- function(id, data, demo_var){
       new_data <- new_data |>
         mutate(demo = !!sym(demo_var)) |>
         select(demo, total)
-
-
       
       plot_demographic(input_data, new_data)
     })

@@ -9,165 +9,76 @@
 #' @importFrom shiny NS tagList
 #' @import shinyWidgets
 #' @import zeallot
-mod_analyze_model_ui <- function(id){
+mod_analyze_model_ui <- function(id) {
   ns <- NS(id)
-  tags$div(class = "pad_top",
-    sidebarLayout(
-      sidebarPanel(width = 3,
-        tagList(
-          HTML("<details open='true'><summary class='summary'>Model Specification</summary>"),
-          tags$div(style = "margin: 15px 10px",
-            tags$p(tags$u("Step 1"), ": Select main effects and interactions"),
-            virtualSelectInput(
-              ns("fixed"),
-              label = "Fixed Effects",
-              choices = NULL,
-              showValueAsTags = TRUE,
-              search = TRUE,
-              multiple = TRUE,
-              hideClearButton = FALSE
-            ),
-            virtualSelectInput(
-              ns("varying"),
-              label = "Varying Effects (Partial Pooling)",
-              choices = NULL,
-              showValueAsTags = TRUE,
-              search = TRUE,
-              multiple = TRUE,
-              hideClearButton = FALSE
-            ),
-            virtualSelectInput(
-              ns("interaction"),
-              label = "Interactions",
-              choices = NULL,
-              showValueAsTags = TRUE,
-              search = TRUE,
-              multiple = TRUE,
-              hideClearButton = FALSE
-            ),
-            tags$p(tags$u("Step 2"), ": Specify priors"),
-            tags$p(class = "ref",
-              "All effects are automatically assigned default priors and can be changed below. Check this",
-              actionLink(
-                inputId = ns("show_priors"),
-                label = "list",
-                class = "action_link"
-              ),
-              "of available priors."
-            ),
-            uiOutput(ns("prior_spec_ui")),
-            actionButton(
-              inputId = ns("add_prior"),
-              label = "Add prior",
-              class = "btn btn-sm"
-            ),
-            tags$div(class = "pad_top"),
-            tags$p(tags$u("Step 3"), ": Set sampling options"),
-            selectInput(
-              inputId = ns("iter_select"),
-              label = "Select the number of iterations",
-              choices = c("100 (Test)", "500 (Low)", "2000 (Medium)", "5000 (High)", "Custom"),
-              selected = "2000 (Medium)"
-            ),
-            conditionalPanel(ns = ns,
-              condition = "input.iter_select == 'Custom'",
-              numericInput(
-                inputId = ns("iter_kb"),
-                label = "Enter the number of iterations",
-                min = 100, max = 5000, step = 100,
-                value = 1000
-              )
-            ),
-            numericInput(
-              inputId = ns("chain_select"),
-              label = "Select the number of chains",
-              min = 1, max = 8, step = 1,
-              value = 4
-            ),
-            numericInput(
-              inputId = ns("seed_select"),
-              label = "Set seed",
-              min = 1, max = 100000, step = 1,
-              value = 123
-            ),
-            conditionalPanel(
-              condition = "output.data_format == 'temporal_covid'",
-              fluidRow(
-                column(width = 6,
-                  numericInput(
-                    inputId = ns("spec_kb"),
-                    label = "Specificity",
-                    min = 0, max = 1, step = 0.01,
-                    value = 0.999
-                  )
-                ),
-                column(width = 6,
-                  numericInput(
-                    inputId = ns("sens_kb"),
-                    label = "Sensitivity",
-                    min = 0, max = 1, step = 0.01,
-                    value = 0.7
-                  )
-                )
-              )
-            ),
-            tags$div(class = "justify pad_bottom",
-              actionButton(
-                inputId = ns("reset_btn"),
-                label = "Reset fields",
-                icon = icon("arrow-rotate-right", lib = "font-awesome", class = "button_icon"),
-                width = "49.5%"
-              ),
-              actionButton(
-                inputId = ns("add_model"),
-                label = "Fit model",
-                icon = icon("chart-line", lib = "font-awesome", class = "button_icon"),
-                width = "49.5%"
-              )
-            ),
-            tags$p(class = "ref",
-              "For details about the model fitting process, open",
-              actionLink(
-                inputId = ns("show_fit_guide"),
-                label = "Guide.",
-                class = "action_link"
-              )
+
+  layout_sidebar(
+    sidebar = sidebar(
+      width = 350,
+      accordion(
+        multiple = FALSE,
+        accordion_panel("Model Specification",
+          tags$p(tags$strong("Step 1: Select main effects and interactions")),
+          shinyWidgets::virtualSelectInput(ns("fixed"), "Fixed Effects", choices = NULL, multiple = TRUE),
+          shinyWidgets::virtualSelectInput(ns("varying"), "Varying Effects (Partial Pooling)", choices = NULL, multiple = TRUE),
+          shinyWidgets::virtualSelectInput(ns("interaction"), "Interactions", choices = NULL, multiple = TRUE),
+          tags$hr(),
+
+          tags$p(tags$strong("Step 2: Specify Priors")),
+          p("All effects have default priors, which can be customized. See the ",
+            actionLink(ns("show_priors"), "list"), " of available priors."),
+          uiOutput(ns("prior_spec_ui")),
+          actionButton(ns("add_prior"), "Add Prior", class = "btn-sm btn-secondary w-100"),
+          tags$hr(),
+
+          tags$p(tags$strong("Step 3: Sampling Options")),
+          selectInput(ns("iter_select"), "Iterations",
+                      choices = c("100 (Test)", "500 (Low)", "2000 (Medium)", "5000 (High)", "Custom"),
+                      selected = "2000 (Medium)"),
+          conditionalPanel(
+            ns = ns,
+            condition = "input.iter_select == 'Custom'",
+            numericInput(ns("iter_kb"), "Custom iterations", value = 1000, min = 100, max = 5000)
+          ),
+          numericInput(ns("chain_select"), "Chains", value = 4, min = 1, max = 8),
+          numericInput(ns("seed_select"), "Seed", value = 123, min = 1, max = 100000),
+
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_covid'",
+            fluidRow(
+              column(6, numericInput(ns("spec_kb"), "Specificity", value = 0.999, min = 0, max = 1, step = 0.01)),
+              column(6, numericInput(ns("sens_kb"), "Sensitivity", value = 0.7, min = 0, max = 1, step = 0.01))
             )
           ),
-          HTML("</details>"),
-          HTML("<details><summary class='summary'>Upload Estimation Results</summary>"),
-          tags$div(style = "margin: 15px 10px",
-            fileInput(
-              inputId = ns("fit_upload"),
-              label = "Select a RDS file containing a model estimation",
-              accept = ".RDS"
-            ),
-            uiOutput(ns("model_feedback")),
-            tags$p("Or use example estimation result", class = "custom_label"),
-            actionButton(
-              inputId = ns("use_example"),
-              label = "Example estimation result",
-              icon = icon("table", lib = "font-awesome", class = "button_icon")
-            )
+
+          layout_column_wrap(width = "50%",
+            actionButton(ns("reset_btn"), "Reset Fields", icon("rotate"), class = "w-100"),
+            actionButton(ns("add_model"), "Fit Model", icon("chart-line"), class = "w-100")
           ),
-          HTML("</details>")
+
+          tags$p(class = "small mt-3",
+            "For details about fitting process, open the ",
+            actionLink(ns("show_fit_guide"), "Guide."))
+        ),
+
+        accordion_panel("Upload Estimation Results",
+          fileInput(ns("fit_upload"), "Select RDS file with model estimation", accept = ".RDS"),
+          uiOutput(ns("model_feedback")),
+          tags$p("Or use example result:"),
+          actionButton(ns("use_example"), "Example Estimation Result", icon("table"), class = "w-100")
         )
-      ),
-      mainPanel(width = 9,
-        tabsetPanel(id = ns("navbar_model"),
-          tabPanel("Model Comparison",
-            value = "nav_compare",
-            tags$div(class = "pad_top",
-              uiOutput(outputId = ns("model_select_ui")),
-              tags$h4("Leave-one-out Cross-validation", class = "break_title"),
-              tags$hr(class = "break_line"),
-              uiOutput(outputId = ns("loo_ui")),
-              tags$h4("Posterior Predictive Check", class = "break_title"),
-              tags$hr(class = "break_line"),
-              uiOutput(outputId = ns("ppc_plots"))
-            )
-          )
-        )
+      )
+    ),
+    bslib::navset_underline(id = ns("navbar_model"),
+      bslib::nav_panel("Model Comparison", value = "nav_compare",
+        tags$div(class = "mt-4"),
+        uiOutput(ns("model_select_ui")),
+        tags$h4("Leave-one-out Cross-validation", class = "mt-4"),
+        tags$hr(class = "break_line"),
+        uiOutput(ns("loo_ui")),
+        tags$h4("Posterior Predictive Check", class = "mt-4"),
+        tags$hr(class = "break_line"),
+        uiOutput(ns("ppc_plots"))
       )
     )
   )
@@ -202,9 +113,11 @@ mod_analyze_model_server <- function(id, global){
     })
 
     observeEvent(input$to_upload, {
-      updateTabsetPanel(global$session,
-                        inputId = "navbar_analyze",
-                        selected = "nav_analyze_upload")
+      bslib::nav_select(
+        id = "navbar_analyze",
+        selected = "nav_analyze_upload",
+        session = global$session
+      )
 
       removeModal(global$session)
     })
@@ -363,7 +276,7 @@ mod_analyze_model_server <- function(id, global){
           choices = names(global$models),
           multiple = TRUE
         ),
-        tags$div(style = "margin-bottom: 15px",
+        tags$div(style = "margin-bottom: 16px",
           actionButton(
             inputId = ns("diagnos_btn"),
             label = "Compare",
@@ -387,9 +300,9 @@ mod_analyze_model_server <- function(id, global){
           ui <- tags$p("*Two or more models are required")
         } else {
           ui <- tagList(
-            create_text_box(
-              title = tags$b("Note"),
-              tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), ".")
+            bslib::card(
+              bslib::card_header(tags$b("Note")),
+              bslib::card_body(tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), "."))
             ),
             tableOutput(outputId = ns("loo_table"))
           )
@@ -427,12 +340,12 @@ mod_analyze_model_server <- function(id, global){
         formulas <- purrr::map(isolate(global$models[selected_names]), function(m) m$formula)
 
         tagList(
-          create_text_box(
-            title = tags$b("Note"),
+          bslib::card(
+            bslib::card_header(tags$b("Note")),
             if(global$data_format == "temporal_covid") {
-              tags$p("The plots show the weekly postive response rates computed from the observed data and 10 sets of replicated data.")
+              bslib::card_body(tags$p("The plots show the weekly postive response rates computed from the observed data and 10 sets of replicated data."))
             } else {
-              tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data.")
+              bslib::card_body(tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data."))
             }
           ),
           purrr::map(1:length(formulas), ~ list(
@@ -648,11 +561,12 @@ mod_analyze_model_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
       
-      if(global$data_format == "temporal_covid") {
-        model <- qs::qread(app_sys("extdata/example/fit/fit_covid.RDS"))
-      } else if(global$data_format == "temporal_poll") {
-        model <- qs::qread(app_sys("extdata/example/fit/fit_poll.RDS"))
-      }
+      model <- switch(global$data_format,
+        "temporal_covid" = qs::qread(app_sys("extdata/example/fit/fit_timevarying_covid.RDS")),
+        "temporal_other" = qs::qread(app_sys("extdata/example/fit/fit_timevarying_other.RDS")),
+        "static_poll" = qs::qread(app_sys("extdata/example/fit/fit_crosssectional_poll.RDS")),
+        "static_other" = qs::qread(app_sys("extdata/example/fit/fit_crosssectional_other.RDS"))
+      )
 
       model_buffer(model)
     })
@@ -712,9 +626,11 @@ mod_analyze_model_server <- function(id, global){
         save_code_btn = paste0("save_code_btn", global$model_count),
         postprocess_btn = paste0("postprocess_btn", global$model_count)
       )
-      
+   
       # create new model tab
-      create_model_tab(ns, model)
+      tab_ids <- purrr::map_chr(global$models, function(m) m$IDs$tab)
+      last_tab_id <- if(length(tab_ids) > 0) as.character(tab_ids[length(tab_ids)]) else "nav_compare"
+      create_model_tab(ns, model, last_tab_id)
 
       # changeable tab title
       output[[model$IDs$title]] <- renderText(model_name)
@@ -723,7 +639,7 @@ mod_analyze_model_server <- function(id, global){
       observeEvent(input[[model$IDs$rm_btn]], {
         # remove model object and tab
         global$models[[model_name]] <- NULL
-        removeTab("navbar_model", model$IDs$tab, session)
+        bslib::nav_remove("navbar_model", model$IDs$tab, session)
         
         # re-index model objects and tabs
         names(global$models) <- if(length(global$models) > 0) paste0("Model ", 1:length(global$models)) else character()
@@ -862,12 +778,14 @@ mod_analyze_model_server <- function(id, global){
 
       # delete all model tabs
       purrr::map(purrr::map(global$models, function(m) m$IDs$tab), function(id) {
-        removeTab("navbar_model", id, session)
+        bslib::nav_remove("navbar_model", id, session)
       })
 
-      updateTabsetPanel(session,
-                        inputId = "navbar_model",
-                        selected = "nav_compare")
+      bslib::nav_select(
+        id = "navbar_model",
+        selected = "nav_compare",
+        session = session
+      )
 
       # clear model object list
       global$models <- NULL

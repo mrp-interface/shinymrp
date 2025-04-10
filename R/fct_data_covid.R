@@ -93,13 +93,11 @@ aggregate_covid <- function(
     expected_levels,
     threshold = 0
 ) {
-
-  # remove rows w/ missing data
-  patient <- patient |> filter(!is.na(date) & !is.na(zip))
-  
+  View(patient)
   # convert dates to week indices
   c(time_indices, timeline) %<-% get_week_indices(patient$date)
   patient$time <- time_indices
+  print(nrow(patient))
   
   # remove all but one test of a patient in the same week
   patient <- patient |> distinct(id, time, .keep_all = TRUE)

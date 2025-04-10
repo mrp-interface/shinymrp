@@ -7,82 +7,102 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_home_ui <- function(id){
+mod_home_ui <- function(id) {
   ns <- NS(id)
   tagList(
     tags$div(class = "landing_container",
       tags$h1("M.R.P.", class = "landing_header"),
-      tags$p("An interface for applying Multilevel Regression and Poststratification", class = "landing_subheader"),
-      conditionalPanel(ns = ns,
+      tags$p("An interface for applying Multilevel Regression and Poststratification", 
+             class = "landing_subheader"),
+      
+      # Main panel group: two panels side-by-side
+      conditionalPanel(
+        ns = ns,
         condition = "output.panel_group == 'main'",
-        tags$div(class = "landing_panels justify",
-          tags$div(class = "panel panel-primary landing_panel",
-            tags$div(class = "panel-heading landing_panel_heading", "Time-varying Data"),
-            tags$div(class = "panel-body landing_panel_body",
-              tags$p("Collected over time", style = "font-style: italic; text-align: center;"),
-              actionButton(
-                inputId = ns("set_temporal"),
-                label = "Start"
+        tags$div(class = "row justify-content-center",
+          tags$div(class = "col-md-6",
+            card(
+              card_header(
+                tags$p("Time-varying Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+              ),
+              card_body(
+                tags$p("Collected over time", style = "font-style: italic; text-align: center;"),
+                actionButton(inputId = ns("set_temporal"), label = "Start")
               )
             )
           ),
-          tags$div(class = "panel panel-primary landing_panel",
-            tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data"),
-            tags$div(class = "panel-body landing_panel_body",
-              tags$p("Collected at a single time point", style = "font-style: italic;  text-align: center;"),
-              actionButton(
-                inputId = ns("set_static"),
-                label = "Start"
+          tags$div(class = "col-md-6",
+            card(
+              card_header(
+                tags$p("Cross-sectional Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+              ),
+              card_body(
+                tags$p("Collected at a single time point", style = "font-style: italic; text-align: center;"),
+                actionButton(inputId = ns("set_static"), label = "Start")
               )
             )
           )
         )
       ),
-      conditionalPanel(ns = ns,
+      
+      # Temporal panel group: two panels side-by-side
+      conditionalPanel(
+        ns = ns,
         condition = "output.panel_group == 'temporal'",
-        tags$div(class = "landing_panels justify",
-          tags$div(class = "panel panel-primary landing_panel",
-            tags$div(class = "panel-heading landing_panel_heading", "COVID Data"),
-            tags$div(class = "panel-body landing_panel_body",
-              tags$p("Data linking for ZIP-code-level covariates and poststratification data", style = "font-style: italic; text-align: center;"),
-              actionButton(
-                inputId = ns("set_temporal_covid"),
-                label = "Start"
+        tags$div(class = "row justify-content-center",
+          tags$div(class = "col-md-6",
+            card(
+              card_header(
+                tags$p("COVID Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+              ),
+              card_body(
+                tags$p("Data linking for ZIP-code-level covariates and poststratification data", 
+                       style = "font-style: italic; text-align: center;"),
+                actionButton(inputId = ns("set_temporal_covid"), label = "Start")
               )
             )
           ),
-          tags$div(class = "panel panel-primary landing_panel",
-            tags$div(class = "panel-heading landing_panel_heading", "Other Time-varying Data"),
-            tags$div(class = "panel-body landing_panel_body",
-              tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data", style = "font-style: italic;  text-align: center;"),
-              actionButton(
-                inputId = ns("set_temporal_other"),
-                label = "Start"
+          tags$div(class = "col-md-6",
+            card(
+              card_header(
+                tags$p("Other Time-varying Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+              ),
+              card_body(
+                tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data", 
+                       style = "font-style: italic; text-align: center;"),
+                actionButton(inputId = ns("set_temporal_other"), label = "Start")
               )
             )
           )
         )
       ),
-      conditionalPanel(ns = ns,
+      
+      # Static panel group: two panels side-by-side
+      conditionalPanel(
+        ns = ns,
         condition = "output.panel_group == 'static'",
-        tags$div(class = "landing_panels justify",
-          tags$div(class = "panel panel-primary landing_panel",
-            tags$div(class = "panel-heading landing_panel_heading", "Cross-sectional Data with Education"),
-            tags$div(class = "panel-body landing_panel_body",
-              tags$p("Data linking for state-level poststratification data with education data", style = "font-style: italic; text-align: center;"),
-              actionButton(
-                inputId = ns("set_static_poll"),
-                label = "Start"
+        tags$div(class = "row justify-content-center",
+          tags$div(class = "col-md-6",
+            card(
+              card_header(
+                tags$p("Cross-sectional Data with Education", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+              ),
+              card_body(
+                tags$p("Data linking for state-level poststratification data with education data", 
+                       style = "font-style: italic; text-align: center;"),
+                actionButton(inputId = ns("set_static_poll"), label = "Start")
               )
             )
           ),
-          tags$div(class = "panel panel-primary landing_panel",
-            tags$div(class = "panel-heading landing_panel_heading", "Other Cross-sectional Data"),
-            tags$div(class = "panel-body landing_panel_body",
-              tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data without education data", style = "font-style: italic;  text-align: center;"),
-              actionButton(
-                inputId = ns("set_static_other"),
-                label = "Start"
+          tags$div(class = "col-md-6",
+            card(
+              card_header(
+                tags$p("Other Cross-sectional Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+              ),
+              card_body(
+                tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data without education data", 
+                       style = "font-style: italic; text-align: center;"),
+                actionButton(inputId = ns("set_static_other"), label = "Start")
               )
             )
           )
@@ -91,6 +111,8 @@ mod_home_ui <- function(id){
     )
   )
 }
+
+
 
 #' home Server Functions
 #'

@@ -9,16 +9,11 @@
 
   p {
     text-align: justify;
-    font-size: 1.03em;
     line-height: 1.8em;
   }
   
   ul {
     line-height: 2em;
-  }
-
-  h1 h2 h3 h4 h5 {
-    font-size: 1.05em;
   }
 
   text {
@@ -277,4 +272,10 @@
   }
   .spin {
     animation: spin 0.5s infinite;  /* 1-second spin */
+  }
+
+  /* NAVIGATION BAR */
+  .nav-item a {
+    background: none;
+    border: none;
   }
