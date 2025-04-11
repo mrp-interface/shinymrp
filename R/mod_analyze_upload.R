@@ -463,7 +463,7 @@ mod_analyze_upload_server <- function(id, global){
     })
 
     observeEvent(input$show_upload_guide, {
-      bslib::toggle_sidebar("guide", session = global$session)
+      show_guide("upload")
     })
 
     observeEvent(input$to_preprocess, {

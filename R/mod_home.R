@@ -85,7 +85,7 @@ mod_home_ui <- function(id) {
           tags$div(class = "col-md-6",
             card(
               card_header(
-                tags$p("Cross-sectional Data with Education", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("Poll Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
               ),
               card_body(
                 tags$p("Data linking for state-level poststratification data with education data", 

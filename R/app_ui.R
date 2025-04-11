@@ -13,14 +13,6 @@ app_ui <- function(request) {
       title = "MRP",
       id = "navbar",
       theme = bslib::bs_theme(version = 5),
-      sidebar = bslib::sidebar(
-        id = "guide",
-        width = "100%",
-        position = "right",
-        open = FALSE,
-        create_guide()
-      ),      
-      # Rest of your UI elements continue here
       bslib::nav_panel(
         title = "Home",
         value = "nav_home",
@@ -53,22 +45,31 @@ app_ui <- function(request) {
           ),
           bslib::nav_spacer(),
           bslib::nav_item(
-            tags$span(
-              conditionalPanel(
-                condition = "output.data_format == 'temporal_covid'",
-                "Time-varying: COVID"
+            tags$div(
+              class = "d-flex align-items-center",
+              tags$span(
+                class = "me-2",  # Add margin to the right of the text
+                conditionalPanel(
+                  condition = "output.data_format == 'temporal_covid'",
+                  "Time-varying: COVID"
+                ),
+                conditionalPanel(
+                  condition = "output.data_format == 'temporal_other'",
+                  "Time-varying: General"
+                ),
+                conditionalPanel(
+                  condition = "output.data_format == 'static_poll'",
+                  "Cross-sectional: With Education"
+                ),
+                conditionalPanel(
+                  condition = "output.data_format == 'static_other'",
+                  "Cross-sectional: General"
+                )
               ),
-              conditionalPanel(
-                condition = "output.data_format == 'temporal_other'",
-                "Time-varying: General"
-              ),
-              conditionalPanel(
-                condition = "output.data_format == 'static_poll'",
-                "Cross-sectional: With Education"
-              ),
-              conditionalPanel(
-                condition = "output.data_format == 'static_other'",
-                "Cross-sectional: General"
+              actionLink(
+                inputId = "show_guide",
+                label = bsicons::bs_icon("question-circle", size = "1.5em"),
+                class = "btn btn-link p-0"  # Remove padding from the button for tighter layout
               )
             )
           )
@@ -108,13 +109,6 @@ app_ui <- function(request) {
           href = "https://github.com/mrp-interface/shinymrp",
           target = "_blank",
           bsicons::bs_icon("github", size = "1.5em")
-        )
-      ),
-      bslib::nav_item(
-        actionLink(
-          inputId = "show_guide",
-          label = bsicons::bs_icon("question-circle", size = "1.5em"),
-          class = "btn"
         )
       )
     )

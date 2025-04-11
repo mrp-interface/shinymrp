@@ -57,7 +57,7 @@ mod_analyze_model_ui <- function(id) {
           ),
 
           tags$p(class = "small mt-3",
-            "For details about fitting process, open the ",
+            "For details about fitting process, open ",
             actionLink(ns("show_fit_guide"), "Guide."))
         ),
 
@@ -123,11 +123,11 @@ mod_analyze_model_server <- function(id, global){
     })
 
     observeEvent(input$show_priors, {
-      show_guide("model_select", session)
+      show_guide("model_spec")
     })
 
     observeEvent(input$show_fit_guide, {
-      show_guide("model_fit", session)
+      show_guide("model_fit")
     })
 
    observeEvent(input$add_prior, {

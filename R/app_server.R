@@ -17,10 +17,10 @@ app_server <- function(input, output, session) {
       pstrat_covid = readr::read_csv(app_sys("extdata/pstrat_covid.csv"), show_col_types = FALSE) |> fix_geocode(),
       covar_covid = readr::read_csv(app_sys("extdata/covar_covid.csv"), show_col_types = FALSE) |> fix_geocode(),
       pstrat_poll = readr::read_csv(app_sys("extdata/pstrat_poll.csv"), show_col_types = FALSE),
-      zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) |> to_lower_case(),
+      zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) |> clean_chr(),
       fips = list(
-        county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE) |> to_lower_case(),
-        state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE) |> to_lower_case()
+        county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE) |> clean_chr(),
+        state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE) |> clean_chr()
       ),
       geojson = list(
         county = readRDS(app_sys("extdata/geojson_county.RDS")),
@@ -53,6 +53,6 @@ app_server <- function(input, output, session) {
   mod_learn_preprocess_server(module_ids$learn$preprocess, global)
 
   observeEvent(input$show_guide, {
-    bslib::toggle_sidebar("guide")
+    show_guide()
   })
 }
