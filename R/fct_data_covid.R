@@ -28,77 +28,16 @@ rename_columns_covid <- function(df) {
   return(df)
 }
 
-get_week_indices <- function(strings) {
-  # extract week numbers, months and years from dates
-  years_weeks <- ISOweek::ISOweek(strings)
-  years <- years_weeks |> sapply(substr, start = 1, stop = 4) |> as.numeric()
-  weeks <- years_weeks |> sapply(substr, start = 7, stop = 8) |> as.numeric()
-  months <- strings |> as.Date() |> format("%m") |> as.numeric()
-
-  # find year range
-  c(low, high) %<-% range(years)
-  all_years <- low:high
-
-
-  if(low == high) {
-    weeks_accum <- weeks
-    timeline_week <- min(weeks_accum):max(weeks_accum)
-    timeline_year <- rep(low, length(timeline_week))
-  } else {
-    # add offsets to week numbers in later years
-    weeks_per_year <- paste0(all_years, "-12-28") |>
-      ISOweek::ISOweek() |>
-      sapply(substr, start = 7, stop = 8) |>
-      as.numeric()
-
-    weeks_offset <- c(0, cumsum(weeks_per_year[1:(length(weeks_per_year)-1)]))
-    offsets <- years |> sapply(function(y) weeks_offset[which(all_years == y)])
-
-    weeks_accum <- weeks + offsets
-    weeks_accum <- weeks_accum - min(weeks_accum) + 1
-
-    # find all weeks between the earliest and most recent dates
-    start <- which.min(weeks_accum)
-    end <- which.max(weeks_accum)
-    year_start <- which(all_years == years[start])
-    year_end <- which(all_years == years[end])
-
-    # first year
-    timeline_week <- weeks[start]:weeks_per_year[year_start]
-    timeline_year <- rep(all_years[year_start], length(timeline_week))
-
-    # in-between year
-    for(year_ind in (year_start+1):(year_end-1)) {
-      timeline_week <- c(timeline_week, 1:weeks_per_year[year_ind])
-      timeline_year <- c(timeline_year, rep(all_years[year_ind], weeks_per_year[year_ind]))
-    }
-
-    # last year
-    timeline_week <- c(timeline_week, 1:weeks[end])
-    timeline_year <- c(timeline_year, rep(all_years[year_end], weeks[end]))
-  }
-
-  # get the start of each week
-  timeline_date <- mapply(function(y, w) sprintf("%d-W%02d-1", y, w),
-                          timeline_year,
-                          timeline_week) |>
-    ISOweek::ISOweek2date()
-
-
-  return(list(weeks_accum, timeline_date))
-}
-
 aggregate_covid <- function(
     patient,
     expected_levels,
     threshold = 0
 ) {
-  View(patient)
+
   # convert dates to week indices
   c(time_indices, timeline) %<-% get_week_indices(patient$date)
   patient$time <- time_indices
-  print(nrow(patient))
-  
+
   # remove all but one test of a patient in the same week
   patient <- patient |> distinct(id, time, .keep_all = TRUE)
   

@@ -18,6 +18,13 @@ clean_names <- function(names) {
     gsub("^_|_$", "", x = _)
 }
 
+
+clean_chr <- function(df) {
+  # Convert character columns to lowercase and trim whitespace
+  df |> mutate(across(where(is.character), 
+                ~str_trim(tolower(.x))))
+}
+
 clean_data <- function(
     df,
     na_strings = c("", "na", "n/a", "none", "null", "unknown")
@@ -32,9 +39,7 @@ clean_data <- function(
   }
 
   # Convert character columns to lowercase and trim whitespace
-  df <- df |> 
-    mutate(across(where(is.character), 
-                 ~str_trim(tolower(.x))))
+  df <- clean_chr(df)
   
   # Convert common NA strings to actual NA
   df <- df |> 
@@ -96,17 +101,65 @@ impute <- function(v) {
   return(v)
 }
 
-to_lower_case <- function(df) {
-  # Convert only character columns to lowercase
-  df |> 
-    mutate(
-      across(
-        where(is.character),
-        tolower
-      )
-    )
-}
+get_week_indices <- function(strings) {
+  # extract week numbers, months and years from dates
+  years_weeks <- ISOweek::ISOweek(strings)
+  years <- years_weeks |> sapply(substr, start = 1, stop = 4) |> as.numeric()
+  weeks <- years_weeks |> sapply(substr, start = 7, stop = 8) |> as.numeric()
+  months <- strings |> as.Date() |> format("%m") |> as.numeric()
 
+  # find year range
+  c(low, high) %<-% range(years)
+  all_years <- low:high
+
+
+  if(low == high) {
+    weeks_accum <- weeks
+    timeline_week <- min(weeks_accum):max(weeks_accum)
+    timeline_year <- rep(low, length(timeline_week))
+  } else {
+    # add offsets to week numbers in later years
+    weeks_per_year <- paste0(all_years, "-12-28") |>
+      ISOweek::ISOweek() |>
+      sapply(substr, start = 7, stop = 8) |>
+      as.numeric()
+
+    weeks_offset <- c(0, cumsum(weeks_per_year[1:(length(weeks_per_year)-1)]))
+    offsets <- years |> sapply(function(y) weeks_offset[which(all_years == y)])
+
+    weeks_accum <- weeks + offsets
+    weeks_accum <- weeks_accum - min(weeks_accum) + 1
+
+    # find all weeks between the earliest and most recent dates
+    start <- which.min(weeks_accum)
+    end <- which.max(weeks_accum)
+    year_start <- which(all_years == years[start])
+    year_end <- which(all_years == years[end])
+
+    # first year
+    timeline_week <- weeks[start]:weeks_per_year[year_start]
+    timeline_year <- rep(all_years[year_start], length(timeline_week))
+
+    # in-between year
+    for(year_ind in (year_start+1):(year_end-1)) {
+      timeline_week <- c(timeline_week, 1:weeks_per_year[year_ind])
+      timeline_year <- c(timeline_year, rep(all_years[year_ind], weeks_per_year[year_ind]))
+    }
+
+    # last year
+    timeline_week <- c(timeline_week, 1:weeks[end])
+    timeline_year <- c(timeline_year, rep(all_years[year_end], weeks[end]))
+  }
+
+  # get the start of each week
+  timeline_date <- mapply(function(y, w) sprintf("%d-W%02d-1", y, w),
+                          timeline_year,
+                          timeline_week) |>
+    ISOweek::ISOweek2date()
+
+
+  return(list(weeks_accum, timeline_date))
+}
 
 recode_values <- function(df, expected_levels) {
   # this function assumes that strings are already lower case
@@ -131,20 +184,6 @@ recode_values <- function(df, expected_levels) {
     )
   )
 
-  return(df)
-}
-
-as_factor <- function(df, levels) {
-  # Find columns that exist in both df and have defined levels
-  cols_to_convert <- intersect(names(df), names(levels))
-  
-  # Apply factor conversion to each column
-  for(col in cols_to_convert) {
-    if(!is.null(levels[[col]])) {
-      df[[col]] <- factor(df[[col]], levels = levels[[col]])
-    }
-  }
-  
   return(df)
 }
 
@@ -248,6 +287,20 @@ append_geo <- function(input_data, zip_county_state, link_geo, vars_global) {
     left_join(zip_county_state, by = link_geo)
 
   return(input_data)
+}
+
+as_factor <- function(df, levels) {
+  # Find columns that exist in both df and have defined levels
+  cols_to_convert <- intersect(names(df), names(levels))
+  
+  # Apply factor conversion to each column
+  for(col in cols_to_convert) {
+    if(!is.null(levels[[col]])) {
+      df[[col]] <- factor(df[[col]], levels = levels[[col]])
+    }
+  }
+  
+  return(df)
 }
 
 
@@ -552,7 +605,9 @@ stan_factor <- function(df, ignore_columns) {
   return(df)
 }
 
-### FOR GENERATING STATIC DATA ###
+# --------------------------------------------------------------------------
+# FOR GENERATING STATIC DATA
+# --------------------------------------------------------------------------
 create_zip_county_state <- function(zip_tract, fips_county_state) {
   # find the most common county for each zip code
   zip_county_state <- zip_tract |>
