@@ -148,13 +148,12 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     bslib::accordion_panel(
       title = "Workflow",
       value = "workflow",
-      tags$p("The interface offers several versions designed to handle different use cases and data types. The two main categories are ", tags$b("time-varying"), " and ", tags$b("cross-sectional"), ". Within each category, we support specific applications such as COVID data and polling data, as well as general cases."),
-      tags$p("Regardless of which version you choose, the application follows a standard statistical analysis workflow:"),
+      tags$p("The interface offers several versions designed to handle different use cases. The two main categories are ", tags$b("time-varying"), " and ", tags$b("cross-sectional"), ". Within each category, we support specific applications such as COVID data and polling data, as well as general cases. Regardless of which version you choose, the application follows a standard statistical analysis workflow:"),
       tags$ul(
-        tags$li(tags$b("Data Validation"), ": The interface validates and displays the input data."),
+        tags$li(tags$b("Data Inspection"), ": The interface validates and displays the input data."),
         tags$li(tags$b("Descriptive Statistics"), ": Visual representations of descriptive statistics are presented."),
-        tags$li(tags$b("Model Specification"), ": Users can specify and fit various models with different covariates and fixed/varying effects. Comprehensive diagnostics are provided to evaluate models, compare alternatives, and identify the optimal specification."),
-        tags$li(tags$b("Results Visualization"), ": Interactive graphs demonstrate estimates for the target population, including demographic and geographic subpopulations for the selected model.")
+        tags$li(tags$b("Model Building"), ": Users can specify and fit various models with different covariates and fixed/varying effects. Comprehensive diagnostics are provided to evaluate models, compare alternatives, and identify the optimal specification."),
+        tags$li(tags$b("Results Visualization"), ": Graphs demonstrate estimates for the target population as well as the demographic and geographic subpopulations for the selected model.")
       )
     ),
     
@@ -162,64 +161,84 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     bslib::accordion_panel(
       title = "Uploading Data",
       value = "upload",
-      tags$p("Example data templates are available in the 'Upload Data' tab.",
-            class = "fst-italic"),
       tags$p("The interface accepts data in two formats:",
             tags$ul(
               tags$li(tags$b("Individual-level"), ": Each row contains information about a single person"),
               tags$li(tags$b("Aggregated"), ": Each row contains population counts for unique combinations of relevant geographic-demographic factors (e.g., White males between 18-30 years old living in Michigan)")
+            )),
+      tags$p("The aggregated format is preferred due to its computational advantages. Individual-level data uploaded to the system is automatically converted to the aggregated format. Multilevel Regression and Poststratification (MRP) requires matching categorical values between the input data and the target population data (ACS data). Given this requirement, the interface currently expects the following categorizations in the input data:"),
+      tags$p("Note: The application follows a naming convention to faciliate handling of the input data. For some column names and categories, the expected values differs from conventional language and are provided in parentheses. Please refer to the example datasets in the 'Upload Data' tab.",
+        class = "fst-italic small"),
+      bslib::layout_columns(
+        col_widths = c(6, 6),
+
+        # Time-varying card
+        bslib::card(
+          bslib::card_header(tags$h4("Time-varying")),
+          bslib::card_body(
+            tags$h5("COVID Data"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
+              tags$li("ZIP code (zip): Each ZIP code is treated as a distinct category"),
+              tags$li("Time Information: Dates (yyyy-mm-dd) or week indices with index 1 assigned to the earliest week in the dataset**")
             ),
-            "The aggregated format is preferred due to its computational advantages. Individual-level data uploaded to the system is automatically converted to the aggregated format. Multilevel Regression and Poststratification (MRP) requires matching categorical values between the input data and the target population data (ACS data). Given this requirement, the interface currently expects the following categorizations in the input data (values in parentheses indicate the corresponding expected values):"),
-      
-      tags$h5("Cross-sectional > Poll Data", class = "fw-bold mt-3"),
-      tags$ul(
-        tags$li("Sex: male, female"),
-        tags$li("Race: Black, White, other"),
-        tags$li("Age: 18-29, 30-39, 40-49, 50-59, 60-69, 70+"),
-        tags$li("Education level: below high school (no hs), high school (hs), some college, 4-year college, post-grad"),
-        tags$li("State: Full state names (Michigan), standard abbreviations (MI), and FIPS codes (26) are all accepted")
+            
+            tags$h5("General", class = "mt-3"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
+              tags$li("ZIP code: Each ZIP code is treated as a distinct category*"),
+              tags$li("County: Each county is treated as a distinct category (5-digit FIPS codes required due to non-uniqueness of county names)*"),
+              tags$li("State: Full state names (Michigan), standard abbreviations (MI), and FIPS codes (26) are all accepted*"),
+              tags$li("Time Information: Dates (yyyy-mm-dd) or week indices with index 1 assigned to the earliest week in the dataset**")
+            )
+          )
+        ),
+        
+        # Cross-sectional card
+        bslib::card(
+          bslib::card_header(tags$h4("Cross-sectional")),
+          bslib::card_body(
+            tags$h5("Poll Data"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 18-29, 30-39, 40-49, 50-59, 60-69, 70+"),
+              tags$li("Education level (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad"),
+              tags$li("State: Full state names (Michigan), standard abbreviations (MI), and FIPS codes (26) are all accepted")
+            ),
+            
+            tags$h5("General", class = "mt-3"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
+              tags$li("ZIP code (zip): Each ZIP code is treated as a distinct category*"),
+              tags$li("County: Each county is treated as a distinct category (5-digit FIPS codes required due to non-uniqueness of county names)*"),
+              tags$li("State: Full state names (Michigan), standard abbreviations (MI), and FIPS codes (26) are all accepted*")
+            )
+          )
+        )
       ),
-      
-      tags$h5("Cross-sectional > General", class = "fw-bold mt-3"),
-      tags$ul(
-        tags$li("Sex: male, female"),
-        tags$li("Race: Black, White, other"),
-        tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-        tags$li("ZIP code: Each ZIP code is treated as a distinct category"),
-        tags$li("County: Each county is treated as a distinct category (5-digit FIPS codes required due to non-uniqueness of county names)"),
-        tags$li("State: Full state names (Michigan), standard abbreviations (MI), and FIPS codes (26) are all accepted")
-      ),
-      
-      tags$h5("Time-varying > COVID", class = "fw-bold mt-3"),
-      tags$ul(
-        tags$li("Sex: male, female"),
-        tags$li("Race: Black, White, other"),
-        tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-        tags$li("ZIP code: Each ZIP code is treated as a distinct category"),
-        tags$li("Week index: Test result dates are grouped into weeks, with index 1 assigned to the earliest week in the dataset. An optional column containing the date of the first day of each week can be included for visualization purposes. Currently, the only accepted date format is yyyy-mm-dd.")
-      ),
-      
-      tags$h5("Time-varying > General", class = "fw-bold mt-3"),
-      tags$ul(
-        tags$li("Sex: male, female"),
-        tags$li("Race: Black, White, other"),
-        tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-        tags$li("ZIP code: Each ZIP code is treated as a distinct category"),
-        tags$li("County: Each county is treated as a distinct category (5-digit FIPS codes required due to non-uniqueness of county names)"),
-        tags$li("State: Full state names (Michigan), standard abbreviations (MI), and FIPS codes (26) are all accepted"),
-        tags$li("Week index: Test result dates are grouped into weeks, with index 1 assigned to the earliest week in the dataset. An optional column containing the date of the first day of each week can be included for visualization purposes. Currently, the only accepted date format is yyyy-mm-dd.")
-      ),
-      
-      tags$p("For individual-level data, the interface attempts to convert raw values to the expected categories (e.g., numeric age to age bracket, date to week index) before grouping the data. Users may manually aggregate their raw data if the interface cannot preprocess it correctly or if they require more control over the process. Users familiar with R can download the preprocessing code from the Learn > Preprocess page and modify it as needed. The preprocessed or aggregated data must conform to the categorical values described above to be accepted by the system. Column names must also match expected formats, as the interface uses these to extract data from the input table. The application will automatically correct minor deviations such as letter case.")
+      tags$p("*For general use cases (not COVID data or poll data), geographic information are optional. The application will automatically identify the smallest geographic scale available and find the corresponding area for the larger scales. More details in the \"Geographic Identifers & Data Linking\" section below.",
+        class = "fst-italic small"),
+      tags$p("**If the input data is in aggregated format, it must contain a column named \"time\" that contains week indices. An optional \"date\" column containing the date of the first day of each week can be included for visualization purposes. For indiviudual-level data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly.",
+        class = "fst-italic small"),
+      tags$p("For individual-level data, the interface attempts to convert raw values to the expected categories (e.g., numeric age to age bracket, date to week index) before grouping the data. Users may manually aggregate their raw data if the interface cannot preprocess it correctly or if they require more control over the process. Users familiar with R can download the preprocessing code from the ", tags$b("Learn > Preprocess"), " page and modify it as needed."),
+      tags$h5("Geographic Indentifiers & Data Linking", class = "mt-3"),
+      tags$p("For the general versions of the interface, users can select the geographic scale for linking with the ACS data. Based on column names, the application find the smallest of the supported geographic scales (ZIP codes, county, and state) in the input data and infer large-scale geography. For example, if the input data contains ZIP codes, the application will automatically find the most overlapping county and state for each ZIP code. Based on the selected scale, the application computes the sizes of the subpopulations in the ACS data for poststratification."),
     ),
     
     # Model Selection panel
     bslib::accordion_panel(
-      title = "Model Selection",
+      title = "Model Specification",
       value = "model_spec",
       tags$p("The interface allows users to select predictors and their potential two-way interactions for inclusion in the model, and to specify prior distributions for model parameters. Predictors can include both individual-level and geographic-area-level measures."),
       
-      tags$h5("Default Priors", class = "fw-bold mt-3"),
+      tags$h5("Default Priors", class = "mt-3"),
       tags$p("The interface treats interaction terms involving nominal measures with more than two categories as varying effects. The model assumes varying effects follow a normal distribution with an unknown standard deviation. Under the Bayesian framework, the following prior distributions are assigned by default:"),
       tags$ul(
         tags$li("Overall intercept: ", withMathJax(sprintf("\\(%s\\)", GLOBAL$default_priors$Intercept))),
@@ -228,7 +247,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li("Standard deviation (interaction): ", withMathJax(sprintf("\\(%s\\)", gsub("\\(", "_+(", GLOBAL$default_priors$interaction))), "*")
       ),
       
-      tags$h5("Available Priors", class = "fw-bold mt-3"),
+      tags$h5("Available Priors", class = "mt-3"),
       tags$p("Prior specifications can be modified by users. The interface currently accepts the following distributions:"),
       tags$ul(
         tags$li("normal(mu, sigma)"),
@@ -245,14 +264,16 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
                     href = "https://arxiv.org/abs/1707.08220",
                     target = "_blank"),
             " which can be assigned to three types of two-way interactions:",
-            tags$ol(
-              tags$li("Two categorical variables (both with more than two levels)"),
-              tags$li("One categorical variable (with more than two levels) and one binary variable"),
-              tags$li("One categorical variable (with more than two levels) and one continuous variable")
-            ),
-            "This approach requires the main effect of the categorical variable with more than two levels to be included as a varying effect."),
+ 
+      ),
+      tags$ul(
+        tags$li("Two categorical variables (both with more than two levels)"),
+        tags$li("One categorical variable (with more than two levels) and one binary variable"),
+        tags$li("One categorical variable (with more than two levels) and one continuous variable")
+      ),
+      tags$p("This approach requires the main effect of the categorical variable with more than two levels to be included as a varying effect. Below is an example of the structured prior distribution for the two-way interaction of race and age:"),
       
-      tags$ul(class = "list-unstyled",
+      tags$ul(class = "list-unstyled mr-2",
         tags$li(withMathJax("Main effect of race: \\(normal(0, \\lambda_1\\sigma_{race})\\)")),
         tags$li(withMathJax("Main effect of age: \\(normal(0, \\lambda_1\\sigma_{age})\\)")),
         tags$li(withMathJax("Interaction of race and age: \\(normal(0, \\lambda_1\\lambda_2\\sigma_{age}\\sigma_{race}\\))")),
@@ -261,10 +282,10 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li(withMathJax("Local scale (\\(\\lambda_2\\)): \\(normal_+(0, 1)\\)"), "*")
       ),
       
-      tags$div(class = "text-muted small mt-3",
+      tags$div(class = "small mt-3",
               withMathJax("*The plus sign indicates that the distributions are restricted to positive values. For example, \\(normal_+(0, 3)\\) is a normal distribution with mean 0 and standard deviation of 3 restricted to positive values.")),
       
-      tags$div(class = "text-muted small mt-2",
+      tags$div(class = "small mt-2",
               withMathJax(sprintf("**The default priors for the global scale and local scale are \\(%s\\) and \\(%s\\) respectively. These cannot be changed at the moment.",
                                   gsub("\\(", "_+(", GLOBAL$default_priors$global_scale),
                                   gsub("\\(", "_+(", GLOBAL$default_priors$local_scale))))
@@ -275,7 +296,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       title = "Model Fitting",
       value = "model_fit",
       tags$p("The interface employs a Bayesian framework and implements Markov chain Monte Carlo (MCMC) algorithms for posterior computation via Stan. MCMC chains are run in parallel for computational efficiency, with the interface automatically allocating one processing core per chain. We recommend that users carefully specify the number of MCMC chains based on their available computing resources."),
-      tags$p("Detailed model specifications for spatio-temporal data (accounting for outcome measurement sensitivity and specification) and cross-sectional data are available on the Learn > MRP page.")
+      tags$p("Model details for time-varying data (including adjustment for outcome measurement sensitivity and specificity) and cross-sectional data are available on the ", tags$b("Learn > MRP"), " page.")
     )
   )
 }

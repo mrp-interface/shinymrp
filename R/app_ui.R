@@ -59,7 +59,7 @@ app_ui <- function(request) {
                 ),
                 conditionalPanel(
                   condition = "output.data_format == 'static_poll'",
-                  "Cross-sectional: With Education"
+                  "Cross-sectional: Poll"
                 ),
                 conditionalPanel(
                   condition = "output.data_format == 'static_other'",
