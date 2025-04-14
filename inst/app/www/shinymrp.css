@@ -1,4 +1,4 @@
-   a {
+  a {
     display: inline;
     word-break: break-all;
   }
@@ -9,7 +9,7 @@
 
   p {
     text-align: justify;
-    line-height: 1.8em;
+    line-height: 2em;
   }
   
   ul {
@@ -18,21 +18,6 @@
 
   text {
     font-family: helvetica,arial,sans-serif;
-  }
-  
-  summary {
-    display: list-item;
-    font-size: 1.4em;
-  }
-
-  .pad_top {
-    margin-top: 15px;
-    width: 100%;
-  }
-
-  .pad_bottom {
-    margin-bottom: 15px;
-    width: 100%;
   }
 
   .break_line {
@@ -142,20 +127,8 @@
   }
 
   .learn_mrp {
-    text-align: justify;
-    font-size: 1.05em;
-  }
-
-  .feedback_container {
-    position: fixed;
-    top: 0.6%;
-    left: 94%;
-    z-index: 1000;
-    width: 5.5%;
-  }
-
-  .feedback {
-    float: right;
+    /* text-align: justify; */
+    line-height: 2em;
   }
 
   .footnote_container {
@@ -177,33 +150,9 @@
     z-index: 1002;
   }
 
-  .button_icon {
-    margin-right: 5px;
-  }
-
-  .ref {
-    font-size: 0.9em;
-  }
   
   .guide_section_body * {
     margin: 5px 15px 5px 15px; 
-  }
-  
-  .guide_math {
-    margin: 10px 15px;
-  }
-  
-  .guide_subheader {
-    margin-top: 25px;
-    font-size: 1.15em;
-  }
-  
-  .learn_math {
-    margin-bottom: 10px;
-  }
-  
-  .learn_math * {
-    line-height: 1.5em;
   }
   
   .custom_label {
@@ -278,27 +227,6 @@
   .nav-item a {
     background: none;
     border: none;
-  }
-
-  .fullscreen-modal .modal-dialog {
-    max-width: 95% !important;
-    max-height: 95vh !important;
-    width: 95% !important;
-    margin: 10px auto;
-  }
-  
-  .fullscreen-modal .modal-content {
-    height: 95vh !important;
-  }
-  
-  .fullscreen-modal .modal-header {
-    background-color: #f8f9fa;
-  }
-  
-  /* Improve readability of instructions */
-  .fullscreen-modal p {
-    font-size: 16px;
-    line-height: 1.6;
   }
   
   
