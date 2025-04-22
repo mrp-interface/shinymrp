@@ -18,24 +18,54 @@ mod_analyze_result_ui <- function(id){
       # Select a model from available models.
       selectInput(
         inputId = ns("model_select"),
-        label = "Select a model",
+        label = "1. Select a model",
         choices = NULL
       ),
       # Select the result category.
       selectInput(
         inputId = ns("result_category"),
-        label = "Select result type",
-        choices = c("Raw vs MRP", "By Subgroup")
+        label = "2. Select result type",
+        choices = c("Raw vs MRP" = "overall", "By Subgroup" = "subgroup")
       ),
       # If user selects "By Subgroup", show subgroup choice.
       conditionalPanel(
-        condition = sprintf("input['%s'] == 'By Subgroup'", ns("result_category")),
+        condition = sprintf("input['%s'] == 'subgroup'", ns("result_category")),
         selectInput(
           inputId = ns("subgroup_select"),
-          label = "Select subgroup",
-          choices = c("Sex", "Race", "Age", "Education", "Geography")
+          label = "3. Select subgroup",
+          choices = NULL
+        ),
+        # If user selects "Geography", show geographic scale choice.
+        conditionalPanel(
+          condition = sprintf("input['%s'] == 'geo'", ns("subgroup_select")),
+          bslib::card(
+            bslib::card_header("Options for Geographic Subgroup"),
+            bslib::card_body(
+              selectizeInput(
+                inputId = ns("geo_scale_select"),
+                label = "Select geographic scale",
+                choices = NULL
+              ),
+              selectizeInput(
+                inputId = ns("geo_view_select"),
+                label = "Select plot type",
+                choices = c("Map" = "map", "Line/Scatter Plot" = "line_scatter"),
+                options = list(dropdownParent = "body")
+              ),
+              conditionalPanel(
+                condition = sprintf("input['%s'] == 'line_scatter'", ns("geo_view_select")),
+                selectizeInput(
+                  inputId = ns("geo_unit_select"),
+                  label = "Select one or more",
+                  choices = NULL,
+                  multiple = TRUE,
+                  options = list(dropdownParent = "body")
+                )
+              )
+            )
+          )
         )
-      )
+      ),
     ),
     uiOutput(ns("result_output"))
   )
@@ -56,18 +86,6 @@ mod_analyze_result_server <- function(id, global){
     # Buffer to preserve selection.
     model_select_buffer <- reactive(input$model_select)
 
-    # Reactive to determine the selected geographic scale.
-    selected_scale <- reactive({
-      req(selected_model())
-
-      if(selected_model()$data_format == "temporal_covid") {
-        "county"
-      } else if (selected_model()$data_format == "static_poll") {
-        "state"
-      } else {
-        input$geo_scale_select
-      }
-    })
 
     # Create reactive outputs for dynamic conditionals.
     output$no_geo <- reactive(is.null(selected_model()$link_data$link_geo))
@@ -82,7 +100,14 @@ mod_analyze_result_server <- function(id, global){
     mod_est_plot_server("est_race", selected_model, "race")
     mod_est_plot_server("est_age", selected_model, "age")
     mod_est_plot_server("est_edu", selected_model, "edu")
-    
+    mod_est_map_server(
+      "est_geo",
+      selected_model,
+      global,
+      reactive(tolower(input$geo_scale_select)),
+      reactive(input$geo_view_select),
+      reactive(input$geo_unit_select)
+    )
     
     # --------------------------------------------------------------------------
     # Overall plot for Raw vs MRP
@@ -118,98 +143,21 @@ mod_analyze_result_server <- function(id, global){
       result_category <- isolate(input$result_category)
       subgroup_select <- isolate(input$subgroup_select)
 
-      if (result_category == "Raw vs MRP") {
+      if (result_category == "overall") {
         plotOutput(ns("est_overall"), height = GLOBAL$ui$plot_height)
-      } else if (result_category == "By Subgroup") {
+      } else if (result_category == "subgroup") {
         switch(subgroup_select,
-          "Sex" = mod_est_plot_ui(ns("est_sex")),
-          "Race" = mod_est_plot_ui(ns("est_race")),
-          "Age" = mod_est_plot_ui(ns("est_age")),
-          "Education" = mod_est_plot_ui(ns("est_edu")),
-          "Geography" = tagList(
-            # Show message if geographic data is not available.
-            conditionalPanel(
-              condition = sprintf("output['%s']", ns("no_geo")),
-              tags$p("Map unavailable", class = "alt_text")
-            ),
-            conditionalPanel(
-              condition = sprintf("output['%s'] == 'temporal_other' || output['%s'] == 'static_other'", ns("data_format"), ns("data_format")),
-              selectInput(
-                inputId = ns("geo_scale_select"),
-                label = "Select geographic scale",
-                choices = NULL
-              )
-            ),
-            plotly::plotlyOutput(ns("est_geo_map"), height = "700px"),
-            conditionalPanel(
-              condition = sprintf("output['%s'] == 'temporal_covid' || output['%s'] == 'temporal_other'", ns("data_format"), ns("data_format")),
-              selectizeInput(
-                inputId = ns("geo_select"),
-                label = "Select one or more counties (max = 5)",
-                choices = NULL,
-                multiple = TRUE,
-                options = list(maxItems = 5)
-              )
-            ),
-            plotOutput(ns("est_geo_plot"))
-          )
+          "sex" = mod_est_plot_ui(ns("est_sex")),
+          "race" = mod_est_plot_ui(ns("est_race")),
+          "age" = mod_est_plot_ui(ns("est_age")),
+          "edu" = mod_est_plot_ui(ns("est_edu")),
+          "geo" = mod_est_map_ui(ns("est_geo"))
         )
       }
     })
     
     # --------------------------------------------------------------------------
-    # Plot for geographic map (MRP estimates)
-    # --------------------------------------------------------------------------
-    output$est_geo_map <- plotly::renderPlotly({
-      req(selected_model())
-
-      geo <- selected_scale()
-      selected_model()$est[[geo]] |>
-        prep_est(
-          fips_codes = global$extdata$fips[[geo]],
-          geo = geo,
-          dates = if("dates" %in% names(selected_model()$plotdata)) selected_model()$plotdata$dates else NULL
-        ) |>
-        mutate(value = est) |>
-        choro_map(
-          selected_model()$plotdata$geojson[[geo]],
-          map_title = "MRP Estimate of Positive Response Rate",
-          colorbar_title = "Positive\nResponse\nRate",
-          geo = geo
-        ) |>
-        suppressWarnings()
-    })
-    
-    # --------------------------------------------------------------------------
-    # Plot for geographic subgroup estimates (subset plots)
-    # --------------------------------------------------------------------------
-    output$est_geo_plot <- renderPlot({
-      req(selected_model())
-
-      geo <- selected_scale()
-      fips_df <- global$extdata$fips[[geo]] |> fips_upper()
-
-      plof_df <- selected_model()$est[[geo]] |>
-        rename("fips" = "factor") |>
-        left_join(fips_df, by = "fips") |>
-        rename("factor" = geo)
-      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
-        plof_df |>
-          filter(factor %in% input$geo_select) |>
-          plot_est_temporal(selected_model()$plotdata$dates)
-      } else {
-        plof_df |> plot_est_static()
-      }
-    }, height = function() {
-      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
-        GLOBAL$ui$subplot_height * (length(input$geo_select) + 1)
-      } else {
-        GLOBAL$ui$plot_height
-      }
-    })
-    
-    # --------------------------------------------------------------------------
-    # Update model selection when user navigates to the Results page.
+    # Update model selection when user navigates to the result tab.
     # --------------------------------------------------------------------------
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_result") {
@@ -244,52 +192,45 @@ mod_analyze_result_server <- function(id, global){
     observeEvent(selected_model(), {
       req(selected_model())
 
-      if(input$model_select != "") {
+      if(!is.null(nullify(input$model_select))) {
         # Update the subgroup select options.
-        choices <- switch(selected_model()$data_format,
-          "static_poll" = c("Sex", "Race", "Age", "Education", "Geography"),
-          c("Sex", "Race", "Age", "Geography")
-        )
-        updateSelectInput(session, inputId = "subgroup_select", choices = choices, selected = choices[1])
+        choices <- GLOBAL$ui$plot_selection$subgroup
+        if(selected_model()$data_format != "static_poll") {
+          choices <- choices[!choices %in% "edu"]
+        }
+        if(is.null(selected_model()$link_data$link_geo)) {
+          choices <- choices[!choices %in% "geo"]
+        }
+        updateSelectInput(session, inputId = "subgroup_select", choices = choices)
 
         # Update the geographic scale select options.
         choices <- intersect(names(selected_model()$est), GLOBAL$vars$geo)
-        updateSelectInput(session, inputId = "geo_scale_select", choices = choices, selected = choices[1])
-
+        choices <- setNames(choices, tools::toTitleCase(choices))
+        updateSelectInput(session, inputId = "geo_scale_select", choices = choices)
       }
     })
-    
+  
 
-    # ---------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # Update county selection when geographic scale changes.
-    # ---------------------------------------------------------------------------
-    observeEvent(selected_scale(), {
-      req(selected_scale())
-
-      geo <- selected_scale()
-      if(geo != "") {
+    # --------------------------------------------------------------------------
+    observeEvent(input$geo_scale_select, {
+      req(input$geo_scale_select)
+      
+      geo <- isolate(input$geo_scale_select)
+      if(!is.null(nullify(geo))) {
         fips_df <- global$extdata$fips[[geo]] |>
           filter(fips %in% selected_model()$mrp$levels[[geo]]) |>
           fips_upper()
         choices <- sort(fips_df[[geo]])
-        updateSelectInput(session, inputId = "geo_select", choices = choices, selected = choices[1])
+        updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
       }
     })
+    
     
     # --------------------------------------------------------------------------
     # Navigation modal events for data/model errors.
     # --------------------------------------------------------------------------
-    observeEvent(global$input$navbar_analyze, {
-      if(global$input$navbar_analyze == "nav_analyze_result" &&
-         is.null(global$mrp)) {
-        showModal(modalDialog(
-          title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-          "Invalid input data.",
-          footer = actionButton(inputId = ns("to_upload"), label = "Go to data upload page")
-        ), session = global$session)
-      }
-    })
-    
     observeEvent(input$to_upload, {
       updateTabsetPanel(global$session, inputId = "navbar_analyze", selected = "nav_analyze_upload")
       removeModal(global$session)

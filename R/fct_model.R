@@ -740,7 +740,7 @@ run_mcmc <- function(
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)
   }
-  
+
   mod_mcmc <- cmdstanr::cmdstan_model(
     stan_file = cmdstanr::write_stan_file(stan_code$mcmc),
     cpp_options = list(stan_threads = TRUE)
@@ -768,17 +768,21 @@ run_gq <- function(
     n_chains
   ) {
   
-  mod_gq <- cmdstanr::cmdstan_model(
-    stan_file = cmdstanr::write_stan_file(stan_code),
-    cpp_options = list(stan_threads = TRUE)
-  )
+  suppressMessages({
+    mod_gq <- cmdstanr::cmdstan_model(
+      stan_file = cmdstanr::write_stan_file(stan_code),
+      cpp_options = list(stan_threads = TRUE)
+    )
+  })
   
-  fit_gq <- mod_gq$generate_quantities(
-    fit_mcmc,
-    data = stan_data,
-    parallel_chains = n_chains,
-    threads_per_chain = 1
-  )
+  capture.output({
+    fit_gq <- mod_gq$generate_quantities(
+      fit_mcmc,
+      data = stan_data,
+      parallel_chains = n_chains,
+      threads_per_chain = 1
+    )
+  })
   
   return(fit_gq)
 }

@@ -131,8 +131,47 @@ GLOBAL <- list(
     chain_range = c(1, 8),
     plot_height = 500,
     subplot_height = 300,
-    small_map_height = 500,
-    large_map_height = 800
+    map_height = 700,
+    date_format = "%b%d\n%Y",
+    animation = list(
+      duration = 1000,
+      delay = 100
+    ),
+    plot_selection = list(
+      vis_main = c(
+        "Individual Characteristics" = "indiv",
+        "Geographic Characteristics" = "geo",
+        "Positive Response Rate" = "pos_rate"
+      ),
+      indiv = c(
+        "Sex" = "sex",
+        "Race" = "race",
+        "Age" = "age",
+        "Education" = "edu"
+      ),
+      geo = c(
+        "Sample Size" = "sample"
+      ),
+      geo_covar = c(
+        "Education" = "edu",
+        "Poverty" = "poverty",
+        "Employment" = "employ", 
+        "Income" = "income",
+        "Urbanicity" = "urban",
+        "ADI" = "adi"
+      ),
+      pos_rate = c(
+        "Overall" = "overall",
+        "By Geography" = "by_geo"
+      ),
+      subgroup = c(
+        "Sex" = "sex",
+        "Race" = "race",
+        "Age" = "age",
+        "Education" = "edu",
+        "Geography" = "geo"
+      )
+    )
   ),
   default_priors = list(
     Intercept = "normal(0, 5)",

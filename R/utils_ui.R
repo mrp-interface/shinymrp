@@ -67,24 +67,6 @@ check_fit_object <- function(model, expected_format, expected_link_geo) {
   return(message)
 }
 
-create_text_box <- function(title, content) {
-  tags$div(
-    class = "panel panel-default",
-    tags$div(
-      class = "panel-heading",
-      title
-    ),
-    tags$div(
-      class = "panel-body",
-      content
-    )
-  )
-}
-
-create_drag_item <- function(s) {
-  HTML(paste0("<p><span class='glyphicon glyphicon-move'></span> <strong>", s, "</strong></p>"))
-}
-
 waiter_ui <- function(type = "") {
   if(type == "fit") {
     tagList(
@@ -231,6 +213,20 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       tags$h5("Geographic Indentifiers & Data Linking", class = "mt-3"),
       tags$p("For the general versions of the interface, users can select the geographic scale for linking with the ACS data. Based on column names, the application find the smallest of the supported geographic scales (ZIP codes, county, and state) in the input data and infer large-scale geography. For example, if the input data contains ZIP codes, the application will automatically find the most overlapping county and state for each ZIP code. Based on the selected scale, the application computes the sizes of the subpopulations in the ACS data for poststratification."),
     ),
+
+    # Plot Selection panel
+    bslib::accordion_panel(
+      title = "Plot Selection",
+      value = "plot_select",
+      tags$p("The application maintains a consistent visual layout throughout the workflow. Both the descriptive statistics visualization and estimation results sections feature a sidebar with responsive selection inputs. Users navigate these options in a hierarchical manner:"),
+      tags$ol(
+        tags$li("Begin by selecting a main plot category at the top"),
+        tags$li("Progress downward to select relevant sub-categories as they appear"),
+        tags$li("For geographic visualizations, additional customization options are provided in a visually distinct container, including different plot type selections and data subsetting capabilities.")
+      ),
+      tags$p("The available selection options vary based on which interface version was chosen on the home page. For instance, histograms depicting geographic covariates such as the Area Deprivation Index (ADI) are exclusively available when working with COVID-19 data.")
+    ),
+
     
     # Model Selection panel
     bslib::accordion_panel(
@@ -296,6 +292,11 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       title = "Model Fitting",
       value = "model_fit",
       tags$p("The interface employs a Bayesian framework and implements Markov chain Monte Carlo (MCMC) algorithms for posterior computation via Stan. MCMC chains are run in parallel for computational efficiency, with the interface automatically allocating one processing core per chain. We recommend that users carefully specify the number of MCMC chains based on their available computing resources."),
+      tags$p("Applying Multilevel Regression and Poststratification (MRP) with complex models to large datasets can result in extensive computation times, depending on available resources. The application addresses this challenge through two key approaches:"),
+      tags$ul(
+        tags$li("Separated stages: The Multilevel Regression (MR) and Poststratification (P) components are separated, allowing users to evaluate their model before proceeding to the poststratification phase. The application supports saving estimation results at either stage of the process."),
+        tags$li("Optimized computation: Poststratification calculations are executed through Stan, which is implemented in C++ and optimized for computational efficiency, significantly reducing runtime requirements.")
+      ),
       tags$p("Model details for time-varying data (including adjustment for outcome measurement sensitivity and specificity) and cross-sectional data are available on the ", tags$b("Learn > MRP"), " page.")
     )
   )
@@ -338,26 +339,29 @@ create_model_tab <- function(ns, model, last_tab_id) {
       value = model$IDs$tab,
       tags$div(class = "pad_top",
         bslib::layout_columns(
-          col_widths = c(10, 2),
-          HTML(paste0("<h4>", "Formula: ", model$formula, "</h4>")),
-          tags$div(style = "float: right;",
-            dropdown(
-              label = "Save Model",
-              circle = FALSE,
-              block = TRUE,
-              width = "100%",
+          col_widths = c(11, 1),
+          class = "mb-0",
+          HTML(paste0("<h4 class='formula'>", "Formula: ", model$formula, "</h4>")),
+          tags$div(
+            bslib::popover(
+              actionButton(
+                inputId = ns(paste0(model$IDs$tab, "_save")),
+                label = "Save",
+                class = "btn-block"
+              ),
+              title = "Save Options",
               downloadButton(
                 outputId = ns(model$IDs$save_code_btn),
-                label = "Code",
-                icon = icon("download", "fa"),
-                style = "width: 100%; margin-bottom: 5px; padding: 0px auto;"
+                label = "Model Code",
+                style = "width: 100%; margin-bottom: 5px;"
               ),
               downloadButton(
                 outputId = ns(model$IDs$save_fit_btn),
-                label = "Result",
+                label = "Estimation Result",
                 icon = icon("download", "fa"),
-                style = "width: 100%; padding: 0px auto;"
-              )
+                style = "width: 100%;"
+              ),
+              placement = "left"
             )
           )
         ),

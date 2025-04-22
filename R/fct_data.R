@@ -40,7 +40,7 @@ clean_data <- function(
 
   # Convert character columns to lowercase and trim whitespace
   df <- clean_chr(df)
-  
+
   # Convert common NA strings to actual NA
   df <- df |> 
     mutate(across(everything(), 
@@ -161,6 +161,16 @@ get_week_indices <- function(strings) {
   return(list(weeks_accum, timeline_date))
 }
 
+get_dates <- function(df) {
+  df$date |>
+    na.omit() |>
+    unique() |>
+    as.Date() |>
+    sort() |>
+    format(GLOBAL$ui$date_format) |>
+    as.character()
+}
+
 recode_values <- function(df, expected_levels) {
   # this function assumes that strings are already lower case
   ranges <- expected_levels$age
@@ -191,19 +201,17 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
   if(is.null(geojson) | is.null(geoids)) {
     return(NULL)
   }
-  
-  all_areas <- geojson$features
-  geojson$features <- if(omit) {
-    purrr::keep(all_areas, function(c) !c$properties$GEOID %in% geoids)
-  } else {
-    purrr::keep(all_areas, function(c) c$properties$GEOID %in% geoids)
-  }
+
+  geojson$features <- purrr::keep(
+    geojson$features,
+    function(f) !is.null(nullify(f$properties$fips)) && f$properties$fips %in% geoids
+  )
 
   return(geojson)
 }
 
 fix_geocode <- function(df) {
-  if("zip" %in% names(df) & is.numeric(df$zip)) {
+  if("zip" %in% names(df) && is.numeric(df$zip)) {
     df$zip <- sprintf("%05d", df$zip)
   }
 

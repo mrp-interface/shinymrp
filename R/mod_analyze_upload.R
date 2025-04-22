@@ -25,9 +25,9 @@ mod_analyze_upload_ui <- function(id) {
       fileInput(ns("input_data"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
       uiOutput(ns("input_feedback")),
       p(class = "mt-0 small",
-        "For", tags$u("requirements for input data"), "and preprocessing code, open",
-        actionLink(ns("show_upload_guide"), label = "Guide."),
-        "For a detailed description of the preprocessing procedure, go to the",
+        "For", tags$u("input data requirements,"), "open the",
+        actionLink(ns("show_upload_guide"), label = "User Guide."),
+        "For a detailed description of the preprocessing procedure and examples of preprocessing code, go to the",
         actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
       ),
       div(class = "mt-4",
@@ -130,28 +130,13 @@ mod_analyze_upload_server <- function(id, global){
       
       if (length(input_errors()) > 0) {
         tags$div(
-          class = "panel panel-danger",
-          tags$div(
-            class = "panel-heading",
-            tagList(icon("circle-xmark", "fa"), "Error")
-          ),
-          tags$div(
-            class = "panel-body",
-            tags$p("Input data does not meet all requirements. Please check Guide (bottom right corner) for input data requirements.")
-          )
+          tagList(icon("circle-xmark", "fa"), "Error"),
+          tags$p("Input data does not meet all requirements. Please check the user guide for input data requirements.", class = "small"),
         )
-          
       } else {
         tags$div(
-          class = "panel panel-success",
-          tags$div(
-            class = "panel-heading",
-            tagList(icon("circle-check", "fa"), "Success")
-          ),
-          tags$div(
-            class = "panel-body",
-            tags$p("All requirements are met. You may proceed to data linking or the next page.")
-          )
+          tagList(icon("circle-check", "fa"), "Success"),
+          tags$p("All requirements are met. You may proceed to data linking or the next page.", class = "small")
         )
       }
     })
@@ -228,7 +213,9 @@ mod_analyze_upload_server <- function(id, global){
           # Clean data
           data <- clean_data(rawdata())
 
-          data <- if(global$data_format == "temporal_covid") {
+          # Find and rename columns
+          data <- if(global$data_format == "temporal_covid" &&
+                      input$toggle_input == "indiv") {
             rename_columns_covid(data)
           } else {
             rename_columns(data)
@@ -334,7 +321,6 @@ mod_analyze_upload_server <- function(id, global){
       link_status(NULL)
 
       if(!is.null(global$data)) {
-
         if(global$data_format == "temporal_covid") {
           c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
             global$data,

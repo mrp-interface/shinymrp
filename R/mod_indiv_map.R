@@ -10,25 +10,19 @@
 mod_indiv_map_ui <- function(id) {
   ns <- NS(id)
   
-  tagList(
-    # Conditionally display a message if no geographic map is available
-    conditionalPanel(
-      condition = sprintf("output['%s']", ns("no_geo")),
-      p("Map unavailable", class = "alt_text")
-    ),
-    conditionalPanel(
-      condition = sprintf("!output['%s']", ns("no_geo")),
-      bslib::layout_columns(
-        col_widths = c(9, 3),
-        plotly::plotlyOutput(
-          outputId = ns("sample_size_map"), 
-          height = GLOBAL$ui$small_map_height,
-          width = "100%"
-        ),
-        DT::dataTableOutput(
-          outputId = ns("sample_size_table")
-        )
+  bslib::layout_sidebar(
+    sidebar = bslib::sidebar(
+      width = 350,
+      position = "right",
+      open = TRUE,
+      DT::dataTableOutput(
+        outputId = ns("sample_size_table")
       )
+    ),
+    highcharter::highchartOutput(
+      outputId = ns("sample_size_map"), 
+      height = GLOBAL$ui$map_height,
+      width = "100%"
     )
   )
 }
@@ -40,14 +34,8 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    # Flag to indicate if geographic data is available
-    output$no_geo <- reactive({
-      is.null(link_geo())
-    })
-    outputOptions(output, "no_geo", suspendWhenHidden = FALSE)
-    
     # Render the sample size map
-    output$sample_size_map <- plotly::renderPlotly({
+    output$sample_size_map <- highcharter::renderHighchart({
       req(link_geo())
 
       geo <- if(link_geo() == "zip") "county" else link_geo()
@@ -61,8 +49,8 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
         mutate(value = count) |>
         choro_map(
           geojson()[[geo]],
-          map_title = sprintf("Sample Size Map"),
-          colorbar_title = "Sample\nSize",
+          main_title = sprintf("Sample Size Map"),
+          sub_title = "Sample Size",
           geo = geo
         )
     })

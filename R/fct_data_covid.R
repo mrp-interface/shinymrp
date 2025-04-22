@@ -75,17 +75,6 @@ aggregate_covid <- function(
   return(patient)
 }
 
-
-get_dates <- function(df) {
-  df$date |>
-    na.omit() |>
-    unique() |>
-    as.Date() |>
-    sort() |>
-    format("%d%b\n%Y") |>
-    as.character()
-}
-
 filter_state_zip <- function(
     patient,
     covariates,
