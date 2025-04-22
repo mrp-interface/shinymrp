@@ -8,7 +8,7 @@
   }
 
   p {
-    text-align: justify;
+    /* text-align: justify; */
     line-height: 2em;
   }
   
@@ -18,6 +18,10 @@
 
   text {
     font-family: helvetica,arial,sans-serif;
+  }
+
+  .formula {
+    margin-top: 15px;
   }
 
   .break_line {
@@ -126,11 +130,6 @@
     display: inline;
   }
 
-  .learn_mrp {
-    /* text-align: justify; */
-    line-height: 2em;
-  }
-
   .footnote_container {
     position: fixed;
     top: 96%;
@@ -228,5 +227,31 @@
     background: none;
     border: none;
   }
+
+  /* SLIDER STYLES */
+  /* main label above the slider */
+  #my_date_label,  /* or use .control-label for all sliders */
+  label[for='my_date'] {
+    font-size: 14px !important;
+  }
+
+  /* the grid / tick labels under the slider track */
+  .js-irs-0 .irs-grid-text {
+    font-size: 13px !important;
+  }
+
+  /* the min / max labels at ends */
+  .js-irs-0 .irs-min, 
+  .js-irs-0 .irs-max {
+    font-size: 13px !important;
+  }
+
+  /* the popup single‐value tooltip */
+  .js-irs-0 .irs-single {
+    font-size: 14px !important;
+  }
+  
+  
+  
   
   

@@ -34,7 +34,8 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
     group_by(fips) |>
     summarize(
       count = sum(total),
-      perc = (sum(total) / total_count) * 100
+      perc = (sum(total) / total_count) * 100,
+      value = count
     ) |>
     left_join(fips_codes, by = "fips")
 
@@ -46,8 +47,8 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
       )
     } else {
       plot_df <- plot_df |> mutate(
-        hover = sprintf("%s\n%s\nSample size: %d (%.2f%%)",
-                        state_name, county, count, perc)
+        hover = sprintf("%s (%s): %d (%.2f%%)",
+                        county, state, count, perc)
       )
     }
   } else {
@@ -84,17 +85,18 @@ prep_raw_support <- function(
     summarize(
       num = sum(positive),
       denom = sum(total),
-      support = round(sum(positive) / sum(total), 4)
+      support = sum(positive) / sum(total),
+      value = support
     ) |>
     left_join(fips_codes, by = "fips")
 
   if(geo == "state") {
     plot_df <- plot_df |> mutate(
-      hover = paste0(state, ": ", support, "\n(", num, "/", denom, ")")
+      hover = paste0(state, ": ", round(support, 4), " | (", num, "/", denom, ")")
     )
   } else {
     plot_df <- plot_df |> mutate(
-      hover = paste0(county, " (", state, "):\n", support, " (", num, "/", denom, ")")
+      hover = paste0(county, " (", state, "): | ", round(support, 4), " (", num, "/", denom, ")")
     )
   }
 
@@ -104,10 +106,12 @@ prep_raw_support <- function(
 prep_raw_prev <- function(
     input_data,
     fips_codes,
-    geo = c("county", "state")
+    geo = c("county", "state"),
+    extreme_type = c("max", "min")
 ) {
   geo <- match.arg(geo)
-
+  extreme_type <- match.arg(extreme_type)
+  
   if(is.null(input_data)) {
     return(NULL)
   }
@@ -123,36 +127,42 @@ prep_raw_prev <- function(
       tests = sum(total)
     )
 
-  # compute max and min weekly positive response rate for each county
+  # compute only the requested extreme value (min or max)
+  if(extreme_type == "max") {
+    extreme_fn <- max
+    label <- "Highest"
+    which_fn <- which.max
+  } else {
+    extreme_fn <- min
+    label <- "Lowest"
+    which_fn <- which.min
+  }
+  
+  # compute the extreme prevalence value
   plot_df <- plot_df |>
     group_by(fips) |>
     summarize(
-      max_prev = max(prev),
-      min_prev = min(prev),
-      max_prev_sample = tests[which.max(prev)],
-      min_prev_sample = tests[which.min(prev)]
+      prev_value = extreme_fn(prev),
+      prev_sample = tests[which_fn(prev)],
+      value = prev_value
     ) |>
     left_join(fips_codes, by = "fips")
 
+  # Create hover text
   if(geo == "state") {
     plot_df <- plot_df |> mutate(
       hover = paste0(
-        state_name, '\n',
-        "Highest: ", round(max_prev, 4),
-        " (", round(max_prev_sample * max_prev), '/', max_prev_sample, ")\n",
-        "Lowest: ", round(min_prev, 4),
-        " (", round(min_prev_sample * min_prev), '/', min_prev_sample, ")\n"
+        state, ": ", round(prev_value, 4),
+        " (", round(prev_sample * prev_value), '/', prev_sample, ")"
       )
     )
   } else {
-    plot_df <- plot_df |> mutate(hover = paste0(
-      state_name, '\n',
-      county, '\n',
-      "Highest: ", round(max_prev, 4),
-      " (", round(max_prev_sample * max_prev), '/', max_prev_sample, ")\n",
-      "Lowest: ", round(min_prev, 4),
-      " (", round(min_prev_sample * min_prev), '/', min_prev_sample, ")\n"
-    ))
+    plot_df <- plot_df |> mutate(
+      hover = paste0(
+        county, " (", state, "): ", round(prev_value, 4),
+        " (", round(prev_sample * prev_value), '/', prev_sample, ")"
+      )
+    )
   }
 
   return(plot_df)
@@ -162,7 +172,7 @@ prep_est <- function(
     est_df,
     fips_codes,
     geo = c("county", "state"),
-    dates = NULL
+    time_index = NULL
 ) {
   geo <- match.arg(geo)
 
@@ -170,37 +180,27 @@ prep_est <- function(
     return(NULL)
   }
 
-  est_df <- est_df |> mutate(fips = factor)
   fips_codes <- fips_codes |> fips_upper()
   
-  if("time" %in% names(est_df)) {
-    sq <- 1:max(est_df$time, na.rm = TRUE)
-    est_df <- est_df |> mutate(
-      time = factor(
-        time,
-        levels = sq,
-        labels = if(!is.null(dates)) dates else paste0("Week ", sq)
-      )
-    )
+  if(!is.null(time_index)) {
+    est_df <- est_df |> filter(time == time_index)
   }
 
-  plot_df <- est_df |> left_join(fips_codes, by = "fips")
+  plot_df <- est_df |>
+    rename("fips" = "factor") |>
+    mutate(value = est) |>
+    left_join(fips_codes, by = "fips")
 
   if(geo == "state") {
     plot_df <- plot_df |> mutate(
       hover = paste0(
-        state_name, '\n',
-        "Estimate: ", round(est, 4), '\n',
-        "Standard error: ", round(std, 4)
+        state, ": ", round(est, 4), ' ± ', round(std, 4)
       )
     )
   } else {
     plot_df <- plot_df |> mutate(
       hover = paste0(
-        state_name, '\n',
-        county, '\n',
-        "Estimate: ", round(est, 4), '\n',
-        "Standard error: ", round(std, 4)
+        county, " (", state, "): ", round(est, 4), ' ± ', round(std, 4)
       )
     )
   }
@@ -811,61 +811,44 @@ plot_est_static <- function(plot_df) {
 
 choro_map <- function(
     plot_df,
-    map_geojson,
-    map_title,
-    colorbar_title,
-    geo
+    geojson,
+    main_title,
+    sub_title,
+    geo,
+    config = NULL
 ) {
-
-  # Validate inputs
-  if (is.null(map_geojson) || is.null(plot_df)) {
-    stop("Missing required geojson or plot data")
+  if(is.null(plot_df) || is.null(geojson)) {
+    return(NULL)
   }
 
-  has_ak_hi <- FALSE
-  if(geo == "state") {
-    states_in_data <- unique(plot_df$fips)
-    ak_hi <- c("02", "15")
-    has_ak_hi <- length(intersect(states_in_data, ak_hi)) > 0
+  # build the chart
+  hc <- highcharter::highchart(type = "map") |>
+    highcharter::hc_add_series_map(
+      map        = geojson,
+      df         = plot_df,
+      joinBy     = c("fips", "fips"),
+      value      = "value",
+      name       = sub_title,
+      dataLabels = list(enabled = TRUE, format = "{point.name}"),
+      tooltip    = list(
+        pointFormat = "{point.hover}"
+      ),
+      borderWidth= 0.1
+    ) |>
+    highcharter::hc_title(
+      text = main_title,
+      align = "center",
+      style = list(fontSize = "20px")
+    ) |>
+    highcharter::hc_mapNavigation(enabled = TRUE)
+
+  if(!is.null(config$minValue) && !is.null(config$maxValue)) {
+    hc <- hc |>
+      highcharter::hc_colorAxis(
+        min = config$minValue,
+        max = config$maxValue
+      )
   }
 
-  # Create the plot
-  fig <- plotly::plot_ly(
-    frame = if("time" %in% names(plot_df)) plot_df$time else NULL
-  ) |>
-    plotly::add_trace(
-      type = "choropleth",
-      geojson = map_geojson,
-      locations = plot_df$fips,
-      z = plot_df$value,
-      zmin = 0,
-      zmax = max(plot_df$value, na.rm = TRUE),
-      featureidkey = "properties.GEOID",
-      colorscale = "Electric",
-      text = plot_df$hover,
-      hoverinfo = "text"
-    ) |>
-    plotly::layout(
-      geo = list(
-        fitbounds = if(has_ak_hi) NULL else "geojson",
-        scope = "usa",
-        projection = list(type = 'albers usa'),
-        visible = FALSE
-      ),
-      title = list(
-        text = map_title,
-        xref = "paper",
-        x = 0.5
-      ),
-      dragmode = FALSE
-    ) |>
-    plotly::colorbar(
-      title = colorbar_title,
-      thickness = 25
-    ) |>
-    plotly::config(
-      displayModeBar = FALSE
-    )
-
-  return(fig)
+  return(hc)
 }

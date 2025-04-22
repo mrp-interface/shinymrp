@@ -9,10 +9,14 @@
 #' @importFrom shiny NS tagList 
 mod_geo_plot_ui <- function(id) {
   ns <- NS(id)
-  bslib::layout_columns(
-    col_widths = c(9, 3),
-    plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot_height),
-    DT::dataTableOutput(outputId = ns("table"))
+  bslib::layout_sidebar(
+    sidebar = bslib::sidebar(
+      width = 350,
+      position = "right",
+      open = TRUE,
+      DT::dataTableOutput(outputId = ns("table"))
+    ),
+    plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot_height)
   )
 }
     
@@ -56,6 +60,7 @@ mod_geo_plot_server <- function(id, data, varname, config){
       data() |>
         mutate(measure = round(!!sym(varname), decimal_places)) |>
         select(zip, measure) |>
+        rename("ZIP Code" = "zip") |>
         DT::datatable(
           options = list(
             lengthChange = FALSE,

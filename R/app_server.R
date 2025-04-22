@@ -23,8 +23,8 @@ app_server <- function(input, output, session) {
         state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE) |> clean_chr()
       ),
       geojson = list(
-        county = readRDS(app_sys("extdata/geojson_county.RDS")),
-        state = readRDS(app_sys("extdata/geojson_state.RDS")) |> filter_geojson(c("11", "72"), omit = TRUE)
+        county = qs::qread(app_sys("extdata/geojson_county.RDS")),
+        state = qs::qread(app_sys("extdata/geojson_state.RDS"))
       )
     ),
     link_data = NULL,

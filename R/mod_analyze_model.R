@@ -57,8 +57,8 @@ mod_analyze_model_ui <- function(id) {
           ),
 
           tags$p(class = "small mt-3",
-            "For details about fitting process, open ",
-            actionLink(ns("show_fit_guide"), "Guide."))
+            "For details about model specification and fitting, check the",
+            actionLink(ns("show_fit_guide"), "User Guide."))
         ),
 
         accordion_panel("Upload Estimation Results",
@@ -276,7 +276,7 @@ mod_analyze_model_server <- function(id, global){
           choices = names(global$models),
           multiple = TRUE
         ),
-        tags$div(style = "margin-bottom: 16px",
+        tags$div(style = "margin-bottom: 18px",
           actionButton(
             inputId = ns("diagnos_btn"),
             label = "Compare",
@@ -313,11 +313,36 @@ mod_analyze_model_server <- function(id, global){
               color = waiter::transparent(0.9)
             )
 
-            df <- isolate(global$models[selected_names]) |>
-              purrr::map(function(m) loo::loo(m$fit$loo$draws("log_lik"))) |>
-              loo::loo_compare() |>
-              as.data.frame() |>
-              select(elpd_diff, se_diff)
+
+            # Get the selected models
+            models <- isolate(global$models[selected_names])
+
+            # Extract log-likelihood from each model
+            loo_list <- purrr::map(models, function(m) {
+              log_lik_draws <- m$fit$loo$draws("log_lik")
+              capture_output <- capture.output(loo_output <- loo::loo(log_lik_draws), type = "message")
+
+              if(length(capture_output) > 0) {
+                show_alert(gsub("Warning: ", "", capture_output[1]), global$session)
+              }
+
+              loo_output
+            })
+
+
+
+            # Compare the models using loo_compare
+            loo_comparison <- loo::loo_compare(loo_list)
+
+
+            
+
+            # Convert to data frame
+            loo_df <- as.data.frame(loo_comparison)
+
+            # Select only the columns of interest
+            df <- dplyr::select(loo_df, elpd_diff, se_diff)
+
 
             waiter::waiter_hide()
 
@@ -349,7 +374,7 @@ mod_analyze_model_server <- function(id, global){
             }
           ),
           purrr::map(1:length(formulas), ~ list(
-            HTML(paste0("<h4><u>", selected_names[.x], "</u>", ": ", formulas[[.x]], "</h4>")),
+            HTML(paste0("<h4 class='formula'><u>", selected_names[.x], "</u>", ": ", formulas[[.x]], "</h4>")),
             plotOutput(ns(paste0("compare_ppc", .x)))
           ))
         )
@@ -391,27 +416,13 @@ mod_analyze_model_server <- function(id, global){
     if(!is.null(model_feedback())) {
       if(model_feedback() == "") {
         tags$div(
-          class = "panel panel-success",
-          tags$div(
-            class = "panel-heading",
-            tagList(icon("circle-check", "fa"), "Success")
-          ),
-          tags$div(
-            class = "panel-body",
-            tags$p("Estimation result loaded successfully.")
-          )
+          tagList(icon("circle-check", "fa"), "Success"),
+          tags$p("Estimation result loaded successfully.", class = "small")
         )
       } else {
         tags$div(
-          class = "panel panel-danger",
-          tags$div(
-            class = "panel-heading",
-            tagList(icon("circle-xmark", "fa"), "Error")
-          ),
-          tags$div(
-            class = "panel-body",
-            tags$p(model_feedback())
-          )
+          tagList(icon("circle-xmark", "fa"), "Error"),
+          tags$p(model_feedback(), class = "small"),
         )
       }
     }
@@ -516,7 +527,7 @@ mod_analyze_model_server <- function(id, global){
                 model_buffer(model)
   
               } else {
-                show_alert("Invalid prior provided. Please check Guide (bottom right corner) for the list of available priors.", global$session)
+                show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
               }
             } else {
               show_alert("No predictor has been selected. Please include at least one.", global$session)

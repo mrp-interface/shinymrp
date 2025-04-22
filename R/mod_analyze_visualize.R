@@ -11,18 +11,35 @@ mod_analyze_visualize_ui <- function(id){
   
   # Sidebar layout with dynamic select inputs:
   bslib::layout_sidebar(
+    class = "p-0",
+    fillable = TRUE,
     sidebar = bslib::sidebar(
       width = 350,
       # First selectInput: choose the plot category.
       selectInput(
         inputId = ns("plot_category"),
-        label = "Select plot category",
-        choices = NULL
+        label = "1. Select plot category",
+        choices = NULL,
+        width = "100%"
       ),
       selectInput(
         inputId = ns("plot_subcategory"),
         label = "",
-        choices = NULL
+        choices = NULL,
+        width = "100%"
+      ),
+      conditionalPanel(
+        condition = sprintf("(output.data_format == 'temporal_covid' || output.data_format == 'temporal_other') && input['%s'] == 'by_geo'", 
+                            ns("plot_subcategory")),
+        bslib::card(
+          selectizeInput(
+            inputId = ns("extreme_select"),
+            label = "Select quantity",
+            choices = c("Highest Weekly Rate" = "max",
+                        "Lowest Weekly Rate" = "min"),
+            options = list(dropdownParent = "body")
+          )
+        )
       )
     ),
     uiOutput(ns("plot_output"))
@@ -36,36 +53,55 @@ mod_analyze_visualize_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
+    # Update the plot category selectInput based on the linking geography.
+    observeEvent(global$link_data$link_geo, {
+      choices <- GLOBAL$ui$plot_selection$vis_main
+      if (is.null(global$link_data$link_geo)) {
+        choices <- choices[!choices %in% "geo"]
+      }
+
+      # Update the plot category selectInput with the new choices.
+      updateSelectInput(session, "plot_category", choices = choices)
+    })
+
+
     # Update the subcategory selectInput based on the main category selection.
     observeEvent(input$plot_category, {
       # Define the subcategory choices for each category.
-      indiv_choices <- c("Sex", "Race", "Age", "Geography")
-      indiv_choices_poll <- c("Sex", "Race", "Age", "Education", "Geography")
-      geo_choices   <- c("Education", "Poverty", "Employment", "Income", "Urbanicity", "ADI")
 
-      choices <- if (input$plot_category == "Individual Characteristics") {
-        updateSelectInput(session, "plot_subcategory", label = "Select characteristic")
-        switch(global$data_format,
-          "static_poll" = indiv_choices_poll,
-          indiv_choices
+      if (input$plot_category == "indiv") {
+        label <- "2. Select characteristic"
+        choices <- GLOBAL$ui$plot_selection$indiv
+        if(global$data_format != "static_poll") {
+          choices <- choices[!choices %in% "edu"]
+        }
+      } else if (input$plot_category == "geo") {
+        label <- "2. Select characteristic"
+        choices <- switch(global$data_format,
+          "temporal_covid" = c(GLOBAL$ui$plot_selection$geo,
+                               GLOBAL$ui$plot_selection$geo_covar),
+          "temporal_other" = GLOBAL$ui$plot_selection$geo,
+          "static_poll"    = GLOBAL$ui$plot_selection$geo,
+          "static_other"   = GLOBAL$ui$plot_selection$geo
         )
-      } else if (input$plot_category == "Geographic Characteristics") {
-        updateSelectInput(session, "plot_subcategory", label = "Select characteristic")
-        geo_choices
-      } else if (input$plot_category == "Positive Response Rate") {
-        updateSelectInput(session, "plot_subcategory", label = "Select plot type")
-        switch(global$data_format,
-          "temporal_covid" = c("Overall", "By Geography"),
-          "temporal_other" = c("Overall", "By Geography"),
-          "static_poll" = "By Geography",
-          "static_other" = "By Geography"
-        )
+      } else if (input$plot_category == "pos_rate") {
+        label <- "2. Select plot type"
+        choices <- GLOBAL$ui$plot_selection$pos_rate
+
+        if (global$data_format %in% c("static_poll", "static_other")) {
+          choices <- choices[!choices %in% "overall"]
+        }
       } else {
-        character(0)  # No choices if the category is not recognized.
+        label <- character(0)  # No label if the category is not recognized.
+        choices <- NULL  # No choices if the category is not recognized.
       }
 
-      # Update the subcategory selectInput with the new choices.
-      updateSelectInput(session, "plot_subcategory", choices = choices, selected = choices[1])
+      # Update the subcategory selectInput with the new choices and label.
+      updateSelectInput(
+        session = session,
+        inputId = "plot_subcategory",
+        choices = choices,
+        label = label)
     })
 
     # Render the UI for the selected plot.
@@ -75,27 +111,27 @@ mod_analyze_visualize_server <- function(id, global){
       category <- isolate(input$plot_category)
       subcategory <- isolate(input$plot_subcategory)
 
-      if (category == "Individual Characteristics") {
+      if (category == "indiv") {
         switch(subcategory,
-          "Sex" = mod_indiv_plot_ui(ns("indiv_sex")),
-          "Race" = mod_indiv_plot_ui(ns("indiv_race")),
-          "Age" = mod_indiv_plot_ui(ns("indiv_age")),
-          "Education" = mod_indiv_plot_ui(ns("indiv_edu")),
-          "Geography" = mod_indiv_map_ui(ns("indiv_geo"))
+          "sex" = mod_indiv_plot_ui(ns("indiv_sex")),
+          "race" = mod_indiv_plot_ui(ns("indiv_race")),
+          "age" = mod_indiv_plot_ui(ns("indiv_age")),
+          "edu" = mod_indiv_plot_ui(ns("indiv_edu"))
         )
-      } else if (category == "Geographic Characteristics") {
+      } else if (category == "geo") {
         switch(subcategory,
-          "Education" = mod_geo_plot_ui(ns("geo_edu")),
-          "Poverty" = mod_geo_plot_ui(ns("geo_poverty")),
-          "Employment" = mod_geo_plot_ui(ns("geo_employ")),
-          "Income" = mod_geo_plot_ui(ns("geo_income")),
-          "Urbanicity" = mod_geo_plot_ui(ns("geo_urban")),
-          "ADI" = mod_geo_plot_ui(ns("geo_adi"))
+          "sample" = mod_indiv_map_ui(ns("geo_sample")),
+          "edu" = mod_geo_plot_ui(ns("geo_edu")),
+          "poverty" = mod_geo_plot_ui(ns("geo_poverty")),
+          "employ" = mod_geo_plot_ui(ns("geo_employ")),
+          "income" = mod_geo_plot_ui(ns("geo_income")),
+          "urban" = mod_geo_plot_ui(ns("geo_urban")),
+          "adi" = mod_geo_plot_ui(ns("geo_adi"))
         )
-      } else if (category == "Positive Response Rate") {
+      } else if (category == "pos_rate") {
         switch(subcategory,
-          "Overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot_height),
-          "By Geography" = plotly::plotlyOutput(ns("positive_map"), height = GLOBAL$ui$map_height)
+          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot_height),
+          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$map_height)
         )
       }
     })
@@ -113,7 +149,7 @@ mod_analyze_visualize_server <- function(id, global){
     # Sample Size Map and Table
     # --------------------------------------------------------------------------
     mod_indiv_map_server(
-      "indiv_geo",
+      "geo_sample",
       reactive(global$mrp$input),
       reactive(global$link_data$link_geo),
       reactive(global$plotdata$geojson),
@@ -182,14 +218,14 @@ mod_analyze_visualize_server <- function(id, global){
     # Plot for Positive Response Rate
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
-      req(input$plot_subcategory == "Overall")
+      req(input$plot_subcategory == "overall")
       plot_prev(global$mrp$input, global$plotdata$dates)
     })
 
     # --------------------------------------------------------------------------
     # Map for Positive Response Rate
     # --------------------------------------------------------------------------
-    output$positive_map <- plotly::renderPlotly({
+    output$positive_map <- highcharter::renderHighchart({
       req(global$link_data$link_geo)
 
       geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
@@ -198,13 +234,16 @@ mod_analyze_visualize_server <- function(id, global){
         global$mrp$input |>
           prep_raw_prev(
             fips_codes = global$extdata$fips[[geo]],
-            geo = geo
+            geo = geo,
+            extreme_type = input$extreme_select
           ) |>
-          mutate(value = max_prev) |>
           choro_map(
             global$plotdata$geojson[[geo]],
-            map_title = "Positive Response Rate Across Weeks",
-            colorbar_title = "Highest\nWeekly\nPositive\nResponse\nRate",
+            main_title = "Weekly Positive Response Rate By Geography",
+            sub_title = switch(input$extreme_select,
+              "max" = "Highest Weekly Rate",
+              "min" = "Lowest Weekly Rate"
+            ),
             geo = geo
           )
       } else {
@@ -216,8 +255,8 @@ mod_analyze_visualize_server <- function(id, global){
           mutate(value = support) |>
           choro_map(
             global$plotdata$geojson[[geo]],
-            map_title = "Positive Response Rate",
-            colorbar_title = "Positive\nResponse\nRate",
+            main_title = "Positive Response Rate By Geography",
+            sub_title = "Positive Response Rate",
             geo = geo
           )
       }
@@ -234,14 +273,6 @@ mod_analyze_visualize_server <- function(id, global){
             "Invalid input data.",
             footer = actionButton(ns("to_upload"), "Go to data upload page")
           ), session = global$session)
-        } else {
-          # Update the plot category choices based on the data format
-          choices <- if (global$data_format == "temporal_covid") {
-            c("Individual Characteristics", "Geographic Characteristics", "Positive Response Rate")
-          } else {
-            c("Individual Characteristics", "Positive Response Rate")
-          }
-          updateSelectInput(session, "plot_category", choices = choices, selected = choices[1])
         }
       }
     })
@@ -255,6 +286,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       removeModal(global$session)
     })
+    
     
   })
 }
