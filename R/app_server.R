@@ -5,6 +5,8 @@
 #' @import shiny
 #' @noRd
 app_server <- function(input, output, session) {
+    # set ggplot2 theme
+  ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 18))
 
   global <- reactiveValues(
     web_version = FALSE,
