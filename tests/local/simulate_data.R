@@ -144,7 +144,6 @@ add_covariates <- function(
 #' @export
 create_base_data <- function(
     indiv_vars,
-    geo_vars,
     n_samples = 10000,
     n_time = 12,
     age_bounds = c(0, 18, 35, 65, 75),
@@ -322,6 +321,7 @@ run_simulation <- function(
   week_date <- readr::read_csv("/path/to/week_conversion.csv")
   zip_county_state <- readr::read_csv("/path/to/zip_county_state.csv")
   
+  
   # All individual and geographic variables
   indiv_vars_all <- c("sex", "race", "age", "edu", "time")
   geo_vars_all <- c("zip", "county", "state")
@@ -336,7 +336,6 @@ run_simulation <- function(
   # Create base data with individual-level variables
   base_data <- create_base_data(
     indiv_vars = indiv_vars,
-    geo_vars = geo_vars,
     n_time = n_time,
     n_samples = n_samples,
     seed = seed
@@ -496,6 +495,9 @@ c(data_indiv, data_agg, effects, true_coefs) %<-% run_simulation(
   include_date = TRUE,
   save_path = NULL
 )
+
+View(data_indiv)
+View(data_agg)
 
 # check_simulation_result(
 #   sim_data = data_agg,

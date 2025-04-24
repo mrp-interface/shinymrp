@@ -129,11 +129,6 @@ golem_add_external_resources <- function() {
     app_sys("app/www")
   )
 
-  add_resource_path(
-    "sbs",
-    system.file("www", package = "shinyBS")
-  )
-
   tags$head(
     favicon(),
     bundle_resources(

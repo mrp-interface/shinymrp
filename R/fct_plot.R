@@ -34,19 +34,20 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
     group_by(fips) |>
     summarize(
       count = sum(total),
-      perc = (sum(total) / total_count) * 100,
-      value = count
+      perc = (sum(total) / total_count) * 100
     ) |>
     left_join(fips_codes, by = "fips")
 
   if(for_map) {
     if(geo == "state") {
       plot_df <- plot_df |> mutate(
+        value = count,
         hover = sprintf("%s: %d (%.2f%%)",
                         state, count, perc)
       )
     } else {
       plot_df <- plot_df |> mutate(
+        value = count,
         hover = sprintf("%s (%s): %d (%.2f%%)",
                         county, state, count, perc)
       )
@@ -85,18 +86,19 @@ prep_raw_support <- function(
     summarize(
       num = sum(positive),
       denom = sum(total),
-      support = sum(positive) / sum(total),
-      value = support
+      support = sum(positive) / sum(total)
     ) |>
     left_join(fips_codes, by = "fips")
 
   if(geo == "state") {
     plot_df <- plot_df |> mutate(
-      hover = paste0(state, ": ", round(support, 4), " | (", num, "/", denom, ")")
+      value = support,
+      hover = paste0(state, ": ", round(support, 4), " (", num, "/", denom, ")")
     )
   } else {
     plot_df <- plot_df |> mutate(
-      hover = paste0(county, " (", state, "): | ", round(support, 4), " (", num, "/", denom, ")")
+      value = support,
+      hover = paste0(county, " (", state, "): ", round(support, 4), " (", num, "/", denom, ")")
     )
   }
 
@@ -143,14 +145,14 @@ prep_raw_prev <- function(
     group_by(fips) |>
     summarize(
       prev_value = extreme_fn(prev),
-      prev_sample = tests[which_fn(prev)],
-      value = prev_value
+      prev_sample = tests[which_fn(prev)]
     ) |>
     left_join(fips_codes, by = "fips")
 
   # Create hover text
   if(geo == "state") {
     plot_df <- plot_df |> mutate(
+      value = prev_value,
       hover = paste0(
         state, ": ", round(prev_value, 4),
         " (", round(prev_sample * prev_value), '/', prev_sample, ")"
@@ -158,6 +160,7 @@ prep_raw_prev <- function(
     )
   } else {
     plot_df <- plot_df |> mutate(
+      value = prev_value,
       hover = paste0(
         county, " (", state, "): ", round(prev_value, 4),
         " (", round(prev_sample * prev_value), '/', prev_sample, ")"
@@ -188,17 +191,18 @@ prep_est <- function(
 
   plot_df <- est_df |>
     rename("fips" = "factor") |>
-    mutate(value = est) |>
     left_join(fips_codes, by = "fips")
 
   if(geo == "state") {
     plot_df <- plot_df |> mutate(
+      value = est,
       hover = paste0(
         state, ": ", round(est, 4), ' ± ', round(std, 4)
       )
     )
   } else {
     plot_df <- plot_df |> mutate(
+      value = est,
       hover = paste0(
         county, " (", state, "): ", round(est, 4), ' ± ', round(std, 4)
       )
@@ -829,7 +833,7 @@ choro_map <- function(
       joinBy     = c("fips", "fips"),
       value      = "value",
       name       = sub_title,
-      dataLabels = list(enabled = TRUE, format = "{point.name}"),
+      dataLabels = list(enabled = FALSE, format = "{point.name}"),
       tooltip    = list(
         pointFormat = "{point.hover}"
       ),
