@@ -148,19 +148,14 @@ mod_analyze_upload_server <- function(id, global){
       
       tagList(
         tags$div(class = "d-flex justify-content-between align-items-center mb-3",
-          # Wrap the element with the tooltip
-          bslib::tooltip(
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("toggle_table"),
-              label = NULL,
-              size = "sm",
-              choices = c("Raw" = "raw", "Preprocessed" = "prep")
-            ),
-            "\"Preprocessed\" table only shows when data has been preprocessed", 
-            placement = "right"
+          shinyWidgets::radioGroupButtons(
+            inputId = ns("toggle_table"),
+            label = NULL,
+            size = "sm",
+            choices = c("Raw" = "raw", "Preprocessed" = "prep")
           ),
           tags$p(sprintf("*The preview only includes the first %d rows of the data", 
-                        GLOBAL$ui$preview_size), 
+                        GLOBAL$ui$preview_size),
                 class = "small text-muted m-0")
         ),
         DT::dataTableOutput(outputId = ns("table"))
