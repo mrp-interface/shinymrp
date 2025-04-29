@@ -94,7 +94,7 @@ waiter_ui <- function(type = "") {
       tags$h4("Please wait...", style = "color: black")
     )
   } else {
-    waiter::spin_1()
+    NULL
   }
 }
 
@@ -337,7 +337,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
     nav = bslib::nav_panel(
       title = tab_header,
       value = model$IDs$tab,
-      tags$div(class = "pad_top",
+      tags$div(
         bslib::layout_columns(
           col_widths = c(11, 1),
           class = "mb-0",
@@ -433,4 +433,31 @@ reset_inputs <- function(vars) {
   shinyjs::reset("spec_kb")
   shinyjs::reset("sens_kb")
   shinyjs::reset("fit_upload")
+}
+
+start_busy <- function(session, id, label) {
+  updateActionButton(
+    session = session,
+    inputId = id,
+    label = label,
+    icon = icon("spinner", class = "fa-spin")
+  )
+
+  shinyjs::disable(id)
+  waiter::waiter_show(
+    html = waiter_ui(),
+    color = waiter::transparent(0)
+  )
+}
+
+stop_busy <- function(session, id, label, success) {
+  updateActionButton(
+    session = session,
+    inputId = id,
+    label = label,
+    icon = if(success) icon("check") else icon("exclamation-triangle"),
+  )
+
+  shinyjs::enable(id)
+  waiter::waiter_hide()
 }

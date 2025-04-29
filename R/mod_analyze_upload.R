@@ -11,8 +11,12 @@ mod_analyze_upload_ui <- function(id) {
   ns <- NS(id)
   
   bslib::layout_sidebar(
+    #---------------------------------------------------------------------------
+    # Sidebar
+    #---------------------------------------------------------------------------
     sidebar = sidebar(
       width = 350,
+
       tags$p(tags$strong("Step 1: Upload individual-level or aggregated data (examples below)")),
       shinyWidgets::radioGroupButtons(
         inputId = ns("toggle_input"),
@@ -30,6 +34,7 @@ mod_analyze_upload_ui <- function(id) {
         "For a detailed description of the preprocessing procedure and examples of preprocessing code, go to the",
         actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
       ),
+      # Example data label
       div(class = "mt-4",
         conditionalPanel(
           condition = "output.data_format == 'temporal_covid'",
@@ -43,35 +48,72 @@ mod_analyze_upload_ui <- function(id) {
           condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
           p("Example", class = "fst-italic small")
         ),
-        layout_column_wrap(
-          actionButton(ns("use_indiv_example"), "Individual-level", icon("table"), class = "w-100"),
-          actionButton(ns("use_agg_example"), "Aggregated", icon("table"), class = "w-100")
+        tags$div(
+          class = "d-flex gap-2",
+          actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
+          actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
         )
       ),
-      tags$p(tags$strong("Step 2: Link to ACS Data")),
+
+      tags$p(tags$strong("Step 2: Link to ACS Data"), class = "mt-4"),
       conditionalPanel(
         condition = "output.data_format == 'temporal_covid'",
         bslib::card(
           card_header("Note", class = "bg-info text-dark"),
-          card_body("Input data is automatically linked to 5-year ACS data (2017-2021) through ZIP code.")
+          card_body("Input COVID data is automatically linked to 5-year ACS data (2017-2021) through ZIP code.")
         )
       ),
       conditionalPanel(
         condition = "output.data_format == 'static_poll'",
         bslib::card(
           card_header("Note", class = "bg-info text-dark"),
-          card_body("Input data is automatically linked to 5-year ACS data (2013-2018) through state.")
+          card_body("Input poll data is automatically linked to 5-year ACS data (2013-2018) through state.")
         )
       ),
       conditionalPanel(
         condition = "output.data_format != 'temporal_covid' && output.data_format != 'static_poll'",
         selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
         selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
-        actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100"),
-        textOutput(ns("link_status"), inline = TRUE)
+        actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100")
       )
     ),
-    uiOutput(ns("main_panel"))
+    #---------------------------------------------------------------------------
+    # Main Window
+    #---------------------------------------------------------------------------
+    conditionalPanel(
+      condition = sprintf("output['%s']", ns("file_uploaded")),
+      bslib::layout_columns(
+        col_widths = c(4, 8),
+        conditionalPanel(
+          condition = sprintf("output['%s'] == true", ns("data_processed")),
+          div(class = "d-flex align-items-start gap-2",
+            # Toggle button for table view
+            shinyWidgets::radioGroupButtons(
+              inputId = ns("toggle_table"),
+              label = NULL,
+              size = "sm",
+              choices = c("Raw" = "raw", "Preprocessed" = "prep")
+            ),
+            # Download button for preprocessed data 
+            conditionalPanel(
+              condition = sprintf("input['%s'] == 'prep'", ns("toggle_table")),
+              downloadButton(
+                outputId = ns("download_preprocessed"),
+                label = NULL,
+                class = "btn btn-primary btn-sm"
+              )
+            )
+          )
+        ),
+        # Info text
+        tags$p(
+          sprintf("*The preview only includes the first %d rows of the data", 
+                 GLOBAL$ui$preview_size), 
+          class = "small text-muted text-end"
+        )
+      ),
+      DT::dataTableOutput(outputId = ns("table"))
+    )
   )
 }
 
@@ -80,38 +122,26 @@ mod_analyze_upload_ui <- function(id) {
 #'
 #' @noRd
 mod_analyze_upload_server <- function(id, global){
-  moduleServer( id, function(input, output, session){
+  moduleServer(id, function(input, output, session){
     ns <- session$ns
-
+    
     rawdata <- reactiveVal()
-    link_status <- reactiveVal()
     input_errors <- reactiveVal()
     input_warnings <- reactiveVal()
 
-    observeEvent(global$input$navbar, {
-      if(global$input$navbar == "nav_analyze" && is.null(global$data_format)) {
-          showModal(
-            modalDialog(
-              title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "Please select a version of the interface.",
-              footer = actionButton(
-                inputId = ns("to_home"),
-                label = "Go to home"
-              )
-            )
-          )
-      }
-    })
+    #---------------------------------------------------------------------------
+    # Reactive outputs for conditional panels
+    #---------------------------------------------------------------------------
+    output$file_uploaded <- reactive(!is.null(rawdata()))
+    outputOptions(output, "file_uploaded", suspendWhenHidden = FALSE)
+    
+    output$data_processed <- reactive(!is.null(global$data))
+    outputOptions(output, "data_processed", suspendWhenHidden = FALSE)
 
-    observeEvent(input$to_home, {
-      updateTabsetPanel(global$session,
-        inputId = "navbar",
-        selected = "nav_home"
-      )
 
-      removeModal(global$session)
-    })
-
+    # --------------------------------------------------------------------------
+    # Reset everything when data format changes
+    # --------------------------------------------------------------------------
     observeEvent(global$data_format, {
       shinyjs::reset("input_data")
       shinyjs::reset("toggle_input")
@@ -119,12 +149,12 @@ mod_analyze_upload_server <- function(id, global){
       shinyjs::reset("acs_year")
 
       rawdata(NULL)
-      link_status(NULL)
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
     })
     
+    # Show feedback about input data
     output$input_feedback <- renderUI({
       req(rawdata())
       
@@ -141,42 +171,42 @@ mod_analyze_upload_server <- function(id, global){
       }
     })
 
-    output$link_status <- renderText(link_status())
     
-    output$main_panel <- renderUI({
+    # Table output renderer
+    output$table <- DT::renderDT({
       req(rawdata())
       
-      tagList(
-        tags$div(class = "d-flex justify-content-between align-items-center mb-3",
-          shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_table"),
-            label = NULL,
-            size = "sm",
-            choices = c("Raw" = "raw", "Preprocessed" = "prep")
-          ),
-          tags$p(sprintf("*The preview only includes the first %d rows of the data", 
-                        GLOBAL$ui$preview_size),
-                class = "small text-muted m-0")
-        ),
-        DT::dataTableOutput(outputId = ns("table"))
-      )
-    })
-
-
-    output$table <- DT::renderDT({
-      df <- if(input$toggle_table == "raw") rawdata() else global$data
-
+      df <- if(is.null(input$toggle_table) || input$toggle_table == "raw") {
+        rawdata()
+      } else {
+        req(global$data) # Ensure global$data exists when "prep" is selected
+        global$data
+      }
+      
       df |>
         head(GLOBAL$ui$preview_size) |>
         DT::datatable(
           options = list(
             scrollX = TRUE,
             lengthChange = FALSE,
-            searching = FALSE
+            searching = FALSE,
+            info = FALSE
           )
         )
     })
 
+    # Preprocessed data download handler
+    output$download_preprocessed <- downloadHandler(
+      filename = function() {
+        paste0("preprocessed_data_", format(Sys.Date(), "%Y%m%d"), ".csv")
+      },
+      content = function(file) {
+        req(global$data)
+        readr::write_csv(global$data, file)
+      }
+    )
+
+    # Handle file upload
     observeEvent(input$input_data, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
@@ -253,13 +283,14 @@ mod_analyze_upload_server <- function(id, global){
         # Capture the actual error message
         err_msg <- paste("Error processing data:", e$message)
         input_errors(list(unexpected = err_msg))
-        warning(err_msg) # Log the error to console
       }, finally = {
         # Always hide the waiter
+        print(input_errors())
         waiter::waiter_hide()
       })
     })
 
+    # Use individual-level example data
     observeEvent(input$use_indiv_example, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
@@ -290,6 +321,7 @@ mod_analyze_upload_server <- function(id, global){
       waiter::waiter_hide()
     })
 
+    # Use aggregated example data
     observeEvent(input$use_agg_example, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
@@ -313,7 +345,6 @@ mod_analyze_upload_server <- function(id, global){
     })
 
     observeEvent(global$data, {
-      link_status(NULL)
 
       if(!is.null(global$data)) {
         if(global$data_format == "temporal_covid") {
@@ -393,55 +424,87 @@ mod_analyze_upload_server <- function(id, global){
     observeEvent(input$link_acs, {
       # prepare data for model fitting and plotting
       if(!is.null(global$data)) {
-        waiter::waiter_show(
-          html = waiter_ui("wait"),
-          color = waiter::transparent(0.9)
+        start_busy(
+          session = session,
+          id = "link_acs",
+          label = "Linking..."
         )
 
-        # store user's selections for data linking
-        global$link_data <- list(
-          link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
-          acs_year = input$acs_year
-        )
-        
-        # retrieve ACS data based on user's selection
-        tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
+        # delay the execution to allow the UI to update
+        shinyjs::delay(10, {
+          success <- FALSE
+          tryCatch({
+            # store user's selections for data linking
+            global$link_data <- list(
+              link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
+              acs_year = input$acs_year
+            )
+            
+            # retrieve ACS data based on user's selection
+            tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
 
-        c(input_data, new_data, levels, vars) %<-% prepare_data(
-          input_data = global$data,
-          tract_data = tract_data,
-          zip_tract = global$extdata$zip_tract,
-          zip_county_state = global$extdata$zip_county_state,
-          demo_levels = GLOBAL$levels[[global$data_format]],
-          vars_global = GLOBAL$vars,
-          link_geo = global$link_data$link_geo
-        )
-        
-        global$mrp <- list(
-          input = input_data,
-          new = new_data,
-          levels = levels,
-          vars = vars,
-          link_geo = global$link_data$link_geo
-        )
+            c(input_data, new_data, levels, vars) %<-% prepare_data(
+              input_data = global$data,
+              tract_data = tract_data,
+              zip_tract = global$extdata$zip_tract,
+              zip_county_state = global$extdata$zip_county_state,
+              demo_levels = GLOBAL$levels[[global$data_format]],
+              vars_global = GLOBAL$vars,
+              link_geo = global$link_data$link_geo
+            )
+            
+            global$mrp <- list(
+              input = input_data,
+              new = new_data,
+              levels = levels,
+              vars = vars,
+              link_geo = global$link_data$link_geo
+            )
 
-        # prepare data for plotting
-        plotdata <- list()
-        plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-        plotdata$geojson <- names(global$extdata$geojson) |>
-          setNames(nm = _) |>
-          purrr::map(~filter_geojson(
-            geojson = global$extdata$geojson[[.x]], 
-            geoids = global$mrp$levels[[.x]]
-          ))
+            # prepare data for plotting
+            plotdata <- list()
+            plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+            plotdata$geojson <- names(global$extdata$geojson) |>
+              setNames(nm = _) |>
+              purrr::map(~filter_geojson(
+                geojson = global$extdata$geojson[[.x]], 
+                geoids = global$mrp$levels[[.x]]
+              ))
 
-        global$plotdata <- if(length(plotdata) > 0) plotdata else NULL
-
-        link_status("Linked successfully")
-
-        waiter::waiter_hide()
+            global$plotdata <- if(length(plotdata) > 0) plotdata else NULL
+            
+            # set success to TRUE if no errors occurred
+            success <- TRUE
+          }, error = function(e) {
+            warnings(paste("Error linking data:", e$message))
+          }, finally = {
+            stop_busy(
+              session = session,
+              id = "link_acs",
+              label = if(success) "Linking complete" else "Linking failed",
+              success = success
+            )
+          })
+        })
       }
     })
+
+    link_button_reset <- reactive({
+      global$data_format
+      global$data
+      input$link_geo
+      input$acs_year
+    })
+
+    observeEvent(link_button_reset(), {
+      updateActionButton(
+        session = session,
+        inputId = "link_acs",
+        label = "Link",
+        icon = character(0)
+      )
+    })
+
 
     observeEvent(input$show_upload_guide, {
       show_guide("upload")

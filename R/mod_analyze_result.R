@@ -7,7 +7,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList layout_sidebar sidebar layout_sidebar sidebarPanel mainPanel
+#' @importFrom shiny NS tagList
 mod_analyze_result_ui <- function(id){
   ns <- NS(id)
   
@@ -160,28 +160,22 @@ mod_analyze_result_server <- function(id, global){
     # Update model selection when user navigates to the result tab.
     # --------------------------------------------------------------------------
     observeEvent(global$input$navbar_analyze, {
-      if(global$input$navbar_analyze == "nav_analyze_result") {
-        if(is.null(global$mrp)) {
-          showModal(modalDialog(
-            title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-            "Invalid input data.",
-            footer = actionButton(inputId = ns("to_upload"), label = "Go to data upload page")
-          ), session = global$session)
-        }
-        
-        # Omit pre-poststratification models.
-        global$poststratified_models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
-        
-        if(length(global$poststratified_models) == 0) {
-          showModal(modalDialog(
-            title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-            "No model with poststratified estimates found. Make sure to run poststratification after fitting models.",
-            footer = actionButton(inputId = ns("to_model"), label = "Go to model page")
-          ), session = global$session)
-        } else {
-          choices <- names(global$poststratified_models)
-          selected <- if(model_select_buffer() %in% choices) model_select_buffer() else choices[1]
-          updateSelectInput(session, inputId = "model_select", choices = choices, selected = selected)
+      if(global$input$navbar_analyze == "nav_analyze_result") {        
+        if (!is.null(global$mrp)) {
+          # Omit pre-poststratification models.
+          global$poststratified_models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
+          
+          if(length(global$poststratified_models) == 0) {
+            showModal(modalDialog(
+              title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
+              "No model with poststratified estimates found. Make sure to run poststratification after fitting models.",
+              footer = actionButton(inputId = ns("to_model"), label = "Go to model page")
+            ), session = global$session)
+          } else {
+            choices <- names(global$poststratified_models)
+            selected <- if(model_select_buffer() %in% choices) model_select_buffer() else choices[1]
+            updateSelectInput(session, inputId = "model_select", choices = choices, selected = selected)
+          }
         }
       }
     })
@@ -230,12 +224,7 @@ mod_analyze_result_server <- function(id, global){
     
     # --------------------------------------------------------------------------
     # Navigation modal events for data/model errors.
-    # --------------------------------------------------------------------------
-    observeEvent(input$to_upload, {
-      updateTabsetPanel(global$session, inputId = "navbar_analyze", selected = "nav_analyze_upload")
-      removeModal(global$session)
-    })
-    
+    # --------------------------------------------------------------------------    
     observeEvent(input$to_model, {
       updateTabsetPanel(global$session, inputId = "navbar_analyze", selected = "nav_analyze_model")
       removeModal(global$session)
