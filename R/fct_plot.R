@@ -322,12 +322,29 @@ plot_geographic <- function(
     data = covariates,
     aes(x = covar)
   ) +
-    geom_histogram(breaks = breaks) +
-    scale_x_continuous(
-      expand = c(0, 0)
-    ) +
+    geom_histogram(breaks = breaks)
+    
+  # Extract bin data from ggplot object
+  plot_data <- ggplot2::ggplot_build(p)
+  histogram_data <- plot_data$data[[1]]
+
+  # Set minimum break width to 1
+  if (max(histogram_data$count) < 3) {
+    p <- p +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, .1)),
+      breaks = scales::breaks_width(1)
+    ) 
+  } else {
+    p <- p +
     scale_y_continuous(
       expand = expansion(mult = c(0, .1))
+    ) 
+  }
+    
+  p <- p +
+    scale_x_continuous(
+      expand = c(0, 0)
     ) +
     labs(
       title = "",
@@ -844,7 +861,8 @@ choro_map <- function(
       align = "center",
       style = list(fontSize = "20px")
     ) |>
-    highcharter::hc_mapNavigation(enabled = TRUE)
+    highcharter::hc_mapNavigation(enabled = TRUE) |>
+    highcharter::hc_boost(enabled = FALSE)
 
   if(!is.null(config$minValue) && !is.null(config$maxValue)) {
     hc <- hc |>

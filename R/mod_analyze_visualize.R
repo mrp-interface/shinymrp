@@ -163,7 +163,7 @@ mod_analyze_visualize_server <- function(id, global){
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
-      description = "\n%d ZIP codes out of %d (%.2f%%) have %d%% or more people who have earned an Associate's degree or higher.",
+      description = "\n%d ZIP codes out of %d (%d%%) have %d%% or more people who have earned an Associate's degree or higher.",
       definition  = "Higher education measure of a zip code is defined as the percentage of the residing population\nwho have earned an Associate's degree or higher.",
       name        = "Higher education measure"
     ))
@@ -172,7 +172,7 @@ mod_analyze_visualize_server <- function(id, global){
       threshold   = 0.2,
       operation   = "<=",
       breaks      = seq(0, 1, 0.05),
-      description = "%d zip codes out of %d (%.2f%%) have %d%% or less people whose ratio of income to poverty level in the past 12 months\nis below 100%%.",
+      description = "%d zip codes out of %d (%d%%) have %d%% or less people whose ratio of income to poverty level in the past 12 months\nis below 100%%.",
       definition  = "Poverty measure of a zip code is defined as the percentage of the residing population\nwhose ratio of income to poverty level in the past 12 months is below 100%%.",
       name        = "Poverty measure"
     ))
@@ -181,7 +181,7 @@ mod_analyze_visualize_server <- function(id, global){
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
-      description = "\n%d zip codes out of %d (%.2f%%) have %d%% or more people who is employed as a part of the civilian labor force.",
+      description = "\n%d zip codes out of %d (%d%%) have %d%% or more people who is employed as a part of the civilian labor force.",
       definition  = "Employment rate of a zip code is defined as the percentage of the residing population\nwho are employed as a part of the civilian labor force.",
       name        = "Employment rate"
     ))
@@ -190,7 +190,7 @@ mod_analyze_visualize_server <- function(id, global){
       threshold   = 70784,
       operation   = ">",
       breaks      = seq(0, 150000, 5000),
-      description = "%d zip codes out of %d (%.2f%%) have average value of tract-level median household income in the past 12 months\ngreater than %d dollars (2021 US median income according to the ACS).",
+      description = "%d zip codes out of %d (%d%%) have average value of tract-level median household income in the past 12 months\ngreater than %d dollars (2021 US median income according to the ACS).",
       definition  = "Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months\nweighted by tract population counts.",
       name        = "Average of median household income"
     ))
@@ -199,7 +199,7 @@ mod_analyze_visualize_server <- function(id, global){
       threshold   = 0.95,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
-      description = "\n%d zip codes out of %d (%.2f%%) have %d%% or more tracts classified as urban.",
+      description = "\n%d zip codes out of %d (%d%%) have %d%% or more tracts classified as urban.",
       definition  = "Urbanicity of a zip code is defined as the percentage of covered census tracts classified as urban\nweighted by tract population counts.",
       name        = "Urbanicity"
     ))
@@ -208,7 +208,7 @@ mod_analyze_visualize_server <- function(id, global){
       threshold   = 80,
       operation   = ">",
       breaks      = seq(0, 100, 5),
-      description = "\n%d zip codes out of %d (%.2f%%) have ADI over %d.",
+      description = "\n%d zip codes out of %d (%d%%) have ADI over %d.",
       definition  = "Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts\nweighted by tract population counts (refer to Learn > Preprocess page for the definition of ADI).",
       name        = "Area Deprivation Index"
     ))
@@ -262,30 +262,6 @@ mod_analyze_visualize_server <- function(id, global){
       }
     })
     
-    # --------------------------------------------------------------------------
-    # Navigation event handlers and modals
-    # --------------------------------------------------------------------------
-    observeEvent(global$input$navbar_analyze, {
-      if (global$input$navbar_analyze == "nav_analyze_visualize") {
-        if (is.null(global$mrp)) {
-          showModal(modalDialog(
-            title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-            "Invalid input data.",
-            footer = actionButton(ns("to_upload"), "Go to data upload page")
-          ), session = global$session)
-        }
-      }
-    })
-    
-    observeEvent(input$to_upload, {
-      bslib::nav_select(
-        id = "navbar_analyze",
-        selected = "nav_analyze_upload",
-        session = global$session
-      )
-
-      removeModal(global$session)
-    })
     
     
   })

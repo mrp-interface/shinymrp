@@ -44,7 +44,7 @@ mod_learn_interface_ui <- function(id){
         tags$p("Below is a simulated dataset that exemplifies the expected aggregated data input."),
         tabsetPanel(
           tabPanel("Spatio-temporal",
-            tags$div(class = "pad_top",
+            tags$div(
               DT::dataTableOutput(outputId = ns("example_st"))
             ),
             tags$div(
@@ -64,7 +64,7 @@ mod_learn_interface_ui <- function(id){
             )
           ),
           tabPanel("Cross-sectional",
-            tags$div(class = "pad_top",
+            tags$div(
               DT::dataTableOutput(outputId = ns("example_cs"))
             ),
             tags$div(

@@ -35,8 +35,7 @@ mod_analyze_model_ui <- function(id) {
           selectInput(ns("iter_select"), "Iterations",
                       choices = c("100 (Test)", "500 (Low)", "2000 (Medium)", "5000 (High)", "Custom"),
                       selected = "2000 (Medium)"),
-          conditionalPanel(
-            ns = ns,
+          conditionalPanel(ns = ns,
             condition = "input.iter_select == 'Custom'",
             numericInput(ns("iter_kb"), "Custom iterations", value = 1000, min = 100, max = 5000)
           ),
@@ -93,34 +92,6 @@ mod_analyze_model_server <- function(id, global){
     prior_buffer <- reactiveVal(list())
     model_buffer <- reactiveVal()
     model_feedback <- reactiveVal()
-
-    observeEvent(global$input$navbar_analyze, {
-      if(global$input$navbar_analyze == "nav_analyze_model") {
-        if(is.null(global$mrp)) {
-          showModal(
-            modalDialog(
-              title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "Invalid input data.",
-              footer = actionButton(
-                inputId = ns("to_upload"),
-                label = "Go to data upload page"
-              )
-            ),
-            session = global$session
-          )
-        }
-      }
-    })
-
-    observeEvent(input$to_upload, {
-      bslib::nav_select(
-        id = "navbar_analyze",
-        selected = "nav_analyze_upload",
-        session = global$session
-      )
-
-      removeModal(global$session)
-    })
 
     observeEvent(input$show_priors, {
       show_guide("model_spec")
@@ -329,13 +300,9 @@ mod_analyze_model_server <- function(id, global){
               loo_output
             })
 
-
-
             # Compare the models using loo_compare
             loo_comparison <- loo::loo_compare(loo_list)
 
-
-            
 
             # Convert to data frame
             loo_df <- as.data.frame(loo_comparison)
@@ -347,7 +314,7 @@ mod_analyze_model_server <- function(id, global){
             waiter::waiter_hide()
 
             return(df)
-          }, rownames = TRUE)
+          }, rownames = TRUE, width = "300px")
         }
       }
 
