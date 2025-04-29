@@ -10,99 +10,113 @@
 mod_home_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$div(class = "landing_container",
-      tags$h1("M.R.P.", class = "landing_header"),
+    tags$div(class = "position-fixed top-50 start-50 translate-middle", style = "width: 55%;",
+      # Add custom font family and increase size for the h1 tag
+      tags$h1("M.R.P.", 
+              class = "text-center display-1 fw-lighter pt-5",
+              style = "font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; font-size: 12rem;"),
       tags$p("An interface for applying Multilevel Regression and Poststratification", 
-             class = "landing_subheader"),
+             class = "fs-3 fst-italic text-center pb-4"),
       
-      # Main panel group: two panels side-by-side
+      # Main panel group: two panels side-by-side with reduced width
       conditionalPanel(
-        ns = ns,
-        condition = "output.panel_group == 'main'",
-        tags$div(class = "row justify-content-center",
-          tags$div(class = "col-md-6",
+        condition = sprintf("output['%s'] == 'main'", ns("panel_group")),
+        tags$div(class = "row justify-content-center mx-auto mt-5",
+          tags$div(class = "col-md-6", 
             card(
               card_header(
-                tags$p("Time-varying Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("Time-varying Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Collected over time", style = "font-style: italic; text-align: center;"),
-                actionButton(inputId = ns("set_temporal"), label = "Start")
+                tags$p("Collected over time", class = "fst-italic text-center"),
+                actionButton(inputId = ns("set_temporal"), label = "Select", 
+                             class = "w-100 mt-3")
               )
             )
           ),
-          tags$div(class = "col-md-6",
+          tags$div(class = "col-md-6", 
             card(
               card_header(
-                tags$p("Cross-sectional Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("Cross-sectional Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Collected at a single time point", style = "font-style: italic; text-align: center;"),
-                actionButton(inputId = ns("set_static"), label = "Start")
+                tags$p("Collected at a single time point", class = "fst-italic text-center"),
+                actionButton(inputId = ns("set_static"), label = "Select", 
+                             class = "w-100 mt-3")
               )
             )
           )
         )
       ),
       
-      # Temporal panel group: two panels side-by-side
+      # Temporal panel group: two panels side-by-side with reduced width
       conditionalPanel(
-        ns = ns,
-        condition = "output.panel_group == 'temporal'",
-        tags$div(class = "row justify-content-center",
-          tags$div(class = "col-md-6",
+        condition = sprintf("output['%s'] == 'temporal'", ns("panel_group")),
+        tags$div(class = "mb-3 ms-3",
+          actionButton(inputId = ns("back_to_main"), label = "←", 
+                       class = "btn")
+        ),
+        tags$div(class = "row justify-content-center mx-auto mt-1",
+          tags$div(class = "col-md-6", 
             card(
               card_header(
-                tags$p("COVID Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("COVID Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Data linking for ZIP-code-level covariates and poststratification data", 
-                       style = "font-style: italic; text-align: center;"),
-                actionButton(inputId = ns("set_temporal_covid"), label = "Start")
+                tags$p("Data linking for ZIP-code-level covariates and poststratification", 
+                       class = "fst-italic text-center"),
+                actionButton(inputId = ns("set_temporal_covid"), label = "Start", 
+                             class = "w-100 mt-3")
               )
             )
           ),
-          tags$div(class = "col-md-6",
+          tags$div(class = "col-md-6", 
             card(
               card_header(
-                tags$p("Other Time-varying Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("Other Time-varying Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data", 
-                       style = "font-style: italic; text-align: center;"),
-                actionButton(inputId = ns("set_temporal_other"), label = "Start")
+                tags$p("Data linking for poststratification at state, county, or ZIP-code level", 
+                       class = "fst-italic text-center"),
+                actionButton(inputId = ns("set_temporal_other"), label = "Start", 
+                             class = "w-100 mt-3")
               )
             )
           )
         )
       ),
       
-      # Static panel group: two panels side-by-side
+      # Static panel group: two panels side-by-side with reduced width
       conditionalPanel(
-        ns = ns,
-        condition = "output.panel_group == 'static'",
-        tags$div(class = "row justify-content-center",
-          tags$div(class = "col-md-6",
+        condition = sprintf("output['%s'] == 'static'", ns("panel_group")),
+        tags$div(class = "mb-3 ms-3",
+          actionButton(inputId = ns("back_to_main"), label = "←", 
+                       class = "btn")
+        ),
+        tags$div(class = "row justify-content-center mx-auto mt-1",
+          tags$div(class = "col-md-6", 
             card(
               card_header(
-                tags$p("Poll Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("Poll Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Data linking for state-level poststratification data with education data", 
-                       style = "font-style: italic; text-align: center;"),
-                actionButton(inputId = ns("set_static_poll"), label = "Start")
+                tags$p("Data linking for poststratification at state level (must include education)", 
+                       class = "fst-italic text-center"),
+                actionButton(inputId = ns("set_static_poll"), label = "Start", 
+                             class = "w-100 mt-3")
               )
             )
           ),
-          tags$div(class = "col-md-6",
+          tags$div(class = "col-md-6", 
             card(
               card_header(
-                tags$p("Other Cross-sectional Data", style = "font-size: 1.2em; font-weight: bold; text-align: center;")
+                tags$p("Other Cross-sectional Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Data linking for state-level, county-level, or ZIP-code-level poststratification data without education data", 
-                       style = "font-style: italic; text-align: center;"),
-                actionButton(inputId = ns("set_static_other"), label = "Start")
+                tags$p("Data linking for poststratification at state, county or ZIP-code level (without education)", 
+                       class = "fst-italic text-center"),
+                actionButton(inputId = ns("set_static_other"), label = "Start", 
+                             class = "w-100 mt-3")
               )
             )
           )
@@ -152,6 +166,12 @@ mod_home_server <- function(id, global){
       if(global$input$navbar == "nav_home") {
         panel_group("main")
       }
+    })
+  
+
+
+    observeEvent(input$back_to_main, {
+      panel_group("main")
     })
 
     observeEvent(input$set_static, {
