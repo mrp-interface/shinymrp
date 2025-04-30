@@ -12,12 +12,12 @@
 mod_analyze_model_ui <- function(id) {
   ns <- NS(id)
 
-  layout_sidebar(
-    sidebar = sidebar(
+  bslib::layout_sidebar(
+    sidebar = bslib::sidebar(
       width = 350,
-      accordion(
+      bslib::accordion(
         multiple = FALSE,
-        accordion_panel("Model Specification",
+        bslib::accordion_panel("Model Specification",
           tags$p(tags$strong("Step 1: Select main effects and interactions")),
           shinyWidgets::virtualSelectInput(ns("fixed"), "Fixed Effects", choices = NULL, multiple = TRUE),
           shinyWidgets::virtualSelectInput(ns("varying"), "Varying Effects (Partial Pooling)", choices = NULL, multiple = TRUE),
@@ -60,7 +60,7 @@ mod_analyze_model_ui <- function(id) {
             actionLink(ns("show_fit_guide"), "User Guide."))
         ),
 
-        accordion_panel("Upload Estimation Results",
+        bslib::accordion_panel("Estimation Result Upload",
           fileInput(ns("fit_upload"), "Select RDS file with model estimation", accept = ".RDS"),
           uiOutput(ns("model_feedback")),
           tags$p("Or use example result:"),
