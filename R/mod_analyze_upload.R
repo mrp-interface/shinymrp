@@ -17,64 +17,80 @@ mod_analyze_upload_ui <- function(id) {
     sidebar = sidebar(
       width = 350,
 
-      tags$p(tags$strong("Step 1: Upload individual-level or aggregated data (examples below)")),
-      shinyWidgets::radioGroupButtons(
-        inputId = ns("toggle_input"),
-        label = NULL,
-        choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
-        selected = "agg",
-        justified = TRUE,
-        size = "sm"
-      ),
-      fileInput(ns("input_data"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
-      uiOutput(ns("input_feedback")),
-      p(class = "mt-0 small",
-        "For", tags$u("input data requirements,"), "open the",
-        actionLink(ns("show_upload_guide"), label = "User Guide."),
-        "For a detailed description of the preprocessing procedure and examples of preprocessing code, go to the",
-        actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
-      ),
-      # Example data label
-      div(class = "mt-4",
-        conditionalPanel(
-          condition = "output.data_format == 'temporal_covid'",
-          p("Example: COVID-19 hospital test records", class = "fst-italic small")
-        ),
-        conditionalPanel(
-          condition = "output.data_format == 'static_poll'",
-          p("Example: The Cooperative Election Study data", class = "fst-italic small")
-        ),
-        conditionalPanel(
-          condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
-          p("Example", class = "fst-italic small")
-        ),
-        tags$div(
-          class = "d-flex gap-2",
-          actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
-          actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
-        )
-      ),
+      bslib::accordion(
+        multiple = FALSE,
+        bslib::accordion_panel("Required Data",
+          tags$p(tags$strong("Step 1: Upload individual-level or aggregated data (examples below)")),
+          shinyWidgets::radioGroupButtons(
+            inputId = ns("toggle_input"),
+            label = NULL,
+            choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
+            selected = "agg",
+            justified = TRUE,
+            size = "sm"
+          ),
+          fileInput(ns("input_data"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
+          uiOutput(ns("input_feedback")),
+          p(class = "mt-0 small",
+            "For", tags$u("input data requirements,"), "open the",
+            actionLink(ns("show_upload_guide"), label = "User Guide."),
+            "For a detailed description of the preprocessing procedure and examples of preprocessing code, go to the",
+            actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
+          ),
+          # Example data label
+          div(class = "mt-4",
+            conditionalPanel(
+              condition = "output.data_format == 'temporal_covid'",
+              p("Example: COVID-19 hospital test records", class = "fst-italic small")
+            ),
+            conditionalPanel(
+              condition = "output.data_format == 'static_poll'",
+              p("Example: The Cooperative Election Study data", class = "fst-italic small")
+            ),
+            conditionalPanel(
+              condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+              p("Example", class = "fst-italic small")
+            ),
+            tags$div(
+              class = "d-flex gap-2",
+              actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
+              actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
+            )
+          ),
 
-      tags$p(tags$strong("Step 2: Link to ACS Data"), class = "mt-4"),
-      conditionalPanel(
-        condition = "output.data_format == 'temporal_covid'",
-        bslib::card(
-          card_header("Note", class = "bg-info text-dark"),
-          card_body("Input COVID data is automatically linked to 5-year ACS data (2017-2021) through ZIP code.")
+          tags$p(tags$strong("Step 2: Link to ACS Data"), class = "mt-4"),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_covid'",
+            bslib::card(
+              card_header("Note", class = "bg-info text-dark"),
+              card_body("Input COVID data is automatically linked to 5-year ACS data (2017-2021) through ZIP code.")
+            )
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'static_poll'",
+            bslib::card(
+              card_header("Note", class = "bg-info text-dark"),
+              card_body("Input poll data is automatically linked to 5-year ACS data (2013-2018) through state.")
+            )
+          ),
+          conditionalPanel(
+            condition = "output.data_format != 'temporal_covid' && output.data_format != 'static_poll'",
+            selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
+            selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
+            actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100")
+          )
+        ),
+        bslib::accordion_panel(
+          title = "Optional Data",
+          tags$div(
+            tags$p(tags$strong("Poststratification Table")),
+            fileInput(ns("optional_file1"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
+            tags$hr(),
+            
+            tags$p(tags$strong("Probability Sample")),
+            fileInput(ns("optional_file2"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
+          )
         )
-      ),
-      conditionalPanel(
-        condition = "output.data_format == 'static_poll'",
-        bslib::card(
-          card_header("Note", class = "bg-info text-dark"),
-          card_body("Input poll data is automatically linked to 5-year ACS data (2013-2018) through state.")
-        )
-      ),
-      conditionalPanel(
-        condition = "output.data_format != 'temporal_covid' && output.data_format != 'static_poll'",
-        selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
-        selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
-        actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100")
       )
     ),
     #---------------------------------------------------------------------------

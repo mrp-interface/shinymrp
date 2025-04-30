@@ -231,21 +231,24 @@ mod_analyze_visualize_server <- function(id, global){
       geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
 
       if("time" %in% names(global$mrp$input)) {
-        global$mrp$input |>
+        plot_df <- global$mrp$input |>
           prep_raw_prev(
             fips_codes = global$extdata$fips[[geo]],
             geo = geo,
             extreme_type = input$extreme_select
-          ) |>
-          choro_map(
-            global$plotdata$geojson[[geo]],
-            main_title = "Weekly Positive Response Rate By Geography",
-            sub_title = switch(input$extreme_select,
-              "max" = "Highest Weekly Rate",
-              "min" = "Lowest Weekly Rate"
-            ),
-            geo = geo
           )
+
+        choro_map(
+          plot_df,
+          global$plotdata$geojson[[geo]],
+          main_title = "Weekly Positive Response Rate By Geography",
+          sub_title = switch(input$extreme_select,
+            "max" = "Highest Weekly Rate",
+            "min" = "Lowest Weekly Rate"
+          ),
+          geo = geo,
+          config = if (max(plot_df$value) == 0) list(minValue = 0, maxValue = 1) else NULL
+        )
       } else {
         global$mrp$input |>
           prep_raw_support(
@@ -261,8 +264,6 @@ mod_analyze_visualize_server <- function(id, global){
           )
       }
     })
-    
-    
     
   })
 }
