@@ -70,8 +70,21 @@ mod_analyze_model_ui <- function(id) {
     ),
     bslib::navset_underline(id = ns("navbar_model"),
       bslib::nav_panel("Model Comparison", value = "nav_compare",
-        tags$div(class = "mt-4"),
-        uiOutput(ns("model_select_ui")),
+        tags$div(class = "d-flex justify-content-between align-items-center mt-4",
+          uiOutput(ns("model_select_ui")),
+          bslib::tooltip(
+            actionButton(
+              inputId = ns("loo_diagnos_btn"),
+              label = NULL,
+              icon = icon("sliders-h", "fa"),
+              class = "btn btn-sm btn-secondary"
+            ),
+            "Please check LOO-CV diagnostics",
+            id = ns("loo_diagnos_tooltip"),
+            placement = "left",
+            options = list(trigger = "manual")
+          )
+        ),
         tags$h4("Leave-one-out Cross-validation", class = "mt-4"),
         tags$hr(class = "break_line"),
         uiOutput(ns("loo_ui")),
@@ -92,6 +105,7 @@ mod_analyze_model_server <- function(id, global){
     prior_buffer <- reactiveVal(list())
     model_buffer <- reactiveVal()
     model_feedback <- reactiveVal()
+    pareto_k_tables <- reactiveVal()
 
     observeEvent(input$show_priors, {
       show_guide("model_spec")
@@ -208,7 +222,7 @@ mod_analyze_model_server <- function(id, global){
       holder <- prior_buffer()
       holder[[length(holder) + 1]] <- list(dist = "", eff = NULL)
 
-      purrr::map(1:length(holder), ~ fluidRow(
+      purrr::map(seq_along(holder), ~ fluidRow(
         column(width = 6,
           textInput(
             inputId = ns(paste0("prior_dist_", .x)),
@@ -240,7 +254,7 @@ mod_analyze_model_server <- function(id, global){
     # Model select input
     output$model_select_ui <- renderUI({
       
-      tags$div(style = "display: flex; align-items: self-end; gap: 10px;",
+      tags$div(class = "d-flex align-items-end gap-2",
         selectizeInput(
           inputId = ns("model_select"),
           label = "Select one or more models",
@@ -249,87 +263,83 @@ mod_analyze_model_server <- function(id, global){
         ),
         tags$div(style = "margin-bottom: 18px",
           actionButton(
-            inputId = ns("diagnos_btn"),
+            inputId = ns("compare_btn"),
             label = "Compare",
             class = "btn btn-sm"
           ) 
         )
-
       )
     })
 
     output$loo_ui <- renderUI({
       global$data_format
-      input$diagnos_btn
+      input$compare_btn
       selected_names <- isolate(input$model_select)
 
       ui <- NULL
       if(!is.null(isolate(global$models))) {
-        if(length(selected_names) == 0) {
-          ui <- NULL
+        ui <- if(length(selected_names) == 0) {
+          NULL
         } else if(length(selected_names) == 1) {
-          ui <- tags$p("*Two or more models are required")
+          tags$p("*Two or more models are required")
         } else {
-          ui <- tagList(
+          tagList(
             bslib::card(
               bslib::card_header(tags$b("Note")),
               bslib::card_body(tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), "."))
             ),
             tableOutput(outputId = ns("loo_table"))
           )
-
-          output$loo_table <- renderTable({
-            waiter::waiter_show(
-              html = waiter_ui("loo"),
-              color = waiter::transparent(0.9)
-            )
-
-
-            # Get the selected models
-            models <- isolate(global$models[selected_names])
-
-            # Extract log-likelihood from each model
-            loo_list <- purrr::map(models, function(m) {
-              log_lik_draws <- m$fit$loo$draws("log_lik")
-              capture_output <- capture.output(loo_output <- loo::loo(log_lik_draws), type = "message")
-
-              if(length(capture_output) > 0) {
-                show_alert(gsub("Warning: ", "", capture_output[1]), global$session)
-              }
-
-              loo_output
-            })
-
-            # Compare the models using loo_compare
-            loo_comparison <- loo::loo_compare(loo_list)
-
-
-            # Convert to data frame
-            loo_df <- as.data.frame(loo_comparison)
-
-            # Select only the columns of interest
-            df <- dplyr::select(loo_df, elpd_diff, se_diff)
-
-
-            waiter::waiter_hide()
-
-            return(df)
-          }, rownames = TRUE, width = "300px")
         }
       }
 
       return(ui)
     })
 
+    output$loo_table <- renderTable({
+      waiter::waiter_show(
+        html = waiter_ui("loo"),
+        color = waiter::transparent(0.9)
+      )
+
+      # Get the selected models
+      selected_names <- isolate(input$model_select)
+      models <- isolate(global$models[selected_names])
+
+      # Extract log-likelihood from each model
+      loo_list <- purrr::map(models, function(m) {
+        log_lik_draws <- m$fit$loo$draws("log_lik")
+        capture.output(loo_output <- loo::loo(log_lik_draws), type = "message")
+
+        return(loo_output)
+      })
+
+      # Store the Pareto k tables
+      purrr::map(loo_list, function(x) loo::pareto_k_table(x)) |>
+        pareto_k_tables()
+
+      # Compare the models using loo_compare
+      compare_df <- loo_list |>
+        loo::loo_compare() |>
+        as.data.frame() |>
+        select(elpd_diff, se_diff)
+
+
+      waiter::waiter_hide()
+
+      return(compare_df)
+    }, rownames = TRUE, width = "300px")
+
     # PPC plots
     output$ppc_plots <- renderUI({
       global$data_format
-      input$diagnos_btn
+      input$compare_btn
 
       selected_names <- isolate(input$model_select)
+      models <- isolate(global$models)
 
-      if(length(selected_names) > 0 && !is.null(isolate(global$models))) {
-        formulas <- purrr::map(isolate(global$models[selected_names]), function(m) m$formula)
+      if(length(selected_names) > 0 && !is.null(models)) {
+        formulas <- purrr::map(models[selected_names], function(m) m$formula)
 
         tagList(
           bslib::card(
@@ -340,7 +350,7 @@ mod_analyze_model_server <- function(id, global){
               bslib::card_body(tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data."))
             }
           ),
-          purrr::map(1:length(formulas), ~ list(
+          purrr::map(seq_along(formulas), ~ list(
             HTML(paste0("<h4 class='formula'><u>", selected_names[.x], "</u>", ": ", formulas[[.x]], "</h4>")),
             plotOutput(ns(paste0("compare_ppc", .x)))
           ))
@@ -349,7 +359,7 @@ mod_analyze_model_server <- function(id, global){
     })
 
     # run model comparison
-    observeEvent(input$diagnos_btn, {
+    observeEvent(input$compare_btn, {
 
       selected_names <- input$model_select
 
@@ -357,7 +367,7 @@ mod_analyze_model_server <- function(id, global){
         inputs <- purrr::map(global$models[selected_names], function(m) m$mrp$input)
         yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
 
-        purrr::map(1:length(yreps), function(i) {
+        purrr::map(seq_along(yreps), function(i) {
           output[[paste0("compare_ppc", i)]] <- renderPlot({
             if(!is.null(isolate(global$models))) {
               if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
@@ -379,21 +389,49 @@ mod_analyze_model_server <- function(id, global){
 
     })
 
-  output$model_feedback <- renderUI({
-    if(!is.null(model_feedback())) {
-      if(model_feedback() == "") {
-        tags$div(
-          tagList(icon("circle-check", "fa"), "Success"),
-          tags$p("Estimation result loaded successfully.", class = "small")
-        )
-      } else {
-        tags$div(
-          tagList(icon("circle-xmark", "fa"), "Error"),
-          tags$p(model_feedback(), class = "small"),
-        )
+    observeEvent(input$loo_diagnos_btn, {
+      bslib::toggle_tooltip(input$loo_diagnos_tooltip, show = FALSE)
+
+      showModal(modalDialog(
+        title = "LOO-CV Diagnostics",
+        tags$p("Below is a summary table of the estimated Pareto shape parameter k. Values above 0.7 suggest influential observations that might negatively affect the accuracy of the leave-one-out cross-validation approximation. For details, check this",
+          tags$a("FAQ", href = "https://mc-stan.org/loo/articles/online-only/faq.html#pareto_shape_parameter_k", target = "_blank"), "."),
+        if (length(pareto_k_tables()) == 0) {
+          tags$p("No models selected", class = "fst-italic")
+        } else {
+          purrr::map(seq_along(pareto_k_tables()), function(i) {
+            tagList(
+              tags$h5(names(pareto_k_tables())[i]),
+              tableOutput(ns(paste0("pareto_k_table", i)))
+            )
+          })
+        },
+        size = "l",
+        easyClose = TRUE,
+        footer = modalButton("Close")
+      ))
+
+      purrr::map(seq_along(pareto_k_tables()), function(i) {
+        output[[paste0("pareto_k_table", i)]] <- renderTable(pareto_k_tables()[[i]], rownames = TRUE)
+      })
+    })
+
+
+    output$model_feedback <- renderUI({
+      if(!is.null(model_feedback())) {
+        if(model_feedback() == "") {
+          tags$div(
+            tagList(icon("circle-check", "fa"), "Success"),
+            tags$p("Estimation result loaded successfully.", class = "small")
+          )
+        } else {
+          tags$div(
+            tagList(icon("circle-xmark", "fa"), "Error"),
+            tags$p(model_feedback(), class = "small"),
+          )
+        }
       }
-    }
-  })
+    })
 
     # reset input fields
     observeEvent(input$reset_btn, {
@@ -552,6 +590,14 @@ mod_analyze_model_server <- function(id, global){
     # create new model tab
     observeEvent(model_buffer(), {
       model <- model_buffer()
+
+      # extract sampler diagnostics
+      if (is.null(model$diagnostics)) {
+        c(model$diagnostics, show_warnings) %<-% extract_diagnostics(
+          fit = model$fit$mcmc,
+          total_transitions = model$n_iter / 2 * model$n_chains
+        )
+      }
       
       # extract posterior summary of coefficients
       if (is.null(model$fixed) || is.null(model$varying)) {
@@ -600,8 +646,12 @@ mod_analyze_model_server <- function(id, global){
         tab = paste0("tab", global$model_count),
         title = paste0("title", global$model_count),
         rm_btn = paste0("rm_btn", global$model_count),
+        save_popover_btn = paste0("save_popover_btn", global$model_count),
         save_fit_btn = paste0("save_fit_btn", global$model_count),
         save_code_btn = paste0("save_code_btn", global$model_count),
+        diagnos_tooltip = paste0("diagnos_tooltip", global$model_count),
+        diagnos_btn = paste0("diagnos_btn", global$model_count),
+        diagnos_tbl = paste0("diagnos_tbl", global$model_count),
         postprocess_btn = paste0("postprocess_btn", global$model_count)
       )
    
@@ -625,6 +675,23 @@ mod_analyze_model_server <- function(id, global){
           output[[global$models[[name]]$IDs$title]] <- renderText(name)
         })
       })
+
+      # show sampler diagnostics
+      observeEvent(input[[model$IDs$diagnos_btn]], {
+        bslib::toggle_tooltip(model$IDs$diagnos_tooltip, show = FALSE)
+
+        showModal(modalDialog(
+          title = "Sampler Diagnostics",
+          tags$p("Below is a summary of problems encountered during sampling for the current model. Ideally, the number of divergences and the number of times the maximum tree depth are reached should be close to 0. E-BFMI should exceed 0.3. For details, see ",
+            tags$a("https://mc-stan.org/misc/warnings", href = "https://mc-stan.org/misc/warnings", target = "_blank"), "."),
+          tableOutput(ns(model$IDs$diagnos_tbl)),
+          easyClose = TRUE,
+          size = "l",
+          footer = modalButton("Close")
+        ))
+      })
+      # Create the table output to display the diagnostics
+      output[[model$IDs$diagnos_tbl]] <- renderTable(model$diagnostics, colnames = FALSE)
       
       # render fixed and varying effect tables
       output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE)
@@ -724,6 +791,13 @@ mod_analyze_model_server <- function(id, global){
           writeLines(model$stan_code$mcmc, file)
         }
       )
+
+
+
+      # trigger diagnostics tooltip
+      if(show_warnings) {
+        bslib::toggle_tooltip(model$IDs$diagnos_tooltip, show = TRUE)
+      }
       
       # if object contains poststratificaiton results
       if(!is.null(model$fit$pstrat)) {
