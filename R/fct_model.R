@@ -755,6 +755,7 @@ run_mcmc <- function(
     parallel_chains = n_chains,
     threads_per_chain = 1,
     refresh = n_iter / 10,
+    diagnostics = NULL,
     seed = seed
   )
   
@@ -878,6 +879,41 @@ extract_parameters <- function(fit, effects) {
   }
 
   return(list(df_fixed, df_varying))
+}
+
+extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
+  # Get diagnostic summary
+  diag_summary <- fit$diagnostic_summary(quiet = TRUE)
+  
+  # Calculate metrics
+  total_divergent <- sum(diag_summary$num_divergent)
+  total_max_treedepth <- sum(diag_summary$num_max_treedepth)
+  low_ebfmi_count <- sum(diag_summary$ebfmi < 0.3)
+  total_chains <- length(diag_summary$ebfmi)
+  
+  # Calculate percentages
+  divergent_percent <- round(total_divergent / total_transitions * 100, 1)
+  
+  # Create formatted messages
+  divergent_msg <- sprintf("%d of %d (%.1f%%) transitions ended with a divergence", 
+                           total_divergent, total_transitions, divergent_percent)
+  
+  treedepth_msg <- sprintf("%d of %d transitions hit the maximum tree depth limit of %d", 
+                          total_max_treedepth, total_transitions, max_depth)
+  
+  ebfmi_msg <- sprintf("%d of %d chains had an E-BFMI less than 0.3", 
+                       low_ebfmi_count, total_chains)
+  
+  # Create and return data frame
+  result <- data.frame(
+    Metric = c("Divergence", "Maximum tree depth", "E-BFMI"),
+    Message = c(divergent_msg, treedepth_msg, ebfmi_msg),
+    stringsAsFactors = FALSE
+  )
+
+  show_warnings <- total_divergent > 0
+  
+  return(list(result, show_warnings))
 }
 
 extract_est <- function(

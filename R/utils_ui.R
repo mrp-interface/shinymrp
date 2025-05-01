@@ -308,7 +308,8 @@ show_guide <- function(open = NULL) {
       title = "User Guide",
       create_guide(open),
       size = "xl",
-      easyClose = TRUE
+      easyClose = TRUE,
+      footer = modalButton("Close")
     )
   )
 }
@@ -342,23 +343,37 @@ create_model_tab <- function(ns, model, last_tab_id) {
           col_widths = c(11, 1),
           class = "mb-0",
           HTML(paste0("<h4 class='formula'>", "Formula: ", model$formula, "</h4>")),
-          tags$div(
+          tags$div(class = "d-flex align-items-end gap-2",
+            bslib::tooltip(
+              actionButton(
+                inputId = ns(model$IDs$diagnos_btn),
+                label = NULL,
+                icon = icon("sliders-h", lib = "font-awesome"),
+                class = "btn btn-sm btn-secondary"
+              ),
+              "Please check sampler diagnostics",
+              id = ns(model$IDs$diagnos_tooltip),
+              placement = "left",
+              options = list(trigger = "manual")
+            ),
             bslib::popover(
               actionButton(
-                inputId = ns(paste0(model$IDs$tab, "_save")),
-                label = "Save",
-                class = "btn-block"
+                inputId = ns(model$IDs$save_popover_btn),
+                label = NULL,
+                icon = icon("download"),
+                class = "btn btn-sm btn-secondary"
               ),
               title = "Save Options",
               downloadButton(
                 outputId = ns(model$IDs$save_code_btn),
                 label = "Model Code",
+                icon = NULL,
                 style = "width: 100%; margin-bottom: 5px;"
               ),
               downloadButton(
                 outputId = ns(model$IDs$save_fit_btn),
                 label = "Estimation Result",
-                icon = icon("download", "fa"),
+                icon = NULL,
                 style = "width: 100%;"
               ),
               placement = "left"

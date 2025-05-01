@@ -19,8 +19,8 @@ mod_analyze_upload_ui <- function(id) {
 
       bslib::accordion(
         multiple = FALSE,
-        bslib::accordion_panel("Required Data",
-          tags$p(tags$strong("Step 1: Upload individual-level or aggregated data (examples below)")),
+        bslib::accordion_panel("Sample",
+          tags$p(tags$strong("Upload individual-level or aggregated data (examples below)")),
           shinyWidgets::radioGroupButtons(
             inputId = ns("toggle_input"),
             label = NULL,
@@ -52,13 +52,15 @@ mod_analyze_upload_ui <- function(id) {
               p("Example", class = "fst-italic small")
             ),
             tags$div(
-              class = "d-flex gap-2",
+              class = "d-flex gap-2 mb-3",
               actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
               actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
             )
-          ),
-
-          tags$p(tags$strong("Step 2: Link to ACS Data"), class = "mt-4"),
+          )
+        ),
+        bslib::accordion_panel(
+          title = "Poststratification Data",
+          tags$p(tags$strong("Link to ACS Data")),
           conditionalPanel(
             condition = "output.data_format == 'temporal_covid'",
             bslib::card(
@@ -75,20 +77,28 @@ mod_analyze_upload_ui <- function(id) {
           ),
           conditionalPanel(
             condition = "output.data_format != 'temporal_covid' && output.data_format != 'static_poll'",
-            selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
-            selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
-            actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100")
-          )
-        ),
-        bslib::accordion_panel(
-          title = "Optional Data",
-          tags$div(
-            tags$p(tags$strong("Poststratification Table")),
-            fileInput(ns("optional_file1"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
-            tags$hr(),
-            
-            tags$p(tags$strong("Probability Sample")),
-            fileInput(ns("optional_file2"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
+            tags$div(class = "mb-2",
+              selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
+              selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
+              actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100")
+            )
+          ),
+          tags$div(class = "mt-3",
+            actionButton(
+              inputId = ns("prob_sample_popover_btn"),
+              label =  "Advanced options",
+              icon = icon("chevron-down"),
+              class = "btn btn-sm btn-secondary",
+            ),
+            conditionalPanel(
+              condition = sprintf("input['%s'] %% 2 == 1", ns("prob_sample_popover_btn")),
+              bslib::card(class = "mt-2",
+                bslib::card_body(
+                  fileInput(ns("optional_file1"), label = "Upload poststratification data", accept = c(".csv", ".xlsx", ".sas7bdat")),
+                  fileInput(ns("optional_file2"), label = "Upload probability sample", accept = c(".csv", ".xlsx", ".sas7bdat")),
+                )
+              )
+            )
           )
         )
       )

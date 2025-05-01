@@ -116,5 +116,9 @@ app_server <- function(input, output, session) {
 
     removeModal()
   })
+
+  observeEvent(input$show_guide, {
+    show_guide()
+  })
 }
 
