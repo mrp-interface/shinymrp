@@ -137,6 +137,7 @@ GLOBAL <- list(
       duration = 1000,
       delay = 100
     ),
+    data_accept = c(".csv", ".xlsx", ".sas7bdat"),
     plot_selection = list(
       vis_main = c(
         "Individual Characteristics" = "indiv",

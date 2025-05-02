@@ -18,7 +18,24 @@ mod_analyze_model_ui <- function(id) {
       bslib::accordion(
         multiple = FALSE,
         bslib::accordion_panel("Model Specification",
-          tags$p(tags$strong("Step 1: Select main effects and interactions")),
+          tags$div(class = "d-flex justify-content-between align-items-start",
+            tags$p(tags$strong("Step 1: Select main effects"), tags$br(), tags$strong("and interactions")),
+            tags$div(style = "margin-top: 10px",
+              bslib::tooltip(
+                actionButton(
+                  inputId = ns("effect_warning_btn"),
+                  label = NULL,
+                  icon = icon("info", class = "fa align-top"),
+                  class = "btn btn-sm btn-secondary rounded-circle",
+                  style = "width: 24px; height: 24px;"
+                ),
+                "Some effects are omitted",
+                id = ns("effect_warning_tooltip"),
+                placement = "left",
+                options = list(trigger = "hover")
+              )
+            )
+          ),
           shinyWidgets::virtualSelectInput(ns("fixed"), "Fixed Effects", choices = NULL, multiple = TRUE),
           shinyWidgets::virtualSelectInput(ns("varying"), "Varying Effects (Partial Pooling)", choices = NULL, multiple = TRUE),
           shinyWidgets::virtualSelectInput(ns("interaction"), "Interactions", choices = NULL, multiple = TRUE),
@@ -26,7 +43,7 @@ mod_analyze_model_ui <- function(id) {
 
           tags$p(tags$strong("Step 2: Specify Priors")),
           p("All effects have default priors, which can be customized. See the ",
-            actionLink(ns("show_priors"), "list"), " of available priors."),
+            actionLink(ns("show_priors"), "list"), " of available priors.", class = "small"),
           uiOutput(ns("prior_spec_ui")),
           actionButton(ns("add_prior"), "Add Prior", class = "btn-sm btn-secondary w-100"),
           tags$hr(),
@@ -592,8 +609,9 @@ mod_analyze_model_server <- function(id, global){
       model <- model_buffer()
 
       # extract sampler diagnostics
-      if (is.null(model$diagnostics)) {
-        c(model$diagnostics, show_warnings) %<-% extract_diagnostics(
+      show_warnings <- FALSE
+      if (is.null(model$diagnostics$mcmc)) {
+        c(model$diagnostics$mcmc, show_warnings) %<-% extract_diagnostics(
           fit = model$fit$mcmc,
           total_transitions = model$n_iter / 2 * model$n_chains
         )
@@ -691,7 +709,7 @@ mod_analyze_model_server <- function(id, global){
         ))
       })
       # Create the table output to display the diagnostics
-      output[[model$IDs$diagnos_tbl]] <- renderTable(model$diagnostics, colnames = FALSE)
+      output[[model$IDs$diagnos_tbl]] <- renderTable(model$diagnostics$mcmc, colnames = FALSE)
       
       # render fixed and varying effect tables
       output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE)
@@ -753,8 +771,12 @@ mod_analyze_model_server <- function(id, global){
               html = waiter_ui("wait"),
               color = waiter::transparent(0.9)
             )
-            
+
+            # save draws in the fit object
+            # model$fit$ppc$draws() already called in extract_yrep
             model$fit$mcmc$draws()
+            model$fit$loo$draws()
+
             qs::qsave(model, file)
             
             waiter::waiter_hide()
@@ -777,7 +799,10 @@ mod_analyze_model_server <- function(id, global){
             color = waiter::transparent(0.9)
           )
           
+          # save draws in the fit object
+          # model$fit$ppc$draws() already called in extract_yrep
           model$fit$mcmc$draws()
+          model$fit$loo$draws()
           qs::qsave(model, file)
           
           waiter::waiter_hide()
@@ -791,8 +816,6 @@ mod_analyze_model_server <- function(id, global){
           writeLines(model$stan_code$mcmc, file)
         }
       )
-
-
 
       # trigger diagnostics tooltip
       if(show_warnings) {
@@ -809,40 +832,43 @@ mod_analyze_model_server <- function(id, global){
       global$model_count <- global$model_count + 1
     })
 
+
+    #------------------------------------------------------------------
     # reset everything when new data is uploaded or
     # when user switch interface
-    reset_flag <- reactive({
-      global$data
-      global$data_format
-      global$link_data
-    })
-    
-    observeEvent(reset_flag(), {
-      # reset input fields
-      prior_buffer(list())
-      model_buffer(NULL)
-      model_feedback(NULL)
+    #------------------------------------------------------------------
+    observeEvent(
+      eventExpr = list(
+        global$data,
+        global$data_format,
+        global$link_data
+      ), 
+      handlerExpr = {
+        # reset input fields
+        prior_buffer(list())
+        model_buffer(NULL)
+        model_feedback(NULL)
 
-      reset_inputs(vars = list(
-        fixed = list(),
-        varying = list()
-      ))
+        reset_inputs(vars = list(
+          fixed = list(),
+          varying = list()
+        ))
 
-      # delete all model tabs
-      purrr::map(purrr::map(global$models, function(m) m$IDs$tab), function(id) {
-        bslib::nav_remove("navbar_model", id, session)
-      })
+        # delete all model tabs
+        purrr::map(purrr::map(global$models, function(m) m$IDs$tab), function(id) {
+          bslib::nav_remove("navbar_model", id, session)
+        })
 
-      bslib::nav_select(
-        id = "navbar_model",
-        selected = "nav_compare",
-        session = session
-      )
+        bslib::nav_select(
+          id = "navbar_model",
+          selected = "nav_compare",
+          session = session
+        )
 
-      # clear model object list
-      global$models <- NULL
-      global$poststratified_models <- NULL
-
-    })
+        # clear model object list
+        global$models <- NULL
+        global$poststratified_models <- NULL
+      }
+    )
   })
 }
