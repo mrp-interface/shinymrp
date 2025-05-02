@@ -427,17 +427,20 @@ create_model_tab <- function(ns, model, last_tab_id) {
 reset_inputs <- function(vars) {
   updateVirtualSelect(
     inputId = "fixed",
-    choices = vars$fixed
+    choices = vars$fixed,
+    selected = NULL
   )
   
   updateVirtualSelect(
     inputId = "varying",
-    choices = vars$varying
+    choices = vars$varying,
+    selected = NULL
   )
   
   updateVirtualSelect(
     inputId = "interaction",
-    choices = list()
+    choices = list(),
+    selected = NULL
   )
   
   shinyjs::reset("predictor_select")

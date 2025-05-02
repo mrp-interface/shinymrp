@@ -18,8 +18,11 @@ mod_analyze_upload_ui <- function(id) {
       width = 350,
 
       bslib::accordion(
+        id = ns("accordion"),
         multiple = FALSE,
-        bslib::accordion_panel("Sample",
+        bslib::accordion_panel(
+          title = "Sample",
+          value = "sample",
           tags$p(tags$strong("Upload individual-level or aggregated data (examples below)")),
           shinyWidgets::radioGroupButtons(
             inputId = ns("toggle_input"),
@@ -29,8 +32,12 @@ mod_analyze_upload_ui <- function(id) {
             justified = TRUE,
             size = "sm"
           ),
-          fileInput(ns("input_data"), label = NULL, accept = c(".csv", ".xlsx", ".sas7bdat")),
-          uiOutput(ns("input_feedback")),
+          fileInput(
+            inputId = ns("sample_upload"),
+            label = NULL,
+            accept = GLOBAL$ui$data_accept
+          ),
+          uiOutput(ns("sample_feedback")),
           p(class = "mt-0 small",
             "For", tags$u("input data requirements,"), "open the",
             actionLink(ns("show_upload_guide"), label = "User Guide."),
@@ -60,42 +67,42 @@ mod_analyze_upload_ui <- function(id) {
         ),
         bslib::accordion_panel(
           title = "Poststratification Data",
-          tags$p(tags$strong("Link to ACS Data")),
-          conditionalPanel(
-            condition = "output.data_format == 'temporal_covid'",
-            bslib::card(
-              card_header("Note", class = "bg-info text-dark"),
-              card_body("Input COVID data is automatically linked to 5-year ACS data (2017-2021) through ZIP code.")
-            )
+          value = "pstrat",
+          tags$p("Upload poststratification data or provide information for linking the input data to the ACS data.",
+            class = "small"
           ),
-          conditionalPanel(
-            condition = "output.data_format == 'static_poll'",
-            bslib::card(
-              card_header("Note", class = "bg-info text-dark"),
-              card_body("Input poll data is automatically linked to 5-year ACS data (2013-2018) through state.")
-            )
-          ),
-          conditionalPanel(
-            condition = "output.data_format != 'temporal_covid' && output.data_format != 'static_poll'",
-            tags$div(class = "mb-2",
-              selectInput(ns("link_geo"), label = "Select geography level for poststratification", choices = NULL),
-              selectInput(ns("acs_year"), label = "Select year 5-year ACS data to link to", choices = NULL),
-              actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100")
-            )
-          ),
-          tags$div(class = "mt-3",
+          tags$div(class = "mt-2",
             actionButton(
-              inputId = ns("prob_sample_popover_btn"),
-              label =  "Advanced options",
+              inputId = ns("pstrat_upload_popover_btn"),
+              label =  "Upload poststratification data",
               icon = icon("chevron-down"),
-              class = "btn btn-sm btn-secondary",
+              class = "btn btn-sm btn-secondary"
             ),
-            conditionalPanel(
-              condition = sprintf("input['%s'] %% 2 == 1", ns("prob_sample_popover_btn")),
+            tags$div(id = ns("pstrat_upload_popover"),
               bslib::card(class = "mt-2",
                 bslib::card_body(
-                  fileInput(ns("optional_file1"), label = "Upload poststratification data", accept = c(".csv", ".xlsx", ".sas7bdat")),
-                  fileInput(ns("optional_file2"), label = "Upload probability sample", accept = c(".csv", ".xlsx", ".sas7bdat")),
+                  fileInput(
+                    inputId = ns("pstrat_upload"),
+                    label = "Upload poststratification data",
+                    accept = GLOBAL$ui$data_accept
+                  )
+                )
+              )
+            )
+          ),
+          tags$div(class = "mt-2",
+            actionButton(
+              inputId = ns("link_acs_popover_btn"),
+              label = "Link to ACS Data",
+              icon = icon("chevron-down"),
+              class = "btn btn-sm btn-secondary"
+            ),
+            tags$div(id = ns("link_acs_popover"),
+              bslib::card(class = "mt-2",
+                bslib::card_body(
+                  selectInput(ns("link_geo"), label = "Select geography scale for poststratification", choices = NULL),
+                  selectInput(ns("acs_year"), label = "Select 5-year ACS data to link to", choices = NULL),
+                  actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100") 
                 )
               )
             )
@@ -175,25 +182,58 @@ mod_analyze_upload_server <- function(id, global){
       shinyjs::reset("acs_year")
 
       rawdata(NULL)
+      input_errors(NULL)
+      input_warnings(NULL)
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
+      global$link_data <- NULL
+
+      # reset the accordion to show the sample data panel
+      bslib::accordion_panel_open(
+        id = "accordion",
+        values = "sample",
+        session = session
+      )
+
+      # reset the poststratification data panel
+      shinyjs::hide("link_acs_popover")
+      shinyjs::show("pstrat_upload_popover")
     })
     
+    # --------------------------------------------------------------------------
+    # Make poststratification data options exclusive
+    # --------------------------------------------------------------------------
+    observeEvent(
+      eventExpr = list(
+        input$pstrat_upload_popover_btn,
+        input$link_acs_popover_btn
+      ),
+      handlerExpr = {
+        shinyjs::toggle(id = "pstrat_upload_popover")
+        shinyjs::toggle(id = "link_acs_popover")
+      }
+    )
+
+
+    # --------------------------------------------------------------------------
     # Show feedback about input data
-    output$input_feedback <- renderUI({
+    # --------------------------------------------------------------------------
+    output$sample_feedback <- renderUI({
       req(rawdata())
       
-      if (length(input_errors()) > 0) {
-        tags$div(
-          tagList(icon("circle-xmark", "fa"), "Error"),
-          tags$p("Input data does not meet all requirements. Please check the user guide for input data requirements.", class = "small"),
-        )
-      } else {
-        tags$div(
-          tagList(icon("circle-check", "fa"), "Success"),
-          tags$p("All requirements are met. You may proceed to data linking or the next page.", class = "small")
-        )
+      if (!is.null(input_errors())) {
+        if (length(input_errors()) > 0) {
+          tags$div(
+            tagList(icon("circle-xmark", "fa"), "Error"),
+            tags$p("Input data does not meet all requirements. Please check the user guide for input data requirements.", class = "small"),
+          )
+        } else {
+          tags$div(
+            tagList(icon("circle-check", "fa"), "Success"),
+            tags$p("All requirements are met. You may proceed to data linking or the next page.", class = "small")
+          )
+        }
       }
     })
 
@@ -233,7 +273,7 @@ mod_analyze_upload_server <- function(id, global){
     )
 
     # Handle file upload
-    observeEvent(input$input_data, {
+    observeEvent(input$sample_upload, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
         color = waiter::transparent(0.9)
@@ -247,7 +287,7 @@ mod_analyze_upload_server <- function(id, global){
       # Read in data
       tryCatch({
         # Read in data first
-        path <- input$input_data$datapath
+        path <- input$sample_upload$datapath
         if(stringr::str_ends(path, "csv")) {
           rawdata(readr::read_csv(path, show_col_types = FALSE))
         } else if (stringr::str_ends(path, "(xlsx|xls)")) {
@@ -311,7 +351,6 @@ mod_analyze_upload_server <- function(id, global){
         input_errors(list(unexpected = err_msg))
       }, finally = {
         # Always hide the waiter
-        print(input_errors())
         waiter::waiter_hide()
       })
     })
@@ -341,9 +380,6 @@ mod_analyze_upload_server <- function(id, global){
         global$data <- cleaned_data |> aggregate_data(expected_levels = GLOBAL$levels[[global$data_format]])
       }
       
-      input_errors(NULL)
-      input_warnings(NULL)
-      
       waiter::waiter_hide()
     })
 
@@ -363,112 +399,128 @@ mod_analyze_upload_server <- function(id, global){
 
       readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> rawdata()
       global$data <- rawdata() |> clean_data()
-      
-      input_errors(NULL)
-      input_warnings(NULL)
 
       waiter::waiter_hide()
     })
 
+
+    #---------------------------------------------------------------------------
+    # Update select input for linking to ACS
+    #---------------------------------------------------------------------------
     observeEvent(global$data, {
+      req(global$data)
 
-      if(!is.null(global$data)) {
-        if(global$data_format == "temporal_covid") {
-          c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-            global$data,
-            global$extdata$pstrat_covid,
-            global$extdata$covar_covid,
-            GLOBAL$levels$temporal_covid,
-            GLOBAL$vars
-          )
-          
-          global$mrp <- list(
-            input = input_data,
-            new = new_data,
-            levels = levels,
-            vars = vars
-          )
-
-          global$plotdata <- list(
-            dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-            geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
-            raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(input_data$zip))
-          )
-          
-          global$link_data <- list(
-            link_geo = "zip",
-            acs_year = NULL
-          )
-
-        } else if (global$data_format == "static_poll") {
-          c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-            global$data,
-            global$extdata$pstrat_poll,
-            global$extdata$fips$county,
-            GLOBAL$levels$static_poll,
-            GLOBAL$vars
-          )
-          
-          global$mrp <- list(
-            input = input_data,
-            new = new_data,
-            levels = levels,
-            vars = vars
-          )
-
-          global$plotdata <- list(
-            geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
-          )
-
-          global$link_data <- list(
-            link_geo = "state",
-            acs_year = NULL
-          )
-        } else {
-          smallest_geo_index <- intersect(names(global$data), GLOBAL$vars$geo) |>
-            purrr::map_int(~which(GLOBAL$vars$geo == .x)) |>
-            min()
-          choices <- c(GLOBAL$vars$geo[smallest_geo_index:length(GLOBAL$vars$geo)], "Do not include geography")
-
-          updateSelectInput(session,
-            inputId = "link_geo",
-            choices = choices
-          )
-          
-          years <- 2019:2023
-          choices <- paste0(years - 4, "-", years)
-          updateSelectInput(session,
-            inputId = "acs_year",
-            choices = choices
-          )
-        }
+      if(global$data_format == "temporal_covid") {
+        link_geos <- c("zip")
+        acs_years <- 2021
+      } else if (global$data_format == "static_poll") {
+        link_geos <- c("state")
+        acs_years <- 2018
+      } else {
+        smallest_geo_index <- intersect(names(global$data), GLOBAL$vars$geo) |>
+          purrr::map_int(~which(GLOBAL$vars$geo == .x)) |>
+          min()
+        link_geos <- c(GLOBAL$vars$geo[smallest_geo_index:length(GLOBAL$vars$geo)], "Do not include geography")
+        acs_years <- 2019:2023
       }
+
+      updateSelectInput(session,
+        inputId = "link_geo",
+        choices = link_geos
+      )
+
+      updateSelectInput(session,
+        inputId = "acs_year",
+        choices = paste0(acs_years - 4, "-", acs_years)
+      )
+
+      # Update the accordion to show the poststratification data panel
+      bslib::accordion_panel_open(
+        id = "accordion",
+        values = "pstrat",
+        session = session
+      )
 
       waiter::waiter_hide()
     })
     
-    observeEvent(input$link_acs, {
-      # prepare data for model fitting and plotting
-      if(!is.null(global$data)) {
-        start_busy(
-          session = session,
-          id = "link_acs",
-          label = "Linking..."
-        )
 
-        # delay the execution to allow the UI to update
-        shinyjs::delay(10, {
-          success <- FALSE
-          tryCatch({
-            # store user's selections for data linking
-            global$link_data <- list(
-              link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
-              acs_year = input$acs_year
+    #---------------------------------------------------------------------------
+    # Create poststratification data
+    #---------------------------------------------------------------------------
+    observeEvent(input$link_acs, {
+      req(global$data)
+
+      start_busy(
+        session = session,
+        id = "link_acs",
+        label = "Linking..."
+      )
+
+      # delay the execution to allow the UI to update
+      shinyjs::delay(10, {
+        success <- FALSE
+
+        tryCatch({
+          # store user's selections for data linking
+          global$link_data <- list(
+            link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
+            acs_year = input$acs_year
+          )
+
+          if(global$data_format == "temporal_covid") {
+            # prepare data for MRP
+            c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
+              global$data,
+              global$extdata$pstrat_covid,
+              global$extdata$covar_covid,
+              GLOBAL$levels$temporal_covid,
+              GLOBAL$vars
             )
             
+            # set global MRP data
+            global$mrp <- list(
+              input = input_data,
+              new = new_data,
+              levels = levels,
+              vars = vars
+            )
+
+            # prepare data for plotting
+            global$plotdata <- list(
+              dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
+              geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
+              raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(input_data$zip))
+            )
+
+          } else if (global$data_format == "static_poll") {
+            # prepare data for MRP
+            c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
+              global$data,
+              global$extdata$pstrat_poll,
+              global$extdata$fips$county,
+              GLOBAL$levels$static_poll,
+              GLOBAL$vars
+            )
+            
+            # set global MRP data
+            global$mrp <- list(
+              input = input_data,
+              new = new_data,
+              levels = levels,
+              vars = vars
+            )
+
+            # prepare data for plotting
+            global$plotdata <- list(
+              geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
+            )
+
+          } else {
             # retrieve ACS data based on user's selection
             tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
 
+            # prepare data for MRP
             c(input_data, new_data, levels, vars) %<-% prepare_data(
               input_data = global$data,
               tract_data = tract_data,
@@ -479,6 +531,7 @@ mod_analyze_upload_server <- function(id, global){
               link_geo = global$link_data$link_geo
             )
             
+            # set global MRP data
             global$mrp <- list(
               input = input_data,
               new = new_data,
@@ -497,39 +550,42 @@ mod_analyze_upload_server <- function(id, global){
                 geoids = global$mrp$levels[[.x]]
               ))
 
-            global$plotdata <- if(length(plotdata) > 0) plotdata else NULL
-            
-            # set success to TRUE if no errors occurred
-            success <- TRUE
-          }, error = function(e) {
-            warnings(paste("Error linking data:", e$message))
-          }, finally = {
-            stop_busy(
-              session = session,
-              id = "link_acs",
-              label = if(success) "Linking complete" else "Linking failed",
-              success = success
-            )
-          })
+            global$plotdata <- nullify(plotdata)
+          }
+          
+          # set success to TRUE if no errors occurred
+          success <- TRUE
+        }, error = function(e) {
+          warnings(paste("Error linking data:", e$message))
+        }, finally = {
+          stop_busy(
+            session = session,
+            id = "link_acs",
+            label = if(success) "Linking complete" else "Linking failed",
+            success = success
+          )
         })
+      })
+
+    })
+
+
+    observeEvent(
+      eventExpr = list(
+        global$data_format,
+        global$data,
+        input$link_geo,
+        input$acs_year
+      ),
+      handlerExpr = {
+        updateActionButton(
+          session = session,
+          inputId = "link_acs",
+          label = "Link",
+          icon = character(0)
+        )
       }
-    })
-
-    link_button_reset <- reactive({
-      global$data_format
-      global$data
-      input$link_geo
-      input$acs_year
-    })
-
-    observeEvent(link_button_reset(), {
-      updateActionButton(
-        session = session,
-        inputId = "link_acs",
-        label = "Link",
-        icon = character(0)
-      )
-    })
+    )
 
 
     observeEvent(input$show_upload_guide, {
