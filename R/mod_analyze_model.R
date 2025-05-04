@@ -29,10 +29,10 @@ mod_analyze_model_ui <- function(id) {
                   class = "btn btn-sm btn-secondary rounded-circle",
                   style = "width: 24px; height: 24px;"
                 ),
-                "Some effects are omitted",
+                "Some effects are omitted (Click for details)",
                 id = ns("effect_warning_tooltip"),
                 placement = "left",
-                options = list(trigger = "hover")
+                options = list(trigger = "manual")
               )
             )
           ),
@@ -122,7 +122,8 @@ mod_analyze_model_server <- function(id, global){
     prior_buffer <- reactiveVal(list())
     model_buffer <- reactiveVal()
     model_feedback <- reactiveVal()
-    pareto_k_tables <- reactiveVal()
+    pareto_k_dfs <- reactiveVal()
+    show_effect_warning <- reactiveVal(FALSE)
 
     observeEvent(input$show_priors, {
       show_guide("model_spec")
@@ -132,110 +133,166 @@ mod_analyze_model_server <- function(id, global){
       show_guide("model_fit")
     })
 
-   observeEvent(input$add_prior, {
-      holder <- purrr::map(1:(length(prior_buffer()) + 1), ~ list(
-        dist = input[[paste0("prior_dist_", .x)]],
-        eff = input[[paste0("prior_eff_", .x)]]
+
+    #--------------------------------------------------------------------------
+    # Set display flag for tooltip if some effects are omitted
+    #--------------------------------------------------------------------------
+    observeEvent(global$mrp, {
+      req(global$mrp)
+      show_effect_warning(length(global$mrp$vars$omit$one_level) > 0)
+    })
+  
+    observeEvent(global$input$navbar_analyze, {
+      if(global$input$navbar_analyze == "nav_analyze_model") {  
+        if (show_effect_warning()) {
+          bslib::toggle_tooltip("effect_warning_tooltip", show = TRUE)
+          show_effect_warning(FALSE)
+        }
+      }
+    })
+
+    #--------------------------------------------------------------------------
+    # Show modal diaglog for omitted effects
+    #--------------------------------------------------------------------------
+    observeEvent(input$effect_warning_btn, {
+      bslib::toggle_tooltip("effect_warning_tooltip", show = FALSE)
+
+      showModal(modalDialog(
+        title = "Omitted Effects",
+        tags$p("The following effects are omitted from the list because the corresponding data only has one level:"),
+        tags$ul(
+          purrr::map(global$mrp$vars$omit$one_level, ~ tags$li(.x))
+        ),
+        tags$p("The following interactions are omitted from the list because their main effects are nested:"),
+        tags$ul(
+          purrr::map(global$mrp$vars$omit$nested, ~ tags$li(.x))
+        ),
+        size = "l",
+        easyClose = TRUE,
+        footer = modalButton("Close")
       ))
+    })
 
-      prior_buffer(holder)
-      holder[[length(holder) + 1]] <- list(dist = "", eff = NULL)
+    #--------------------------------------------------------------------------
+    # Update select inputs for fixed and varying effects and prevent a variable
+    # from being included as both a fixed effect and a varying effect
+    #--------------------------------------------------------------------------
+    purrr::map(c("fixed", "varying"), function(id) {
+      observeEvent(input[[paste0(id, "_open")]], {
+        if(input[[paste0(id, "_open")]]) {
+          other_id <- setdiff(c("fixed", "varying"), id)
+          choices <- global$mrp$vars[[id]] |>
+            purrr::map(function(l) as.list(setdiff(l, input[[other_id]])))
+          selected = setdiff(input[[id]], input[[other_id]])
+          
+          updateVirtualSelect(
+            inputId = id,
+            choices = choices,
+            selected = selected
+          )
+        }
+      })
+    })
 
-      for(i in 1:length(holder)) {
+    #--------------------------------------------------------------------------
+    # Update select input for interactions
+    #--------------------------------------------------------------------------
+    observeEvent(input$interaction_open, {
+      if(input$interaction_open) {
+        choices <- create_interactions(
+          input$fixed,
+          input$varying,
+          global$mrp$input
+        ) |> 
+        pair_setdiff(global$mrp$vars$omit$nested)
+
         updateVirtualSelect(
-          inputId = paste0("prior_eff_", i),
-          choices = list(
-            "Intercept" = setNames(c("Intercept_Intercept"), c("Intercept")),
-            "Fixed Effect" = if(length(input$fixed) > 0)  setNames(paste0("fixed_", input$fixed), input$fixed),
-            "Varying Effect" = if(length(input$varying) > 0)  setNames(paste0("varying_", input$varying), input$varying),
-            "Interaction" = if(length(input$interaction) > 0)  setNames(paste0("interaction_", input$interaction), input$interaction)
-          ),
-          selected = holder[[i]]$eff
+          inputId = "interaction",
+          choices = choices,
+          selected = input$interaction
         )
       }
     })
+
+    #--------------------------------------------------------------------------
+    # Handler for adding priors
+    #--------------------------------------------------------------------------
+    observeEvent(input$add_prior, {
+        holder <- purrr::map(1:(length(prior_buffer()) + 1), ~ list(
+          dist = input[[paste0("prior_dist_", .x)]],
+          eff = input[[paste0("prior_eff_", .x)]]
+        ))
+
+        prior_buffer(holder)
+        holder[[length(holder) + 1]] <- list(dist = "", eff = NULL)
+
+        for(i in 1:length(holder)) {
+          updateVirtualSelect(
+            inputId = paste0("prior_eff_", i),
+            choices = list(
+              "Intercept" = setNames(c("Intercept_Intercept"), c("Intercept")),
+              "Fixed Effect" = if(length(input$fixed) > 0)  setNames(paste0("fixed_", input$fixed), input$fixed),
+              "Varying Effect" = if(length(input$varying) > 0)  setNames(paste0("varying_", input$varying), input$varying),
+              "Interaction" = if(length(input$interaction) > 0)  setNames(paste0("interaction_", input$interaction), input$interaction)
+            ),
+            selected = holder[[i]]$eff
+          )
+        }
+      })
+
+
+    #--------------------------------------------------------------------------
+    # Update select inputs for prior assignment
+    #--------------------------------------------------------------------------
+    observe({
+      purrr::map(1:(length(prior_buffer()) + 1), function(i) {
+        dist_id <- paste0("prior_dist_", i)
+        eff_id <- paste0("prior_eff_", i)
+        eff_id_open <- paste0("prior_eff_", i, "_open")
+        
+        # update select inputs for prior assignment
+        observeEvent(input[[eff_id_open]], {
+          if(input[[eff_id_open]]) {
+            intercept <- setNames(c("Intercept_Intercept"), c("Intercept"))
+            fixed_effects <- if(length(input$fixed) > 0) setNames(paste0("fixed_", input$fixed), input$fixed)
+            varying_effects <- if(length(input$varying) > 0) setNames(paste0("varying_", input$varying), input$varying)
+            interactions <- if(length(input$interaction) > 0) setNames(paste0("interaction_", input$interaction), input$interaction)
+            
+            # filter effects for structred prior
+            if(input[[dist_id]] == "structured") {
+              intercept <- list()
+              fixed_effects <- list()
+              varying_effects <- list()
+              interactions <- list()
+              
+              if(length(input$interaction) > 0) {
+                interactions <- filter_interactions(input$interaction, input$fixed, global$mrp$input)
+                interactions <- setNames(paste0("interaction_", interactions), interactions)
+              }
+            }
+
+            
+            updateVirtualSelect(
+              inputId = eff_id,
+              choices = list(
+                "Intercept" = intercept,
+                "Fixed Effect" = fixed_effects,
+                "Varying Effect" = varying_effects,
+                "Interaction" = interactions
+              ),
+              selected = input[[eff_id]]
+            )
+          }
+        })
+        
+      })
+    })
    
-   # create interaction and populate select input
-   observeEvent(input$interaction_open, {
-     if(input$interaction_open) {
-       updateVirtualSelect(
-         inputId = "interaction",
-         choices = create_interactions(
-           input$fixed,
-           input$varying,
-           global$mrp$input
-         ),
-         selected = input$interaction
-       )
-     }
-   })
 
-   # prevent a variable from being included as
-   # both a fixed effect and a varying effect
-   purrr::map(c("fixed", "varying"), function(id) {
-     observeEvent(input[[paste0(id, "_open")]], {
-       if(input[[paste0(id, "_open")]]) {
-         other_id <- setdiff(c("fixed", "varying"), id)
-         choices <- global$mrp$vars[[id]] |>
-           purrr::map(function(l) as.list(setdiff(l, input[[other_id]])))
-         selected = setdiff(input[[id]], input[[other_id]])
-         
-         updateVirtualSelect(
-           inputId = id,
-           choices = choices,
-           selected = selected
-         )
-       }
-     })
-   })
-
-
-
-   observe({
-     purrr::map(1:(length(prior_buffer()) + 1), function(i) {
-       dist_id <- paste0("prior_dist_", i)
-       eff_id <- paste0("prior_eff_", i)
-       eff_id_open <- paste0("prior_eff_", i, "_open")
-       
-       # update select inputs for prior assignment
-       observeEvent(input[[eff_id_open]], {
-         if(input[[eff_id_open]]) {
-           intercept <- setNames(c("Intercept_Intercept"), c("Intercept"))
-           fixed_effects <- if(length(input$fixed) > 0) setNames(paste0("fixed_", input$fixed), input$fixed)
-           varying_effects <- if(length(input$varying) > 0) setNames(paste0("varying_", input$varying), input$varying)
-           interactions <- if(length(input$interaction) > 0) setNames(paste0("interaction_", input$interaction), input$interaction)
-           
-           # filter effects for structred prior
-           if(input[[dist_id]] == "structured") {
-             intercept <- list()
-             fixed_effects <- list()
-             varying_effects <- list()
-             interactions <- list()
-             
-             if(length(input$interaction) > 0) {
-               interactions <- filter_interactions(input$interaction, input$fixed, global$mrp$input)
-               interactions <- setNames(paste0("interaction_", interactions), interactions)
-             }
-           }
-
-           
-           updateVirtualSelect(
-             inputId = eff_id,
-             choices = list(
-               "Intercept" = intercept,
-               "Fixed Effect" = fixed_effects,
-               "Varying Effect" = varying_effects,
-               "Interaction" = interactions
-             ),
-             selected = input[[eff_id]]
-           )
-         }
-       })
-      
-     })
-   })
-   
-   output$prior_spec_ui <- renderUI({
+    #--------------------------------------------------------------------------
+    # Render prior specification UI
+    #--------------------------------------------------------------------------
+    output$prior_spec_ui <- renderUI({
       holder <- prior_buffer()
       holder[[length(holder) + 1]] <- list(dist = "", eff = NULL)
 
@@ -268,7 +325,9 @@ mod_analyze_model_server <- function(id, global){
       ))
     })
 
-    # Model select input
+    #--------------------------------------------------------------------------
+    # Render model selection UI
+    #--------------------------------------------------------------------------
     output$model_select_ui <- renderUI({
       
       tags$div(class = "d-flex align-items-end gap-2",
@@ -288,6 +347,9 @@ mod_analyze_model_server <- function(id, global){
       )
     })
 
+    #-----------------------------------------------------------------------
+    # Render LOO-CV UI
+    #-----------------------------------------------------------------------
     output$loo_ui <- renderUI({
       req(global$models)
       global$data_format
@@ -312,6 +374,9 @@ mod_analyze_model_server <- function(id, global){
       return(ui)
     })
 
+    #-----------------------------------------------------------------------
+    # Render LOO-CV table
+    #-----------------------------------------------------------------------
     output$loo_table <- renderTable({
       waiter::waiter_show(
         html = waiter_ui("loo"),
@@ -326,15 +391,28 @@ mod_analyze_model_server <- function(id, global){
 
         # Extract log-likelihood from each model
         loo_list <- purrr::map(models, function(m) {
-          log_lik_draws <- m$fit$loo$draws("log_lik")
-          capture.output(loo_output <- loo::loo(log_lik_draws), type = "message")
+          capture.output({
+            loo_output <- loo::loo(
+              m$fit$loo$draws("log_lik"),
+              cores = m$n_chains
+            )
+          }, type = "message")
 
           return(loo_output)
         })
 
+
+        # Check for problematic Pareto k values
+        dfs <- purrr::map(loo_list, function(x) loo::pareto_k_table(x))
+        for (df in dfs) {
+          if (sum(df[2:3, 1]) > 0) {
+            bslib::toggle_tooltip("loo_diagnos_tooltip", show = TRUE)
+            break
+          }
+        }
+        
         # Store the Pareto k tables
-        purrr::map(loo_list, function(x) loo::pareto_k_table(x)) |>
-          pareto_k_tables()
+        pareto_k_dfs(dfs)
 
         # Compare the models using loo_compare
         compare_df <- loo_list |>
@@ -351,7 +429,10 @@ mod_analyze_model_server <- function(id, global){
       return(compare_df)
     }, rownames = TRUE, width = "300px")
 
-    # PPC plots
+
+    #-----------------------------------------------------------------------
+    # Render posterior predictive check UI
+    #-----------------------------------------------------------------------
     output$ppc_plots <- renderUI({
       global$data_format
       input$compare_btn
@@ -379,7 +460,9 @@ mod_analyze_model_server <- function(id, global){
       }
     })
 
-    # run model comparison
+    #-----------------------------------------------------------------------
+    # Render posterior predictive check plots
+    #-----------------------------------------------------------------------
     observeEvent(input$compare_btn, {
 
       selected_names <- input$model_select
@@ -408,19 +491,23 @@ mod_analyze_model_server <- function(id, global){
 
     })
 
+
+    #-----------------------------------------------------------------------
+    # Show LOO-CV diagnostics
+    #-----------------------------------------------------------------------
     observeEvent(input$loo_diagnos_btn, {
-      bslib::toggle_tooltip(input$loo_diagnos_tooltip, show = FALSE)
+      bslib::toggle_tooltip("loo_diagnos_tooltip", show = FALSE)
 
       showModal(modalDialog(
         title = "LOO-CV Diagnostics",
-        tags$p("Below is a summary table of the estimated Pareto shape parameter k. Values above 0.7 (second and third rows) suggest influential observations that might negatively affect the accuracy of the leave-one-out cross-validation approximation. For details, check this",
+        tags$p("Below is a summary table of the estimated Pareto shape parameter k. Positive 'Count' values in the second and third rows suggest influential observations that might negatively affect the accuracy of the leave-one-out cross-validation approximation. For details, check this",
           tags$a("FAQ", href = "https://mc-stan.org/loo/articles/online-only/faq.html#pareto_shape_parameter_k", target = "_blank"), "."),
-        if (length(pareto_k_tables()) == 0) {
+        if (length(pareto_k_dfs()) == 0) {
           tags$p("No models selected", class = "fst-italic")
         } else {
-          purrr::map(seq_along(pareto_k_tables()), function(i) {
+          purrr::map(seq_along(pareto_k_dfs()), function(i) {
             tagList(
-              tags$h5(names(pareto_k_tables())[i]),
+              tags$h5(names(pareto_k_dfs())[i]),
               tableOutput(ns(paste0("pareto_k_table", i)))
             )
           })
@@ -430,12 +517,14 @@ mod_analyze_model_server <- function(id, global){
         footer = modalButton("Close")
       ))
 
-      purrr::map(seq_along(pareto_k_tables()), function(i) {
-        output[[paste0("pareto_k_table", i)]] <- renderTable(pareto_k_tables()[[i]], rownames = TRUE)
+      purrr::map(seq_along(pareto_k_dfs()), function(i) {
+        output[[paste0("pareto_k_table", i)]] <- renderTable(pareto_k_dfs()[[i]], rownames = TRUE)
       })
     })
 
-
+    #-----------------------------------------------------------------------
+    # Render feedbacl for model upload
+    #-----------------------------------------------------------------------
     output$model_feedback <- renderUI({
       if(!is.null(model_feedback())) {
         if(model_feedback() == "") {
@@ -452,14 +541,18 @@ mod_analyze_model_server <- function(id, global){
       }
     })
 
-    # reset input fields
+    #-----------------------------------------------------------------------
+    # Reset input fields
+    #-----------------------------------------------------------------------
     observeEvent(input$reset_btn, {
       prior_buffer(list())
 
       reset_inputs(global$mpr$vars)
     })
 
-    # add model
+    #-----------------------------------------------------------------------
+    # Add model
+    #-----------------------------------------------------------------------
     observeEvent(input$add_model, {
       if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
         if(global$web_version) {
@@ -702,7 +795,7 @@ mod_analyze_model_server <- function(id, global){
 
         showModal(modalDialog(
           title = "Sampler Diagnostics",
-          tags$p("Below is a summary of problems encountered during sampling for the current model. Ideally, the number of divergences and the number of times the maximum tree depth are reached should be close to 0. E-BFMI should exceed 0.3. For details, see ",
+          tags$p("Below is a summary of problems encountered during sampling for the current model. Ideally, the top two quantities are close to 0 and E-BFMI value are above 0.3. For details, see ",
             tags$a("https://mc-stan.org/misc/warnings", href = "https://mc-stan.org/misc/warnings", target = "_blank"), "."),
           tableOutput(ns(model$IDs$diagnos_tbl)),
           easyClose = TRUE,
