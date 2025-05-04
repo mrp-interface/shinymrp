@@ -311,6 +311,24 @@ as_factor <- function(df, levels) {
   return(df)
 }
 
+find_nested <- function(df, cols, sep = "---") {
+  # generate all 2‑column combinations
+  pairs <- combn(cols, 2, simplify = FALSE)
+  
+  # test each pair for a bijection via approach 2
+  is_bij <- vapply(pairs, function(pr) {
+    x  <- df[[pr[1]]]
+    y  <- df[[pr[2]]]
+    ux <- unique(x)
+    uy <- unique(y)
+    up <- unique(paste(x, y, sep = sep))
+    length(ux) == length(uy) && length(up) == length(ux)
+  }, logical(1))
+  
+  # return only the names of the true pairs, collapsed with “:”
+  vapply(pairs[is_bij], paste, collapse = ":", FUN.VALUE = "")
+}
+
 
 data_type <- function(col, num = FALSE, threshold = 0.1) {
   if(is.numeric(col)) {
@@ -418,42 +436,6 @@ aggregate_data <- function(
 
   return(df)
 }
-
-find_nested <- function(df, cols, sep = "\r") {
-  # generate all 2‑column combinations
-  pairs <- combn(cols, 2, simplify = FALSE)
-  
-  # test each pair for a bijection via approach 2
-  is_bij <- vapply(pairs, function(pr) {
-    x  <- df[[pr[1]]]
-    y  <- df[[pr[2]]]
-    ux <- unique(x)
-    uy <- unique(y)
-    up <- unique(paste(x, y, sep = sep))
-    length(ux) == length(uy) && length(up) == length(ux)
-  }, logical(1))
-  
-  # return only the names of the true pairs, collapsed with “:”
-  vapply(pairs[is_bij], paste, collapse = ":", FUN.VALUE = "")
-}
-
-pair_setdiff <- function(pairs1, pairs2, sep = ":") {
-  # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
-  norm_pair <- function(p) {
-    parts <- strsplit(p, sep, fixed = TRUE)[[1]]
-    paste(sort(parts), collapse = sep)
-  }
-
-  # precompute the normalized set of pairs2
-  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1))
-
-  # keep those in pairs1 whose normalized form is NOT in norm2
-  keep <- !vapply(pairs1, norm_pair, FUN.VALUE = character(1)) %in% norm2
-
-  return(pairs1[keep])
-}
-
-
 
 create_variable_list <- function(input_data, covariates, vars_global) {
   # list of variables for model specification
@@ -621,7 +603,7 @@ prepare_data <- function(
 }
 
 
-stan_factor <- function(df, ignore_columns) {
+stan_factor <- function(df, ignore_columns = NULL) {
   # Get column names
   col_names <- setdiff(names(df), ignore_columns)
 

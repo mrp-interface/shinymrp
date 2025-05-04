@@ -347,8 +347,9 @@ mod_analyze_upload_server <- function(id, global){
         
       }, error = function(e) {
         # Capture the actual error message
-        err_msg <- paste("Error processing data:", e$message)
+        err_msg <- paste("Error preprocessing data:", e$message)
         input_errors(list(unexpected = err_msg))
+        message(err_msg)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
@@ -555,8 +556,9 @@ mod_analyze_upload_server <- function(id, global){
           
           # set success to TRUE if no errors occurred
           success <- TRUE
+
         }, error = function(e) {
-          warnings(paste("Error linking data:", e$message))
+          message(paste("Error linking data:", e$message))
         }, finally = {
           stop_busy(
             session = session,

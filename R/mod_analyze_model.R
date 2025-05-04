@@ -421,6 +421,7 @@ mod_analyze_model_server <- function(id, global){
           select(elpd_diff, se_diff)
 
       }, error = function(e) {
+        message(paste0("Error during LOO-CV: ", e$message))
         show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
       }, finally = {
         waiter::waiter_hide()
@@ -588,60 +589,66 @@ mod_analyze_model_server <- function(id, global){
                   color = waiter::transparent(0.9)
                 )
 
-                # assign default priors to all selected effects
-                all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
-                for(type in c("fixed", "varying", "interaction")) {
-                  for(v in input[[type]]) {
-                    all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
-                  }
-                }
-  
-                # assign user-specified priors
-                for(i in 1:(length(prior_buffer()) + 1)) {
-                  dist <- input[[paste0("prior_dist_", i)]]
-                  eff <- input[[paste0("prior_eff_", i)]]
-                  if(dist != "") {
-                    for(s in eff) {
-                      ss <- strsplit(s, split = "_")[[1]]
-                      all_priors[[ss[1]]][[ss[2]]] <- dist
+                tryCatch({
+                  # assign default priors to all selected effects
+                  all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
+                  for(type in c("fixed", "varying", "interaction")) {
+                    for(v in input[[type]]) {
+                      all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
                     }
                   }
-                }
+    
+                  # assign user-specified priors
+                  for(i in 1:(length(prior_buffer()) + 1)) {
+                    dist <- input[[paste0("prior_dist_", i)]]
+                    eff <- input[[paste0("prior_eff_", i)]]
+                    if(dist != "") {
+                      for(s in eff) {
+                        ss <- strsplit(s, split = "_")[[1]]
+                        all_priors[[ss[1]]][[ss[2]]] <- dist
+                      }
+                    }
+                  }
 
-                # classify effects
-                all_priors <- all_priors |>
-                  group_effects(global$mrp$input) |>
-                  ungroup_effects()
+                  # classify effects
+                  all_priors <- all_priors |>
+                    group_effects(global$mrp$input) |>
+                    ungroup_effects()
 
-                # create a list to store model info
-                model <- list()
-                model$data_format <- global$data_format
-                model$effects <- all_priors
-                model$formula <- create_formula(all_priors)
-                model$n_iter <- n_iter
-                model$n_chains <- n_chains
-                model$mrp <- global$mrp
-                model$plotdata <- global$plotdata
-                model$link_data <- global$link_data
-                model$gq_data <- list(
-                  subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
-                  temporal = "time" %in% names(model$mrp$input)
-                )
+                  # create a list to store model info
+                  model <- list()
+                  model$data_format <- global$data_format
+                  model$effects <- all_priors
+                  model$formula <- create_formula(all_priors)
+                  model$n_iter <- n_iter
+                  model$n_chains <- n_chains
+                  model$mrp <- global$mrp
+                  model$plotdata <- global$plotdata
+                  model$link_data <- global$link_data
+                  model$gq_data <- list(
+                    subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
+                    temporal = "time" %in% names(model$mrp$input)
+                  )
 
-                # run MCMC
-                c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
-                  input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
-                  new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
-                  effects = model$effects,
-                  gq_data = model$gq_data,
-                  n_iter = model$n_iter,
-                  n_chains = model$n_chains,
-                  seed = input$seed_select,
-                  sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
-                  spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
-                )
-                
-                model_buffer(model)
+                  # run MCMC
+                  c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
+                    input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
+                    new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
+                    effects = model$effects,
+                    gq_data = model$gq_data,
+                    n_iter = model$n_iter,
+                    n_chains = model$n_chains,
+                    seed = input$seed_select,
+                    sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
+                    spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
+                  )
+
+                  model_buffer(model)
+
+                }, error = function(e) {
+                  message(paste0("Error fitting model: ", e$message))
+                  show_alert("An error occured during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
+                })
   
               } else {
                 show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
@@ -714,7 +721,11 @@ mod_analyze_model_server <- function(id, global){
       
       # extract posterior summary of coefficients
       if (is.null(model$fixed) || is.null(model$varying)) {
-        c(model$fixed, model$varying) %<-% extract_parameters(model$fit$mcmc, model$effects)
+        c(model$fixed, model$varying) %<-% extract_parameters(
+          model$fit$mcmc,
+          model$effects,
+          model$mrp$input
+        )
       }
       
       # run standalone generated quantities for LOO
@@ -807,8 +818,8 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$diagnos_tbl]] <- renderTable(model$diagnostics$mcmc, colnames = FALSE)
       
       # render fixed and varying effect tables
-      output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE)
-      output[[model$IDs$varying]] <- renderTable(model$varying, rownames = TRUE)
+      output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE, na = "")
+      output[[model$IDs$varying]] <- renderTable(model$varying, rownames = TRUE, na = "")
       
       # render ppc plot
       output[[model$IDs$ppc]] <- renderPlot({
