@@ -298,47 +298,47 @@ mod_analyze_upload_server <- function(id, global){
         
         errors <- list()
         warnings <- list()
-        
-        # Process the data only if reading was successful
-        if(!is.null(rawdata())) {
-          # Clean data
-          data <- clean_data(rawdata())
 
-          # Find and rename columns
-          data <- if(global$data_format == "temporal_covid" &&
-                      input$toggle_input == "indiv") {
-            rename_columns_covid(data)
-          } else {
-            rename_columns(data)
-          }
+        # Prevent processing if file cannot be read
+        req(rawdata())
 
-          # Aggregate if needed
-          if(input$toggle_input == "indiv") {
-            # Check for common dataframe issues
-            c(errors, warnings) %<-% check_data(
-              data,
-              GLOBAL$expected_types$indiv[[global$data_format]]
-            )
+        # Clean data
+        data <- clean_data(rawdata())
 
-            if(length(errors) == 0) {
-              if(global$data_format == "temporal_covid") {
-                data <- data |> aggregate_covid(GLOBAL$levels$temporal_covid)
-              } else {
-                data <- data |> aggregate_data(GLOBAL$levels[[global$data_format]])
-              }
-            }
-          } else {
-            # Check for common dataframe issues
-            c(errors, warnings) %<-% check_data(
-              data, 
-              GLOBAL$expected_types$agg[[global$data_format]]
-            )
-          }
-          
-          # Update global data only if no errors
+        # Find and rename columns
+        data <- if(global$data_format == "temporal_covid" &&
+                    input$toggle_input == "indiv") {
+          rename_columns_covid(data)
+        } else {
+          rename_columns(data)
+        }
+
+        # Aggregate if needed
+        if(input$toggle_input == "indiv") {
+          # Check for common dataframe issues
+          c(errors, warnings) %<-% check_data(
+            data,
+            GLOBAL$expected_types$indiv[[global$data_format]]
+          )
+
           if(length(errors) == 0) {
-            global$data <- data
+            if(global$data_format == "temporal_covid") {
+              data <- data |> aggregate_covid(GLOBAL$levels$temporal_covid)
+            } else {
+              data <- data |> aggregate_data(GLOBAL$levels[[global$data_format]])
+            }
           }
+        } else {
+          # Check for common dataframe issues
+          c(errors, warnings) %<-% check_data(
+            data, 
+            GLOBAL$expected_types$agg[[global$data_format]]
+          )
+        }
+        
+        # Update global data only if no errors
+        if(length(errors) == 0) {
+          global$data <- data
         }
         
         # Update reactives with validation results

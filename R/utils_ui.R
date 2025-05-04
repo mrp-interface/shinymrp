@@ -49,22 +49,22 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
 #'   \item{valid}{Logical indicating if the format is valid}
 #'   \item{message}{Warning message if invalid, or NULL if valid}
 #' @noRd
-check_fit_object <- function(model, expected_format, expected_link_geo) {
-  message <- ""
+check_fit_object <- function(model, expected_format) {
+  example_model <- qs::qread(app_sys("extdata/example/fit/fit_crosssectional_other.RDS"))
   
-  # Check if the model object has a data_format field
-  if(!("data_format" %in% names(model))) {
-    message <- "The uploaded file does not contain a model estimation result."
-  } 
-  # Check if the model's data_format matches the expected format
-  else if(model$data_format != expected_format) {
-    message <- sprintf("The uploaded file contains model estimation for %s instead of %s.",
-                        data_format_label(model$data_format),
-                        data_format_label(expected_format))
-
+  # Check if the model object has all the required fields
+  if (!setequal(names(model), names(example_model))) {
+    return("The uploaded file does not contain a valid estimation result.")
   }
-  
-  return(message)
+
+  # Check if the model object has the expected data format
+  if(model$data_format != expected_format) {
+      return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
+                     data_format_label(model$data_format),
+                     data_format_label(expected_format)))
+  }
+
+  return("")
 }
 
 waiter_ui <- function(type = "") {

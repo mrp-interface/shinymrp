@@ -184,24 +184,22 @@ mod_analyze_result_server <- function(id, global){
     # Update subgroup and geographic scale selection when model changes.
     # --------------------------------------------------------------------------
     observeEvent(selected_model(), {
-      req(selected_model())
+      req(selected_model(), input$model_select)
 
-      if(!is.null(nullify(input$model_select))) {
-        # Update the subgroup select options.
-        choices <- GLOBAL$ui$plot_selection$subgroup
-        if(selected_model()$data_format != "static_poll") {
-          choices <- choices[!choices %in% "edu"]
-        }
-        if(is.null(selected_model()$link_data$link_geo)) {
-          choices <- choices[!choices %in% "geo"]
-        }
-        updateSelectInput(session, inputId = "subgroup_select", choices = choices)
-
-        # Update the geographic scale select options.
-        choices <- intersect(names(selected_model()$est), GLOBAL$vars$geo)
-        choices <- setNames(choices, tools::toTitleCase(choices))
-        updateSelectInput(session, inputId = "geo_scale_select", choices = choices)
+      # Update the subgroup select options.
+      choices <- GLOBAL$ui$plot_selection$subgroup
+      if(selected_model()$data_format != "static_poll") {
+        choices <- choices[!choices %in% "edu"]
       }
+      if(is.null(selected_model()$link_data$link_geo)) {
+        choices <- choices[!choices %in% "geo"]
+      }
+      updateSelectInput(session, inputId = "subgroup_select", choices = choices)
+
+      # Update the geographic scale select options.
+      choices <- intersect(names(selected_model()$est), GLOBAL$vars$geo)
+      choices <- setNames(choices, tools::toTitleCase(choices))
+      updateSelectInput(session, inputId = "geo_scale_select", choices = choices)
     })
   
 
@@ -209,16 +207,15 @@ mod_analyze_result_server <- function(id, global){
     # Update county selection when geographic scale changes.
     # --------------------------------------------------------------------------
     observeEvent(input$geo_scale_select, {
-      req(input$geo_scale_select)
+      req(input$geo_scale_select, input$geo_view_select)
       
       geo <- isolate(input$geo_scale_select)
-      if(!is.null(nullify(geo))) {
-        fips_df <- global$extdata$fips[[geo]] |>
-          filter(fips %in% selected_model()$mrp$levels[[geo]]) |>
-          fips_upper()
-        choices <- sort(fips_df[[geo]])
-        updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
-      }
+      fips_df <- global$extdata$fips[[geo]] |>
+        filter(fips %in% selected_model()$mrp$levels[[geo]]) |>
+        fips_upper()
+      choices <- sort(fips_df[[geo]])
+      updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
+
     })
     
     
