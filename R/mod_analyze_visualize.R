@@ -54,10 +54,10 @@ mod_analyze_visualize_server <- function(id, global){
     ns <- session$ns
 
     # Update the plot category selectInput based on the linking geography.
-    observeEvent(global$link_data$link_geo, {
+    observeEvent(global$link_data, {
       choices <- GLOBAL$ui$plot_selection$vis_main
       if (is.null(global$link_data$link_geo)) {
-        choices <- choices[!choices %in% "geo"]
+        choices <- choices[!choices == "geo"]
       }
 
       # Update the plot category selectInput with the new choices.
@@ -73,7 +73,7 @@ mod_analyze_visualize_server <- function(id, global){
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
         if(global$data_format != "static_poll") {
-          choices <- choices[!choices %in% "edu"]
+          choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {
         label <- "2. Select characteristic"
@@ -89,7 +89,11 @@ mod_analyze_visualize_server <- function(id, global){
         choices <- GLOBAL$ui$plot_selection$pos_rate
 
         if (global$data_format %in% c("static_poll", "static_other")) {
-          choices <- choices[!choices %in% "overall"]
+          choices <- choices[!choices == "overall"]
+        }
+
+        if (is.null(global$link_data$link_geo)) {
+          choices <- choices[!choices == "by_geo"]
         }
       } else {
         label <- character(0)  # No label if the category is not recognized.

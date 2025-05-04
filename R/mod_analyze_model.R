@@ -80,7 +80,7 @@ mod_analyze_model_ui <- function(id) {
         bslib::accordion_panel("Estimation Result Upload",
           fileInput(ns("fit_upload"), "Select RDS file with model estimation", accept = ".RDS"),
           uiOutput(ns("model_feedback")),
-          tags$p("Or use example result:"),
+          tags$p("Or use example result", class = "mt-2 mb-1"),
           actionButton(ns("use_example"), "Example Estimation Result", icon("table"), class = "w-100")
         )
       )
@@ -102,7 +102,7 @@ mod_analyze_model_ui <- function(id) {
             options = list(trigger = "manual")
           )
         ),
-        tags$h4("Leave-one-out Cross-validation", class = "mt-4"),
+        tags$h4("Leave-one-out Cross-validation (LOO-CV)", class = "mt-4"),
         tags$hr(class = "break_line"),
         uiOutput(ns("loo_ui")),
         tags$h4("Posterior Predictive Check", class = "mt-4"),
@@ -289,25 +289,24 @@ mod_analyze_model_server <- function(id, global){
     })
 
     output$loo_ui <- renderUI({
+      req(global$models)
       global$data_format
       input$compare_btn
+
       selected_names <- isolate(input$model_select)
 
-      ui <- NULL
-      if(!is.null(isolate(global$models))) {
-        ui <- if(length(selected_names) == 0) {
-          NULL
-        } else if(length(selected_names) == 1) {
-          tags$p("*Two or more models are required")
-        } else {
-          tagList(
-            bslib::card(
-              bslib::card_header(tags$b("Note")),
-              bslib::card_body(tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), "."))
-            ),
-            tableOutput(outputId = ns("loo_table"))
-          )
-        }
+      ui <- if(length(selected_names) == 0) {
+        NULL
+      } else if(length(selected_names) == 1) {
+        tags$p("*Two or more models are required")
+      } else {
+        tagList(
+          bslib::card(
+            bslib::card_header(tags$b("Note")),
+            bslib::card_body(tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), "."))
+          ),
+          tableOutput(outputId = ns("loo_table"))
+        )
       }
 
       return(ui)
@@ -319,30 +318,35 @@ mod_analyze_model_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      # Get the selected models
-      selected_names <- isolate(input$model_select)
-      models <- isolate(global$models[selected_names])
+      compare_df <- NULL
+      tryCatch({
+        # Get the selected models
+        selected_names <- isolate(input$model_select)
+        models <- isolate(global$models[selected_names])
 
-      # Extract log-likelihood from each model
-      loo_list <- purrr::map(models, function(m) {
-        log_lik_draws <- m$fit$loo$draws("log_lik")
-        capture.output(loo_output <- loo::loo(log_lik_draws), type = "message")
+        # Extract log-likelihood from each model
+        loo_list <- purrr::map(models, function(m) {
+          log_lik_draws <- m$fit$loo$draws("log_lik")
+          capture.output(loo_output <- loo::loo(log_lik_draws), type = "message")
 
-        return(loo_output)
+          return(loo_output)
+        })
+
+        # Store the Pareto k tables
+        purrr::map(loo_list, function(x) loo::pareto_k_table(x)) |>
+          pareto_k_tables()
+
+        # Compare the models using loo_compare
+        compare_df <- loo_list |>
+          loo::loo_compare() |>
+          as.data.frame() |>
+          select(elpd_diff, se_diff)
+
+      }, error = function(e) {
+        show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
+      }, finally = {
+        waiter::waiter_hide()
       })
-
-      # Store the Pareto k tables
-      purrr::map(loo_list, function(x) loo::pareto_k_table(x)) |>
-        pareto_k_tables()
-
-      # Compare the models using loo_compare
-      compare_df <- loo_list |>
-        loo::loo_compare() |>
-        as.data.frame() |>
-        select(elpd_diff, se_diff)
-
-
-      waiter::waiter_hide()
 
       return(compare_df)
     }, rownames = TRUE, width = "300px")
@@ -386,19 +390,17 @@ mod_analyze_model_server <- function(id, global){
 
         purrr::map(seq_along(yreps), function(i) {
           output[[paste0("compare_ppc", i)]] <- renderPlot({
-            if(!is.null(isolate(global$models))) {
-              if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
-                plot_ppc_covid_subset(
-                  yreps[[i]],
-                  inputs[[i]],
-                  global$plotdata$dates
-                )
-              } else {
-                plot_ppc_poll(
-                  yreps[[i]],
-                  inputs[[i]],
-                )
-              }
+            if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+              plot_ppc_covid_subset(
+                yreps[[i]],
+                inputs[[i]],
+                global$plotdata$dates
+              )
+            } else {
+              plot_ppc_poll(
+                yreps[[i]],
+                inputs[[i]],
+              )
             }
           })
         })
@@ -411,7 +413,7 @@ mod_analyze_model_server <- function(id, global){
 
       showModal(modalDialog(
         title = "LOO-CV Diagnostics",
-        tags$p("Below is a summary table of the estimated Pareto shape parameter k. Values above 0.7 suggest influential observations that might negatively affect the accuracy of the leave-one-out cross-validation approximation. For details, check this",
+        tags$p("Below is a summary table of the estimated Pareto shape parameter k. Values above 0.7 (second and third rows) suggest influential observations that might negatively affect the accuracy of the leave-one-out cross-validation approximation. For details, check this",
           tags$a("FAQ", href = "https://mc-stan.org/loo/articles/online-only/faq.html#pareto_shape_parameter_k", target = "_blank"), "."),
         if (length(pareto_k_tables()) == 0) {
           tags$p("No models selected", class = "fst-italic")
