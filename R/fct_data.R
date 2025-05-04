@@ -332,16 +332,6 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
   return(dtype)
 }
 
-check_var_data <- function(col) {
-  pass <- TRUE
-  
-  if(n_distinct(col) < 2) {
-    pass <- FALSE
-  }
-  
-  return(pass)
-}
-
 
 check_data <- function(df, expected_types, na_threshold = 0.5) {
   errors <- list()
@@ -429,6 +419,42 @@ aggregate_data <- function(
   return(df)
 }
 
+find_nested <- function(df, cols, sep = "\r") {
+  # generate all 2‑column combinations
+  pairs <- combn(cols, 2, simplify = FALSE)
+  
+  # test each pair for a bijection via approach 2
+  is_bij <- vapply(pairs, function(pr) {
+    x  <- df[[pr[1]]]
+    y  <- df[[pr[2]]]
+    ux <- unique(x)
+    uy <- unique(y)
+    up <- unique(paste(x, y, sep = sep))
+    length(ux) == length(uy) && length(up) == length(ux)
+  }, logical(1))
+  
+  # return only the names of the true pairs, collapsed with “:”
+  vapply(pairs[is_bij], paste, collapse = ":", FUN.VALUE = "")
+}
+
+pair_setdiff <- function(pairs1, pairs2, sep = ":") {
+  # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
+  norm_pair <- function(p) {
+    parts <- strsplit(p, sep, fixed = TRUE)[[1]]
+    paste(sort(parts), collapse = sep)
+  }
+
+  # precompute the normalized set of pairs2
+  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1))
+
+  # keep those in pairs1 whose normalized form is NOT in norm2
+  keep <- !vapply(pairs1, norm_pair, FUN.VALUE = character(1)) %in% norm2
+
+  return(pairs1[keep])
+}
+
+
+
 create_variable_list <- function(input_data, covariates, vars_global) {
   # list of variables for model specification
   vars <- list(
@@ -439,34 +465,44 @@ create_variable_list <- function(input_data, covariates, vars_global) {
     varying = list(
       "Individual-level Predictor" = c(),
       "Geographic Predictor" = c()
+    ),
+    omit = list(
+      one_level = c(),
+      nested = c()
     )
   )
 
-  # add individual-level predictors
-  indiv_vars <- setdiff(names(input_data), c(vars_global$geo, vars_global$ignore, names(covariates)))
-  for(v in indiv_vars) {
-    if(check_var_data(input_data[[v]])) {
-      if(data_type(input_data[[v]]) == "cat") {
-        vars$varying$"Individual-level Predictor" <- c(vars$varying$"Individual-level Predictor", v)
+  # Helper function to process variables and add them to appropriate lists
+  add_variables <- function(group_name, var_names, data_source, vars) {
+    for (v in var_names) {
+      if (n_distinct(data_source[[v]]) > 1) {
+        if (data_type(data_source[[v]]) == "cat") {
+          vars$varying[[group_name]] <- c(vars$varying[[group_name]], v)
+        }
+        vars$fixed[[group_name]] <- c(vars$fixed[[group_name]], v) 
+      } else {
+        # if the variable has only one level, add it to the omit list
+        vars$omit$one_level <- c(vars$omit$one_level, v)
       }
-      vars$fixed$"Individual-level Predictor" <- c(vars$fixed$"Individual-level Predictor", v) 
     }
+    return(vars)
   }
 
-  # add geographic predictors
+  # Process individual-level predictors
+  indiv_vars <- setdiff(names(input_data), c(vars_global$geo, vars_global$ignore, names(covariates)))
+  vars <- add_variables("Individual-level Predictor", indiv_vars, input_data, vars)
+
+  # Process geographic predictors
   geo_vars <- intersect(vars_global$geo, names(input_data)) |> union(names(covariates))
-  for(v in geo_vars) {
-    if(check_var_data(covariates[[v]])) {
-      if(data_type(covariates[[v]]) == "cat") {
-        vars$varying$"Geographic Predictor" <- c(vars$varying$"Geographic Predictor", v)
-      }
-      vars$fixed$"Geographic Predictor" <- c(vars$fixed$"Geographic Predictor", v) 
-    }
-  }
+  vars <- add_variables("Geographic Predictor", geo_vars, covariates, vars)
+
+  # Check for nested variables
+  vars$omit$nested <- combn(vars$varying[["Geographic Predictor"]], 2, simplify = FALSE) |>
+    lapply(paste, collapse = ":") |>
+    unlist()
 
   return(vars)
-} 
-
+}
 
 combine_tracts <- function(
     tract_data,
