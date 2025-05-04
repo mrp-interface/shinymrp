@@ -52,6 +52,24 @@ check_prior_syntax <- function(s) {
   }
 }
 
+pair_setdiff <- function(pairs1, pairs2, sep = ":") {
+  # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
+  norm_pair <- function(p) {
+    parts <- strsplit(p, sep, fixed = TRUE)[[1]]
+    paste(sort(parts), collapse = sep)
+  }
+
+  # precompute the normalized set of pairs2
+  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1))
+
+  # keep those in pairs1 whose normalized form is NOT in norm2
+  keep <- !vapply(pairs1, norm_pair, FUN.VALUE = character(1)) %in% norm2
+
+  return(pairs1[keep])
+}
+
+
+
 # filter interactions for structured prior
 filter_interactions <- function(interactions, fixed_effects, dat) {
   bool <- map_lgl(interactions, function(s) {
@@ -130,8 +148,8 @@ group_fixed <- function(fixed, dat) {
   for(s in names(fixed)) {
     if(data_type(dat[[s]]) == "cat") {
       levels <- sort(unique(dat[[s]]))
-      dummy <- paste0(s, ".", levels[2:length(levels)])
-      for(d in dummy) {
+      dummies <- paste0(s, ".", levels[2:length(levels)])   # first level is the reference level
+      for(d in dummies) {
         out$cat[[d]] <- fixed[[s]]
       }
     } else {
@@ -649,7 +667,7 @@ make_standata <- function(
     # fixed main effects (categorical)
     X_cat <- map(names(effects$m_fix_c), function(s) {
       ss <- strsplit(s, split = '\\.')[[1]]
-      return(as.integer(dat[[paste0(ss[1], "_raw")]] == ss[2]))
+      as.integer(dat[[paste0(ss[1], "_raw")]] == ss[2])
     }) %>%
       do.call(cbind, .)
     
@@ -728,7 +746,7 @@ run_mcmc <- function(
     spec = 1,
     code_fout = NULL
 ) {
-  
+
   stan_code <- list()
   stan_code$mcmc <- make_stancode_mcmc(effects, gq_data)
   stan_code$ppc <- make_stancode_gq(effects, gq_data, "ppc")
@@ -788,31 +806,52 @@ run_gq <- function(
   return(fit_gq)
 }
 
-extract_predict <- function(fit, ppc_samples=10) {
-  pred_mat <- fit$draws(
-    variables = "p_pop",
-    format = "draws_matrix"
-  )|> t()
+add_ref_lvl <- function(df_fixed, effects, input_data) {
+  ### include reference levels for binary variables
+  m_fix_bc_names <- names(effects$m_fix_bc) |>
+    purrr::map_chr(function(s) {
+      if (data_type(input_data[[s]]) == "bin") {
+        df <- data.frame(x = input_data[[s]]) |> stan_factor()
+        eq1 <- unique(df$x_raw[df$x == 1])
+        paste0(s, ".", eq1)
+      } else {
+        s
+      }
+    })
 
-  # generate replicated data
-  yrep_mat <- fit$draws(
-    variables = "y_rep",
-    format = "draws_matrix"
-  )|> t()
+  row.names(df_fixed) <- c("Intercept", c(m_fix_bc_names, names(effects$m_fix_c), names(effects$i_fixsl)))
 
-  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), ppc_samples)]
+  ### include reference levels for categorical variables
+  # get variable names
+  m_fix_c_vars <- names(effects$m_fix_c) |>
+    purrr::map_chr(function(s) strsplit(s, split = '\\.')[[1]][1]) |>
+    unique()
 
-  return(list(pred_mat, yrep_mat))
+  # dummy variables including reference levels
+  m_fix_c_names <- m_fix_c_vars |>
+    purrr::map(function(s) {
+      levels <- sort(unique(input_data[[s]]))
+      paste0(s, ".", levels)
+    }) |>
+    unlist(use.names = FALSE)
+
+  row_names <- c("Intercept", m_fix_bc_names, m_fix_c_names, names(effects$i_fixsl))
+  idx <- match(row_names, row.names(df_fixed))
+  df_fixed <- df_fixed[idx, ] # NA indices are given rows with NA values
+  row.names(df_fixed) <- row_names
+
+  return(df_fixed)
 }
 
-extract_parameters <- function(fit, effects) {
+extract_parameters <- function(fit, effects, input_data) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
 
-  # fixed main effects + fixed-slope interaction
+  ### fixed main effects & fixed-slope interaction
   df_fixed <- data.frame()
   if(length(fixed) > 0) {
+    # extract summary table
     df_fixed <- fit$summary(
       variables = c("Intercept", "beta"),
       posterior::default_summary_measures()[1:4],
@@ -822,11 +861,12 @@ extract_parameters <- function(fit, effects) {
       select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
       as.data.frame()
 
+    # rename columns and rows
     names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
-    row.names(df_fixed) <- c("Intercept", names(fixed))
+    df_fixed <- add_ref_lvl(df_fixed, effects, input_data)
   }
 
-  # varying effects
+  ### varying effects
   df_varying <- data.frame()
   row_names <- c()
 
