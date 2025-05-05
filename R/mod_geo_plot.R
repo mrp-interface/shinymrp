@@ -37,7 +37,7 @@ mod_geo_plot_server <- function(id, data, varname, config){
         "<=" = sum(data()[[varname]] <= config$threshold, na.rm = TRUE)
       )
       total <- nrow(data())
-      perc <-  count / total * 100
+      perc <-  round(count / total * 100)
       threshold <- if(config$threshold > 1) config$threshold else config$threshold * 100
 
       # Create plot

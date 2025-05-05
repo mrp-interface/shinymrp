@@ -28,28 +28,61 @@ rename_columns_covid <- function(df) {
   return(df)
 }
 
+recode_covid <- function(df, expected_levels) {
+  ranges <- expected_levels$age
+  age_bounds <- regmatches(
+    ranges,
+    regexpr("^\\d+", ranges)
+  ) |>
+    as.numeric()
+  breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
+
+  df <- df |> mutate(
+    sex = if_else(str_detect(sex, regex("female", ignore_case = TRUE)), "female", "male"),
+    race = case_when(
+      str_detect(race, regex("white", ignore_case = TRUE)) ~ "white",
+      str_detect(race, regex("black", ignore_case = TRUE)) ~ "black",
+      TRUE ~ "other"
+    ),
+    age = cut(df$age, breaks, ranges) |> as.character(),
+    positive = if("positive" %in% names(df)) case_match(
+      as.character(positive),
+      c("positive", "detected", "yes", "y", "true", "1") ~ 1,
+      c("negative", "undetected", "no", "n", "false", "0") ~ 0
+    )
+  )
+
+  return(df)
+}
+
 aggregate_covid <- function(
-    patient,
+    df,
     expected_levels,
     threshold = 0
 ) {
 
-  # convert dates to week indices
-  c(time_indices, timeline) %<-% get_week_indices(patient$date)
-  patient$time <- time_indices
+  indiv_vars <- names(expected_levels)
+  
+  # remove NAs
+  check_cols <- setdiff(names(df), indiv_vars)
+  df <- df |> tidyr::drop_na(all_of(check_cols))
 
-  # remove all but one test of a patient in the same week
-  patient <- patient |> distinct(id, time, .keep_all = TRUE)
+  # convert dates to week indices
+  c(time_indices, timeline) %<-% get_week_indices(df$date)
+  df$time <- time_indices
+
+  # remove all but one test of a df in the same week
+  df <- df |> distinct(id, time, .keep_all = TRUE)
   
   # create factors from raw values
-  patient <- recode_values(patient, expected_levels)
+  df <- recode_covid(df, expected_levels)
 
   # impute missing demographic data based on frequency
-  patient <- patient |> mutate(across(c(sex, race, age), impute))
+  df <- df |> mutate(across(c(sex, race, age), impute))
   
   # aggregate test records based on combinations of factors
   # and omit cells with small number of tests
-  patient <- patient |>
+  df <- df |>
     group_by(time, zip, sex, race, age) |>
     filter(n() >= threshold) |>
     summarize(
@@ -59,30 +92,30 @@ aggregate_covid <- function(
     ungroup()
 
   # reset week indices and corresponding dates
-  timeline <- timeline[min(patient$time):max(patient$time)]
-  patient <- patient |> mutate(time = time - min(time) + 1)
+  timeline <- timeline[min(df$time):max(df$time)]
+  df <- df |> mutate(time = time - min(time) + 1)
 
   # add the column containing first dates of the weeks
-  patient <- patient |>
+  df <- df |>
     full_join(
       data.frame(
-        time = 1:max(patient$time),
+        time = 1:max(df$time),
         date = timeline |> as.character()
       ),
       by = "time"
     )
 
-  return(patient)
+  return(df)
 }
 
 filter_state_zip <- function(
-    patient,
+    df,
     covariates,
     zip_threshold = 5,
     state_threshold = 0.01
 ) {
   
-  zip_count <- patient |>
+  zip_count <- df |>
     group_by(zip) |>
     summarize(count = sum(total))
 
@@ -106,9 +139,9 @@ filter_state_zip <- function(
     filter(sum(count) > zip_threshold) |>
     ungroup()
 
-  patient <- patient |> filter(zip %in% state_zip$zip)
+  df <- df |> filter(zip %in% state_zip$zip)
 
-  return(patient)
+  return(df)
 }
 
 

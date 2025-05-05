@@ -160,13 +160,21 @@ mod_analyze_model_server <- function(id, global){
       showModal(modalDialog(
         title = "Omitted Effects",
         tags$p("The following effects are omitted from the list because the corresponding data only has one level:"),
-        tags$ul(
-          purrr::map(global$mrp$vars$omit$one_level, ~ tags$li(.x))
-        ),
+        if (length(global$mrp$vars$omit$one_level) == 0) {
+          tags$p("None", class = "fst-italic")
+        } else {
+          tags$ul(
+            purrr::map(global$mrp$vars$omit$one_level, ~ tags$li(.x))
+          )
+        },
         tags$p("The following interactions are omitted from the list because their main effects are nested:"),
-        tags$ul(
-          purrr::map(global$mrp$vars$omit$nested, ~ tags$li(.x))
-        ),
+        if (length(global$mrp$vars$omit$nested) == 0) {
+          tags$p("None", class = "fst-italic")
+        } else {
+          tags$ul(
+            purrr::map(global$mrp$vars$omit$nested, ~ tags$li(.x))
+          )
+        },
         size = "l",
         easyClose = TRUE,
         footer = modalButton("Close")
