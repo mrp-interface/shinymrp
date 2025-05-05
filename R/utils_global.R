@@ -54,7 +54,7 @@ GLOBAL <- list(
       age = c("0-17", "18-34", "35-64", "65-74", "75+")
     )
   ),
-  expected_types = list(
+  data_types = list(
     indiv = list(
       temporal_covid = list(
         sex = "bin",
@@ -125,6 +125,20 @@ GLOBAL <- list(
     ignore = c("date", "total", "positive")
   ),
   ui = list(
+    style = list(
+      global = "
+        .navbar-brand {
+          font-size: 1.5rem;
+        }
+        
+        .navbar-nav .nav-link {
+          font-size: 1.04rem;
+        }
+        
+        .nav-item .nav-link {
+          font-size: 1.0rem;
+        }"
+    ),
     preview_size = 100,
     max_model = 5,
     iter_range = c(100, 5000),

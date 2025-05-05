@@ -6,7 +6,7 @@
 #'
 #' @noRd
 
-prepare_data_poll <- function(
+prepare_mrp_poll <- function(
   input_data,
   pstrat_data,
   fips_county_state,
@@ -16,8 +16,8 @@ prepare_data_poll <- function(
 
   # convert geography names to FIPS codes
   link_geo <- "state"
-  input_data[[link_geo]] <- input_data[[link_geo]] |> to_geocode(fips_county_state, link_geo)
-  pstrat_data[[link_geo]] <- pstrat_data[[link_geo]] |> to_geocode(fips_county_state, link_geo)
+  input_data[[link_geo]] <- input_data[[link_geo]] |> to_fips(fips_county_state, link_geo)
+  pstrat_data[[link_geo]] <- pstrat_data[[link_geo]] |> to_fips(fips_county_state, link_geo)
 
   # keep states in the input data
   levels <- demo_levels
@@ -36,5 +36,10 @@ prepare_data_poll <- function(
 
   vars <- create_variable_list(input_data, covariates, vars_global)
 
-  return(list(input_data, new_data, levels, vars))
+  return(list(
+    input = input_data,
+    new = new_data,
+    levels = levels,
+    vars = vars
+  ))
 }

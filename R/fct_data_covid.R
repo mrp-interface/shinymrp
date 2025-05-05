@@ -36,6 +36,8 @@ recode_covid <- function(df, expected_levels) {
   ) |>
     as.numeric()
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
+  is_pos <- grepl("positive|detected", df$positive, ignore.case = TRUE)
+  is_neg <- grepl("not|negative|undetected", df$positive, ignore.case = TRUE)
 
   df <- df |> mutate(
     sex = if_else(str_detect(sex, regex("female", ignore_case = TRUE)), "female", "male"),
@@ -45,11 +47,7 @@ recode_covid <- function(df, expected_levels) {
       TRUE ~ "other"
     ),
     age = cut(df$age, breaks, ranges) |> as.character(),
-    positive = if("positive" %in% names(df)) case_match(
-      as.character(positive),
-      c("positive", "detected", "yes", "y", "true", "1") ~ 1,
-      c("negative", "undetected", "no", "n", "false", "0") ~ 0
-    )
+    positive = if("positive" %in% names(df)) ifelse(is_neg, 0, ifelse(is_pos, 1, NA))
   )
 
   return(df)
@@ -145,7 +143,7 @@ filter_state_zip <- function(
 }
 
 
-prepare_data_covid <- function(
+prepare_mrp_covid <- function(
     input_data,
     pstrat_data,
     covariates,
@@ -185,7 +183,12 @@ prepare_data_covid <- function(
   # list of variables for model specification
   vars <- create_variable_list(input_data, covariates, vars_global)
 
-  return(list(input_data, new_data, levels, vars))
+  return(list(
+    input = input_data,
+    new = new_data,
+    levels = levels,
+    vars = vars
+  ))
 }
 
 

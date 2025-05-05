@@ -8,6 +8,15 @@
 #'
 #' @import dplyr
 #' @import zeallot
+read_data <- function(file_path) {
+  if(stringr::str_ends(file_path, "csv")) {
+    readr::read_csv(file_path, show_col_types = FALSE)
+  } else if (stringr::str_ends(file_path, "(xlsx|xls)")) {
+    readxl::read_excel(file_path, guess_max = 5000)
+  } else if (stringr::str_ends(file_path, "sas7bdat")) {
+    haven::read_sas(file_path)
+  }
+}
 
 clean_names <- function(names) {
   names |> 
@@ -24,6 +33,45 @@ clean_chr <- function(df) {
   df |> mutate(across(where(is.character), 
                 ~str_trim(tolower(.x))))
 }
+
+find_bad_geocode <- function(geocodes) {
+  # Coerce to character (so that NA stays NA_character_)
+  geocodes <- as.character(geocodes)
+  
+  # Valid if exactly 5 digits
+  valid <- grepl("^[0-9]{5}$", geocodes)
+  
+  # Replace anything not matching (including non‐character inputs) with NA
+  geocodes[!valid] <- NA_character_
+  
+  return(geocodes)
+}
+
+format_geocode <- function(df) {
+  if ("zip" %in% names(df)) {
+    if (is.numeric(df$zip)) {
+      df$zip <- sprintf("%05d", df$zip)
+    }
+    df$zip <- find_bad_geocode(df$zip)
+  }
+
+  if ("county" %in% names(df)) {
+    if (is.numeric(df$county)) {
+      df$county <- sprintf("%05d", df$county)
+    } else {
+      stop("FIPS codes must be provided.")
+    }
+  }
+
+  if ("state" %in% names(df)) {
+    if (is.numeric(df$state)) {
+      df$state <- sprintf("%02d", df$state)
+    }
+  }
+
+  return(df)
+}
+
 
 clean_data <- function(
     df,
@@ -47,7 +95,7 @@ clean_data <- function(
                  ~if_else(.x %in% na_strings, NA, .x)))
 
   # Format geographic identifiers
-  df <- fix_geocode(df)
+  df <- format_geocode(df)
   
   return(df)
 }
@@ -210,32 +258,8 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
   return(geojson)
 }
 
-fix_geocode <- function(df) {
-  if("zip" %in% names(df) && is.numeric(df$zip)) {
-    df$zip <- sprintf("%05d", df$zip)
-  }
-
-  if("county" %in% names(df)) {
-    if(is.numeric(df$county)) {
-      df$county <- sprintf("%05d", df$county)
-    }
-  }
-
-  if("state" %in% names(df)) {
-    if(is.numeric(df$state)) {
-      df$state <- sprintf("%02d", df$state)
-    }
-  }
-
-  return(df)
-}
-
-to_geocode <- function(vec, fips_county_state, link_geo = c("state", "county", "zip")) {
+to_fips <- function(vec, fips_county_state, link_geo = c("county", "state")) {
   link_geo <- match.arg(link_geo)
-
-  if(link_geo == "zip") {
-    return(sprintf("%05d", as.numeric(vec)))
-  }
 
   lookup_df <- if(link_geo == "state") aggregate_fips(fips_county_state) else fips_county_state
   fmt <- if(link_geo == "state") "%02d" else "%05d"
@@ -270,25 +294,20 @@ get_geo_predictors <- function(df, geo_col) {
   return(geo_preds)
 }
 
-append_geo <- function(input_data, zip_county_state, vars_global) {
-  idx <- match(names(input_data), vars_global$geo) |> na.omit()
+append_geo <- function(input_data, zip_county_state, geo_all) {
+  idx <- match(names(input_data), geo_all) |> na.omit()
   if (length(idx) == 0) {
     return(input_data)
   }
 
+  fips_county_state <- create_fips_county_state(zip_county_state)
+
   # Find the smallest geographic index
   smallest_geo_index <- min(idx)
-  smallest_geo <- vars_global$geo[smallest_geo_index]
+  smallest_geo <- geo_all[smallest_geo_index]
 
   # Get geographic variables at current and larger scales
-  geo_vars <- vars_global$geo[smallest_geo_index:length(vars_global$geo)]
-
-  # Convert geographic identifiers to standard format
-  input_data[[smallest_geo]] <- to_geocode(
-    input_data[[smallest_geo]], 
-    create_fips_county_state(zip_county_state), 
-    smallest_geo
-  )
+  geo_vars <- geo_all[smallest_geo_index:length(geo_all)]
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_county_state |>
@@ -298,6 +317,14 @@ append_geo <- function(input_data, zip_county_state, vars_global) {
     select(all_of(geo_vars)) |>
     distinct()
   
+  # Convert names to FIPS for smallest geographic scale
+  if (smallest_geo != "zip") { 
+    input_data[[smallest_geo]] <- to_fips(
+      input_data[[smallest_geo]], 
+      fips_county_state, 
+      smallest_geo
+    )
+  }
 
   # Join geographic variables
   common <- intersect(names(input_data), names(zip_county_state))
@@ -305,6 +332,19 @@ append_geo <- function(input_data, zip_county_state, vars_global) {
   input_data <- zip_county_state |>
     select(-all_of(to_drop)) |>
     right_join(input_data, by = smallest_geo)
+
+
+  # Convert names to GEOIDs for larger geographic scales
+  for (geo in setdiff(geo_vars, smallest_geo)) {
+    if (geo != "zip") {
+      input_data[[geo]] <- to_fips(
+        input_data[[geo]], 
+        fips_county_state, 
+        geo
+      )
+    }
+  }
+  
 
   return(input_data)
 }
@@ -412,6 +452,13 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
       warnings$missing_date <- "Dates are not provided. Plots will use week indices instead."
     }
   }
+
+  # Check county format
+  if("county" %in% expected_columns) {
+    if(!is.numeric(df$county)) {
+      errors$county_format <- "County identifiers are not in expected format. Please provide numeric values."
+    }
+  }
   
   return(list(errors, warnings))
 }
@@ -480,6 +527,60 @@ aggregate_data <- function(
   }
 
   return(df)
+}
+
+# Process uploaded data 
+preprocess_data <- function(
+  data,
+  data_format,
+  aggregated,
+  expected_levels,
+  expected_types,
+  zip_county_state,
+  geo_all
+) {
+  
+  # Clean data
+  data <- clean_data(data)
+  
+  # Find and rename columns
+  data <- if(data_format == "temporal_covid" && !aggregated) {
+    rename_columns_covid(data)
+  } else {
+    rename_columns(data)
+  }
+
+  # Aggregate if needed
+  if(!aggregated) {
+    # Check for common dataframe issues
+    c(errors, warnings) %<-% check_data(
+      data,
+      expected_types$indiv[[data_format]]
+    )
+    
+    if(length(errors) == 0) {
+      if(data_format == "temporal_covid") {
+        data <- data |> aggregate_covid(expected_levels$temporal_covid)
+      } else {
+        data <- data |> aggregate_data(expected_levels[[data_format]])
+      }
+    }
+  } else {
+    # Check for common dataframe issues
+    c(errors, warnings) %<-% check_data(
+      data, 
+      expected_types$agg[[data_format]]
+    )
+  }
+
+  # append geographic areas at larger scales if missing
+  data <- append_geo(data, zip_county_state, geo_all)
+  
+  return(list(
+    data = data,
+    errors = errors,
+    warnings = warnings
+  ))
 }
 
 create_variable_list <- function(input_data, covariates, vars_global) {
@@ -583,7 +684,7 @@ combine_tracts <- function(
   return(pstrat_data)
 }
 
-prepare_data <- function(
+prepare_mrp <- function(
     input_data,
     tract_data,
     zip_tract,
@@ -592,11 +693,6 @@ prepare_data <- function(
     vars_global,
     link_geo
 ) {
-
-  if(!is.null(link_geo)) {
-    # append geographic identifiers at larger scales
-    input_data <- append_geo(input_data, zip_county_state, vars_global)
-  }
 
   # create poststratification table
   pstrat <- combine_tracts(tract_data, zip_tract, link_geo)
@@ -646,7 +742,12 @@ prepare_data <- function(
 
   vars <- create_variable_list(input_data, covariates, vars_global)
 
-  return(list(input_data, new_data, levels, vars))
+  return(list(
+    input = input_data,
+    new = new_data,
+    levels = levels,
+    vars = vars
+  ))
 }
 
 

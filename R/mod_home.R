@@ -15,7 +15,7 @@ mod_home_ui <- function(id) {
       tags$h1("M.R.P.", 
               class = "text-center display-1 fw-lighter pt-5",
               style = "font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; font-size: 12rem;"),
-      tags$p("An interface for applying Multilevel Regression and Poststratification", 
+      tags$p("An Interface for applying Multilevel Regression and Poststratification", 
              class = "fs-3 fst-italic text-center pb-4"),
       
       # Main panel group: two panels side-by-side with reduced width

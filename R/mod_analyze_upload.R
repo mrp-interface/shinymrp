@@ -69,6 +69,19 @@ mod_analyze_upload_ui <- function(id) {
           title = "Poststratification Data",
           value = "pstrat",
           conditionalPanel(
+            condition = sprintf("!output['%s']", ns("data_processed")),
+            bslib::card(
+              class = "bg-warning mb-3",  # yellow background & border
+              bslib::card_body(
+                tags$div(
+                  style = "display: flex; align-items: center;",
+                  shiny::icon("exclamation-triangle", class = "me-2"),  # Bootstrap margin-end
+                  tags$span("Please upload sample data first", class = "fw-semibold")
+                )
+              )
+            )
+          ),
+          conditionalPanel(
             condition = "output.data_format == 'temporal_covid' || output.data_format == 'static_poll'",
             tags$p("Provide information for linking the input data to the ACS data.",
               class = "small"
@@ -183,6 +196,7 @@ mod_analyze_upload_server <- function(id, global){
     sample_warnings <- reactiveVal()
     pstrat_errors <- reactiveVal()
     pstrat_warnings <- reactiveVal()
+    
 
     #---------------------------------------------------------------------------
     # Reactive outputs for conditional panels
@@ -247,7 +261,7 @@ mod_analyze_upload_server <- function(id, global){
     # --------------------------------------------------------------------------
     output$sample_feedback <- renderUI({
       req(rawdata())
-      
+
       if (!is.null(sample_errors())) {
         if (length(sample_errors()) > 0) {
           tags$div(
@@ -298,7 +312,7 @@ mod_analyze_upload_server <- function(id, global){
       }
     )
 
-    # Handle file upload
+    # Handle sample data upload
     observeEvent(input$sample_upload, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
@@ -310,67 +324,28 @@ mod_analyze_upload_server <- function(id, global){
       global$mrp <- NULL
       global$plotdata <- NULL
 
-      # Read in data
       tryCatch({
         # Read in data first
-        path <- input$sample_upload$datapath
-        if(stringr::str_ends(path, "csv")) {
-          rawdata(readr::read_csv(path, show_col_types = FALSE))
-        } else if (stringr::str_ends(path, "(xlsx|xls)")) {
-          rawdata(readxl::read_excel(path, guess_max = 5000))
-        } else if (stringr::str_ends(path, "sas7bdat")) {
-          rawdata(haven::read_sas(path))
+        read_data(input$sample_upload$datapath) |> rawdata()
+        print(nrow(rawdata()))
+        # Process data
+        result <- preprocess_data(
+          data = rawdata(),
+          data_format = global$data_format,
+          aggregated = input$toggle_sample == "agg",
+          expected_levels = GLOBAL$levels,
+          expected_types = GLOBAL$data_types,
+          zip_county_state = global$extdata$zip_county_state,
+          geo_all = GLOBAL$vars$geo
+        )
+
+        # Update reactives
+        if(length(result$errors) == 0) {
+          global$data <- result$data
         }
-        
-        errors <- list()
-        warnings <- list()
-
-        # Prevent processing if file cannot be read
-        req(rawdata())
-
-        # Clean data
-        data <- clean_data(rawdata())
-
-        # Find and rename columns
-        data <- if(global$data_format == "temporal_covid" &&
-                    input$toggle_sample == "indiv") {
-          rename_columns_covid(data)
-        } else {
-          rename_columns(data)
-        }
-
-        # Aggregate if needed
-        if(input$toggle_sample == "indiv") {
-          # Check for common dataframe issues
-          c(errors, warnings) %<-% check_data(
-            data,
-            GLOBAL$expected_types$indiv[[global$data_format]]
-          )
-
-          if(length(errors) == 0) {
-            if(global$data_format == "temporal_covid") {
-              data <- data |> aggregate_covid(GLOBAL$levels$temporal_covid)
-            } else {
-              data <- data |> aggregate_data(GLOBAL$levels[[global$data_format]])
-            }
-          }
-        } else {
-          # Check for common dataframe issues
-          c(errors, warnings) %<-% check_data(
-            data, 
-            GLOBAL$expected_types$agg[[global$data_format]]
-          )
-        }
-        
-        # Update global data only if no errors
-        if(length(errors) == 0) {
-          global$data <- data
-        }
-        
-        # Update reactives with validation results
-        sample_errors(errors)
-        sample_warnings(warnings)
-        
+        sample_errors(result$errors)
+        sample_warnings(result$warnings)
+      
       }, error = function(e) {
         err_msg <- paste("Error preprocessing data:", e$message)
         sample_errors(list(unexpected = err_msg))
@@ -380,7 +355,7 @@ mod_analyze_upload_server <- function(id, global){
         waiter::waiter_hide()
       })
     })
-
+    
     # Use individual-level example data
     observeEvent(input$use_indiv_example, {
       waiter::waiter_show(
@@ -476,7 +451,7 @@ mod_analyze_upload_server <- function(id, global){
     
 
     #---------------------------------------------------------------------------
-    # Create poststratification data
+    # Create poststratification data from ACS data
     #---------------------------------------------------------------------------
     observeEvent(input$link_acs, {
       req(global$data)
@@ -500,7 +475,7 @@ mod_analyze_upload_server <- function(id, global){
 
           if(global$data_format == "temporal_covid") {
             # prepare data for MRP
-            c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
+            global$mrp <- prepare_mrp_covid(
               global$data,
               global$extdata$pstrat_covid,
               global$extdata$covar_covid,
@@ -508,37 +483,22 @@ mod_analyze_upload_server <- function(id, global){
               GLOBAL$vars
             )
             
-            # set global MRP data
-            global$mrp <- list(
-              input = input_data,
-              new = new_data,
-              levels = levels,
-              vars = vars
-            )
 
             # prepare data for plotting
             global$plotdata <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
               geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
-              raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(input_data$zip))
+              raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(global$mrp$input$zip))
             )
 
           } else if (global$data_format == "static_poll") {
             # prepare data for MRP
-            c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
+            global$mrp <- prepare_mrp_poll(
               global$data,
               global$extdata$pstrat_poll,
               global$extdata$fips$county,
               GLOBAL$levels$static_poll,
               GLOBAL$vars
-            )
-
-            # set global MRP data
-            global$mrp <- list(
-              input = input_data,
-              new = new_data,
-              levels = levels,
-              vars = vars
             )
 
             # prepare data for plotting
@@ -551,22 +511,12 @@ mod_analyze_upload_server <- function(id, global){
             tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
 
             # prepare data for MRP
-            c(input_data, new_data, levels, vars) %<-% prepare_data(
+            global$mrp <- prepare_mrp(
               input_data = global$data,
               tract_data = tract_data,
               zip_tract = global$extdata$zip_tract,
-              zip_county_state = global$extdata$zip_county_state,
               demo_levels = GLOBAL$levels[[global$data_format]],
               vars_global = GLOBAL$vars,
-              link_geo = global$link_data$link_geo
-            )
-            
-            # set global MRP data
-            global$mrp <- list(
-              input = input_data,
-              new = new_data,
-              levels = levels,
-              vars = vars,
               link_geo = global$link_data$link_geo
             )
 
@@ -597,10 +547,51 @@ mod_analyze_upload_server <- function(id, global){
           )
         })
       })
+    })
 
+    # Handle poststratification data upload
+    observeEvent(input$pstrat_upload, {
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
+
+      tryCatch({
+        # Read in data first
+        read_data(input$sample_upload$datapath) |> rawdata()
+
+        # Process data
+        result <- preprocess_data(
+          data = rawdata(),
+          data_format = global$data_format,
+          aggregated = input$toggle_sample == "agg",
+          expected_levels = GLOBAL$levels,
+          expected_types = GLOBAL$data_types,
+          zip_county_state = global$extdata$zip_county_state,
+          geo_all = GLOBAL$vars$geo
+        )
+
+        # Update reactives
+        if(length(result$errors) == 0) {
+          global$data <- result$data
+        }
+        sample_errors(result$errors)
+        sample_warnings(result$warnings)
+      
+      }, error = function(e) {
+        err_msg <- paste("Error preprocessing data:", e$message)
+        sample_errors(list(unexpected = err_msg))
+        message(err_msg)
+      }, finally = {
+        # Always hide the waiter
+        waiter::waiter_hide()
+      })
     })
 
 
+    #----------------------------------------------------------------------------
+    # Reset link button
+    #----------------------------------------------------------------------------
     observeEvent(
       eventExpr = list(
         global$data_format,
