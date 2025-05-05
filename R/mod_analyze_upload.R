@@ -558,13 +558,13 @@ mod_analyze_upload_server <- function(id, global){
 
       tryCatch({
         # Read in data first
-        read_data(input$sample_upload$datapath) |> rawdata()
+        raw_data <- read_data(input$sample_upload$datapath)
 
         # Process data
         result <- preprocess_data(
-          data = rawdata(),
+          data = raw_data,
           data_format = global$data_format,
-          aggregated = input$toggle_sample == "agg",
+          aggregated = input$toggle_pstrat == "agg",
           expected_levels = GLOBAL$levels,
           expected_types = GLOBAL$data_types,
           zip_county_state = global$extdata$zip_county_state,
