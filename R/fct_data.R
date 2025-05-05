@@ -270,16 +270,25 @@ get_geo_predictors <- function(df, geo_col) {
   return(geo_preds)
 }
 
-append_geo <- function(input_data, zip_county_state, link_geo, vars_global) {
-  # Convert geographic identifiers to standard format
-  input_data[[link_geo]] <- to_geocode(
-    input_data[[link_geo]], 
-    create_fips_county_state(zip_county_state), 
-    link_geo
-  )
-  
+append_geo <- function(input_data, zip_county_state, vars_global) {
+  idx <- match(names(input_data), vars_global$geo) |> na.omit()
+  if (length(idx) == 0) {
+    return(input_data)
+  }
+
+  # Find the smallest geographic index
+  smallest_geo_index <- min(idx)
+  smallest_geo <- vars_global$geo[smallest_geo_index]
+
   # Get geographic variables at current and larger scales
-  geo_vars <- vars_global$geo[which(vars_global$geo == link_geo):length(vars_global$geo)]
+  geo_vars <- vars_global$geo[smallest_geo_index:length(vars_global$geo)]
+
+  # Convert geographic identifiers to standard format
+  input_data[[smallest_geo]] <- to_geocode(
+    input_data[[smallest_geo]], 
+    create_fips_county_state(zip_county_state), 
+    smallest_geo
+  )
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_county_state |>
@@ -289,10 +298,13 @@ append_geo <- function(input_data, zip_county_state, link_geo, vars_global) {
     select(all_of(geo_vars)) |>
     distinct()
   
+
   # Join geographic variables
-  input_data <- input_data |>
-    select(-all_of(setdiff(geo_vars, link_geo))) |>
-    left_join(zip_county_state, by = link_geo)
+  common <- intersect(names(input_data), names(zip_county_state))
+  to_drop <- setdiff(common, smallest_geo)
+  input_data <- zip_county_state |>
+    select(-all_of(to_drop)) |>
+    right_join(input_data, by = smallest_geo)
 
   return(input_data)
 }
@@ -410,11 +422,28 @@ aggregate_data <- function(
     threshold = 0
 ) {
 
+  indiv_vars <- names(expected_levels)
+
+  # remove NAs
+  check_cols <- setdiff(names(df), indiv_vars)
+  df <- df |> tidyr::drop_na(all_of(check_cols))
+
+  # convert date to week indices if necessary
+  convert_date <- "time" %in% indiv_vars &&
+                  "date" %in% names(df) 
+  
+  if (convert_date) {
+    # convert date to week indices
+    c(time_indices, timeline) %<-% get_week_indices(df$date)
+    df$time <- time_indices
+  }
+
+
   # recode values to expected levels
   df <- recode_values(df, expected_levels)
+  
 
   # impute missing demographic data based on frequency
-  indiv_vars <- names(expected_levels)
   df <- df |> mutate(across(all_of(indiv_vars), impute))
 
   all_geo_vars <- GLOBAL$vars$geo
@@ -433,6 +462,22 @@ aggregate_data <- function(
       positive = sum(positive)
     ) |>
     ungroup()
+
+  if (convert_date) {
+    # reset week indices and corresponding dates if cells were dropped
+    timeline <- timeline[min(df$time):max(df$time)]
+    df <- df |> mutate(time = time - min(time) + 1)
+
+    # add the column containing first dates of the weeks
+    df <- df |>
+      full_join(
+        data.frame(
+          time = 1:max(df$time),
+          date = timeline |> as.character()
+        ),
+        by = "time"
+      )
+  }
 
   return(df)
 }
@@ -479,9 +524,11 @@ create_variable_list <- function(input_data, covariates, vars_global) {
   vars <- add_variables("Geographic Predictor", geo_vars, covariates, vars)
 
   # Check for nested variables
-  vars$omit$nested <- combn(vars$varying[["Geographic Predictor"]], 2, simplify = FALSE) |>
-    lapply(paste, collapse = ":") |>
-    unlist()
+  if (length(vars$varying[["Geographic Predictor"]]) > 2) {
+    vars$omit$nested <- combn(vars$varying[["Geographic Predictor"]], 2, simplify = FALSE) |>
+      lapply(paste, collapse = ":") |>
+      unlist()
+  }
 
   return(vars)
 }
@@ -548,7 +595,7 @@ prepare_data <- function(
 
   if(!is.null(link_geo)) {
     # append geographic identifiers at larger scales
-    input_data <- append_geo(input_data, zip_county_state, link_geo, vars_global)
+    input_data <- append_geo(input_data, zip_county_state, vars_global)
   }
 
   # create poststratification table
@@ -631,9 +678,7 @@ stan_factor <- function(df, ignore_columns = NULL) {
   return(df)
 }
 
-# --------------------------------------------------------------------------
-# FOR GENERATING STATIC DATA
-# --------------------------------------------------------------------------
+
 create_zip_county_state <- function(zip_tract, fips_county_state) {
   # find the most common county for each zip code
   zip_county_state <- zip_tract |>

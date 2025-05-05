@@ -25,7 +25,7 @@ mod_analyze_upload_ui <- function(id) {
           value = "sample",
           tags$p(tags$strong("Upload individual-level or aggregated data (examples below)")),
           shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_input"),
+            inputId = ns("toggle_sample"),
             label = NULL,
             choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
             selected = "agg",
@@ -68,27 +68,17 @@ mod_analyze_upload_ui <- function(id) {
         bslib::accordion_panel(
           title = "Poststratification Data",
           value = "pstrat",
-          tags$p("Upload poststratification data or provide information for linking the input data to the ACS data.",
-            class = "small"
-          ),
-          tags$div(class = "mt-2",
-            actionButton(
-              inputId = ns("pstrat_upload_popover_btn"),
-              label =  "Upload poststratification data",
-              icon = icon("chevron-down"),
-              class = "btn btn-sm btn-secondary"
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_covid' || output.data_format == 'static_poll'",
+            tags$p("Provide information for linking the input data to the ACS data.",
+              class = "small"
             ),
-            tags$div(id = ns("pstrat_upload_popover"),
-              bslib::card(class = "mt-2",
-                bslib::card_body(
-                  fileInput(
-                    inputId = ns("pstrat_upload"),
-                    label = "Upload poststratification data",
-                    accept = GLOBAL$ui$data_accept
-                  )
-                )
-              )
-            )
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+            tags$p("Provide information for linking the input data to the ACS data or upload poststratification data.",
+              class = "small"
+            ),
           ),
           tags$div(class = "mt-2",
             actionButton(
@@ -103,6 +93,36 @@ mod_analyze_upload_ui <- function(id) {
                   selectInput(ns("link_geo"), label = "Select geography scale for poststratification", choices = NULL),
                   selectInput(ns("acs_year"), label = "Select 5-year ACS data to link to", choices = NULL),
                   actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100") 
+                )
+              )
+            )
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+            tags$div(class = "mt-2",
+              actionButton(
+                inputId = ns("pstrat_upload_popover_btn"),
+                label =  "Upload poststratification data",
+                icon = icon("chevron-down"),
+                class = "btn btn-sm btn-secondary"
+              ),
+              tags$div(id = ns("pstrat_upload_popover"),
+                bslib::card(class = "mt-2",
+                  bslib::card_body(class = "gap-3",
+                    shinyWidgets::radioGroupButtons(
+                      inputId = ns("toggle_pstrat"),
+                      label = NULL,
+                      choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
+                      selected = "agg",
+                      justified = TRUE,
+                      size = "sm"
+                    ),
+                    fileInput(
+                      inputId = ns("pstrat_upload"),
+                      label = NULL,
+                      accept = GLOBAL$ui$data_accept
+                    )
+                  )
                 )
               )
             )
@@ -159,8 +179,10 @@ mod_analyze_upload_server <- function(id, global){
     ns <- session$ns
     
     rawdata <- reactiveVal()
-    input_errors <- reactiveVal()
-    input_warnings <- reactiveVal()
+    sample_errors <- reactiveVal()
+    sample_warnings <- reactiveVal()
+    pstrat_errors <- reactiveVal()
+    pstrat_warnings <- reactiveVal()
 
     #---------------------------------------------------------------------------
     # Reactive outputs for conditional panels
@@ -176,14 +198,18 @@ mod_analyze_upload_server <- function(id, global){
     # Reset everything when data format changes
     # --------------------------------------------------------------------------
     observeEvent(global$data_format, {
-      shinyjs::reset("input_data")
-      shinyjs::reset("toggle_input")
+      shinyjs::reset("sample_upload")
+      shinyjs::reset("pstrat_upload")
+      shinyjs::reset("toggle_sample")
+      shinyjs::reset("toggle_pstrat")
       shinyjs::reset("link_geo")
       shinyjs::reset("acs_year")
 
       rawdata(NULL)
-      input_errors(NULL)
-      input_warnings(NULL)
+      sample_errors(NULL)
+      sample_warnings(NULL)
+      pstrat_errors(NULL)
+      pstrat_warnings(NULL)
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
@@ -197,8 +223,8 @@ mod_analyze_upload_server <- function(id, global){
       )
 
       # reset the poststratification data panel
-      shinyjs::hide("link_acs_popover")
-      shinyjs::show("pstrat_upload_popover")
+      shinyjs::show("link_acs_popover")
+      shinyjs::hide("pstrat_upload_popover")
     })
     
     # --------------------------------------------------------------------------
@@ -222,8 +248,8 @@ mod_analyze_upload_server <- function(id, global){
     output$sample_feedback <- renderUI({
       req(rawdata())
       
-      if (!is.null(input_errors())) {
-        if (length(input_errors()) > 0) {
+      if (!is.null(sample_errors())) {
+        if (length(sample_errors()) > 0) {
           tags$div(
             tagList(icon("circle-xmark", "fa"), "Error"),
             tags$p("Input data does not meet all requirements. Please check the user guide for input data requirements.", class = "small"),
@@ -307,14 +333,14 @@ mod_analyze_upload_server <- function(id, global){
 
         # Find and rename columns
         data <- if(global$data_format == "temporal_covid" &&
-                    input$toggle_input == "indiv") {
+                    input$toggle_sample == "indiv") {
           rename_columns_covid(data)
         } else {
           rename_columns(data)
         }
 
         # Aggregate if needed
-        if(input$toggle_input == "indiv") {
+        if(input$toggle_sample == "indiv") {
           # Check for common dataframe issues
           c(errors, warnings) %<-% check_data(
             data,
@@ -342,13 +368,12 @@ mod_analyze_upload_server <- function(id, global){
         }
         
         # Update reactives with validation results
-        input_errors(errors)
-        input_warnings(warnings)
+        sample_errors(errors)
+        sample_warnings(warnings)
         
       }, error = function(e) {
-        # Capture the actual error message
         err_msg <- paste("Error preprocessing data:", e$message)
-        input_errors(list(unexpected = err_msg))
+        sample_errors(list(unexpected = err_msg))
         message(err_msg)
       }, finally = {
         # Always hide the waiter
@@ -418,10 +443,14 @@ mod_analyze_upload_server <- function(id, global){
         link_geos <- c("state")
         acs_years <- 2018
       } else {
-        smallest_geo_index <- intersect(names(global$data), GLOBAL$vars$geo) |>
-          purrr::map_int(~which(GLOBAL$vars$geo == .x)) |>
-          min()
-        link_geos <- c(GLOBAL$vars$geo[smallest_geo_index:length(GLOBAL$vars$geo)], "Do not include geography")
+        # find the smallest geography in the data
+        idx <- match(names(global$data), GLOBAL$vars$geo) |> na.omit()
+        link_geos <- if (length(idx) > 0) {
+          c(GLOBAL$vars$geo[min(idx):length(GLOBAL$vars$geo)], "Do not include geography")
+        } else {
+          "Do not include geography"
+}
+
         acs_years <- 2019:2023
       }
 
@@ -503,7 +532,7 @@ mod_analyze_upload_server <- function(id, global){
               GLOBAL$levels$static_poll,
               GLOBAL$vars
             )
-            
+
             # set global MRP data
             global$mrp <- list(
               input = input_data,
