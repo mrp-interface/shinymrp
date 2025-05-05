@@ -6,7 +6,7 @@
 #' @noRd
 app_server <- function(input, output, session) {
     # set ggplot2 theme
-  ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 18))
+  ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 25))
 
   global <- reactiveValues(
     web_version = FALSE,
@@ -68,7 +68,7 @@ app_server <- function(input, output, session) {
             title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
             "Please select a version of the interface.",
             footer = actionButton(
-              inputId = ns("to_home"),
+              inputId = "to_home",
               label = "Go to home"
             )
           )
