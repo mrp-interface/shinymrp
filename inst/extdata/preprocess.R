@@ -36,7 +36,7 @@ clean_data <- function(
                  ~if_else(.x %in% na_strings, NA, .x)))
 
   # Format geographic identifiers
-  df <- fix_geocode(df)
+  df <- format_geocode(df)
   
   return(df)
 }
