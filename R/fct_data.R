@@ -625,7 +625,7 @@ create_variable_list <- function(input_data, covariates, vars_global) {
   vars <- add_variables("Geographic Predictor", geo_vars, covariates, vars)
 
   # Check for nested variables
-  if (length(vars$varying[["Geographic Predictor"]]) > 2) {
+  if (length(vars$varying[["Geographic Predictor"]]) >= 2) {
     vars$omit$nested <- combn(vars$varying[["Geographic Predictor"]], 2, simplify = FALSE) |>
       lapply(paste, collapse = ":") |>
       unlist()
