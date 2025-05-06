@@ -51,15 +51,16 @@ format_geocode <- function(df) {
   if ("zip" %in% names(df)) {
     if (is.numeric(df$zip)) {
       df$zip <- sprintf("%05d", df$zip)
+    } else {
+      df$zip <- find_bad_geocode(df$zip)
     }
-    df$zip <- find_bad_geocode(df$zip)
   }
 
   if ("county" %in% names(df)) {
     if (is.numeric(df$county)) {
       df$county <- sprintf("%05d", df$county)
     } else {
-      stop("FIPS codes must be provided.")
+      df$county <- find_bad_geocode(df$county)
     }
   }
 
@@ -100,11 +101,15 @@ clean_data <- function(
   return(df)
 }
 
-rename_columns <- function(df) {
+rename_columns <- function(df, const, covid_indiv = FALSE) {
+  if (covid_indiv) {
+    return(rename_columns_covid(df))
+  }
+
   target_names <- c(
-    GLOBAL$vars$indiv,
-    GLOBAL$vars$geo,
-    GLOBAL$vars$ignore
+    const$vars$indiv,
+    const$vars$geo,
+    const$vars$ignore
   )
 
   current_names <- names(df)
@@ -219,7 +224,11 @@ get_dates <- function(df) {
     as.character()
 }
 
-recode_values <- function(df, expected_levels) {
+recode_values <- function(df, expected_levels, covid=FALSE) {
+  if (covid) {
+    return(recode_covid(df, expected_levels))
+  }
+
   # this function assumes that strings are already lower case
   ranges <- expected_levels$age
   age_bounds <- regmatches(
@@ -294,20 +303,32 @@ get_geo_predictors <- function(df, geo_col) {
   return(geo_preds)
 }
 
-append_geo <- function(input_data, zip_county_state, geo_all) {
-  idx <- match(names(input_data), geo_all) |> na.omit()
+get_smallest_geo <- function(col_names, geo_col) {
+  # Find the smallest geographic index
+  idx <- match(col_names, GLOBAL$vars$geo) |> na.omit()
   if (length(idx) == 0) {
+    return(NULL)
+  }
+
+  smallest_geo_index <- min(idx)
+  smallest_geo <- GLOBAL$vars$geo[smallest_geo_index]
+
+  return(list(
+    geo = smallest_geo,
+    idx = smallest_geo_index
+  ))
+}
+
+append_geo <- function(input_data, zip_county_state, geo_all) {
+  smallest <- get_smallest_geo(names(input_data), geo_all)
+  if (is.null(smallest)) {
     return(input_data)
   }
 
   fips_county_state <- create_fips_county_state(zip_county_state)
 
-  # Find the smallest geographic index
-  smallest_geo_index <- min(idx)
-  smallest_geo <- geo_all[smallest_geo_index]
-
   # Get geographic variables at current and larger scales
-  geo_vars <- geo_all[smallest_geo_index:length(geo_all)]
+  geo_vars <- geo_all[smallest$idx:length(geo_all)]
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_county_state |>
@@ -318,24 +339,19 @@ append_geo <- function(input_data, zip_county_state, geo_all) {
     distinct()
   
   # Convert names to FIPS for smallest geographic scale
-  if (smallest_geo != "zip") { 
-    input_data[[smallest_geo]] <- to_fips(
-      input_data[[smallest_geo]], 
+  if (smallest$geo != "zip") { 
+    input_data[[smallest$geo]] <- to_fips(
+      input_data[[smallest$geo]], 
       fips_county_state, 
-      smallest_geo
+      smallest$geo
     )
   }
 
   # Join geographic variables
-  common <- intersect(names(input_data), names(zip_county_state))
-  to_drop <- setdiff(common, smallest_geo)
-  input_data <- zip_county_state |>
-    select(-all_of(to_drop)) |>
-    right_join(input_data, by = smallest_geo)
-
+  input_data <- clean_left_join(input_data, zip_county_state, by = smallest$geo)
 
   # Convert names to GEOIDs for larger geographic scales
-  for (geo in setdiff(geo_vars, smallest_geo)) {
+  for (geo in setdiff(geo_vars, smallest$geo)) {
     if (geo != "zip") {
       input_data[[geo]] <- to_fips(
         input_data[[geo]], 
@@ -382,6 +398,17 @@ find_nested <- function(df, cols, sep = "---") {
 }
 
 
+clean_left_join <- function(df1, df2, by) {
+  common <- intersect(names(df1), names(df2))
+  to_drop <- setdiff(common, by)
+  df_join <- df2 |>
+    select(-all_of(to_drop)) |>
+    right_join(df1, by = by)
+
+  
+  return(df_join)
+}
+
 data_type <- function(col, num = FALSE, threshold = 0.1) {
   if(is.numeric(col)) {
     if(!all(as.integer(col) == col) | mean(table(col) == 1) > threshold) {
@@ -402,186 +429,226 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
   return(dtype)
 }
 
+create_expected_types <- function(
+  data_format = c("temporal_covid", "temporal_other", "static_poll", "static_other"),
+  is_sample = TRUE,
+  is_aggregated = FALSE
+) {
+
+  data_format <- match.arg(data_format)
+  
+  types <- list(
+    sex  = "bin",
+    race = "cat",
+    age  = "cat"
+  )
+  
+  if (data_format == "temporal_covid") types$zip <- "cat"
+  if (data_format == "static_poll")   types$edu <- "cat"
+
+  if (is_sample) {
+    types$positive <- "ignore"
+    if (is_aggregated) {
+      if (data_format %in% c("temporal_covid", "temporal_other")) types$time  <- "cat"
+    }
+  }
+
+  if (is_aggregated) {
+    types$total <- "ignore"
+  }
+  
+  return(types)
+}
+
+create_expected_levels <- function(
+  data_format = c("temporal_covid", "temporal_other", "static_poll", "static_other")
+) {
+  
+  data_format <- match.arg(data_format)
+
+  levels <- list(
+    static_poll = list(
+      sex = c("male", "female"),
+      race = c("white", "black", "other"),
+      age = c("18-29", "30-39", "40-49", "50-59", "60-69", "70+"),
+      edu = c("no hs", "hs", "some college", "4-year college", "post-grad")
+    ),
+    other = list(
+      sex = c("male", "female"),
+      race = c("white", "black", "other"),
+      age = c("0-17", "18-34", "35-64", "65-74", "75+")
+    )
+  )
+
+  switch(
+    data_format,
+    static_poll = levels$static_poll,
+    levels$other
+  )
+}
 
 check_data <- function(df, expected_types, na_threshold = 0.5) {
-  errors <- list()
-  warnings <- list()
   expected_columns <- names(expected_types)
   
   # Check for missing columns
   missing <- setdiff(expected_columns, names(df))
   if(length(missing) > 0) {
-    errors$missing_columns <- paste0("The following columns are missing: ",
-                                    paste(missing, collapse = ", "))
-    # Return early if critical columns are missing
-    return(list(errors, warnings))
+    stop(paste0("The following columns are missing: ",
+                  paste(missing, collapse = ", ")))
+
   }
   
   # Check data types
-
   types <- df |> select(all_of(expected_columns)) |> lapply(data_type) |> unlist()
   valid <- unlist(expected_types) == types
   valid[expected_types == "ignore"] <- TRUE
   
   if(any(!valid)) {
-    errors$invalid_type <- paste0("Columns corresponding to the following variables have inappropriate data types: ",
-                               paste(expected_columns[!valid], collapse = ", "))
+    stop(paste0("Columns corresponding to the following variables have inappropriate data types: ",
+                paste(expected_columns[!valid], collapse = ", ")))
   }
   
-  # Check for too many NAs - only if we don't already have type errors
-  if(length(errors) == 0) {
-    na_percents <- df |>
-      lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
-      unlist()
-    
-    high_na_cols <- expected_columns[na_percents[expected_columns] > na_threshold]
-    if(length(high_na_cols) > 0) {
-      errors$na <- paste0("Columns corresponding to the following variables have more than ",
-                        na_threshold * 100, "% rows with missing data: ",
-                        paste(high_na_cols, collapse = ", "))
-    }
+  # Check for too many NAs
+  na_percents <- df |>
+    lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
+    unlist()
+  
+  high_na_cols <- expected_columns[na_percents[expected_columns] > na_threshold]
+  if(length(high_na_cols) > 0) {
+    stop(paste0("Columns corresponding to the following variables have more than ",
+                na_threshold * 100, "% rows with missing data: ",
+                paste(high_na_cols, collapse = ", ")))
   }
   
-  # Check date format - independent of other checks
+  # Check date format
   if("time" %in% expected_columns) {
     if("date" %in% names(df)) {
       if (anyNA(as.Date(na.omit(df$date), optional = TRUE))) {
-        warnings$date_format <- "Provided dates are not in expected format. Plots will use week indices instead."
+        warning("Provided dates are not in expected format. Plots will use week indices instead.")
       }
     } else {
-      warnings$missing_date <- "Dates are not provided. Plots will use week indices instead."
+      warning("Dates are not provided. Plots will use week indices instead.")
     }
   }
-
-  # Check county format
-  if("county" %in% expected_columns) {
-    if(!is.numeric(df$county)) {
-      errors$county_format <- "County identifiers are not in expected format. Please provide numeric values."
-    }
-  }
-  
-  return(list(errors, warnings))
 }
 
-aggregate_data <- function(
-    df,
-    expected_levels,
-    threshold = 0
-) {
-
-  indiv_vars <- names(expected_levels)
-
-  # remove NAs
-  check_cols <- setdiff(names(df), indiv_vars)
-  df <- df |> tidyr::drop_na(all_of(check_cols))
-
-  # convert date to week indices if necessary
-  convert_date <- "time" %in% indiv_vars &&
-                  "date" %in% names(df) 
-  
-  if (convert_date) {
-    # convert date to week indices
-    c(time_indices, timeline) %<-% get_week_indices(df$date)
-    df$time <- time_indices
+check_pstrat <- function(df, df_ref, expected_types) {
+  if (is.null(df_ref)) {
+    stop("Sample data is not provided.")
   }
-
-
-  # recode values to expected levels
-  df <- recode_values(df, expected_levels)
   
+  # ensure columns exist
+  cols <- names(expected_types)
+  missing_df  <- setdiff(cols, names(df))
+  missing_ref <- setdiff(cols, names(df_ref))
+  if (length(missing_df))  stop("Missing in sample data:  ", paste(missing_df, collapse = ", "))
+  if (length(missing_ref)) stop("Missing in postratification data: ", paste(missing_ref, collapse = ", "))
+  
+  # compare unique values
+  cond <- vapply(cols, function(col) {
+    setequal(unique(df[[col]]), unique(df_ref[[col]]))
+  }, logical(1))
 
-  # impute missing demographic data based on frequency
-  df <- df |> mutate(across(all_of(indiv_vars), impute))
-
-  all_geo_vars <- GLOBAL$vars$geo
-  geo_vars <- intersect(all_geo_vars, names(df))
-  smallest_geo <- all_geo_vars[min(match(geo_vars, all_geo_vars))]
-  group_vars <- c(indiv_vars, smallest_geo)
-  geo_covars <- setdiff(geo_vars, smallest_geo)
-
-  # aggregate test records based on combinations of factors
-  df <- df |>
-    group_by(!!!syms(group_vars)) |>
-    filter(n() >= threshold) |>   # omit cells with small number of tests
-    summarize(
-      across(all_of(geo_covars), first),
-      total = n(),
-      positive = sum(positive)
-    ) |>
-    ungroup()
-
-  if (convert_date) {
-    # reset week indices and corresponding dates if cells were dropped
-    timeline <- timeline[min(df$time):max(df$time)]
-    df <- df |> mutate(time = time - min(time) + 1)
-
-    # add the column containing first dates of the weeks
-    df <- df |>
-      full_join(
-        data.frame(
-          time = 1:max(df$time),
-          date = timeline |> as.character()
-        ),
-        by = "time"
-      )
+  if (any(!cond)) {
+    stop("The following columns have different unique values in sample and postratification data: ",
+         paste(cols[!cond], collapse = ", "))
   }
-
-  return(df)
 }
+
 
 # Process uploaded data 
-preprocess_data <- function(
+preprocess <- function(
   data,
   data_format,
-  aggregated,
-  expected_levels,
-  expected_types,
   zip_county_state,
-  geo_all
+  const,
+  is_sample = TRUE,
+  is_aggregated = TRUE
 ) {
+  
+  # set up flags
+  covid <- data_format == "temporal_covid"
+  need_time <- is_sample && data_format %in% c("temporal_covid", "temporal_other")
+  levels <- create_expected_levels(data_format)
+  indiv_vars <- names(levels)
+  if (need_time) {
+    indiv_vars <- c(indiv_vars, "time")
+  }
   
   # Clean data
   data <- clean_data(data)
   
   # Find and rename columns
-  data <- if(data_format == "temporal_covid" && !aggregated) {
-    rename_columns_covid(data)
-  } else {
-    rename_columns(data)
-  }
+  data <- rename_columns(data, const, covid && !is_aggregated)
+  
+  # Check for common dataframe issues
+  types <- create_expected_types(
+    data_format = data_format,
+    is_sample = is_sample,
+    is_aggregated = is_aggregated
+  )
+  check_data(data, types)
 
   # Aggregate if needed
-  if(!aggregated) {
-    # Check for common dataframe issues
-    c(errors, warnings) %<-% check_data(
-      data,
-      expected_types$indiv[[data_format]]
-    )
-    
-    if(length(errors) == 0) {
-      if(data_format == "temporal_covid") {
-        data <- data |> aggregate_covid(expected_levels$temporal_covid)
-      } else {
-        data <- data |> aggregate_data(expected_levels[[data_format]])
+  if(!is_aggregated) {
+    # remove NAs
+    check_cols <- setdiff(names(data), indiv_vars)
+    data <- data |> tidyr::drop_na(all_of(check_cols))
+
+    # convert date to week indices if necessary
+    if (need_time) {
+      common <- intersect(names(data), c("date", "time"))
+      if (length(common) == 1 && "date" %in% common) {
+        # convert date to week indices
+        c(time_indices, timeline) %<-% get_week_indices(data$date)
+        data$time <- time_indices
+
+        # add the column containing first dates of the weeks
+        data <- data |>
+          full_join(
+            data.frame(
+              time = 1:max(data$time),
+              date = timeline |> as.character()
+            ),
+            by = "time"
+          )
+      } else if (length(common) == 0) {
+        stop("No dates or week indices found.")
       }
     }
-  } else {
-    # Check for common dataframe issues
-    c(errors, warnings) %<-% check_data(
-      data, 
-      expected_types$agg[[data_format]]
-    )
+
+    # recode values to expected levels
+    data <- recode_values(data, levels, covid)
+
+    # impute missing demographic data based on frequency
+    data <- data |> mutate(across(all_of(indiv_vars), impute))
+
+    # aggregate test records based on combinations of factors
+    smallest <- get_smallest_geo(names(data), const$vars$geo)
+    smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
+    group_vars <- c(indiv_vars, smallest_geo)
+    geo_covars <- if(!is.null(smallest_geo)) names(get_geo_predictors(data, smallest_geo)) else NULL
+
+    data <- data |>
+      group_by(!!!syms(group_vars)) |>
+      summarize(
+        across(any_of(geo_covars), first),
+        total = n(),
+        positive = sum(positive)
+      ) |>
+      ungroup()
   }
 
   # append geographic areas at larger scales if missing
-  data <- append_geo(data, zip_county_state, geo_all)
-  
-  return(list(
-    data = data,
-    errors = errors,
-    warnings = warnings
-  ))
+  data <- append_geo(data, zip_county_state, const$vars$geo)
+
+  return(data)
 }
+
+# process_pstrat <- function(
+#     sample_data,
+#     pstrat_data,
+# )
 
 create_variable_list <- function(input_data, covariates, vars_global) {
   # list of variables for model specification
@@ -684,30 +751,96 @@ combine_tracts <- function(
   return(pstrat_data)
 }
 
-prepare_mrp <- function(
+prepare_mrp_custom <- function(
+  input_data,
+  pstrat_data,
+  fips_county_state,
+  demo_levels,
+  vars_global,
+  link_geo = NULL,
+  need_time = FALSE
+) {
+
+  # filter based on common GEOIDs
+  shared_geocodes <- c()
+  if(!is.null(link_geo)) {
+    shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(pstrat_data[[link_geo]]))
+    input_data <- input_data |> filter(!!sym(link_geo) %in% shared_geocodes)
+    pstrat_data <- pstrat_data |> filter(!!sym(link_geo) %in% shared_geocodes)
+  }
+
+  # create lists of all factor levels
+  n_time_indices <- 1
+  levels <- demo_levels
+  if(need_time) {
+    levels$time <- unique(input_data$time) |> sort()
+    n_time_indices <- length(levels$time)
+  }
+  if(!is.null(link_geo)) {
+    levels[[link_geo]] <- shared_geocodes
+  }
+
+  # convert demographic levels to factors
+  new_data <- pstrat_data |> as_factor(demo_levels)
+
+  # append geographic predictors
+  covariates <- NULL
+  if(!is.null(link_geo)) {
+    # find geographic covariates
+    covariates <- get_geo_predictors(input_data, link_geo)
+    if(ncol(covariates) > 1) {
+      new_data <- clean_left_join(new_data, covariates, by = link_geo)
+    }
+  }
+
+  # append levels for other geographic predictors
+  for(v in intersect(names(new_data), vars_global$geo)) {
+    levels[[v]] <- unique(new_data[[v]]) |> sort()
+  }
+
+  # duplicate rows for each time index
+  new_data <- purrr::map_dfr(
+    seq_len(n_time_indices),
+    ~ new_data |> mutate(time = .x)
+  )
+
+  vars <- create_variable_list(input_data, covariates, vars_global)
+
+  return(list(
+    input = input_data,
+    new = new_data,
+    levels = levels,
+    vars = vars
+  ))
+}
+
+prepare_mrp_acs <- function(
     input_data,
     tract_data,
     zip_tract,
     zip_county_state,
     demo_levels,
     vars_global,
-    link_geo
+    link_geo = NULL,
+    need_time = FALSE
 ) {
 
   # create poststratification table
-  pstrat <- combine_tracts(tract_data, zip_tract, link_geo)
+  pstrat_data <- combine_tracts(tract_data, zip_tract, link_geo)
+
+  # filter based on common GEOIDs
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
-    shared_geocodes <- intersect(unique(input_data[[link_geo]]), pstrat$geocode)
+    shared_geocodes <- intersect(unique(input_data[[link_geo]]), pstrat_data$geocode)
     input_data <- input_data |> filter(!!sym(link_geo) %in% shared_geocodes)
-    pstrat <- pstrat |> filter(geocode %in% shared_geocodes)
+    pstrat_data <- pstrat_data |> filter(geocode %in% shared_geocodes)
   }
-  cell_counts <- pstrat |> select(-geocode) |> t() |> c()
+  cell_counts <- pstrat_data |> select(-geocode) |> t() |> c()
 
   # create lists of all factor levels
   n_time_indices <- 1
   levels <- demo_levels
-  if("time" %in% names(input_data)) {
+  if(need_time) {
     levels$time <- unique(input_data$time) |> sort()
     n_time_indices <- length(levels$time)
   }

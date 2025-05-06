@@ -14,12 +14,12 @@ mod_analyze_model_ui <- function(id) {
 
   bslib::layout_sidebar(
     sidebar = bslib::sidebar(
-      width = 350,
+      width = 375,
       bslib::accordion(
         multiple = FALSE,
         bslib::accordion_panel("Model Specification",
           tags$div(class = "d-flex justify-content-between align-items-start",
-            tags$p(tags$strong("Step 1: Select main effects"), tags$br(), tags$strong("and interactions")),
+            tags$p(tags$strong("Step 1: Select main effects and"), tags$br(), tags$strong("interactions")),
             tags$div(style = "margin-top: 10px",
               bslib::tooltip(
                 actionButton(
@@ -635,7 +635,7 @@ mod_analyze_model_server <- function(id, global){
                   model$link_data <- global$link_data
                   model$gq_data <- list(
                     subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
-                    temporal = "time" %in% names(model$mrp$input)
+                    temporal = model$data_format %in% c("temporal_covid", "temporal_other"),
                   )
 
                   # run MCMC
