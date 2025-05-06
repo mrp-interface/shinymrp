@@ -635,7 +635,7 @@ mod_analyze_model_server <- function(id, global){
                   model$link_data <- global$link_data
                   model$gq_data <- list(
                     subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
-                    temporal = model$data_format %in% c("temporal_covid", "temporal_other"),
+                    temporal = model$data_format %in% c("temporal_covid", "temporal_other")
                   )
 
                   # run MCMC
@@ -653,9 +653,9 @@ mod_analyze_model_server <- function(id, global){
 
                   model_buffer(model)
 
-                }, error = function(e) {
-                  message(paste0("Error fitting model: ", e$message))
-                  show_alert("An error occured during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
+                # }, error = function(e) {
+                #   message(paste0("Error fitting model: ", e$message))
+                #   show_alert("An error occured during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
                 })
   
               } else {

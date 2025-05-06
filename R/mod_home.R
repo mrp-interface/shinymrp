@@ -100,7 +100,7 @@ mod_home_ui <- function(id) {
                 tags$p("Poll Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Data linking for poststratification at state level (must include education)", 
+                tags$p("Data linking for poststratification at state level", 
                        class = "fst-italic text-center"),
                 actionButton(inputId = ns("set_static_poll"), label = "Start", 
                              class = "w-100 mt-3")
@@ -113,7 +113,7 @@ mod_home_ui <- function(id) {
                 tags$p("Other Cross-sectional Data", class = "fs-4 fw-bold text-center m-0")
               ),
               card_body(
-                tags$p("Data linking for poststratification at state, county or ZIP-code level (without education)", 
+                tags$p("Data linking for poststratification at state, county or ZIP-code level", 
                        class = "fst-italic text-center"),
                 actionButton(inputId = ns("set_static_other"), label = "Start", 
                              class = "w-100 mt-3")
