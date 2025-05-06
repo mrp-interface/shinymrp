@@ -353,8 +353,8 @@ plot_geographic <- function(
       x = name, y = "Number of zip codes"
     ) +
     theme(
-      plot.subtitle = element_text(size = 15, hjust = 0),
-      plot.caption = element_text(size = 15, hjust = 0.5),
+      plot.subtitle = element_text(size = 16, hjust = 0),
+      plot.caption = element_text(size = 16, hjust = 0.5),
       plot.margin = margin(1, 1, 1, 1, "cm")
     )
 

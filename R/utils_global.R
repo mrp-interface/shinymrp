@@ -29,99 +29,11 @@ GLOBAL <- list(
       poverty = c(0, 1, 2)
     )
   ),
-  levels = list(
-    temporal_covid = list(
-      sex = c("male", "female"),
-      race = c("white", "black", "other"),
-      age = c("0-17", "18-34", "35-64", "65-74", "75+"),
-      time = NULL
-    ),
-    temporal_other = list(
-      sex = c("male", "female"),
-      race = c("white", "black", "other"),
-      age = c("0-17", "18-34", "35-64", "65-74", "75+"),
-      time = NULL
-    ),
-    static_poll = list(
-      sex = c("male", "female"),
-      race = c("white", "black", "other"),
-      age = c("18-29", "30-39", "40-49", "50-59", "60-69", "70+"),
-      edu = c("no hs", "hs", "some college", "4-year college", "post-grad")
-    ),
-    static_other = list(
-      sex = c("male", "female"),
-      race = c("white", "black", "other"),
-      age = c("0-17", "18-34", "35-64", "65-74", "75+")
-    )
-  ),
-  data_types = list(
-    indiv = list(
-      temporal_covid = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        zip = "cat",
-        positive = "ignore"
-      ),
-      temporal_other = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        positive = "ignore"
-      ),
-      static_poll = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        edu = "cat",
-        positive = "ignore"
-      ),
-      static_other = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        positive = "ignore"
-      )
-    ),
-    agg = list(
-      temporal_covid = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        zip = "cat",
-        time = "cat",
-        total = "ignore",
-        positive = "ignore"
-      ),
-      temporal_other = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        time = "cat",
-        total = "ignore",
-        positive = "ignore"
-      ),
-      static_poll = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        edu = "cat",
-        total = "ignore",
-        positive = "ignore"
-      ),
-      static_other = list(
-        sex = "bin",
-        race = "cat",
-        age = "cat",
-        total = "ignore",
-        positive = "ignore"
-      )
-    )
-  ),
   vars = list(
     subgroups = c("sex", "race", "age", "edu", "county", "state"),
     indiv = c("sex", "race", "age", "edu", "time"),
     geo = c("zip", "county", "state"),
+    time = c("time", "date"),
     ignore = c("date", "total", "positive")
   ),
   ui = list(
@@ -143,7 +55,7 @@ GLOBAL <- list(
     max_model = 5,
     iter_range = c(100, 5000),
     chain_range = c(1, 8),
-    plot_height = 500,
+    plot_height = 550,
     subplot_height = 300,
     map_height = 700,
     date_format = "%b%d\n%Y",
@@ -197,6 +109,3 @@ GLOBAL <- list(
     local_scale = "normal(0, 1)"
   )
 )
-
-# set file upload size limit
-options(shiny.maxRequestSize = 200*1024^2)

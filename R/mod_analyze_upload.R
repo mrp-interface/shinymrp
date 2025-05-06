@@ -15,7 +15,7 @@ mod_analyze_upload_ui <- function(id) {
     # Sidebar
     #---------------------------------------------------------------------------
     sidebar = sidebar(
-      width = 350,
+      width = 375,
 
       bslib::accordion(
         id = ns("accordion"),
@@ -103,8 +103,8 @@ mod_analyze_upload_ui <- function(id) {
             tags$div(id = ns("link_acs_popover"),
               bslib::card(class = "mt-2",
                 bslib::card_body(
-                  selectInput(ns("link_geo"), label = "Select geography scale for poststratification", choices = NULL),
-                  selectInput(ns("acs_year"), label = "Select 5-year ACS data to link to", choices = NULL),
+                  selectizeInput(ns("link_geo"), label = "Select geography scale for poststratification", choices = NULL),
+                  selectizeInput(ns("acs_year"), label = "Select 5-year ACS data to link to", choices = NULL, options = list(dropdownParent = "body")),
                   actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100") 
                 )
               )
@@ -134,7 +134,8 @@ mod_analyze_upload_ui <- function(id) {
                       inputId = ns("pstrat_upload"),
                       label = NULL,
                       accept = GLOBAL$ui$data_accept
-                    )
+                    ),
+                    uiOutput(ns("pstrat_feedback"))
                   )
                 )
               )
@@ -191,17 +192,16 @@ mod_analyze_upload_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    rawdata <- reactiveVal()
+    raw_sample <- reactiveVal()
+    raw_pstrat <- reactiveVal()
     sample_errors <- reactiveVal()
-    sample_warnings <- reactiveVal()
     pstrat_errors <- reactiveVal()
-    pstrat_warnings <- reactiveVal()
     
 
     #---------------------------------------------------------------------------
     # Reactive outputs for conditional panels
     #---------------------------------------------------------------------------
-    output$file_uploaded <- reactive(!is.null(rawdata()))
+    output$file_uploaded <- reactive(!is.null(raw_sample()))
     outputOptions(output, "file_uploaded", suspendWhenHidden = FALSE)
     
     output$data_processed <- reactive(!is.null(global$data))
@@ -219,11 +219,10 @@ mod_analyze_upload_server <- function(id, global){
       shinyjs::reset("link_geo")
       shinyjs::reset("acs_year")
 
-      rawdata(NULL)
+      raw_sample(NULL)
+      raw_pstrat(NULL)
       sample_errors(NULL)
-      sample_warnings(NULL)
       pstrat_errors(NULL)
-      pstrat_warnings(NULL)
       global$data <- NULL
       global$mrp <- NULL
       global$plotdata <- NULL
@@ -260,18 +259,18 @@ mod_analyze_upload_server <- function(id, global){
     # Show feedback about input data
     # --------------------------------------------------------------------------
     output$sample_feedback <- renderUI({
-      req(rawdata())
+      req(raw_sample())
 
       if (!is.null(sample_errors())) {
         if (length(sample_errors()) > 0) {
           tags$div(
             tagList(icon("circle-xmark", "fa"), "Error"),
-            tags$p("Input data does not meet all requirements. Please check the user guide for input data requirements.", class = "small"),
+            tags$p("Input data does not meet all requirements. Please check the user guide for data requirements.", class = "small"),
           )
         } else {
           tags$div(
             tagList(icon("circle-check", "fa"), "Success"),
-            tags$p("All requirements are met. You may proceed to data linking or the next page.", class = "small")
+            tags$p("All requirements are met. You may proceed to the Poststratification Data section'.", class = "small")
           )
         }
       }
@@ -280,10 +279,10 @@ mod_analyze_upload_server <- function(id, global){
     
     # Table output renderer
     output$table <- DT::renderDT({
-      req(rawdata())
+      req(raw_sample())
       
       df <- if(is.null(input$toggle_table) || input$toggle_table == "raw") {
-        rawdata()
+        raw_sample()
       } else {
         req(global$data) # Ensure global$data exists when "prep" is selected
         global$data
@@ -325,31 +324,22 @@ mod_analyze_upload_server <- function(id, global){
       global$plotdata <- NULL
 
       tryCatch({
-        # Read in data first
-        read_data(input$sample_upload$datapath) |> rawdata()
-        print(nrow(rawdata()))
-        # Process data
-        result <- preprocess_data(
-          data = rawdata(),
+        read_data(input$sample_upload$datapath) |> raw_sample()
+
+        global$data <- preprocess(
+          data = raw_sample(),
           data_format = global$data_format,
-          aggregated = input$toggle_sample == "agg",
-          expected_levels = GLOBAL$levels,
-          expected_types = GLOBAL$data_types,
           zip_county_state = global$extdata$zip_county_state,
-          geo_all = GLOBAL$vars$geo
+          const = GLOBAL,
+          is_sample = TRUE,
+          is_aggregated = input$toggle_sample == "agg"
         )
 
-        # Update reactives
-        if(length(result$errors) == 0) {
-          global$data <- result$data
-        }
-        sample_errors(result$errors)
-        sample_warnings(result$warnings)
+        sample_errors(character(0))
       
       }, error = function(e) {
-        err_msg <- paste("Error preprocessing data:", e$message)
-        sample_errors(list(unexpected = err_msg))
-        message(err_msg)
+        sample_errors(e$message)
+        message(e$message)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
@@ -363,23 +353,24 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      file_name <- switch(global$data_format,
+      indiv_file_name <- switch(global$data_format,
         "temporal_covid" = "covid_data_individual.csv",
         "temporal_other" = "timevarying_data_individual.csv",
         "static_poll" = "ces_data_individual.csv",
         "static_other" = "crosssectional_data_individual.csv"
       )
 
-      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> rawdata()
+      agg_file_name <- switch(global$data_format,
+        "temporal_covid" = "covid_data_aggregated.csv",
+        "temporal_other" = "timevarying_data_aggregated.csv",
+        "static_poll" = "ces_data_aggregated.csv",
+        "static_other" = "crosssectional_data_aggregated.csv"
+      )
 
-      cleaned_data <- rawdata() |> clean_data()
-
-      # Use the appropriate aggregation function
-      if(global$data_format == "temporal_covid") {
-        global$data <- cleaned_data |> aggregate_covid(expected_levels = GLOBAL$levels$temporal_covid)
-      } else {
-        global$data <- cleaned_data |> aggregate_data(expected_levels = GLOBAL$levels[[global$data_format]])
-      }
+      readr::read_csv(app_sys(paste0("extdata/example/data/", indiv_file_name)), show_col_types = FALSE) |> raw_sample()
+      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", agg_file_name)), show_col_types = FALSE) |>
+        clean_data() |>
+        mutate(state = to_fips(state, global$extdata$fips$county, "state"))
       
       waiter::waiter_hide()
     })
@@ -398,8 +389,10 @@ mod_analyze_upload_server <- function(id, global){
         "static_other" = "crosssectional_data_aggregated.csv"
       )
 
-      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> rawdata()
-      global$data <- rawdata() |> clean_data()
+      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> raw_sample()
+      global$data <- raw_sample() |>
+        clean_data() |>
+        mutate(state = to_fips(state, global$extdata$fips$county, "state"))
 
       waiter::waiter_hide()
     })
@@ -424,7 +417,7 @@ mod_analyze_upload_server <- function(id, global){
           c(GLOBAL$vars$geo[min(idx):length(GLOBAL$vars$geo)], "Do not include geography")
         } else {
           "Do not include geography"
-}
+        }
 
         acs_years <- 2019:2023
       }
@@ -476,13 +469,12 @@ mod_analyze_upload_server <- function(id, global){
           if(global$data_format == "temporal_covid") {
             # prepare data for MRP
             global$mrp <- prepare_mrp_covid(
-              global$data,
-              global$extdata$pstrat_covid,
-              global$extdata$covar_covid,
-              GLOBAL$levels$temporal_covid,
-              GLOBAL$vars
+              input_data = global$data,
+              pstrat_data = global$extdata$pstrat_covid,
+              covariates = global$extdata$covar_covid,
+              demo_levels = create_expected_levels(global$data_format),
+              vars_global = GLOBAL$vars
             )
-            
 
             # prepare data for plotting
             global$plotdata <- list(
@@ -492,13 +484,17 @@ mod_analyze_upload_server <- function(id, global){
             )
 
           } else if (global$data_format == "static_poll") {
-            # prepare data for MRP
-            global$mrp <- prepare_mrp_poll(
-              global$data,
-              global$extdata$pstrat_poll,
-              global$extdata$fips$county,
-              GLOBAL$levels$static_poll,
-              GLOBAL$vars
+            pstrat_data <- global$extdata$pstrat_poll |>
+              mutate(state = to_fips(state, global$extdata$fips$county, "state"))
+
+            global$mrp <- prepare_mrp_custom(
+              input_data = global$data,
+              pstrat_data = pstrat_data,
+              fips_county_state = global$extdata$fips$county,
+              demo_levels = create_expected_levels(global$data_format),
+              vars_global = GLOBAL$vars,
+              link_geo = "state",
+              need_time = global$data_format %in% c("temporal_covid", "temporal_other")
             )
 
             # prepare data for plotting
@@ -511,14 +507,16 @@ mod_analyze_upload_server <- function(id, global){
             tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
 
             # prepare data for MRP
-            global$mrp <- prepare_mrp(
+            global$mrp <- prepare_mrp_acs(
               input_data = global$data,
               tract_data = tract_data,
               zip_tract = global$extdata$zip_tract,
-              demo_levels = GLOBAL$levels[[global$data_format]],
+              demo_levels = create_expected_levels(global$data_format),
               vars_global = GLOBAL$vars,
-              link_geo = global$link_data$link_geo
+              link_geo = global$link_data$link_geo,
+              need_time = global$data_format %in% c("temporal_covid", "temporal_other")
             )
+            
 
             # prepare data for plotting
             plotdata <- list()
@@ -537,7 +535,7 @@ mod_analyze_upload_server <- function(id, global){
           success <- TRUE
 
         }, error = function(e) {
-          message(paste("Error linking data:", e$message))
+          message(paste("Error linking data\n", e$message))
         }, finally = {
           stop_busy(
             session = session,
@@ -549,7 +547,30 @@ mod_analyze_upload_server <- function(id, global){
       })
     })
 
+    #----------------------------------------------------------------------------
+    # Show feedback about poststratification data
+    #----------------------------------------------------------------------------
+    output$pstrat_feedback <- renderUI({
+      req(raw_pstrat())
+
+      if (!is.null(pstrat_errors())) {
+        if (length(pstrat_errors()) > 0) {
+          tags$div(
+            tagList(icon("circle-xmark", "fa"), "Error"),
+            tags$p("Poststratification data does not meet all requirements. Please check the user guide for data requirements.", class = "small"),
+          )
+        } else {
+          tags$div(
+            tagList(icon("circle-check", "fa"), "Success"),
+            tags$p("All requirements are met. You may proceed to the next page.", class = "small")
+          )
+        }
+      }
+    })
+
+    #----------------------------------------------------------------------------
     # Handle poststratification data upload
+    #----------------------------------------------------------------------------
     observeEvent(input$pstrat_upload, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
@@ -558,35 +579,69 @@ mod_analyze_upload_server <- function(id, global){
 
       tryCatch({
         # Read in data first
-        raw_data <- read_data(input$sample_upload$datapath)
+        read_data(input$pstrat_upload$datapath) |> raw_pstrat()
 
         # Process data
-        result <- preprocess_data(
-          data = raw_data,
+        pstrat_data <- preprocess(
+          data = raw_pstrat(),
           data_format = global$data_format,
-          aggregated = input$toggle_pstrat == "agg",
-          expected_levels = GLOBAL$levels,
-          expected_types = GLOBAL$data_types,
           zip_county_state = global$extdata$zip_county_state,
-          geo_all = GLOBAL$vars$geo
+          const = GLOBAL,
+          is_sample = FALSE,
+          is_aggregated = input$toggle_pstrat == "agg"
         )
 
-        # Update reactives
-        if(length(result$errors) == 0) {
-          global$data <- result$data
+        # Compare to sample data
+        check_pstrat(pstrat_data, global$data, create_expected_levels(global$data_format))
+
+        # Find the smallest common geography
+        link_geo <- NULL
+        common <- intersect(names(global$data), names(pstrat_data))
+        smallest <- get_smallest_geo(common, GLOBAL$vars$geo)
+        if (!is.null(smallest)) {
+          link_geo <- smallest$geo
         }
-        sample_errors(result$errors)
-        sample_warnings(result$warnings)
-      
+
+        # Store linking geography
+        global$link_data <- list(
+          link_geo = link_geo,
+          acs_year = NULL
+        )
+
+        # Prepare data for MRP
+        global$mrp <- prepare_mrp_custom(
+          input_data = global$data,
+          pstrat_data = pstrat_data,
+          fips_county_state = global$extdata$fips$county,
+          demo_levels = create_expected_levels(global$data_format),
+          vars_global = GLOBAL$vars,
+          link_geo = link_geo
+        )
+
+        # prepare data for plotting
+        plotdata <- list()
+        plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+        plotdata$geojson <- names(global$extdata$geojson) |>
+          setNames(nm = _) |>
+          purrr::map(~filter_geojson(
+            geojson = global$extdata$geojson[[.x]], 
+            geoids = global$mrp$levels[[.x]]
+          ))
+
+        global$plotdata <- nullify(plotdata)
+
+        # Trigger success feedback
+        pstrat_errors(character(0))
+
       }, error = function(e) {
-        err_msg <- paste("Error preprocessing data:", e$message)
-        sample_errors(list(unexpected = err_msg))
-        message(err_msg)
+        pstrat_errors(e$message)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
       })
     })
+
+
 
 
     #----------------------------------------------------------------------------

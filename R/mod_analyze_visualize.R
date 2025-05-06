@@ -14,7 +14,7 @@ mod_analyze_visualize_ui <- function(id){
     class = "p-0",
     fillable = TRUE,
     sidebar = bslib::sidebar(
-      width = 350,
+      width = 375,
       # First selectInput: choose the plot category.
       selectInput(
         inputId = ns("plot_category"),
@@ -234,7 +234,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
 
-      if("time" %in% names(global$mrp$input)) {
+      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
         plot_df <- global$mrp$input |>
           prep_raw_prev(
             fips_codes = global$extdata$fips[[geo]],

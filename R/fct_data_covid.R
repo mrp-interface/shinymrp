@@ -53,24 +53,29 @@ recode_covid <- function(df, expected_levels) {
   return(df)
 }
 
+remove_dup_covid <- function(df) {
+  # remove all but one test of a df in the same week
+  df <- df |> distinct(id, time, .keep_all = TRUE)
+
+  return(df)
+}
+
 aggregate_covid <- function(
     df,
     expected_levels,
     threshold = 0
 ) {
-
-  indiv_vars <- names(expected_levels)
   
   # remove NAs
-  check_cols <- setdiff(names(df), indiv_vars)
+  check_cols <- setdiff(names(df), names(expected_levels))
   df <- df |> tidyr::drop_na(all_of(check_cols))
 
   # convert dates to week indices
   c(time_indices, timeline) %<-% get_week_indices(df$date)
   df$time <- time_indices
 
-  # remove all but one test of a df in the same week
-  df <- df |> distinct(id, time, .keep_all = TRUE)
+  # remove duplicate tests
+  df <- remove_dup_covid(df)
   
   # create factors from raw values
   df <- recode_covid(df, expected_levels)

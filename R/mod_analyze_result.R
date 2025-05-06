@@ -14,7 +14,7 @@ mod_analyze_result_ui <- function(id){
   # Use layout_sidebar from bslib for a modern sidebar layout.
   layout_sidebar(
     sidebar = sidebar(
-      width = 350,
+      width = 375,
       # Select a model from available models.
       selectInput(
         inputId = ns("model_select"),
