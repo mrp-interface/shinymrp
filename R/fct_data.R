@@ -645,11 +645,6 @@ preprocess <- function(
   return(data)
 }
 
-# process_pstrat <- function(
-#     sample_data,
-#     pstrat_data,
-# )
-
 create_variable_list <- function(input_data, covariates, vars_global) {
   # list of variables for model specification
   vars <- list(
@@ -670,7 +665,7 @@ create_variable_list <- function(input_data, covariates, vars_global) {
   # Helper function to process variables and add them to appropriate lists
   add_variables <- function(group_name, var_names, data_source, vars) {
     for (v in var_names) {
-      if (n_distinct(data_source[[v]]) > 1) {
+      if (!is.null(data_source[[v]]) && n_distinct(data_source[[v]]) > 1) {
         if (data_type(data_source[[v]]) == "cat") {
           vars$varying[[group_name]] <- c(vars$varying[[group_name]], v)
         }
@@ -688,7 +683,7 @@ create_variable_list <- function(input_data, covariates, vars_global) {
   vars <- add_variables("Individual-level Predictor", indiv_vars, input_data, vars)
 
   # Process geographic predictors
-  geo_vars <- intersect(vars_global$geo, names(input_data)) |> union(names(covariates))
+  geo_vars <- names(covariates)
   vars <- add_variables("Geographic Predictor", geo_vars, covariates, vars)
 
   # Check for nested variables

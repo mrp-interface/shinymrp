@@ -23,7 +23,7 @@ mod_analyze_upload_ui <- function(id) {
         bslib::accordion_panel(
           title = "Sample",
           value = "sample",
-          tags$p(tags$strong("Upload individual-level or aggregated data (examples below)")),
+          tags$p(tags$strong("Upload individual-level or aggregated sample data")),
           shinyWidgets::radioGroupButtons(
             inputId = ns("toggle_sample"),
             label = NULL,
@@ -45,18 +45,18 @@ mod_analyze_upload_ui <- function(id) {
             actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
           ),
           # Example data label
-          div(class = "mt-4",
+          tags$div(class = "mt-4",
             conditionalPanel(
               condition = "output.data_format == 'temporal_covid'",
-              p("Example: COVID-19 hospital test records", class = "fst-italic small")
+              tags$p(tags$u("Example"), ": COVID-19 hospital test records")
             ),
             conditionalPanel(
               condition = "output.data_format == 'static_poll'",
-              p("Example: The Cooperative Election Study data", class = "fst-italic small")
+              tags$p(tags$u("Example"), ": The Cooperative Election Study data")
             ),
             conditionalPanel(
               condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
-              p("Example", class = "fst-italic small")
+              tags$p(tags$u("Example"))
             ),
             tags$div(
               class = "d-flex gap-2 mb-3",
@@ -122,6 +122,7 @@ mod_analyze_upload_ui <- function(id) {
               tags$div(id = ns("pstrat_upload_popover"),
                 bslib::card(class = "mt-2",
                   bslib::card_body(class = "gap-3",
+                    tags$p(tags$strong("Upload individual-level or aggregated poststratification data")),
                     shinyWidgets::radioGroupButtons(
                       inputId = ns("toggle_pstrat"),
                       label = NULL,
@@ -135,7 +136,13 @@ mod_analyze_upload_ui <- function(id) {
                       label = NULL,
                       accept = GLOBAL$ui$data_accept
                     ),
-                    uiOutput(ns("pstrat_feedback"))
+                    uiOutput(ns("pstrat_feedback")),
+                    tags$p(class = "mt-0", tags$u("Example")),
+                    downloadButton(
+                      outputId = ns("save_pstrat_example"),
+                      label = "Aggregated",
+                      class = "btn w-100"
+                    )
                   )
                 )
               )
@@ -354,17 +361,17 @@ mod_analyze_upload_server <- function(id, global){
       )
 
       indiv_file_name <- switch(global$data_format,
-        "temporal_covid" = "covid_data_individual.csv",
-        "temporal_other" = "timevarying_data_individual.csv",
-        "static_poll" = "ces_data_individual.csv",
-        "static_other" = "crosssectional_data_individual.csv"
+        "temporal_covid" = "timevarying_covid_individual.csv",
+        "temporal_other" = "timevarying_other_individual.csv",
+        "static_poll"    = "crosssectional_poll_individual.csv",
+        "static_other"   = "crosssectional_other_individual.csv"
       )
 
       agg_file_name <- switch(global$data_format,
-        "temporal_covid" = "covid_data_aggregated.csv",
-        "temporal_other" = "timevarying_data_aggregated.csv",
-        "static_poll" = "ces_data_aggregated.csv",
-        "static_other" = "crosssectional_data_aggregated.csv"
+        "temporal_covid" = "timevarying_covid_aggregated.csv",
+        "temporal_other" = "timevarying_other_aggregated.csv",
+        "static_poll"    = "crosssectional_poll_aggregated.csv",
+        "static_other"   = "crosssectional_other_aggregated.csv"
       )
 
       readr::read_csv(app_sys(paste0("extdata/example/data/", indiv_file_name)), show_col_types = FALSE) |> raw_sample()
@@ -383,10 +390,10 @@ mod_analyze_upload_server <- function(id, global){
       )
 
       file_name <- switch(global$data_format,
-        "temporal_covid" = "covid_data_aggregated.csv",
-        "temporal_other" = "timevarying_data_aggregated.csv",
-        "static_poll" = "ces_data_aggregated.csv",
-        "static_other" = "crosssectional_data_aggregated.csv"
+        "temporal_covid" = "timevarying_covid_aggregated.csv",
+        "temporal_other" = "timevarying_other_aggregated.csv",
+        "static_poll"    = "crosssectional_poll_aggregated.csv",
+        "static_other"   = "crosssectional_other_aggregated.csv"
       )
 
       readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> raw_sample()
@@ -677,5 +684,34 @@ mod_analyze_upload_server <- function(id, global){
       )
     })
 
+    # Example poststratification data download handler
+    output$save_pstrat_example <- downloadHandler(
+      filename = function() {
+        # Name based on data format
+        prefix <- switch(global$data_format,
+          "temporal_other" = "timevarying_other",
+          "static_other" = "crosssectional_other",
+          "temporal_covid" = "timevarying_covid",
+          "static_poll" = "crosssectional_poll"
+        )
+        paste0(prefix, "_pstrat_example_", format(Sys.Date(), "%Y%m%d"), ".csv")
+      },
+      content = function(file) {
+        # Determine which example file to use based on data format
+        example_file <- switch(global$data_format,
+          "temporal_other" = "timevarying_other_pstrat.csv",
+          "static_other" = "crosssectional_other_pstrat.csv",
+          "temporal_covid" = "timevarying_covid_pstrat.csv",
+          "static_poll" = "crosssectional_poll_pstrat.csv"
+        )
+        
+        # Read the example file and write it to the download location
+        readr::read_csv(
+          app_sys(paste0("extdata/example/data/", example_file)), 
+          show_col_types = FALSE
+        ) |> 
+          readr::write_csv(file)
+      }
+    )
   })
 }
