@@ -637,7 +637,7 @@ mod_analyze_model_server <- function(id, global){
                     subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
                     temporal = model$data_format %in% c("temporal_covid", "temporal_other")
                   )
-
+                  
                   # run MCMC
                   c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
                     input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
@@ -648,7 +648,8 @@ mod_analyze_model_server <- function(id, global){
                     n_chains = model$n_chains,
                     seed = input$seed_select,
                     sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
-                    spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
+                    spec = if(global$data_format == "temporal_covid") input$spec_kb else 1,
+                    code_fout = "/Users/tntoan/Downloads/stan_code.stan"
                   )
 
                   model_buffer(model)
