@@ -1,4 +1,4 @@
-id,sex,race,age,time,date,zip,county,state,positive
+encrypted_id,sex,race,age,time,result_date,zip,county,state,positive
 980,Male,Black,89,6,2020-02-03,61569,17143,IL,0
 434,Female,Other,100,12,2020-03-16,61564,17179,IL,0
 327,Male,White,100,12,2020-03-16,61570,17123,IL,0

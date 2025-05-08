@@ -32,14 +32,24 @@ create_formula <- function(effects) {
   return(formula)
 }
 
+clean_prior_syntax <- function(s) {
+  # Remove whitespace
+  s <- gsub("\\s+", "", s)
+
+  # Convert to lowercase
+  s <- tolower(s)
+
+  return(s)
+}
+
 check_prior_syntax <- function(s) {
-  if(s == "") {
+  if(is.null(nullify(s))) {
     return(TRUE)
   }
-  
+
   patterns <- list(
-    normal = "^normal\\([0-9]+, [1-9][0-9]*\\)$",
-    student_t = "^student_t\\([1-9][0-9]*, [0-9]+, [1-9][0-9]*)$",
+    normal = "^normal\\([0-9]+,[1-9][0-9]*\\)$",
+    student_t = "^student_t\\([1-9][0-9]*,[0-9]+,[1-9][0-9]*)$",
     structured = "^structured$"
   )
   
