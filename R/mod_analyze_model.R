@@ -648,8 +648,7 @@ mod_analyze_model_server <- function(id, global){
                     n_chains = model$n_chains,
                     seed = input$seed_select,
                     sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
-                    spec = if(global$data_format == "temporal_covid") input$spec_kb else 1,
-                    code_fout = "/Users/tntoan/Downloads/stan_code.stan"
+                    spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
                   )
 
                   model_buffer(model)
