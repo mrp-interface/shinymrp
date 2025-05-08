@@ -563,122 +563,130 @@ mod_analyze_model_server <- function(id, global){
     # Add model
     #-----------------------------------------------------------------------
     observeEvent(input$add_model, {
+      # 1. Check if CmdStan is installed
       if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
         if(global$web_version) {
           show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
         } else {
           show_alert(tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
         }
-      } else {
-        n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
-        n_chains <- input$chain_select
-        seed <- input$seed_select
-
-        # check if number of iterations and number of chains are within defined range
-        c(valid, errors) %<-% check_iter_chain(
-          n_iter, GLOBAL$ui$iter_range,
-          n_chains, GLOBAL$ui$chain_range,
-          seed
-        )
-
-        if(valid) {
-          # check if maximum number of models is reached
-          if(length(global$models) <= GLOBAL$ui$max_model) {
-            # check if the user selects nothing
-            if(length(c(input$fixed, input$varying, input$interaction)) > 0) {
-              # check if prior syntax are correct
-              valid_priors <- purrr::map(1:(length(prior_buffer()) + 1), function(i) {
-                check_prior_syntax(input[[paste0("prior_dist_", i)]])
-              }) |> unlist()
-
-              if(all(valid_priors)) {
-                waiter::waiter_show(
-                  html = waiter_ui("fit"),
-                  color = waiter::transparent(0.9)
-                )
-
-                tryCatch({
-                  # assign default priors to all selected effects
-                  all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
-                  for(type in c("fixed", "varying", "interaction")) {
-                    for(v in input[[type]]) {
-                      all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
-                    }
-                  }
-    
-                  # assign user-specified priors
-                  for(i in 1:(length(prior_buffer()) + 1)) {
-                    dist <- input[[paste0("prior_dist_", i)]]
-                    eff <- input[[paste0("prior_eff_", i)]]
-                    if(dist != "") {
-                      for(s in eff) {
-                        ss <- strsplit(s, split = "_")[[1]]
-                        all_priors[[ss[1]]][[ss[2]]] <- dist
-                      }
-                    }
-                  }
-
-                  # classify effects
-                  all_priors <- all_priors |>
-                    group_effects(global$mrp$input) |>
-                    ungroup_effects()
-
-                  # create a list to store model info
-                  model <- list()
-                  model$data_format <- global$data_format
-                  model$effects <- all_priors
-                  model$formula <- create_formula(all_priors)
-                  model$n_iter <- n_iter
-                  model$n_chains <- n_chains
-                  model$mrp <- global$mrp
-                  model$plotdata <- global$plotdata
-                  model$link_data <- global$link_data
-                  model$gq_data <- list(
-                    subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
-                    temporal = model$data_format %in% c("temporal_covid", "temporal_other")
-                  )
-                  
-                  # run MCMC
-                  c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
-                    input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
-                    new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
-                    effects = model$effects,
-                    gq_data = model$gq_data,
-                    n_iter = model$n_iter,
-                    n_chains = model$n_chains,
-                    seed = input$seed_select,
-                    sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
-                    spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
-                  )
-
-                  model_buffer(model)
-
-                # }, error = function(e) {
-                #   message(paste0("Error fitting model: ", e$message))
-                #   show_alert("An error occured during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
-                })
-  
-              } else {
-                show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
-              }
-            } else {
-              show_alert("No predictor has been selected. Please include at least one.", global$session)
-            }
-          } else {
-            show_alert("Maximum number of models reached. Please removed existing models to add more.", global$session)
-          }
-        } else {
-          show_alert(
-            tagList(
-              tags$ul(
-                purrr::map(errors, ~ tags$li(.x))
-              )
-            ),
-            global$session
-          )
-        }
+        return()
       }
-
+      
+      # 2. Validate iteration and chain parameters
+      n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
+      n_chains <- input$chain_select
+      seed <- input$seed_select
+      
+      c(valid, errors) %<-% check_iter_chain(
+        n_iter, GLOBAL$ui$iter_range,
+        n_chains, GLOBAL$ui$chain_range,
+        seed
+      )
+      
+      if(!valid) {
+        show_alert(
+          tagList(
+            tags$ul(
+              purrr::map(errors, ~ tags$li(.x))
+            )
+          ),
+          global$session
+        )
+        return()
+      }
+      
+      # 3. Check if maximum number of models is reached
+      if(length(global$models) > GLOBAL$ui$max_model) {
+        show_alert("Maximum number of models reached. Please remove existing models to add more.", global$session)
+        return()
+      }
+      
+      # 4. Check if the user selected any predictors
+      if(length(c(input$fixed, input$varying, input$interaction)) == 0) {
+        show_alert("No predictor has been selected. Please include at least one.", global$session)
+        return()
+      }
+      
+      # 5. Check if prior syntax is correct
+      valid_priors <- purrr::map(1:(length(prior_buffer()) + 1), function(i) {
+        input[[paste0("prior_dist_", i)]] |>
+          clean_prior_syntax() |>
+          check_prior_syntax()
+      }) |> unlist()
+      
+      if(!all(valid_priors)) {
+        show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
+        return()
+      }
+      
+      # All validation passed, show waiter and proceed
+      waiter::waiter_show(
+        html = waiter_ui("fit"),
+        color = waiter::transparent(0.9)
+      )
+      
+      # Try to fit the model
+      tryCatch({
+        # assign default priors to all selected effects
+        all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
+        for(type in c("fixed", "varying", "interaction")) {
+          for(v in input[[type]]) {
+            all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
+          }
+        }
+    
+        # assign user-specified priors
+        for(i in 1:(length(prior_buffer()) + 1)) {
+          dist <- input[[paste0("prior_dist_", i)]] |> clean_prior_syntax()
+          eff <- input[[paste0("prior_eff_", i)]]
+          if(is.null(nullify(dist))) {
+            for(s in eff) {
+              ss <- strsplit(s, split = "_")[[1]]
+              all_priors[[ss[1]]][[ss[2]]] <- dist
+            }
+          }
+        }
+        
+        # classify effects
+        all_priors <- all_priors |>
+          group_effects(global$mrp$input) |>
+          ungroup_effects()
+        
+        # Create model object
+        model <- list()
+        model$data_format <- global$data_format
+        model$effects <- all_priors
+        model$formula <- create_formula(all_priors)
+        model$n_iter <- n_iter
+        model$n_chains <- n_chains
+        model$mrp <- global$mrp
+        model$plotdata <- global$plotdata
+        model$link_data <- global$link_data
+        model$gq_data <- list(
+          subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
+          temporal = model$data_format %in% c("temporal_covid", "temporal_other")
+        )
+        
+        # run MCMC
+        c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
+          input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
+          new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
+          effects = model$effects,
+          gq_data = model$gq_data,
+          n_iter = model$n_iter,
+          n_chains = model$n_chains,
+          seed = input$seed_select,
+          sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
+          spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
+        )
+        
+        model_buffer(model)
+        
+      }, error = function(e) {
+        message(paste0("Error fitting model: ", e$message))
+        show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
+      })
     })
 
     observeEvent(input$fit_upload, {

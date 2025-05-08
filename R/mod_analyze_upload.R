@@ -52,11 +52,11 @@ mod_analyze_upload_ui <- function(id) {
             ),
             conditionalPanel(
               condition = "output.data_format == 'static_poll'",
-              tags$p(tags$u("Example"), ": The Cooperative Election Study data")
+              tags$p(tags$u("Example"), ": 2018 Cooperative Congressional Election Study")
             ),
             conditionalPanel(
               condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
-              tags$p(tags$u("Example"))
+              tags$p(tags$u("Example data"))
             ),
             tags$div(
               class = "d-flex gap-2 mb-3",
@@ -137,7 +137,7 @@ mod_analyze_upload_ui <- function(id) {
                       accept = GLOBAL$ui$data_accept
                     ),
                     uiOutput(ns("pstrat_feedback")),
-                    tags$p(class = "mt-0", tags$u("Example")),
+                    tags$p(class = "mt-0", tags$u("Example data")),
                     downloadButton(
                       outputId = ns("save_pstrat_example"),
                       label = "Aggregated",

@@ -8,13 +8,14 @@
 
 rename_columns_covid <- function(df) {
   all_names <- names(df)
-  patterns <- c("encrypted|masked", "sex", "race", "age", "zip")
+  patterns <- c("(encrypted|masked).*id", "sex", "race", "age", "zip")
 
   old_names <- patterns |>
     sapply(\(s) all_names[grepl(s, all_names, ignore.case=TRUE)]) |>
     unlist()
+
   old_names <- c(old_names,
-                 all_names[grepl("result", all_names, ignore.case=TRUE)
+                 all_names[grepl("result|positive", all_names, ignore.case=TRUE)
                                & !grepl("date|time|igg", all_names, ignore.case=TRUE)] |> unlist(),
                  all_names[grepl("result.*(time|date)", all_names, ignore.case=TRUE)
                              & !grepl("igg", all_names, ignore.case=TRUE)]
