@@ -81,19 +81,14 @@ pair_setdiff <- function(pairs1, pairs2, sep = ":") {
 
 
 # filter interactions for structured prior
-filter_interactions <- function(interactions, fixed_cat_dummies, dat) {
-  fixed_cat <- purrr::map_chr(
-    fixed_cat_dummies,
-    function(s) strsplit(s, split = "\\.")[[1]][1]
-  ) |>
-    unique()
+filter_interactions <- function(interactions, fixed_effects, dat) {
   bool <- map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     type1 <- data_type(dat[[ss[1]]])
     type2 <- data_type(dat[[ss[2]]])
     
-    return((type1 == "cat" | type2 == "cat") &&
-           length(intersect(ss, fixed_cat)) == 0)
+    return((type1 == "cat" && !ss[1] %in% fixed_effects) ||
+           (type2 == "cat" && !ss[2] %in% fixed_effects))
   })
   
   return(interactions[bool])

@@ -523,7 +523,7 @@ mod_analyze_upload_server <- function(id, global){
               link_geo = global$link_data$link_geo,
               need_time = global$data_format %in% c("temporal_covid", "temporal_other")
             )
-            
+
 
             # prepare data for plotting
             plotdata <- list()
@@ -622,7 +622,8 @@ mod_analyze_upload_server <- function(id, global){
           fips_county_state = global$extdata$fips$county,
           demo_levels = create_expected_levels(global$data_format),
           vars_global = GLOBAL$vars,
-          link_geo = link_geo
+          link_geo = link_geo,
+          need_time = global$data_format %in% c("temporal_covid", "temporal_other")
         )
 
         # prepare data for plotting

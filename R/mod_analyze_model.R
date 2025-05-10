@@ -386,54 +386,59 @@ mod_analyze_model_server <- function(id, global){
     # Render LOO-CV table
     #-----------------------------------------------------------------------
     output$loo_table <- renderTable({
-      waiter::waiter_show(
-        html = waiter_ui("loo"),
-        color = waiter::transparent(0.9)
-      )
+      global$data_format
+      input$compare_btn
 
+      # Get the selected models
       compare_df <- NULL
-      tryCatch({
-        # Get the selected models
-        selected_names <- isolate(input$model_select)
-        models <- isolate(global$models[selected_names])
+      selected_names <- isolate(input$model_select)
+      models <- isolate(global$models)
+      
+      if (length(selected_names) > 0 && !is.null(models)) {
+        waiter::waiter_show(
+          html = waiter_ui("loo"),
+          color = waiter::transparent(0.9)
+        )
 
-        # Extract log-likelihood from each model
-        loo_list <- purrr::map(models, function(m) {
-          capture.output({
-            loo_output <- loo::loo(
-              m$fit$loo$draws("log_lik"),
-              cores = m$n_chains
-            )
-          }, type = "message")
+        tryCatch({
+          # Extract log-likelihood from each model
+          loo_list <- purrr::map(models[selected_names], function(m) {
+            capture.output({
+              loo_output <- loo::loo(
+                m$fit$loo$draws("log_lik"),
+                cores = m$n_chains
+              )
+            }, type = "message")
 
-          return(loo_output)
-        })
+            return(loo_output)
+          })
 
 
-        # Check for problematic Pareto k values
-        dfs <- purrr::map(loo_list, function(x) loo::pareto_k_table(x))
-        for (df in dfs) {
-          if (sum(df[2:3, 1]) > 0) {
-            bslib::toggle_tooltip("loo_diagnos_tooltip", show = TRUE)
-            break
+          # Check for problematic Pareto k values
+          dfs <- purrr::map(loo_list, function(x) loo::pareto_k_table(x))
+          for (df in dfs) {
+            if (sum(df[2:3, 1]) > 0) {
+              bslib::toggle_tooltip("loo_diagnos_tooltip", show = TRUE)
+              break
+            }
           }
-        }
-        
-        # Store the Pareto k tables
-        pareto_k_dfs(dfs)
+          
+          # Store the Pareto k tables
+          pareto_k_dfs(dfs)
 
-        # Compare the models using loo_compare
-        compare_df <- loo_list |>
-          loo::loo_compare() |>
-          as.data.frame() |>
-          select(elpd_diff, se_diff)
+          # Compare the models using loo_compare
+          compare_df <- loo_list |>
+            loo::loo_compare() |>
+            as.data.frame() |>
+            select(elpd_diff, se_diff)
 
-      }, error = function(e) {
-        message(paste0("Error during LOO-CV: ", e$message))
-        show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
-      }, finally = {
-        waiter::waiter_hide()
-      })
+        }, error = function(e) {
+          message(paste0("Error during LOO-CV: ", e$message))
+          show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
+        }, finally = {
+          waiter::waiter_hide()
+        })
+      }
 
       return(compare_df)
     }, rownames = TRUE, width = "300px")
@@ -527,7 +532,12 @@ mod_analyze_model_server <- function(id, global){
       ))
 
       purrr::map(seq_along(pareto_k_dfs()), function(i) {
-        output[[paste0("pareto_k_table", i)]] <- renderTable(pareto_k_dfs()[[i]], rownames = TRUE)
+        output[[paste0("pareto_k_table", i)]] <- renderTable(
+          pareto_k_dfs()[[i]] |>
+            as.data.frame() |>
+            mutate(Count = as.integer(Count)),
+          rownames = TRUE
+        )
       })
     })
 
@@ -970,6 +980,7 @@ mod_analyze_model_server <- function(id, global){
         prior_buffer(list())
         model_buffer(NULL)
         model_feedback(NULL)
+        pareto_k_dfs(NULL)
 
         reset_inputs(vars = list(
           fixed = list(),

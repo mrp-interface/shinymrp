@@ -143,6 +143,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     bslib::accordion_panel(
       title = "Uploading Data",
       value = "upload",
+      tags$h4("Sample"),
       tags$p("The interface accepts data in two formats:",
             tags$ul(
               tags$li(tags$b("Individual-level"), ": Each row contains information about a single person"),
@@ -210,8 +211,11 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       tags$p("**If the input data is in aggregated format, it must contain a column named \"time\" that contains week indices. An optional \"date\" column containing the date of the first day of each week can be included for visualization purposes. For indiviudual-level data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly.",
         class = "fst-italic small"),
       tags$p("For individual-level data, the interface attempts to convert raw values to the expected categories (e.g., numeric age to age bracket, date to week index) before grouping the data. It automatically selects the smallest geography to form the cross-tabulation together with the demographic factors. Additionally, it preserves any covariates based on their one-to-one relationships with the geographic identifier. Users may manually aggregate their raw data if the interface cannot preprocess it correctly or if they require more control over the process. Users familiar with R can download the preprocessing code from the ", tags$b("Learn > Preprocess"), " page and modify it as needed."),
-      tags$h5("Poststratification Data", class = "mt-3"),
+      tags$h4("Poststratification Data", class = "mt-3"),
+      tags$h5("Link to the ACS"),
       tags$p("The MRP interface provides seamless linking to the American Community Survey (ACS) data to obtain population counts essential for poststratification. Users can select the geographic factor for the cross-tabulation and the year of the ACS data, depending on the version of the interface. These selections are more restrictive for specific use cases like COVID and poll data. Currently, the interface links COVID-19 test records to 5-year ACS data (2017-2021) via ZIP code and poll data to 5-year ACS data (2014-2018) via state. The interface provides more options for general applications, allowing users to link via ZIP code, county, or state based on the geographic information in the input data. The application identifies the smallest geographic unit in your data and automatically infers corresponding larger geographic areas. For example, if your data contains ZIP codes, the application will determine the most overlapping county and state for each ZIP code."),
+      tags$h5("Upload Custom Poststratification Data"),
+      tags$p("Only available for general use cases", class = "fst-italic"),
       tags$p("If you want to use custom poststratification data, you can upload it following the same format conventions as sample data. In addition to checking for common problems like missing values, the interface validates that demographic factors and their levels match between your input data and poststratification table. This is a requirement for Multilevel Regression and Poststratification. The application also handles data with separate individual entries, like the sample data. If there are ", tags$b("survey weights"), " in the data, please name the column containing them ", tags$b("positive"), " so the application can incorporate them. For cross-tabulation, it uses the smallest geographic level common to both the sample and poststratification data. Examples of aggregated poststratification are available for download in the data upload page.")
     ),
 
