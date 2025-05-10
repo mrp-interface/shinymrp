@@ -633,7 +633,7 @@ preprocess <- function(
       group_by(!!!syms(group_vars)) |>
       summarize(
         across(any_of(geo_covars), first),
-        total = n(),
+        total = if("weight" %in% names(data)) sum(weight) else n(),
         positive = sum(positive)
       ) |>
       ungroup()

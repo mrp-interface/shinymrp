@@ -143,15 +143,41 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     bslib::accordion_panel(
       title = "Uploading Data",
       value = "upload",
-      tags$h4("Sample"),
+      tags$p("Data input into the MRP interface consists of two major components:"),
+      tags$ul(
+        tags$li(tags$b("sample"), ": test records, survey results, or any other data that contains demographic information about the participants and an outcome variable."),
+        tags$li(tags$b("poststratification data"), ": size of sub-groups in a target population corresponding to unique combinations of the demographic factors.")
+      ),
+      tags$p("The latter is optional, as the application can link your data to the American Community Survey (ACS) to obtain the population counts. Currently, data linking is provided in all versions of the application, whereas users can only upload their post-stratification data in the ones for general time-varying and cross-sectional data."),
+      tags$h5("Individual-level vs. Aggregated Data"),
       tags$p("The interface accepts data in two formats:",
             tags$ul(
               tags$li(tags$b("Individual-level"), ": Each row contains information about a single person"),
               tags$li(tags$b("Aggregated"), ": Each row contains population counts for unique combinations of relevant geographic-demographic factors (e.g., White males between 18-30 years old living in Michigan)")
             )),
-      tags$p("The aggregated format is preferred due to its computational advantages. Individual-level data uploaded to the system is automatically converted to the aggregated format. Multilevel Regression and Poststratification (MRP) requires matching categorical values between the input data and the target population data (ACS data). Given this requirement, the interface currently expects the following categorizations in the input data:"),
-      tags$p("Note: The application follows a naming convention to faciliate handling of the input data. For some column names and categories, the expected values differs from conventional language and are provided in parentheses. Please refer to the example datasets in the 'Upload Data' tab.",
+      
+      tags$p("The second form is preferred due to its computational advantages, so any individual-level data loaded into the application is automatically aggregated. Data requirements differ slightly between the forms, with the key difference being the outcome variable. More details are provided below."),
+      tags$h5("Required Columns and Categories"),
+      tags$p("The application automatically screens the input data using a naming convention. Below is the combined list of expected columns and values between all the versions, with the convention names in parentheses when they differ from the general language (Letter case is not important)."),
+      tags$ul(
+        tags$li("Sex: male, female"),
+        tags$li("Race: Black, White, other"),
+        tags$li("Age"),
+        tags$li("Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad"),
+        tags$li("ZIP code: Each ZIP code is treated as a distinct category*"),
+        tags$li("County"),
+        tags$li("State"),
+        tags$li("Week indices (time)"),
+        tags$li("Date"),
+        tags$li("Positive response indicator or number of positive responses (positive)*"),
+        tags$li("Cross-tabulation cell counts (total)*"),
+        tags$li("Survey weights (weight)**")
+      ),
+      tags$p("*In individual-level data, the column of interest containing binary categories must be named 'positive'. Aggregated data requires two columns to represent the outcome variables: the total count and the number of positive responses for each cross-tabulation cell. They should be named 'total' and 'positive' respectively.",
         class = "fst-italic small"),
+      tags$p("**Please name the column containing survey 'weights' in your poststratification data weight so the application can incorporate them.",
+        class = "fst-italic small"),
+      tags$p("The requirements for the input data vary slightly between interface versions. Below is a detailed list of the expected categories for both the sample and poststratification data."),
       bslib::layout_columns(
         col_widths = c(6, 6),
 
@@ -208,15 +234,13 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       ),
       tags$p("*For general use cases (not COVID data or poll data), geographic information are optional. The application will automatically identify the smallest geographic scale available and find the corresponding area for the larger scales.",
         class = "fst-italic small"),
-      tags$p("**If the input data is in aggregated format, it must contain a column named \"time\" that contains week indices. An optional \"date\" column containing the date of the first day of each week can be included for visualization purposes. For indiviudual-level data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly.",
+      tags$p("**Time information is irrelevant for poststratification data. For the sample data, if the input data is in aggregated format, it must contain a column named \"time\" that contains week indices. An optional \"date\" column containing the date of the first day of each week can be included for visualization purposes. For indiviudual-level data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly.",
         class = "fst-italic small"),
-      tags$p("For individual-level data, the interface attempts to convert raw values to the expected categories (e.g., numeric age to age bracket, date to week index) before grouping the data. It automatically selects the smallest geography to form the cross-tabulation together with the demographic factors. Additionally, it preserves any covariates based on their one-to-one relationships with the geographic identifier. Users may manually aggregate their raw data if the interface cannot preprocess it correctly or if they require more control over the process. Users familiar with R can download the preprocessing code from the ", tags$b("Learn > Preprocess"), " page and modify it as needed."),
-      tags$h4("Poststratification Data", class = "mt-3"),
-      tags$h5("Link to the ACS"),
-      tags$p("The MRP interface provides seamless linking to the American Community Survey (ACS) data to obtain population counts essential for poststratification. Users can select the geographic factor for the cross-tabulation and the year of the ACS data, depending on the version of the interface. These selections are more restrictive for specific use cases like COVID and poll data. Currently, the interface links COVID-19 test records to 5-year ACS data (2017-2021) via ZIP code and poll data to 5-year ACS data (2014-2018) via state. The interface provides more options for general applications, allowing users to link via ZIP code, county, or state based on the geographic information in the input data. The application identifies the smallest geographic unit in your data and automatically infers corresponding larger geographic areas. For example, if your data contains ZIP codes, the application will determine the most overlapping county and state for each ZIP code."),
-      tags$h5("Upload Custom Poststratification Data"),
-      tags$p("Only available for general use cases", class = "fst-italic"),
-      tags$p("If you want to use custom poststratification data, you can upload it following the same format conventions as sample data. In addition to checking for common problems like missing values, the interface validates that demographic factors and their levels match between your input data and poststratification table. This is a requirement for Multilevel Regression and Poststratification. The application also handles data with separate individual entries, like the sample data. If there are ", tags$b("survey weights"), " in the data, please name the column containing them ", tags$b("positive"), " so the application can incorporate them. For cross-tabulation, it uses the smallest geographic level common to both the sample and poststratification data. Examples of aggregated poststratification are available for download in the data upload page.")
+      tags$h5("Preprocessing Data"),
+      tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to expected categories (e.g., numeric age to age bracket, date to week index), etc. However, it is not exhaustive, and users may need to preprocess the data themselves before loading it into the application. We provide our preprocessing code in the ", tags$b("Learn > Preprocess"), " page that users can download and modify as needed."),
+      tags$p("To provide more linking options, the application automatically adds geographic information to the sample data. It identifies the smallest geographic unit in your data and automatically infers corresponding larger geographic areas. For example, if your data contains ZIP codes, the application will determine the most overlapping county and state for each ZIP code. Additionally, it preserves any covariates based on their one-to-one relationships with the geographic identifier. The smallest available geography is used for the cross-tabulation of the data along with the demographic factors."),
+      tags$h5("ACS Data Linking"),
+      tags$p("The MRP interface provides seamless linking to the American Community Survey (ACS) data to obtain population counts essential for poststratification. Users can select the geographic factor for the cross-tabulation and the year of the ACS data, depending on the version of the interface. These selections are more restrictive for specific use cases like COVID and poll data. Currently, the interface links COVID-19 test records to 5-year ACS data (2017-2021) via ZIP code and poll data to 5-year ACS data (2014-2018) via state. The interface provides more options for general applications, allowing users to link via ZIP code, county, or state based on the geographic information in the input data.")
     ),
 
     # Plot Selection panel
