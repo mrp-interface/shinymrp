@@ -21,11 +21,11 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
     ns <- session$ns
 
     output$ui <- renderUI({
-      req(model())
+      req(model(), geo_scale(), geo_view())
 
       geo <- geo_scale()
       time_indices <- model()$est[[geo]][["time"]]
-      dates <- model()$plotdata$dates
+      dates <- model()$plot_data$dates
 
       switch(geo_view(),
         "map" = tagList(
@@ -72,11 +72,12 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
     })
     
     output$est_geo_map <- highcharter::renderHighchart({
-      req(model())
+      req(model(), geo_scale())
+
       geo <- geo_scale()
       
-      time_index <- if(!is.null(model()$plotdata$dates)) {
-        which(as.character(format(input$map_slider, GLOBAL$ui$date_format)) == model()$plotdata$dates)
+      time_index <- if(!is.null(model()$plot_data$dates)) {
+        which(as.character(format(input$map_slider, GLOBAL$ui$date_format)) == model()$plot_data$dates)
       } else {
         input$map_slider
       }
@@ -91,7 +92,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
 
       plot_df |>
         choro_map(
-          model()$plotdata$geojson[[geo]],
+          model()$plot_data$geojson[[geo]],
           main_title = "MRP Estimate of Positive Response Rate",
           sub_title = "MRP Estimate",
           geo = geo,
@@ -106,7 +107,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
     # Plot for geographic subgroup estimates (subset plots)
     # --------------------------------------------------------------------------
     output$est_geo_plot <- renderPlot({
-      req(model())
+      req(model(), geo_scale())
       
       geo <- isolate(geo_scale())
       fips_df <- global$extdata$fips[[geo]] |> fips_upper()
@@ -118,7 +119,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         filter(factor %in% geo_subset())
 
       if(model()$data_format %in% c("temporal_covid", "temporal_other")) {
-        plot_est_temporal(plot_df, model()$plotdata$dates)
+        plot_est_temporal(plot_df, model()$plot_data$dates)
       } else {
         plot_est_static(plot_df)
       }

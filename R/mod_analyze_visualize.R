@@ -156,14 +156,14 @@ mod_analyze_visualize_server <- function(id, global){
       "geo_sample",
       reactive(global$mrp$input),
       reactive(global$link_data$link_geo),
-      reactive(global$plotdata$geojson),
+      reactive(global$plot_data$geojson),
       global$extdata$fips
     )
 
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_edu", reactive(global$plotdata$raw_covariates), "college", list(
+    mod_geo_plot_server("geo_edu", reactive(global$plot_data$raw_covariates), "college", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -172,7 +172,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Higher education measure"
     ))
     
-    mod_geo_plot_server("geo_poverty", reactive(global$plotdata$raw_covariates), "poverty", list(
+    mod_geo_plot_server("geo_poverty", reactive(global$plot_data$raw_covariates), "poverty", list(
       threshold   = 0.2,
       operation   = "<=",
       breaks      = seq(0, 1, 0.05),
@@ -181,7 +181,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Poverty measure"
     ))
     
-    mod_geo_plot_server("geo_employ", reactive(global$plotdata$raw_covariates), "employment", list(
+    mod_geo_plot_server("geo_employ", reactive(global$plot_data$raw_covariates), "employment", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -190,7 +190,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Employment rate"
     ))
     
-    mod_geo_plot_server("geo_income", reactive(global$plotdata$raw_covariates), "income", list(
+    mod_geo_plot_server("geo_income", reactive(global$plot_data$raw_covariates), "income", list(
       threshold   = 70784,
       operation   = ">",
       breaks      = seq(0, 150000, 5000),
@@ -199,7 +199,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Average of median household income"
     ))
     
-    mod_geo_plot_server("geo_urban", reactive(global$plotdata$raw_covariates), "urbanicity", list(
+    mod_geo_plot_server("geo_urban", reactive(global$plot_data$raw_covariates), "urbanicity", list(
       threshold   = 0.95,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -208,7 +208,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Urbanicity"
     ))
     
-    mod_geo_plot_server("geo_adi", reactive(global$plotdata$raw_covariates), "ADI", list(
+    mod_geo_plot_server("geo_adi", reactive(global$plot_data$raw_covariates), "ADI", list(
       threshold   = 80,
       operation   = ">",
       breaks      = seq(0, 100, 5),
@@ -223,7 +223,7 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
       req(input$plot_subcategory == "overall")
-      plot_prev(global$mrp$input, global$plotdata$dates)
+      plot_prev(global$mrp$input, global$plot_data$dates)
     })
 
     # --------------------------------------------------------------------------
@@ -244,7 +244,7 @@ mod_analyze_visualize_server <- function(id, global){
 
         choro_map(
           plot_df,
-          global$plotdata$geojson[[geo]],
+          global$plot_data$geojson[[geo]],
           main_title = "Weekly Positive Response Rate By Geography",
           sub_title = switch(input$extreme_select,
             "max" = "Highest Weekly Rate",
@@ -261,7 +261,7 @@ mod_analyze_visualize_server <- function(id, global){
           ) |>
           mutate(value = support) |>
           choro_map(
-            global$plotdata$geojson[[geo]],
+            global$plot_data$geojson[[geo]],
             main_title = "Positive Response Rate By Geography",
             sub_title = "Positive Response Rate",
             geo = geo

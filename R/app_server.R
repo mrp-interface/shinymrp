@@ -33,11 +33,10 @@ app_server <- function(input, output, session) {
       )
     ),
     link_data = NULL,
-    plotdata = NULL,
+    plot_data = NULL,
     uploaded_model = NULL,
     models = NULL,
-    poststratified_models = NULL,
-    model_count = 0
+    poststratified_models = NULL
   )
 
   
