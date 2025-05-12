@@ -232,7 +232,7 @@ mod_analyze_upload_server <- function(id, global){
       pstrat_errors(NULL)
       global$data <- NULL
       global$mrp <- NULL
-      global$plotdata <- NULL
+      global$plot_data <- NULL
       global$link_data <- NULL
 
       # reset the accordion to show the sample data panel
@@ -328,7 +328,7 @@ mod_analyze_upload_server <- function(id, global){
       # Reset state
       global$data <- NULL
       global$mrp <- NULL
-      global$plotdata <- NULL
+      global$plot_data <- NULL
 
       tryCatch({
         read_data(input$sample_upload$datapath) |> raw_sample()
@@ -484,7 +484,7 @@ mod_analyze_upload_server <- function(id, global){
             )
 
             # prepare data for plotting
-            global$plotdata <- list(
+            global$plot_data <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
               geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
               raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(global$mrp$input$zip))
@@ -505,7 +505,7 @@ mod_analyze_upload_server <- function(id, global){
             )
 
             # prepare data for plotting
-            global$plotdata <- list(
+            global$plot_data <- list(
               geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
             )
 
@@ -526,16 +526,16 @@ mod_analyze_upload_server <- function(id, global){
 
 
             # prepare data for plotting
-            plotdata <- list()
-            plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-            plotdata$geojson <- names(global$extdata$geojson) |>
+            plot_data <- list()
+            plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+            plot_data$geojson <- names(global$extdata$geojson) |>
               setNames(nm = _) |>
               purrr::map(~filter_geojson(
                 geojson = global$extdata$geojson[[.x]], 
                 geoids = global$mrp$levels[[.x]]
               ))
 
-            global$plotdata <- nullify(plotdata)
+            global$plot_data <- nullify(plot_data)
           }
           
           # set success to TRUE if no errors occurred
@@ -627,16 +627,16 @@ mod_analyze_upload_server <- function(id, global){
         )
 
         # prepare data for plotting
-        plotdata <- list()
-        plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-        plotdata$geojson <- names(global$extdata$geojson) |>
+        plot_data <- list()
+        plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+        plot_data$geojson <- names(global$extdata$geojson) |>
           setNames(nm = _) |>
           purrr::map(~filter_geojson(
             geojson = global$extdata$geojson[[.x]], 
             geoids = global$mrp$levels[[.x]]
           ))
 
-        global$plotdata <- nullify(plotdata)
+        global$plot_data <- nullify(plot_data)
 
         # Trigger success feedback
         pstrat_errors(character(0))

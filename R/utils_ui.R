@@ -128,7 +128,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     multiple = FALSE,
     # Workflow panel
     bslib::accordion_panel(
-      title = "Workflow",
+      title = tags$h4("Workflow"),
       value = "workflow",
       tags$p("The interface offers several versions designed to handle different use cases. The two main categories are ", tags$b("time-varying"), " and ", tags$b("cross-sectional"), ". Within each category, we support specific applications such as COVID data and polling data, as well as general cases. Regardless of which version you choose, the application follows a standard statistical analysis workflow:"),
       tags$ul(
@@ -141,7 +141,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     
     # Uploading Data panel
     bslib::accordion_panel(
-      title = "Uploading Data",
+      title = tags$h4("Uploading Data"),
       value = "upload",
       tags$p("Data input into the MRP interface consists of two major components:"),
       tags$ul(
@@ -149,7 +149,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li(tags$b("poststratification data"), ": size of sub-groups in a target population corresponding to unique combinations of the demographic factors.")
       ),
       tags$p("The latter is optional, as the application can link your data to the American Community Survey (ACS) to obtain the population counts. Currently, data linking is provided in all versions of the application, whereas users can only upload their post-stratification data in the ones for general time-varying and cross-sectional data."),
-      tags$h5("Individual-level vs. Aggregated Data"),
+      tags$h5("Individual-level vs. Aggregated Data", class = "mt-4"),
       tags$p("The interface accepts data in two formats:",
             tags$ul(
               tags$li(tags$b("Individual-level"), ": Each row contains information about a single person"),
@@ -157,7 +157,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
             )),
       
       tags$p("The second form is preferred due to its computational advantages, so any individual-level data loaded into the application is automatically aggregated. Data requirements differ slightly between the forms, with the key difference being the outcome variable. More details are provided below."),
-      tags$h5("Required Columns and Categories"),
+      tags$h5("Required Columns and Categories", class = "mt-4"),
       tags$p("The application automatically screens the input data using a naming convention. Below is the combined list of expected columns and values between all the versions, with the convention names in parentheses when they differ from the general language (Letter case is not important)."),
       tags$ul(
         tags$li("Sex: male, female"),
@@ -174,7 +174,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li("Survey weights (weight)**")
       ),
       tags$p("*In individual-level data, the column of interest containing binary categories must be named 'positive'. Aggregated data requires two columns to represent the outcome variables: the total count and the number of positive responses for each cross-tabulation cell. They should be named 'total' and 'positive' respectively.",
-        class = "fst-italic small"),
+        class = "fst-italic small mb-1"),
       tags$p("**Please name the column containing survey 'weights' in your poststratification data weight so the application can incorporate them.",
         class = "fst-italic small"),
       tags$p("The requirements for the input data vary slightly between interface versions. Below is a detailed list of the expected categories for both the sample and poststratification data."),
@@ -233,19 +233,19 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         )
       ),
       tags$p("*For general use cases (not COVID data or poll data), geographic information are optional. The application will automatically identify the smallest geographic scale available and find the corresponding area for the larger scales.",
-        class = "fst-italic small"),
+        class = "fst-italic small mb-1"),
       tags$p("**Time information is irrelevant for poststratification data. For the sample data, if the input data is in aggregated format, it must contain a column named \"time\" that contains week indices. An optional \"date\" column containing the date of the first day of each week can be included for visualization purposes. For indiviudual-level data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly.",
         class = "fst-italic small"),
-      tags$h5("Preprocessing Data"),
+      tags$h5("Preprocessing Data", class = "mt-4"),
       tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to expected categories (e.g., numeric age to age bracket, date to week index), etc. However, it is not exhaustive, and users may need to preprocess the data themselves before loading it into the application. We provide our preprocessing code in the ", tags$b("Learn > Preprocess"), " page that users can download and modify as needed."),
       tags$p("To provide more linking options, the application automatically adds geographic information to the sample data. It identifies the smallest geographic unit in your data and automatically infers corresponding larger geographic areas. For example, if your data contains ZIP codes, the application will determine the most overlapping county and state for each ZIP code. Additionally, it preserves any covariates based on their one-to-one relationships with the geographic identifier. The smallest available geography is used for the cross-tabulation of the data along with the demographic factors."),
-      tags$h5("ACS Data Linking"),
+      tags$h5("ACS Data Linking", class = "mt-4"),
       tags$p("The MRP interface provides seamless linking to the American Community Survey (ACS) data to obtain population counts essential for poststratification. Users can select the geographic factor for the cross-tabulation and the year of the ACS data, depending on the version of the interface. These selections are more restrictive for specific use cases like COVID and poll data. Currently, the interface links COVID-19 test records to 5-year ACS data (2017-2021) via ZIP code and poll data to 5-year ACS data (2014-2018) via state. The interface provides more options for general applications, allowing users to link via ZIP code, county, or state based on the geographic information in the input data.")
     ),
 
     # Plot Selection panel
     bslib::accordion_panel(
-      title = "Plot Selection",
+      title = tags$h4("Plot Selection"),
       value = "plot_select",
       tags$p("The application maintains a consistent visual layout throughout the workflow. Both the descriptive statistics visualization and estimation results sections feature a sidebar with responsive selection inputs. Users navigate these options in a hierarchical manner:"),
       tags$ol(
@@ -259,7 +259,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     
     # Model Selection panel
     bslib::accordion_panel(
-      title = "Model Specification",
+      title = tags$h4("Model Specification"),
       value = "model_spec",
       tags$p("The interface allows users to select predictors and their potential two-way interactions for inclusion in the model, and to specify prior distributions for model parameters. Predictors can include both individual-level and geographic-area-level measures."),
       
@@ -318,7 +318,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
     
     # Model Fitting panel
     bslib::accordion_panel(
-      title = "Model Fitting",
+      title = tags$h4("Model Fitting"),
       value = "model_fit",
       tags$p("The interface employs a Bayesian framework and implements Markov chain Monte Carlo (MCMC) algorithms for posterior computation via Stan. MCMC chains are run in parallel for computational efficiency, with the interface automatically allocating one processing core per chain. We recommend that users carefully specify the number of MCMC chains based on their available computing resources."),
       tags$p("Applying Multilevel Regression and Poststratification (MRP) with complex models to large datasets can result in extensive computation times, depending on available resources. The application addresses this challenge through two key approaches:"),
@@ -410,7 +410,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
           )
         ),
         tags$p(paste0("A binomial model with a logit function of the positive response rate. ",
-                       "Samples are generated using ", model$n_chains, " chains with ", model$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small"),
+                       "Samples are generated using ", model$sampling$n_chains, " chains with ", model$sampling$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small"),
         actionButton(
           inputId = ns(model$IDs$postprocess_btn),
           label = "Run poststratification"
@@ -423,18 +423,18 @@ create_model_tab <- function(ns, model, last_tab_id) {
               tags$li("Low values for ", tags$a("Bulk-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " and ", tags$a("Tail-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
             ))
           ),
-          if(nrow(model$fixed) > 0) {
+          if(nrow(model$params$fixed) > 0) {
             tags$div(
               tags$h4("Fixed Effects", class = "break_title"),
               tags$hr(class = "break_line"),
-              tableOutput(ns(model$IDs$fixed))
+              tableOutput(ns(model$IDs$fixed_tbl))
             )
           },
-          if(nrow(model$varying) > 0) {
+          if(nrow(model$params$varying) > 0) {
             tags$div(
               tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
               tags$hr(class = "break_line"),
-              tableOutput(ns(model$IDs$varying))  
+              tableOutput(ns(model$IDs$varying_tbl))  
             )
           },
           tags$div(
@@ -444,7 +444,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
               bslib::card_header(tags$b("Note")),
               bslib::card_body(tags$p("The plot shows the positive response rate/proportion computed from the observed data and 10 sets of replicated data.")) 
             ),
-            plotOutput(outputId = ns(model$IDs$ppc))
+            plotOutput(outputId = ns(model$IDs$ppc_plot))
           )
         )
       )

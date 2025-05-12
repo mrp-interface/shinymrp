@@ -31,3 +31,12 @@ data_format_label <- function(data_format) {
          temporal_other = "Time-Varying: Other",
          "Unknown Data Format")
 }
+
+
+generate_id <- function(n = 8) {
+  # Define the pool of characters: digits, lowercase and uppercase letters
+  chars <- c(0:9, letters, LETTERS)
+  
+  # Sample with replacement and collapse into one string
+  paste0(sample(chars, size = n, replace = TRUE), collapse = "")
+}

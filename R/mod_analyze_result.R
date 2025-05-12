@@ -117,7 +117,7 @@ mod_analyze_result_server <- function(id, global){
       if(global$data_format %in% c("temporal_covid", "temporal_other")) {
         plot_prev(
           selected_model()$mrp$input,
-          selected_model()$plotdata$dates,
+          selected_model()$plot_data$dates,
           selected_model()$est$overall,
           show_caption = TRUE
         )
@@ -163,16 +163,19 @@ mod_analyze_result_server <- function(id, global){
       if(global$input$navbar_analyze == "nav_analyze_result") {        
         if (!is.null(global$mrp)) {
           # Omit pre-poststratification models.
-          global$poststratified_models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
+          models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
+          global$poststratified_models <- models
           
-          if(length(global$poststratified_models) == 0) {
+          if(length(models) == 0) {
             showModal(modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
               "No model with poststratified estimates found. Make sure to run poststratification after fitting models.",
               footer = actionButton(inputId = ns("to_model"), label = "Go to model page")
             ), session = global$session)
           } else {
-            choices <- names(global$poststratified_models)
+            model_names <- purrr::map_chr(models, ~ .x$name)
+            model_ids <- purrr::map_chr(models, ~ .x$IDs$main)
+            choices <- setNames(model_ids, model_names)
             selected <- if(model_select_buffer() %in% choices) model_select_buffer() else choices[1]
             updateSelectInput(session, inputId = "model_select", choices = choices, selected = selected)
           }
@@ -216,6 +219,13 @@ mod_analyze_result_server <- function(id, global){
       choices <- sort(fips_df[[geo]])
       updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
 
+    })
+
+    #---------------------------------------------------------------------------
+    # Reset selection when user switch version
+    # --------------------------------------------------------------------------
+    observeEvent(global$data_format, {
+      updateSelectInput(session, inputId = "result_category", selected = "overall")
     })
     
     

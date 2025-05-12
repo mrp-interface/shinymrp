@@ -16,8 +16,11 @@ mod_analyze_model_ui <- function(id) {
     sidebar = bslib::sidebar(
       width = 375,
       bslib::accordion(
+        id = ns("accordion"),
         multiple = FALSE,
-        bslib::accordion_panel("Model Specification",
+        bslib::accordion_panel(
+          title = "Model Specification",
+          value = "model_spec",
           tags$div(class = "d-flex justify-content-between align-items-start",
             tags$p(tags$strong("Step 1: Select main effects and"), tags$br(), tags$strong("interactions")),
             tags$div(style = "margin-top: 10px",
@@ -77,7 +80,9 @@ mod_analyze_model_ui <- function(id) {
             actionLink(ns("show_fit_guide"), "User Guide."))
         ),
 
-        bslib::accordion_panel("Estimation Result Upload",
+        bslib::accordion_panel(
+          title = "Estimation Result Upload",
+          value = "model_upload",
           fileInput(ns("fit_upload"), "Select RDS file with model estimation", accept = ".RDS"),
           uiOutput(ns("model_feedback")),
           tags$p("Or use example result", class = "mt-2 mb-1"),
@@ -337,12 +342,14 @@ mod_analyze_model_server <- function(id, global){
     # Render model selection UI
     #--------------------------------------------------------------------------
     output$model_select_ui <- renderUI({
-      
+      model_names <- purrr::map_chr(global$models, ~ .x$name)
+      model_ids <- purrr::map_chr(global$models, ~ .x$IDs$main)
+
       tags$div(class = "d-flex align-items-end gap-2",
         selectizeInput(
           inputId = ns("model_select"),
           label = "Select one or more models",
-          choices = names(global$models),
+          choices = setNames(model_ids, model_names),
           multiple = TRUE
         ),
         tags$div(style = "margin-bottom: 18px",
@@ -363,11 +370,11 @@ mod_analyze_model_server <- function(id, global){
       global$data_format
       input$compare_btn
 
-      selected_names <- isolate(input$model_select)
+      selected_ids <- isolate(input$model_select)
 
-      ui <- if(length(selected_names) == 0) {
+      ui <- if(length(selected_ids) == 0) {
         NULL
-      } else if(length(selected_names) == 1) {
+      } else if(length(selected_ids) == 1) {
         tags$p("*Two or more models are required")
       } else {
         tagList(
@@ -383,79 +390,18 @@ mod_analyze_model_server <- function(id, global){
     })
 
     #-----------------------------------------------------------------------
-    # Render LOO-CV table
-    #-----------------------------------------------------------------------
-    output$loo_table <- renderTable({
-      global$data_format
-      input$compare_btn
-
-      # Get the selected models
-      compare_df <- NULL
-      selected_names <- isolate(input$model_select)
-      models <- isolate(global$models)
-      
-      if (length(selected_names) > 0 && !is.null(models)) {
-        waiter::waiter_show(
-          html = waiter_ui("loo"),
-          color = waiter::transparent(0.9)
-        )
-
-        tryCatch({
-          # Extract log-likelihood from each model
-          loo_list <- purrr::map(models[selected_names], function(m) {
-            capture.output({
-              loo_output <- loo::loo(
-                m$fit$loo$draws("log_lik"),
-                cores = m$n_chains
-              )
-            }, type = "message")
-
-            return(loo_output)
-          })
-
-
-          # Check for problematic Pareto k values
-          dfs <- purrr::map(loo_list, function(x) loo::pareto_k_table(x))
-          for (df in dfs) {
-            if (sum(df[2:3, 1]) > 0) {
-              bslib::toggle_tooltip("loo_diagnos_tooltip", show = TRUE)
-              break
-            }
-          }
-          
-          # Store the Pareto k tables
-          pareto_k_dfs(dfs)
-
-          # Compare the models using loo_compare
-          compare_df <- loo_list |>
-            loo::loo_compare() |>
-            as.data.frame() |>
-            select(elpd_diff, se_diff)
-
-        }, error = function(e) {
-          message(paste0("Error during LOO-CV: ", e$message))
-          show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
-        }, finally = {
-          waiter::waiter_hide()
-        })
-      }
-
-      return(compare_df)
-    }, rownames = TRUE, width = "300px")
-
-
-    #-----------------------------------------------------------------------
     # Render posterior predictive check UI
     #-----------------------------------------------------------------------
     output$ppc_plots <- renderUI({
       global$data_format
       input$compare_btn
 
-      selected_names <- isolate(input$model_select)
+      selected_ids <- isolate(input$model_select)
       models <- isolate(global$models)
 
-      if(length(selected_names) > 0 && !is.null(models)) {
-        formulas <- purrr::map(models[selected_names], function(m) m$formula)
+      if(length(selected_ids) > 0 && !is.null(models)) {
+        model_names <- purrr::map_chr(models[selected_ids], ~ .x$name)
+        model_formulas <- purrr::map_chr(models[selected_ids], ~ .x$formula)
 
         tagList(
           bslib::card(
@@ -466,8 +412,8 @@ mod_analyze_model_server <- function(id, global){
               bslib::card_body(tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data."))
             }
           ),
-          purrr::map(seq_along(formulas), ~ list(
-            HTML(paste0("<h4 class='formula'><u>", selected_names[.x], "</u>", ": ", formulas[[.x]], "</h4>")),
+          purrr::map(seq_along(model_names), ~ list(
+            HTML(paste0("<h4 class='formula'><u>", model_names[.x], "</u>", ": ", model_formulas[.x], "</h4>")),
             plotOutput(ns(paste0("compare_ppc", .x)))
           ))
         )
@@ -475,23 +421,32 @@ mod_analyze_model_server <- function(id, global){
     })
 
     #-----------------------------------------------------------------------
-    # Render posterior predictive check plots
+    # Render LOO table and posterior predictive check plots
     #-----------------------------------------------------------------------
     observeEvent(input$compare_btn, {
+      req(input$model_select, global$models)
 
-      selected_names <- input$model_select
+      selected_ids <- input$model_select
 
-      if(length(selected_names) > 0) {
-        inputs <- purrr::map(global$models[selected_names], function(m) m$mrp$input)
-        yreps <- purrr::map(global$models[selected_names], function(m) m$yrep)
+      if(length(selected_ids) >= 1) {
+        waiter::waiter_show(
+          html = waiter_ui("loo"),
+          color = waiter::transparent(0.9)
+        )
+
+        ### PPC plots
+        inputs <- purrr::map(global$models[selected_ids], function(m) m$mrp$input)
+        yreps <- purrr::map(global$models[selected_ids], function(m) m$yrep)
 
         purrr::map(seq_along(yreps), function(i) {
           output[[paste0("compare_ppc", i)]] <- renderPlot({
             if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+              req(global$models)
+
               plot_ppc_covid_subset(
                 yreps[[i]],
                 inputs[[i]],
-                global$plotdata$dates
+                global$plot_data$dates
               )
             } else {
               plot_ppc_poll(
@@ -501,8 +456,60 @@ mod_analyze_model_server <- function(id, global){
             }
           })
         })
-      }
 
+
+        ### LOO table
+        if (length(selected_ids) >= 2) {
+          compare_df <- NULL
+          
+          tryCatch({
+            # Use model names instead of IDs
+            selected_models <- global$models[selected_ids]
+            names(selected_models) <- purrr::map_chr(selected_models, ~ .x$name)
+
+            # Extract log-likelihood from each model
+            loo_list <- purrr::map(selected_models, function(m) {
+              capture.output({
+                loo_output <- loo::loo(
+                  m$fit$loo$draws("log_lik"),
+                  cores = m$sampling$n_chains
+                )
+              }, type = "message")
+
+              
+
+              return(loo_output)
+            })
+
+
+            # Check for problematic Pareto k values and notify users
+            dfs <- purrr::map(loo_list, function(x) loo::pareto_k_table(x))
+            for (df in dfs) {
+              if (sum(df[2:3, 1]) > 0) {
+                bslib::toggle_tooltip("loo_diagnos_tooltip", show = TRUE)
+                break
+              }
+            }
+            
+            # Store the Pareto k tables
+            pareto_k_dfs(dfs)
+
+            # Compare the models using loo_compare
+            compare_df <- loo_list |>
+              loo::loo_compare() |>
+              as.data.frame() |>
+              select(elpd_diff, se_diff)
+
+          }, error = function(e) {
+            message(paste0("Error during LOO-CV: ", e$message))
+            show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
+          })
+
+          output$loo_table <- renderTable(compare_df, rownames = TRUE, width = "300px")
+        }
+
+        waiter::waiter_hide()
+      }
     })
 
 
@@ -668,10 +675,10 @@ mod_analyze_model_server <- function(id, global){
         model$data_format <- global$data_format
         model$effects <- all_priors
         model$formula <- create_formula(all_priors)
-        model$n_iter <- n_iter
-        model$n_chains <- n_chains
+        model$sampling$n_iter <- n_iter
+        model$sampling$n_chains <- n_chains
         model$mrp <- global$mrp
-        model$plotdata <- global$plotdata
+        model$plot_data <- global$plot_data
         model$link_data <- global$link_data
         model$gq_data <- list(
           subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
@@ -684,8 +691,8 @@ mod_analyze_model_server <- function(id, global){
           new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
           effects = model$effects,
           gq_data = model$gq_data,
-          n_iter = model$n_iter,
-          n_chains = model$n_chains,
+          n_iter = model$sampling$n_iter,
+          n_chains = model$sampling$n_chains,
           seed = input$seed_select,
           sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
           spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
@@ -741,13 +748,13 @@ mod_analyze_model_server <- function(id, global){
       if (is.null(model$diagnostics$mcmc)) {
         c(model$diagnostics$mcmc, show_warnings) %<-% extract_diagnostics(
           fit = model$fit$mcmc,
-          total_transitions = model$n_iter / 2 * model$n_chains
+          total_transitions = model$sampling$n_iter / 2 * model$sampling$n_chains
         )
       }
       
       # extract posterior summary of coefficients
-      if (is.null(model$fixed) || is.null(model$varying)) {
-        c(model$fixed, model$varying) %<-% extract_parameters(
+      if (is.null(model$params$fixed) || is.null(model$params$varying)) {
+        c(model$params$fixed, model$params$varying) %<-% extract_parameters(
           model$fit$mcmc,
           model$effects,
           model$mrp$input
@@ -760,7 +767,7 @@ mod_analyze_model_server <- function(id, global){
           fit_mcmc = model$fit$mcmc,
           stan_code = model$stan_code$loo,
           stan_data = model$stan_data,
-          n_chains = model$n_chains
+          n_chains = model$sampling$n_chains
         )
       }
       
@@ -770,7 +777,7 @@ mod_analyze_model_server <- function(id, global){
           fit_mcmc = model$fit$mcmc,
           stan_code = model$stan_code$ppc,
           stan_data = model$stan_data,
-          n_chains = model$n_chains
+          n_chains = model$sampling$n_chains
         )
       }
       
@@ -782,27 +789,24 @@ mod_analyze_model_server <- function(id, global){
           model$gq_data
         )
       }
- 
-
-      waiter::waiter_hide()
-      
-      model_name <- paste0("Model ", length(global$models) + 1)
       
       # UI element IDs
+      model_id <- generate_id()
       model$IDs <- list(
-        fixed = paste0("fixed", global$model_count),
-        varying = paste0("varying", global$model_count),
-        ppc = paste0("ppc", global$model_count),
-        tab = paste0("tab", global$model_count),
-        title = paste0("title", global$model_count),
-        rm_btn = paste0("rm_btn", global$model_count),
-        save_popover_btn = paste0("save_popover_btn", global$model_count),
-        save_fit_btn = paste0("save_fit_btn", global$model_count),
-        save_code_btn = paste0("save_code_btn", global$model_count),
-        diagnos_tooltip = paste0("diagnos_tooltip", global$model_count),
-        diagnos_btn = paste0("diagnos_btn", global$model_count),
-        diagnos_tbl = paste0("diagnos_tbl", global$model_count),
-        postprocess_btn = paste0("postprocess_btn", global$model_count)
+        main = model_id,
+        fixed_tbl = paste0("fixed_tbl_", model_id),
+        varying_tbl = paste0("varying_tbl_", model_id),
+        ppc_plot = paste0("ppc_plot_", model_id),
+        tab = paste0("tab_", model_id),
+        title = paste0("title_", model_id),
+        rm_btn = paste0("rm_btn_", model_id),
+        save_popover_btn = paste0("save_popover_btn_", model_id),
+        save_fit_btn = paste0("save_fit_btn_", model_id),
+        save_code_btn = paste0("save_code_btn_", model_id),
+        diagnos_tooltip = paste0("diagnos_tooltip_", model_id),
+        diagnos_btn = paste0("diagnos_btn_", model_id),
+        diagnos_tbl = paste0("diagnos_tbl_", model_id),
+        postprocess_btn = paste0("postprocess_btn_", model_id)
       )
    
       # create new model tab
@@ -811,18 +815,23 @@ mod_analyze_model_server <- function(id, global){
       create_model_tab(ns, model, last_tab_id)
 
       # changeable tab title
+      model_name <- paste0("Model ", length(global$models) + 1)
       output[[model$IDs$title]] <- renderText(model_name)
+      model$name <- model_name
       
       # tab removal
       observeEvent(input[[model$IDs$rm_btn]], {
+        model <- global$models[[model_id]]
+
         # remove model object and tab
-        global$models[[model_name]] <- NULL
+        global$models[[model_id]] <- NULL
         bslib::nav_remove("navbar_model", model$IDs$tab, session)
-        
-        # re-index model objects and tabs
-        names(global$models) <- if(length(global$models) > 0) paste0("Model ", 1:length(global$models)) else character()
-        purrr::map(names(global$models), function(name) {
-          output[[global$models[[name]]$IDs$title]] <- renderText(name)
+
+        # rename tabs
+        new_names <- if(length(global$models) > 0) paste0("Model ", seq_along(global$models)) else c()
+        purrr::map(seq_along(new_names), function(i) {
+          output[[global$models[[i]]$IDs$title]] <- renderText(new_names[i])
+          global$models[[i]]$name <- new_names[i]
         })
       })
 
@@ -840,22 +849,23 @@ mod_analyze_model_server <- function(id, global){
           footer = modalButton("Close")
         ))
       })
+
       # Create the table output to display the diagnostics
       output[[model$IDs$diagnos_tbl]] <- renderTable(model$diagnostics$mcmc, colnames = FALSE)
       
       # render fixed and varying effect tables
-      output[[model$IDs$fixed]] <- renderTable(model$fixed, rownames = TRUE, na = "")
-      output[[model$IDs$varying]] <- renderTable(model$varying, rownames = TRUE, na = "")
+      output[[model$IDs$fixed_tbl]] <- renderTable(model$params$fixed, rownames = TRUE, na = "")
+      output[[model$IDs$varying_tbl]] <- renderTable(model$params$varying, rownames = TRUE, na = "")
       
       # render ppc plot
-      output[[model$IDs$ppc]] <- renderPlot({
+      output[[model$IDs$ppc_plot]] <- renderPlot({
         req(model$yrep)
         
         if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
           plot_ppc_covid_subset(
             model$yrep,
             model$mrp$input,
-            global$plotdata$dates
+            global$plot_data$dates
           )
         } else {
           plot_ppc_poll(
@@ -868,19 +878,19 @@ mod_analyze_model_server <- function(id, global){
       # postprocessing
       observeEvent(input[[model$IDs$postprocess_btn]], {
 
-        if(is.null(global$models[[model_name]]$fit$pstrat)) {
+        if(is.null(global$models[[model_id]]$fit$pstrat)) {
           waiter::waiter_show(
             html = waiter_ui("pstrat"),
             color = waiter::transparent(0.9)
           )
           
-          model <- global$models[[model_name]]
+          model <- global$models[[model_id]]
           
           model$fit$pstrat %<-% run_gq(
             fit_mcmc = model$fit$mcmc,
             stan_code = model$stan_code$pstrat,
             stan_data = model$stan_data,
-            n_chains = model$n_chains
+            n_chains = model$sampling$n_chains
           )
           
           model$est <- extract_est(
@@ -890,7 +900,7 @@ mod_analyze_model_server <- function(id, global){
           )
 
           # update reactiveValues
-          global$models[[model_name]] <- model
+          global$models[[model_id]] <- model
           
           waiter::waiter_hide()
         }
@@ -960,8 +970,9 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # add to model list
-      global$models[[model_name]] <- model
-      global$model_count <- global$model_count + 1
+      global$models[[model_id]] <- model
+
+      waiter::waiter_hide()
     })
 
 
@@ -1001,6 +1012,13 @@ mod_analyze_model_server <- function(id, global){
         # clear model object list
         global$models <- NULL
         global$poststratified_models <- NULL
+
+        # reset the accordion to show the model specification panel
+        bslib::accordion_panel_open(
+          id = "accordion",
+          values = "model_spec",
+          session = session
+        )
       }
     )
   })
