@@ -168,7 +168,6 @@ prepare_mrp_covid <- function(
   input_data <- input_data |> select(-all_of(dup_cols))
 
   input_data <- input_data |>
-    as_factor(demo_levels) |>
     left_join(covariates, by = "zip")
 
   # create lists of all factor levels
@@ -176,7 +175,7 @@ prepare_mrp_covid <- function(
   levels$time <- unique(input_data$time) |> sort()
   levels$zip <- pstrat_data$zip
 
-  new_data <- expand.grid(levels, stringsAsFactors = TRUE) |> # sex, race, age must be factors for later use in plotting
+  new_data <- expand.grid(levels, stringsAsFactors = FALSE) |>
     arrange(time, zip, sex, race, age) |>  # IMPORTANT: To match the cell order of poststratification data
     mutate(total = rep(cell_counts, length(levels$time))) |>
     left_join(covariates, by = "zip")

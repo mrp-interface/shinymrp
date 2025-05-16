@@ -30,7 +30,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       switch(geo_view(),
         "map" = tagList(
           highcharter::highchartOutput(
-            outputId = ns("est_geo_map"),
+            outputId = ns("map"),
             height = GLOBAL$ui$map_height
           ),
           # Only show slider if we have temporal data
@@ -66,20 +66,24 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
             }
           }
         ),
-        "line_scatter" = plotOutput(ns("est_geo_plot")),
+        "line_scatter" = plotOutput(ns("plot")),
         NULL
       )
     })
     
-    output$est_geo_map <- highcharter::renderHighchart({
+    output$map <- highcharter::renderHighchart({
       req(model(), geo_scale())
 
       geo <- geo_scale()
+      time_indices <- model()$est[[geo]][["time"]]
+      dates <- model()$plot_data$dates
       
-      time_index <- if(!is.null(model()$plot_data$dates)) {
+      time_index <- if (!is.null(time_indices) && !is.null(dates)) {
         which(as.character(format(input$map_slider, GLOBAL$ui$date_format)) == model()$plot_data$dates)
-      } else {
+      } else if (!is.null(time_indices)) {
         input$map_slider
+      } else {
+        NULL
       }
 
       plot_df <- model()$est[[geo]] |> 
@@ -106,7 +110,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
     # --------------------------------------------------------------------------
     # Plot for geographic subgroup estimates (subset plots)
     # --------------------------------------------------------------------------
-    output$est_geo_plot <- renderPlot({
+    output$plot <- renderPlot({
       req(model(), geo_scale())
       
       geo <- isolate(geo_scale())
@@ -124,6 +128,8 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         plot_est_static(plot_df)
       }
     }, height = function() {
+      req(model())
+
       if(model()$data_format %in% c("temporal_covid", "temporal_other")) {
         GLOBAL$ui$subplot_height * (length(geo_subset()) + 1)
       } else {

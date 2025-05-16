@@ -22,8 +22,9 @@ mod_est_plot_server <- function(id, model, var) {
     output$plot <- renderPlot({
       req(model())
   
-      est_df <- model()$est[[var]]
-      
+      est_df <- model()$est[[var]] |> 
+        mutate(factor = factor(factor, levels = model()$mrp$levels[[var]]))
+
       if ("time" %in% names(est_df)) {
         plot_est_temporal(est_df, model()$plotdata$dates)
       } else {
@@ -31,6 +32,8 @@ mod_est_plot_server <- function(id, model, var) {
       }
       
     }, height = function() {
+      req(model())
+      
       if(model()$data_format %in% c("temporal_covid", "temporal_other")) {
         GLOBAL$ui$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
       } else {

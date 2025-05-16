@@ -234,10 +234,9 @@ plot_demographic <- function(
     group_by(demo) |>
     summarize(perc = sum(total) / total_new)
 
-  datasets <- c("Input Data", "ACS Data")
+  datasets <- c("Input Data", "Target Population")
   plot_df <- rbind(input, new) |> mutate(
-    dataset = rep(datasets, each = nrow(input)),
-    demo = factor(demo, levels = new$demo)
+    dataset = rep(datasets, each = nrow(input))
   )
 
   if(separate) {

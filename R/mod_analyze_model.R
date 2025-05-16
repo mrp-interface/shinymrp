@@ -380,7 +380,19 @@ mod_analyze_model_server <- function(id, global){
         tagList(
           bslib::card(
             bslib::card_header(tags$b("Note")),
-            bslib::card_body(tags$p("Generally, a small ", tags$code("elpd_diff"), "difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ", tags$code("elpd_diff"), " difference (e.g., greater than 4), ", tags$code("se_diff"), ", the standard error of ", tags$code("elpd_diff"), ", measures the uncertainty in the difference. Find more details about how to inteprete these terms ", tags$a("here", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"), "."))
+            bslib::card_body(
+              tags$p(
+                "Generally, a small ",
+                tags$a("elpd_diff", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"),
+                " difference (e.g., less than 4) indicates a small difference in the predictive power between models. For a large ",
+                tags$a("elpd_diff", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"),
+                " difference (e.g., greater than 4), ",
+                tags$a("se_diff", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"),
+                ", the standard error of ",
+                tags$a("elpd_diff", href = "https://mc-stan.org/loo/articles/online-only/faq.html#elpd_interpretation", target = "_blank"),
+                ", measures the uncertainty in the difference."
+              )
+            )
           ),
           tableOutput(outputId = ns("loo_table"))
         )
@@ -521,8 +533,13 @@ mod_analyze_model_server <- function(id, global){
 
       showModal(modalDialog(
         title = "LOO-CV Diagnostics",
-        tags$p("Below is a summary table of the estimated Pareto shape parameter k. Positive 'Count' values in the second and third rows suggest influential observations that might negatively affect the accuracy of the leave-one-out cross-validation approximation. For details, check this",
-          tags$a("FAQ", href = "https://mc-stan.org/loo/articles/online-only/faq.html#pareto_shape_parameter_k", target = "_blank"), "."),
+        tags$div(class = "mt-0 mb-5",
+          withMathJax(
+            "We provide a summary of the estimated Pareto shape parameter \\(\\kappa\\) values, which estimates how far an individual leave-one-out distribution is from the full distribution. High \\(\\kappa\\) values often indicate model misspecification, outliers or mistakes in data processing, resulting in an unreliable importance sampling estimate and an unreliable approximation of LOO-CV. See the ",
+            tags$a("LOO FAQ", href = "https://mc-stan.org/loo/articles/online-only/faq.html#pareto_shape_parameter_k", target = "_blank"),
+            " for more details."
+          )
+        ),
         if (length(pareto_k_dfs()) == 0) {
           tags$p("No models selected", class = "fst-italic")
         } else {
@@ -542,7 +559,8 @@ mod_analyze_model_server <- function(id, global){
         output[[paste0("pareto_k_table", i)]] <- renderTable(
           pareto_k_dfs()[[i]] |>
             as.data.frame() |>
-            mutate(Count = as.integer(Count)),
+            mutate(Count = as.integer(Count)) |>
+            select(Count, Proportion),
           rownames = TRUE
         )
       })

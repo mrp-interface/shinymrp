@@ -24,9 +24,6 @@ prepare_mrp_poll <- function(
   levels$state <- unique(input_data$state) |> sort()
   pstrat_data <- pstrat_data |> filter(state %in% levels$state)
 
-  # convert demographic levels to factors
-  new_data <- pstrat_data |> as_factor(demo_levels)
-
   # find geographic covariates
   covariates <- get_geo_predictors(input_data, link_geo)
   if(ncol(covariates) > 1) {

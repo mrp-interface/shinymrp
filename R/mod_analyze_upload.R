@@ -299,11 +299,18 @@ mod_analyze_upload_server <- function(id, global){
         head(GLOBAL$ui$preview_size) |>
         DT::datatable(
           options = list(
+            columnDefs = list(
+              list(className = "dt-left", targets = "_all")
+            ),
             scrollX = TRUE,
             lengthChange = FALSE,
             searching = FALSE,
             info = FALSE
           )
+        ) |>
+        DT::formatStyle(
+          columns = c("positive"),
+          `max-width` = "150px"
         )
     })
 
@@ -345,8 +352,10 @@ mod_analyze_upload_server <- function(id, global){
         sample_errors(character(0))
       
       }, error = function(e) {
-        sample_errors(e$message)
-        message(e$message)
+        # show error message
+        error_message <- paste("Error processing data:\n", e$message)
+        sample_errors(error_message)
+        message(error_message)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
@@ -491,12 +500,12 @@ mod_analyze_upload_server <- function(id, global){
             )
 
           } else if (global$data_format == "static_poll") {
-            pstrat_data <- global$extdata$pstrat_poll |>
+            new_data <- global$extdata$pstrat_poll |>
               mutate(state = to_fips(state, global$extdata$fips$county, "state"))
 
             global$mrp <- prepare_mrp_custom(
               input_data = global$data,
-              pstrat_data = pstrat_data,
+              new_data = new_data,
               fips_county_state = global$extdata$fips$county,
               demo_levels = create_expected_levels(global$data_format),
               vars_global = GLOBAL$vars,
@@ -542,7 +551,7 @@ mod_analyze_upload_server <- function(id, global){
           success <- TRUE
 
         }, error = function(e) {
-          message(paste("Error linking data\n", e$message))
+          message(paste("Error linking data:\n", e$message))
         }, finally = {
           stop_busy(
             session = session,
@@ -589,7 +598,7 @@ mod_analyze_upload_server <- function(id, global){
         read_data(input$pstrat_upload$datapath) |> raw_pstrat()
 
         # Process data
-        pstrat_data <- preprocess(
+        new_data <- preprocess(
           data = raw_pstrat(),
           data_format = global$data_format,
           zip_county_state = global$extdata$zip_county_state,
@@ -599,11 +608,11 @@ mod_analyze_upload_server <- function(id, global){
         )
 
         # Compare to sample data
-        check_pstrat(pstrat_data, global$data, create_expected_levels(global$data_format))
+        check_pstrat(new_data, global$data, create_expected_levels(global$data_format))
 
         # Find the smallest common geography
         link_geo <- NULL
-        common <- intersect(names(global$data), names(pstrat_data))
+        common <- intersect(names(global$data), names(new_data))
         smallest <- get_smallest_geo(common, GLOBAL$vars$geo)
         if (!is.null(smallest)) {
           link_geo <- smallest$geo
@@ -618,13 +627,14 @@ mod_analyze_upload_server <- function(id, global){
         # Prepare data for MRP
         global$mrp <- prepare_mrp_custom(
           input_data = global$data,
-          pstrat_data = pstrat_data,
+          new_data = new_data,
           fips_county_state = global$extdata$fips$county,
           demo_levels = create_expected_levels(global$data_format),
           vars_global = GLOBAL$vars,
           link_geo = link_geo,
           need_time = global$data_format %in% c("temporal_covid", "temporal_other")
         )
+
 
         # prepare data for plotting
         plot_data <- list()
@@ -642,7 +652,16 @@ mod_analyze_upload_server <- function(id, global){
         pstrat_errors(character(0))
 
       }, error = function(e) {
-        pstrat_errors(e$message)
+        # show error message
+        error_message <- paste("Error processing data:\n", e$message)
+        pstrat_errors(error_message)
+        message(error_message)
+        
+        # reset reactives
+        global$link_data <- NULL
+        global$mrp <- NULL
+        global$plot_data <- NULL
+        
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
