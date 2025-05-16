@@ -17,10 +17,10 @@ mod_learn_preprocess_ui <- function(id){
       tags$h3("Survey/Test Data Preprocessing", class = "mt-5"),
       tags$p("The preprocessing workflow follows these general steps for both cross-sectional and spatio-temporal data:"),
       tags$ul(
-        tags$li("Data cleaning: standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes"),
-        tags$li("Converting raw values to categorical data: recoding categorical data, converting numeric values to categories using predefined intervals, assigning week indices to dates"),
-        tags$li("Data imputation: imputing missing data based on frequency distributions of converted categories in the data"),
-        tags$li("Data aggregation: aggregating individual-level records to create cell counts for each unique combination of relevant demographic-geographic factors")
+        tags$li(tags$b("Data cleaning:"), " standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes"),
+        tags$li(tags$b("Conversion to categorical data:"), " recoding categorical data, converting numeric values to categories using predefined intervals, assigning week indices to dates"),
+        tags$li(tags$b("Data imputation:"), " imputing missing data based on frequency distributions of converted categories in the data"),
+        tags$li(tags$b("Data aggregation:"), " aggregating individual-level records to create cell counts for each unique combination of relevant demographic-geographic factors")
       ),
       tags$p("The result is a cross tabulation of the following categories:"),
       bslib::layout_columns(
@@ -44,10 +44,8 @@ mod_learn_preprocess_ui <- function(id){
               tags$li("Sex: male, female"),
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-              tags$li("ZIP codes (optional)"),
-              tags$li("Counties (optional)"),
-              tags$li("States (optional)"),
-              tags$li("Week indices")
+              tags$li("Week indices"),
+              tags$li("User selected geograhic levels")
             )
           )
         ),
@@ -70,9 +68,7 @@ mod_learn_preprocess_ui <- function(id){
               tags$li("Sex: male, female"),
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-              tags$li("ZIP codes (optional)"),
-              tags$li("Counties (optional)"),
-              tags$li("States (optional)"),
+              tags$li("User selected geograhic levels")
             )
           )
         )

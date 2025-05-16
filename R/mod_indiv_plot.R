@@ -22,6 +22,7 @@ mod_indiv_plot_server <- function(id, data, demo_var){
       req(data()$input[[demo_var]], data()$new[[demo_var]])
 
       input_data <- data()$input |>
+        as_factor(data()$levels[demo_var]) |>
         mutate(demo = !!sym(demo_var)) |>
         select(demo, total)
 
@@ -30,6 +31,7 @@ mod_indiv_plot_server <- function(id, data, demo_var){
         new_data <- new_data |> filter(time == 1)
       }
       new_data <- new_data |>
+        as_factor(data()$levels[demo_var]) |>
         mutate(demo = !!sym(demo_var)) |>
         select(demo, total)
       

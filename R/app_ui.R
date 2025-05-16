@@ -81,7 +81,12 @@ app_ui <- function(request) {
         title = "Learn",
         value = "nav_learn",
         bslib::nav_panel(
-          title = "Preprocess",
+          title = "User Guide",
+          value = "nav_learn_interface",
+          mod_learn_interface_ui(module_ids$learn$interface)
+        ),
+        bslib::nav_panel(
+          title = "Data Preprocessing",
           value = "nav_learn_preprocess",
           mod_learn_preprocess_ui(module_ids$learn$preprocess)
         ),

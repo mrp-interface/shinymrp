@@ -62,6 +62,9 @@ mod_analyze_visualize_server <- function(id, global){
 
       # Update the plot category selectInput with the new choices.
       updateSelectInput(session, "plot_category", choices = choices)
+      
+      # Reset extreme select input
+      shinyjs::reset("extreme_select")
     })
 
 

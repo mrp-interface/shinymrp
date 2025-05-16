@@ -81,6 +81,7 @@ mod_analyze_result_server <- function(id, global){
     # Reactive for the selected model.
     selected_model <- reactive({
       req(input$model_select)
+
       global$poststratified_models[[input$model_select]]
     })
     # Buffer to preserve selection.
@@ -220,14 +221,6 @@ mod_analyze_result_server <- function(id, global){
       updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
 
     })
-
-    #---------------------------------------------------------------------------
-    # Reset selection when user switch version
-    # --------------------------------------------------------------------------
-    observeEvent(global$data_format, {
-      updateSelectInput(session, inputId = "result_category", selected = "overall")
-    })
-    
     
     # --------------------------------------------------------------------------
     # Navigation modal events for data/model errors.
@@ -236,6 +229,25 @@ mod_analyze_result_server <- function(id, global){
       updateTabsetPanel(global$session, inputId = "navbar_analyze", selected = "nav_analyze_model")
       removeModal(global$session)
     })
+
+    #---------------------------------------------------------------------------
+    # Reset selection when user switch version
+    # --------------------------------------------------------------------------
+    observeEvent(
+      eventExpr = list(
+        global$data,
+        global$data_format,
+        global$link_data
+      ),
+      handlerExpr = {
+        shinyjs::reset("model_select")
+        shinyjs::reset("result_category")
+        shinyjs::reset("subgroup_select")
+        shinyjs::reset("geo_scale_select")
+        shinyjs::reset("geo_view_select")
+        shinyjs::reset("geo_unit_select")
+      }
+    )
     
   })
 }

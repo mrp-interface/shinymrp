@@ -544,6 +544,8 @@ check_pstrat <- function(df, df_ref, expected_types) {
   if (length(missing_df))  stop("Missing in sample data:  ", paste(missing_df, collapse = ", "))
   if (length(missing_ref)) stop("Missing in postratification data: ", paste(missing_ref, collapse = ", "))
   
+  cols <- intersect(names(df), names(df_ref)) |> setdiff("total")
+  
   # compare unique values
   cond <- vapply(cols, function(col) {
     setequal(unique(df[[col]]), unique(df_ref[[col]]))
@@ -748,7 +750,7 @@ combine_tracts <- function(
 
 prepare_mrp_custom <- function(
   input_data,
-  pstrat_data,
+  new_data,
   fips_county_state,
   demo_levels,
   vars_global,
@@ -759,9 +761,9 @@ prepare_mrp_custom <- function(
   # filter based on common GEOIDs
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
-    shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(pstrat_data[[link_geo]]))
+    shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(new_data[[link_geo]]))
     input_data <- input_data |> filter(!!sym(link_geo) %in% shared_geocodes)
-    pstrat_data <- pstrat_data |> filter(!!sym(link_geo) %in% shared_geocodes)
+    new_data <- new_data |> filter(!!sym(link_geo) %in% shared_geocodes)
   }
 
   # create lists of all factor levels
@@ -774,9 +776,6 @@ prepare_mrp_custom <- function(
   if(!is.null(link_geo)) {
     levels[[link_geo]] <- shared_geocodes
   }
-
-  # convert demographic levels to factors
-  new_data <- pstrat_data |> as_factor(demo_levels)
 
   # append geographic predictors
   covariates <- NULL
@@ -847,7 +846,7 @@ prepare_mrp_acs <- function(
   sort_vars <- c("time", link_geo, "sex", "race", "age") |>
     intersect(names(levels))
 
-  new_data <- expand.grid(levels, stringsAsFactors = TRUE) |> # sex, race, age must be factors for later use in plotting
+  new_data <- expand.grid(levels, stringsAsFactors = FALSE) |>
     arrange(across(all_of(sort_vars))) |> # IMPORTANT: To match the cell order of poststratification data
     mutate(total = rep(cell_counts, n_time_indices))
 
@@ -876,35 +875,6 @@ prepare_mrp_acs <- function(
     levels = levels,
     vars = vars
   ))
-}
-
-
-stan_factor <- function(df, ignore_columns = NULL) {
-  # Get column names
-  col_names <- setdiff(names(df), ignore_columns)
-
-  # Loop through columns and check data type
-  for (col in col_names) {
-    dtype <- data_type(df[[col]])
-    if(dtype == "bin" | dtype == "cat") {
-      # Rename raw column
-      raw_col <- paste0(col, "_raw")
-      df <- df |> rename(!!raw_col := !!col)
-      
-      # Create new numeric factor column
-      df[[col]] <- df[[raw_col]] |> factor() |> as.numeric()
-
-      if(dtype == "bin") {
-        df[[col]] <- df[[col]] - 1
-      }
-    } else if(dtype == "cont") {
-      # Standardize continuous data
-      df[[col]] <- scale(df[[col]]) |> array()
-
-    }
-  }
-
-  return(df)
 }
 
 

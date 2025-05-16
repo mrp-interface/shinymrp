@@ -122,9 +122,9 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
   # create unique pairs
   df <- expand.grid(
     eff1 = main_effects,
-    eff2 = main_effects 
+    eff2 = main_effects,
+    stringsAsFactors = FALSE
   ) |>
-    mutate_all(as.character) |>
     filter(eff1 != eff2)
   
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
@@ -642,6 +642,40 @@ generated quantities { ${gq}
   return(scode)
 }
 
+stan_factor <- function(df, ignore_columns = NULL) {
+  # Get column names
+  col_names <- setdiff(names(df), ignore_columns)
+  
+  # Loop through columns and check data type
+  for (col in col_names) {
+    dtype <- data_type(df[[col]])
+    if(dtype == "bin" | dtype == "cat") {
+      # If column class is factor, convert to character
+      if(is.factor(df[[col]])) {
+        df[[col]] <- as.character(df[[col]])
+      }
+
+      # Rename raw column
+      raw_col <- paste0(col, "_raw")
+      df <- df |> rename(!!raw_col := !!col)
+      
+      # Create new numeric factor column
+      df[[col]] <- df[[raw_col]] |> factor() |> as.numeric()
+      
+      if(dtype == "bin") {
+        df[[col]] <- df[[col]] - 1
+      }
+    } else if(dtype == "cont") {
+      # Standardize continuous data
+      df[[col]] <- scale(df[[col]]) |> array()
+      
+    }
+  }
+  
+  return(df)
+}
+
+
 make_standata <- function(
     input_data,
     new_data,
@@ -976,25 +1010,37 @@ extract_est <- function(
   new_data,
   gq_data
 ) {
+  
 
-  new_data <- new_data |> mutate(overall = 1)
+  # convert new data to numeric factors
+  col_names <- if(gq_data$temporal) c(gq_data$subgroups, "time") else gq_data$subgroups
+  new_data <- new_data |>
+    select(all_of(col_names)) |>
+    mutate(overall = "overall") |>  # add placeholder column for overall estimates
+    stan_factor()
+
   est <- list()
 
   for(s in c("overall", gq_data$subgroups)) {
+    # get posterior draws for each subgroup
     pred_mat <- fit$draws(
       variables = str_interp("p_${s}_pop"),
       format = "draws_matrix"
     ) |> t()
-    
-    cols <- if(gq_data$temporal) c("time", s) else c(s)
-    
+
+    col_names <- if(gq_data$temporal) c("time", s) else c(s)
+    raw_col_names <- paste0(col_names, "_raw")
+    new_col_names <- if(gq_data$temporal) c("time", "factor") else c("factor")
+
+    # Order raw levels based on numeric levels to match order of posterior draws matrix
     est[[s]] <- new_data |>
-      distinct(!!!syms(cols)) |>
+      arrange(across(all_of(col_names))) |>
+      distinct(across(all_of(raw_col_names))) |>
+      setNames(new_col_names) |>
       mutate(
         est = pred_mat |> apply(1, mean),
         std = pred_mat |> apply(1, sd)
-      ) |>
-      rename("factor" := !!s)
+      )
   }
 
   return(est)
