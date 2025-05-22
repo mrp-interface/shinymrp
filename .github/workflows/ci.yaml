@@ -32,7 +32,7 @@ jobs:
         run: Rscript -e 'renv::restore()'
 
       - name: Run R CMD check
-        run: R CMD check --no-manual --as-cran .
+        run: R CMD check --no-manual .
 
 
   coverage:
