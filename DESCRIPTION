@@ -2,30 +2,30 @@ Package: shinymrp
 Title: Point-and-click interface for MRP
 Version: 0.5.0
 Authors@R: c(
-    person(
-        given = "Toan",
-        family = "Tran",
-        email = "trannttoan97@gmail.com",
-        role = c("cre", "aut")
-    ),
-    person(
-        given = "Jonah",
-        family = "Gabry",
-        email = "jgabry@gmail.com",
-        role = "aut"
-    ),
-    person(
-        given = "Yajuan",
-        family = "Si",
-        email = "yajuan@umich.edu",
-        role = "aut"
-    ),
-    person(
-        given = "Mitzi",
-        family = "Morris",
-        email = "mitzi212@gmail.com",
-        role = "aut"
-    )
+  person(
+    given = "Toan",
+    family = "Tran",
+    email = "trannttoan97@gmail.com",
+    role = c("cre", "aut")
+  ),
+  person(
+    given = "Jonah",
+    family = "Gabry",
+    email = "jgabry@gmail.com",
+    role = "aut"
+  ),
+  person(
+    given = "Yajuan",
+    family = "Si",
+    email = "yajuan@umich.edu",
+    role = "aut"
+  ),
+  person(
+    given = "Mitzi",
+    family = "Morris",
+    email = "mitzi212@gmail.com",
+    role = "aut"
+  )
   )
 Description: A GUI designed for intuitive applications of Multilevel
     Regression and Poststratification.
