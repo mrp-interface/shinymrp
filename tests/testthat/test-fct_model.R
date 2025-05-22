@@ -1,4 +1,4 @@
-create_test_data <- function(N=10, seed=sample(1:10000, 1)) {
+create_test_data <- function(N=100, seed=sample(1:10000, 1)) {
   set.seed(seed)
   dat <- data.frame(
     cont1 = runif(N, 0, 10),
@@ -9,20 +9,28 @@ create_test_data <- function(N=10, seed=sample(1:10000, 1)) {
     cat2 = sample(1:5, N, replace = TRUE),
     positive = sample(1:5, N, replace = TRUE),
     total = sample(6:10, N, replace = TRUE)
-  ) |>
-    mutate(
-      cat1_raw = cat1,
-      cat2_raw = cat2
-    )
+  )
 
   return(dat)
 }
 
 compile <- function(effects, dat) {
-  effects |>
-    group_effects(dat) |>
-    ungroup_effects() |>
-    make_stancode() |>
+  # convert to numeric factors
+  stan_dat <- stan_factor(dat)
+
+  # placeholder because only model compilation is tested
+  gq_dat <- list(
+    temporal = FALSE,
+    subgroup = c()
+  )
+
+  # group effects
+  effects <- effects |>
+    group_effects(stan_dat) |>
+    ungroup_effects()
+    
+  # create stan code and compile model
+  make_stancode_mcmc(gq_dat) |>
     cmdstanr::write_stan_file() |>
     cmdstanr::cmdstan_model()
 }
