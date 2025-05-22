@@ -12,7 +12,7 @@ app_ui <- function(request) {
     bslib::page_navbar(
       title = "MRP",
       id = "navbar",
-      theme = bslib::bs_theme(version = 5) |> 
+      theme = bslib::bs_theme(version = 5) %>% 
         bslib::bs_add_rules(GLOBAL$ui$style$global),
       bslib::nav_panel(
         title = "Home",

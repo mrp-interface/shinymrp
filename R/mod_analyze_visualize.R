@@ -238,7 +238,7 @@ mod_analyze_visualize_server <- function(id, global){
       geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
 
       if(global$data_format %in% c("temporal_covid", "temporal_other")) {
-        plot_df <- global$mrp$input |>
+        plot_df <- global$mrp$input %>%
           prep_raw_prev(
             fips_codes = global$extdata$fips[[geo]],
             geo = geo,
@@ -257,12 +257,12 @@ mod_analyze_visualize_server <- function(id, global){
           config = if (max(plot_df$value) == 0) list(minValue = 0, maxValue = 1) else NULL
         )
       } else {
-        global$mrp$input |>
+        global$mrp$input %>%
           prep_raw_support(
             fips_codes = global$extdata$fips[[geo]],
             geo = geo
-          ) |>
-          mutate(value = support) |>
+          ) %>%
+          mutate(value = .data$support) %>%
           choro_map(
             global$plot_data$geojson[[geo]],
             main_title = "Positive Response Rate By Geography",

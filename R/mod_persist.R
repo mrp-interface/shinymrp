@@ -49,7 +49,7 @@ mod_persist_server <- function(id, global){
     shinyjs::delay(2000, shinyjs::removeClass("show_guide", "spin"))
  
     observeEvent(input$show_guide, {
-      show_guide("workflow", global$session)
+      show_guide("workflow")
     })
     
     observeEvent(input$at_top, {

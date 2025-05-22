@@ -41,8 +41,8 @@ mod_geo_plot_server <- function(id, data, varname, config){
       threshold <- if(config$threshold > 1) config$threshold else config$threshold * 100
 
       # Create plot
-      data() |>
-        mutate(covar = !!sym(varname)) |>
+      data() %>%
+        mutate(covar = !!sym(varname)) %>%
         plot_geographic(
           breaks = config$breaks,
           description = sprintf(config$description, count, total, perc, threshold),
@@ -55,12 +55,12 @@ mod_geo_plot_server <- function(id, data, varname, config){
     output$table <- DT::renderDT({
       req(data())
 
-      decimal_places <- if(median(data()[[varname]]) > 100) 0 else 4
+      decimal_places <- if(stats::median(data()[[varname]]) > 100) 0 else 4
 
-      data() |>
-        mutate(measure = round(!!sym(varname), decimal_places)) |>
-        select(zip, measure) |>
-        rename("ZIP Code" = "zip") |>
+      data() %>%
+        mutate(measure = round(!!sym(varname), decimal_places)) %>%
+        select(.data$zip, .data$measure) %>%
+        rename("ZIP Code" = "zip") %>%
         DT::datatable(
           options = list(
             lengthChange = FALSE,

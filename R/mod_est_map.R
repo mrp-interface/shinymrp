@@ -7,7 +7,6 @@
 #' @noRd 
 #'
 #' @importFrom shiny NS tagList conditionalPanel selectInput selectizeInput plotOutput
-#' @importFrom plotly plotlyOutput
 mod_est_map_ui <- function(id) {
   ns <- NS(id)
   uiOutput(ns("ui"))
@@ -86,7 +85,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         NULL
       }
 
-      plot_df <- model()$est[[geo]] |> 
+      plot_df <- model()$est[[geo]] %>% 
         prep_est(
           fips_codes = global$extdata$fips[[geo]],
           geo = geo,
@@ -94,7 +93,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         )
 
 
-      plot_df |>
+      plot_df %>%
         choro_map(
           model()$plot_data$geojson[[geo]],
           main_title = "MRP Estimate of Positive Response Rate",
@@ -114,12 +113,12 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model(), geo_scale())
       
       geo <- isolate(geo_scale())
-      fips_df <- global$extdata$fips[[geo]] |> fips_upper()
+      fips_df <- global$extdata$fips[[geo]] %>% fips_upper()
 
-      plot_df <- model()$est[[geo]] |>
-        rename("fips" = "factor") |>
-        left_join(fips_df, by = "fips") |>
-        rename("factor" = geo) |>
+      plot_df <- model()$est[[geo]] %>%
+        rename("fips" = "factor") %>%
+        left_join(fips_df, by = "fips") %>%
+        rename("factor" = geo) %>%
         filter(factor %in% geo_subset())
 
       if(model()$data_format %in% c("temporal_covid", "temporal_other")) {

@@ -53,7 +53,7 @@ mod_home_ui <- function(id) {
       conditionalPanel(
         condition = sprintf("output['%s'] == 'temporal'", ns("panel_group")),
         tags$div(class = "mb-3 ms-3",
-          actionButton(inputId = ns("back_to_main"), label = "← Back", 
+          actionButton(inputId = ns("back_to_main"), label = "\u2190 Back", 
                        class = "btn btn-secondary")
         ),
         tags$div(class = "row justify-content-center mx-auto mt-1",
@@ -90,7 +90,7 @@ mod_home_ui <- function(id) {
       conditionalPanel(
         condition = sprintf("output['%s'] == 'static'", ns("panel_group")),
         tags$div(class = "mb-3 ms-3",
-          actionButton(inputId = ns("back_to_main"), label = "← Back", 
+          actionButton(inputId = ns("back_to_main"), label = "\u2190 Back", 
                        class = "btn btn-secondary")
         ),
         tags$div(class = "row justify-content-center mx-auto mt-1",

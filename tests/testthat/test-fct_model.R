@@ -25,13 +25,13 @@ compile <- function(effects, dat) {
   )
 
   # group effects
-  effects <- effects |>
-    group_effects(stan_dat) |>
+  effects <- effects %>%
+    group_effects(stan_dat) %>%
     ungroup_effects()
     
   # create stan code and compile model
-  make_stancode_mcmc(gq_dat) |>
-    cmdstanr::write_stan_file() |>
+  make_stancode_mcmc(effects, gq_dat) %>%
+    cmdstanr::write_stan_file() %>%
     cmdstanr::cmdstan_model()
 }
 
