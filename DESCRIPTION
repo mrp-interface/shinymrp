@@ -1,5 +1,5 @@
 Package: shinymrp
-Title: Point-and-click Interface for MRP
+Title: Point-and-click interface for MRP
 Version: 0.0.1
 Authors@R: c(
     person("Toan", "Tran", , "tntoan@umich.edu", role = c("cre", "aut")),
@@ -7,7 +7,7 @@ Authors@R: c(
     person("Yajuan", "Si", , "yajuan@umich.edu", role = "aut"),
     person("Mitzi", "Morris", , "mitzi212@gmail.com", role = "aut")
   )
-Description: A GUI designed for intuitive applications of Multilevel Regression and Poststratification to cross-sectional and spatio-temporal datasets.
+Description: A GUI designed for intuitive applications of Multilevel Regression and Poststratification.
 License: MIT + file LICENSE
 Imports: 
     bsicons,
@@ -23,7 +23,6 @@ Imports:
     ISOweek,
     loo,
     patchwork,
-    pkgload,
     plotly,
     posterior,
     purrr,
@@ -33,7 +32,6 @@ Imports:
     readxl,
     shiny (>= 1.8.0),
     shinyjs,
-    shinythemes,
     shinyWidgets,
     stringr,
     tidyr,
