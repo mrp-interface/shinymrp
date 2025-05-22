@@ -1,6 +1,6 @@
 Package: shinymrp
 Title: Point-and-click interface for MRP
-Version: 0.0.1
+Version: 0.5.0
 Authors@R: c(
     person("Toan", "Tran", , "tntoan@umich.edu", role = c("cre", "aut")),
     person("Jonah", "Gabry", , "jgabry@gmail.com", role = "aut"),
