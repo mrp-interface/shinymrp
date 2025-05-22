@@ -1,5 +1,4 @@
 library(dplyr)
-library(zeallot)
 library(stringr)
 library(purrr)
 library(bayesplot)
@@ -19,10 +18,10 @@ source("/path/to/fct_model.R")
 #' @export
 add_date <- function(data, week_date) {
   if("time" %in% names(data)) {
-    data <- data |>
-      select(-time, time) |>
+    data <- data %>%
+      select(-time, time) %>%
       left_join(
-        week_date |> rename(time = week_index, date = start_of_week), 
+        week_date %>% rename(time = week_index, date = start_of_week), 
         by = "time"
       )
   }
@@ -48,7 +47,7 @@ add_geo <- function(
     zip_county_state,
     n_geo = 10
 ) {
-  zip_county_state <- zip_county_state |> mutate(county = fips)
+  zip_county_state <- zip_county_state %>% mutate(county = fips)
 
   if(length(geo_vars) > 0) {
     # Find smallest geographic unit and select consecutive units
@@ -57,13 +56,13 @@ add_geo <- function(
     smallest_geo <- all_geo_vars[min(match(valid_geo_vars, all_geo_vars))]
     
     # Select ordered unique values and generate random samples
-    geo_df <- zip_county_state |>
-      select(all_of(geo_vars)) |>
-      distinct() |>
+    geo_df <- zip_county_state %>%
+      select(all_of(geo_vars)) %>%
+      distinct() %>%
       arrange(!!sym(smallest_geo))
 
     start_idx <- sample(1:(nrow(geo_df) - n_geo + 1), size = 1)
-    geo_df <- geo_df[start_idx:(start_idx + n_geo - 1), ] |>
+    geo_df <- geo_df[start_idx:(start_idx + n_geo - 1), ] %>%
       slice_sample(n = nrow(data), replace = TRUE)
 
     # Add geographic data to individual-level data
@@ -162,7 +161,7 @@ create_base_data <- function(
   )
 
   # Create individual-level data
-  data <- indiv_vars |>
+  data <- indiv_vars %>%
     map_dfc(~tibble(!!.x := sample(levels[[.x]], n_samples, replace = TRUE)))
 
   return(data)
@@ -219,7 +218,7 @@ simulate_data <- function(
 
   # Generate data
   print(formula_terms)
-  dat <- base_dat |> mutate(
+  dat <- base_dat %>% mutate(
     mu = !!rlang::parse_expr(formula_terms),
     ptrue = 1 / (1 + exp(-mu)),
     psample = sens*ptrue + (1-spec)*(1-ptrue),
@@ -353,10 +352,10 @@ run_simulation <- function(
   base_data <- add_covariates(base_data, covar_geo, covar_vars)
 
   # Create numeric factors for Stan
-  base_data_stan <- base_data |> stan_factor(ignore_vars)
+  base_data_stan <- base_data %>% stan_factor(ignore_vars)
 
   # Simulate data
-  c(sim_data, effects, params) %<-% simulate_data(
+  sim <- simulate_data(
     base_data_stan,
     effects,
     params,
@@ -365,7 +364,7 @@ run_simulation <- function(
     seed = seed
   )
 
-  example_data_indiv <- base_data |>
+  data_indiv <- base_data %>%
     mutate(
       age = sapply(age, function(x) {
         bounds <- if(grepl("\\+", x)) {
@@ -374,13 +373,13 @@ run_simulation <- function(
           as.numeric(strsplit(x, "-")[[1]])
         sample(bounds[1]:bounds[2], 1)
       }),
-      positive = sim_data$positive
+      positive = sim$data$positive
     )
     
 
-  example_data_agg <- base_data |>
-    mutate(positive = sim_data$positive) |>
-    group_by(across(all_of(c(indiv_vars, geo_vars)))) |>
+  data_agg <- base_data %>%
+    mutate(positive = sim$data$positive) %>%
+    group_by(across(all_of(c(indiv_vars, geo_vars)))) %>%
     summarise(
       date = if(include_date) first(date),
       across(all_of(covar_vars), first),
@@ -390,11 +389,16 @@ run_simulation <- function(
     )
 
   if(!is.null(save_path)) {
-    readr::write_csv(example_data_indiv, paste0(save_path, "data_individual.csv"))
-    readr::write_csv(example_data_agg, paste0(save_path, "data_aggregated.csv"))
+    readr::write_csv(data_indiv, paste0(save_path, "data_individual.csv"))
+    readr::write_csv(data_agg, paste0(save_path, "data_aggregated.csv"))
   }
 
-  return(list(example_data_indiv, example_data_agg, effects, params))
+  return(list(
+    data_indiv = data_indiv,
+    data_agg = data_agg,
+    effects = sim$effects,
+    true_coefs = sim$params
+  ))
 }
 
 #' Check Parameter Recovery in Simulation
@@ -432,7 +436,7 @@ check_simulation_result <- function(
   }
 
   # Group effects for MCMC
-  effects <- effects |> group_effects(sim_data) |> ungroup_effects()
+  effects <- effects %>% group_effects(sim_data) %>% ungroup_effects()
   
   # Setup generated quantities data
   gq_data <- list(
@@ -441,9 +445,9 @@ check_simulation_result <- function(
   )
 
   # Run MCMC
-  c(fit, stan_data, stan_code) %<-% run_mcmc(
-    input_data = sim_data |> stan_factor(ignore_vars),
-    new_data = sim_data |> stan_factor(ignore_vars),
+  mod <- run_mcmc(
+    input_data = sim_data %>% stan_factor(ignore_vars),
+    new_data = sim_data %>% stan_factor(ignore_vars),
     effects = effects,
     gq_data = gq_data,
     spec = 1,
@@ -451,7 +455,7 @@ check_simulation_result <- function(
   )
 
   # Get draws and true values
-  draws <- fit$mcmc$draws(variables = variables_draws, format = "draws_matrix")
+  draws <- mod$fit$mcmc$draws(variables = variables_draws, format = "draws_matrix")
   true <- do.call(c, true_coefs[variables_true])
 
   # Create and print recovery plots
@@ -488,7 +492,7 @@ params <- list(
   lambda_zip = 0.5
 )
 
-c(data_indiv, data_agg, effects, true_coefs) %<-% run_simulation(
+sim <- run_simulation(
   effects = effects,
   params = params,
   covar_geo = "zip",
@@ -496,11 +500,11 @@ c(data_indiv, data_agg, effects, true_coefs) %<-% run_simulation(
   save_path = NULL
 )
 
-View(data_indiv)
-View(data_agg)
+View(sim$data_indiv)
+View(sim$data_agg)
 
 # check_simulation_result(
-#   sim_data = data_agg,
-#   effects = effects,
-#   true_coefs = true_coefs
+#   sim_data = sim$data_agg,
+#   effects = sim$effects,
+#   true_coefs = sim$true_coefs
 # )

@@ -13,7 +13,7 @@ mod_learn_interface_ui <- function(id){
     col_widths = c(-3, 6),
     tags$div(
       tags$h4("Workflow"),
-      tags$p("The interface provides different modules tailored to various use cases, categorized into ", tags$b("time‑varying"), " and ", tags$b("cross‑sectional"), " analyses. Each category supports specific applications, such as COVID-19 transmission tracking and public opinion polling, along with broader use cases. Regardless of the chosen module, the application adheres to a standard statistical analysis workflow:"),
+      tags$p("The interface provides different modules tailored to various use cases, categorized into ", tags$b("time-varying"), " and ", tags$b("cross-sectional"), " analyses. Each category supports specific applications, such as COVID-19 transmission tracking and public opinion polling, along with broader use cases. Regardless of the chosen module, the application adheres to a standard statistical analysis workflow:"),
       tags$ul(
         tags$li(tags$b("Data Cleaning:"), " Preprocess and display the input data."),
         tags$li(tags$b("Descriptive Statistics:"), " Visualize key summary statistics."),
@@ -32,11 +32,11 @@ mod_learn_interface_ui <- function(id){
       tags$p("The interface accepts data in two formats:",
       tags$ul(
         tags$li(tags$b("Individual-level:"), " Each row contains information for on individual."),
-        tags$li(tags$b("Aggregated:"), " Each row contains information for one group (e.g., White males aged 18–30 in Michigan), with geographic‑demographic factors, total numbers of individuals, and summary of outcomes.")
+        tags$li(tags$b("Aggregated:"), " Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.")
       )),
       tags$p("Aggregated data are preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),
       tags$h5("Required Columns and Categories", class = "mt-4"),
-      tags$p("The application screens input data using a specific naming convention. Here’s a list of the expected columns and their values (case-insensitive):"),
+      tags$p("The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):"),
       tags$ul(
         tags$li("Sex: male, female"),
         tags$li("Race: Black, White, other"),
@@ -53,17 +53,17 @@ mod_learn_interface_ui <- function(id){
       ),
       tags$p("1. For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.",
         class = "fst-italic small mb-1"),
-      tags$p("2. If the input sample data are in aggregated format, there has to be a column named ‘time’ that contains week indices. An optional ‘date’ column containing the date of the first day of each week can be included for visualization purposes. For individual‑level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.",
+      tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.",
         class = "fst-italic small mb-1"),
-      tags$p("3. In the individual‑level data, the binary outcome column must be named ‘positive’. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross‑tabulation cell, which should be named ‘total’ and ‘positive’, respectively.",
+      tags$p("3. In the individual-level data, the binary outcome column must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.",
         class = "fst-italic small mb-1"),
-      tags$p("4. Please name the column containing survey weights in the data ‘weight’. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
+      tags$p("4. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
         class = "fst-italic small"),
       tags$h5("Data Preprocessing", class = "mt-4"),
       tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to week index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
       tags$h5("Data Linking", class = "mt-4"),
       tags$p("To enhance linking capabilities, the interface identifies the smallest geographic unit in the sample data and infers corresponding larger geographic areas from the smallest units (e.g., ZIP code to county and state with most overlapping areas). Additionally, the interface supplements geographic covariates on the zip code level (e.g., urbanicity, Area Deprivation Index, etc.). More details are available on the ", tags$b("Learn > Data Preprocessing"), " page."),
-      # tags$p("The MRP interface facilitates linking to the ACS to obtain approximate population counts critical to poststratification. Users can select geographic factors and ACS data years, with specific restrictions for use cases of COVID-19 and public opinion polling data. Current options link COVID records to five-year ACS data (2017–2021) via ZIP codes and poll data to five-year ACS (2014–2018) via states. More options exist for general applications, including ZIP code, county, or state-based links.")
+      tags$p("The MRP interface facilitates linking to the ACS to obtain approximate population counts critical to poststratification. Users can select geographic factors and ACS data years, with specific restrictions for use cases of COVID-19 and public opinion polling data. Current options link COVID records to five-year ACS data (2017-2021) via ZIP codes and poll data to five-year ACS (2014-2018) via states. More options exist for general applications, including ZIP code, county, or state-based links."),
       tags$p("Input requirements differ between interface use case modules. Detailed columns for both sample and poststratification data are outlined below."),
       bslib::layout_columns(
         col_widths = c(6, 6),
@@ -79,7 +79,7 @@ mod_learn_interface_ui <- function(id){
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
               tags$li("ZIP code (zip): Each ZIP code is treated as distinct"),
-              tags$li("Time: Dates (yyyy‑mm‑dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
+              tags$li("Time: Dates (yyyy-mm-dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
             ),
             tags$p("2. Poststratification data"),
             tags$ul(
@@ -94,9 +94,9 @@ mod_learn_interface_ui <- function(id){
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
               tags$li("ZIP code: Each ZIP code is treated as distinct"),
-              tags$li("County: Five‑digit FIPS codes required due to duplicates in county names"),
+              tags$li("County: Five-digit FIPS codes required due to duplicates in county names"),
               tags$li("State: Names, abbreviations, or FIPS accepted"),
-              tags$li("Time: Dates (yyyy‑mm‑dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
+              tags$li("Time: Dates (yyyy-mm-dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
             ),
             tags$p("2. Poststratification data"),
             tags$ul(
@@ -131,7 +131,7 @@ mod_learn_interface_ui <- function(id){
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
               tags$li("ZIP code: Each ZIP code is treated as distinct"),
-              tags$li("County: Five‑digit FIPS codes required due to duplicates in county names"),
+              tags$li("County: Five-digit FIPS codes required due to duplicates in county names"),
               tags$li("State: Names, abbreviations, or FIPS accepted")
             ),
             tags$p("2. Poststratification data"),
@@ -183,7 +183,7 @@ mod_learn_interface_ui <- function(id){
             tags$a("Si et al. (2020),",
                     href = "https://arxiv.org/abs/1707.08220",
                     target = "_blank"),
-            " which can be assigned to three types of two‑way interactions:",
+            " which can be assigned to three types of two-way interactions:",
 
       ),
       tags$ul(
@@ -241,52 +241,52 @@ mod_learn_interface_server <- function(id, global){
     })
 
     output$example_cs <- DT::renderDT({
-      read.csv(app_sys("extdata/CES_data_aggregated.csv"))
+      readr::read_csv(app_sys("extdata/CES_data_aggregated.csv"), show_col_types = FALSE)
     })
 
     output$example_st <- DT::renderDT({
-      read.csv(app_sys("extdata/covid_test_records_aggregated.csv"))
+      readr::read_csv(app_sys("extdata/covid_test_records_aggregated.csv"), show_col_types = FALSE)
     })
 
     output$save_code_cs <- downloadHandler(
       filename = function() { "preprocess.R" },
       content = function(file) {
-        readLines(app_sys("extdata/preprocess_cs.R")) |> writeLines(file)
+        readLines(app_sys("extdata/preprocess_cs.R")) %>% writeLines(file)
       }
     )
 
     output$save_code_st <- downloadHandler(
       filename = function() { "preprocess.R" },
       content = function(file) {
-        readLines(app_sys("extdata/preprocess_st.R")) |> writeLines(file)
+        readLines(app_sys("extdata/preprocess_st.R")) %>% writeLines(file)
       }
     )
 
     output$save_ex_w_state <- downloadHandler(
       filename = function() { "CES_data_aggregated.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/CES_data_aggregated.csv")) |> readr::write_csv(file)
+        readr::read_csv(app_sys("extdata/CES_data_aggregated.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
       }
     )
 
     output$save_ex_wo_state <- downloadHandler(
       filename = function() { "CES_data_aggregated_wo_state.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/CES_data_aggregated_wo_state.csv")) |> readr::write_csv(file)
+        readr::read_csv(app_sys("extdata/CES_data_aggregated_wo_state.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
       }
     )
 
     output$save_ex_st <- downloadHandler(
       filename = function() { "covid_test_records_aggregated.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/covid_test_records_aggregated.csv")) |> readr::write_csv(file)
+        readr::read_csv(app_sys("extdata/covid_test_records_aggregated.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
       }
     )
 
     output$save_week_table <- downloadHandler(
       filename = function() { "week_conversion.csv" },
       content = function(file) {
-        read.csv(app_sys("extdata/week_conversion.csv")) |> readr::write_csv(file)
+        readr::read_csv(app_sys("extdata/week_conversion.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
       }
     )
 

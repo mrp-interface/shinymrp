@@ -12,10 +12,10 @@
 fips_upper <- function(fips) {
   has_county <- "county" %in% names(fips)
 
-  fips |> mutate(
-    state = toupper(state),
-    state_name = tools::toTitleCase(state_name),
-    county = if(has_county) tools::toTitleCase(county)
+  fips %>% mutate(
+    state = toupper(.data$state),
+    state_name = tools::toTitleCase(.data$state_name),
+    county = if(has_county) tools::toTitleCase(.data$county)
   )
 }
 
@@ -26,41 +26,41 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
     return(NULL)
   }
 
-  input_data <- input_data |> mutate(fips = input_data[[geo]])
-  fips_codes <- fips_codes |> fips_upper()
+  input_data <- input_data %>% mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes %>% fips_upper()
   
   total_count <- sum(input_data$total)
-  plot_df <- input_data |>
-    group_by(fips) |>
+  plot_df <- input_data %>%
+    group_by(.data$fips) %>%
     summarize(
-      count = sum(total),
-      perc = (sum(total) / total_count) * 100
-    ) |>
+      count = sum(.data$total),
+      perc = (sum(.data$total) / total_count) * 100
+    ) %>%
     left_join(fips_codes, by = "fips")
 
   if(for_map) {
     if(geo == "state") {
-      plot_df <- plot_df |> mutate(
-        value = count,
+      plot_df <- plot_df %>% mutate(
+        value = .data$count,
         hover = sprintf("%s: %d (%.2f%%)",
-                        state, count, perc)
+                        .data$state, .data$count, .data$perc)
       )
     } else {
-      plot_df <- plot_df |> mutate(
-        value = count,
+      plot_df <- plot_df %>% mutate(
+        value = .data$count,
         hover = sprintf("%s (%s): %d (%.2f%%)",
-                        county, state, count, perc)
+                        .data$county, .data$state, .data$count, .data$perc)
       )
     }
   } else {
     if(geo == "county") {
-      plot_df <- plot_df |> mutate(county = gsub(" [Cc][Oo][Uu][Nn][Tt][Yy]", "", county))
+      plot_df <- plot_df %>% mutate(county = gsub(" [Cc][Oo][Uu][Nn][Tt][Yy]", "", .data$county))
     }
     
-    plot_df <- plot_df |>
-      select(-c(fips, perc, state_name)) |>
-      select(-count, count) |>
-      arrange(desc(count))
+    plot_df <- plot_df %>%
+      select(-c(.data$fips, .data$perc, .data$state_name)) %>%
+      select(-.data$count, .data$count) %>%
+      arrange(desc(.data$count))
   }
 
 
@@ -78,27 +78,27 @@ prep_raw_support <- function(
     return(NULL)
   }
 
-  input_data <- input_data |> mutate(fips = input_data[[geo]])
-  fips_codes <- fips_codes |> fips_upper()
+  input_data <- input_data %>% mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes %>% fips_upper()
 
-  plot_df <- input_data |>
-    group_by(fips) |>
+  plot_df <- input_data %>%
+    group_by(.data$fips) %>%
     summarize(
-      num = sum(positive),
-      denom = sum(total),
-      support = sum(positive) / sum(total)
-    ) |>
+      num = sum(.data$positive),
+      denom = sum(.data$total),
+      support = sum(.data$positive) / sum(.data$total)
+    ) %>%
     left_join(fips_codes, by = "fips")
 
   if(geo == "state") {
-    plot_df <- plot_df |> mutate(
-      value = support,
-      hover = paste0(state, ": ", round(support, 4), " (", num, "/", denom, ")")
+    plot_df <- plot_df %>% mutate(
+      value = .data$support,
+      hover = paste0(.data$state, ": ", round(.data$support, 4), " (", .data$num, "/", .data$denom, ")")
     )
   } else {
-    plot_df <- plot_df |> mutate(
-      value = support,
-      hover = paste0(county, " (", state, "): ", round(support, 4), " (", num, "/", denom, ")")
+    plot_df <- plot_df %>% mutate(
+      value = .data$support,
+      hover = paste0(.data$county, " (", .data$state, "): ", round(.data$support, 4), " (", .data$num, "/", .data$denom, ")")
     )
   }
 
@@ -118,15 +118,15 @@ prep_raw_prev <- function(
     return(NULL)
   }
 
-  input_data <- input_data |> mutate(fips = input_data[[geo]])
-  fips_codes <- fips_codes |> fips_upper()
+  input_data <- input_data %>% mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes %>% fips_upper()
 
   # calculate weekly positive response rate and test counts for each county/state
-  plot_df <- input_data |>
-    group_by(fips, time) |>
+  plot_df <- input_data %>%
+    group_by(.data$fips, .data$time) %>%
     summarize(
-      prev = sum(positive) / sum(total),
-      tests = sum(total)
+      prev = sum(.data$positive) / sum(.data$total),
+      tests = sum(.data$total)
     )
 
   # compute only the requested extreme value (min or max)
@@ -141,29 +141,29 @@ prep_raw_prev <- function(
   }
   
   # compute the extreme prevalence value
-  plot_df <- plot_df |>
-    group_by(fips) |>
+  plot_df <- plot_df %>%
+    group_by(.data$fips) %>%
     summarize(
-      prev_value = extreme_fn(prev),
-      prev_sample = tests[which_fn(prev)]
-    ) |>
+      prev_value = extreme_fn(.data$prev),
+      prev_sample = .data$tests[which_fn(.data$prev)]
+    ) %>%
     left_join(fips_codes, by = "fips")
 
   # Create hover text
   if(geo == "state") {
-    plot_df <- plot_df |> mutate(
-      value = prev_value,
+    plot_df <- plot_df %>% mutate(
+      value = .data$prev_value,
       hover = paste0(
-        state, ": ", round(prev_value, 4),
-        " (", round(prev_sample * prev_value), '/', prev_sample, ")"
+        .data$state, ": ", round(.data$prev_value, 4),
+        " (", round(.data$prev_sample * .data$prev_value), '/', .data$prev_sample, ")"
       )
     )
   } else {
-    plot_df <- plot_df |> mutate(
-      value = prev_value,
+    plot_df <- plot_df %>% mutate(
+      value = .data$prev_value,
       hover = paste0(
-        county, " (", state, "): ", round(prev_value, 4),
-        " (", round(prev_sample * prev_value), '/', prev_sample, ")"
+        .data$county, " (", .data$state, "): ", round(.data$prev_value, 4),
+        " (", round(.data$prev_sample * .data$prev_value), '/', .data$prev_sample, ")"
       )
     )
   }
@@ -183,28 +183,28 @@ prep_est <- function(
     return(NULL)
   }
 
-  fips_codes <- fips_codes |> fips_upper()
+  fips_codes <- fips_codes %>% fips_upper()
   
   if(!is.null(time_index)) {
-    est_df <- est_df |> filter(time == time_index)
+    est_df <- est_df %>% filter(.data$time == time_index)
   }
 
-  plot_df <- est_df |>
-    rename("fips" = "factor") |>
+  plot_df <- est_df %>%
+    rename("fips" = "factor") %>%
     left_join(fips_codes, by = "fips")
 
   if(geo == "state") {
-    plot_df <- plot_df |> mutate(
-      value = est,
+    plot_df <- plot_df %>% mutate(
+      value = .data$est,
       hover = paste0(
-        state, ": ", round(est, 4), ' ± ', round(std, 4)
+        .data$state, ": ", round(.data$est, 4), ' \u00B1 ', round(.data$std, 4)
       )
     )
   } else {
-    plot_df <- plot_df |> mutate(
-      value = est,
+    plot_df <- plot_df %>% mutate(
+      value = .data$est,
       hover = paste0(
-        county, " (", state, "): ", round(est, 4), ' ± ', round(std, 4)
+        .data$county, " (", .data$state, "): ", round(.data$est, 4), ' \u00B1 ', round(.data$std, 4)
       )
     )
   }
@@ -225,24 +225,24 @@ plot_demographic <- function(
   }
 
   total_input <- sum(input_data$total)
-  input <- input_data |>
-    group_by(demo) |>
-    summarize(perc = sum(total) / total_input)
+  input <- input_data %>%
+    group_by(.data$demo) %>%
+    summarize(perc = sum(.data$total) / total_input)
 
   total_new <- sum(new_data$total)
-  new <- new_data |>
-    group_by(demo) |>
-    summarize(perc = sum(total) / total_new)
+  new <- new_data %>%
+    group_by(.data$demo) %>%
+    summarize(perc = sum(.data$total) / total_new)
 
   datasets <- c("Input Data", "Target Population")
-  plot_df <- rbind(input, new) |> mutate(
+  plot_df <- rbind(input, new) %>% mutate(
     dataset = rep(datasets, each = nrow(input))
   )
 
   if(separate) {
     p1 <- ggplot(
-      data = plot_df |> filter(dataset == datasets[1]),
-      aes(x = demo, y = perc)
+      data = plot_df %>% filter(.data$dataset == datasets[1]),
+      aes(x = .data$demo, y = .data$perc)
     ) +
       geom_bar(
         stat = "identity",
@@ -254,9 +254,9 @@ plot_demographic <- function(
       )
 
     p2 <- ggplot(
-      data = plot_df |> filter(dataset == datasets[2]),
-      aes(x = demo,
-          y = perc)
+      data = plot_df %>% filter(.data$dataset == datasets[2]),
+      aes(x = .data$demo,
+          y = .data$perc)
     ) +
       geom_bar(
         stat = "identity",
@@ -273,9 +273,9 @@ plot_demographic <- function(
     p <- ggplot(
       data = plot_df,
       aes(
-        x = demo,
-        y = perc,
-        fill = dataset
+        x = .data$demo,
+        y = .data$perc,
+        fill = .data$dataset
       )
     ) +
       geom_bar(
@@ -319,7 +319,7 @@ plot_geographic <- function(
 
   p <- ggplot(
     data = covariates,
-    aes(x = covar)
+    aes(x = .data$covar)
   ) +
     geom_histogram(breaks = breaks)
     
@@ -373,31 +373,31 @@ plot_prev <- function(
     return(NULL)
   }
 
-  plot_df <- raw |>
-    group_by(time) |>
-    summarize(prev = sum(positive) / sum(total)) |>
+  plot_df <- raw %>%
+    group_by(.data$time) %>%
+    summarize(prev = sum(.data$positive) / sum(.data$total)) %>%
     right_join(
       data.frame(time = 1:max(raw$time, na.rm = TRUE)),
       by = "time"
     )
 
   if(!is.null(estimate)) {
-    plot_df <- plot_df |>
-      left_join(estimate, by = "time") |>
+    plot_df <- plot_df %>%
+      left_join(estimate, by = "time") %>%
       mutate(
-        bound_upper = est + std,
-        bound_lower = est - std
+        bound_upper = .data$est + .data$std,
+        bound_lower = .data$est - .data$std
       )
     plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
   }
 
   p <- ggplot(
     data = plot_df,
-    aes(x = time)
+    aes(x = .data$time)
   ) +
     geom_line(
       aes(
-        y = prev,
+        y = .data$prev,
         color = "Raw"
       ),
       linewidth = 1.5
@@ -407,16 +407,16 @@ plot_prev <- function(
     p <- p +
       geom_line(
         aes(
-          y = est,
+          y = .data$est,
           color = "MRP"
         ),
         linewidth = 1.5
       ) +
       geom_ribbon(
         aes(
-          y = est,
-          ymin = bound_lower,
-          ymax = bound_upper
+          y = .data$est,
+          ymin = .data$bound_lower,
+          ymax = .data$bound_upper
         ),
         fill = mrp_color,
         alpha = 0.5
@@ -432,7 +432,7 @@ plot_prev <- function(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
       y = "Positive\nResponse Rate",
-      caption = if(show_caption) "*The shaded areas represent ±1 SD of uncertainty" else NULL
+      caption = if(show_caption) "*The shaded areas represent \u00B11 SD of uncertainty" else NULL
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -473,15 +473,15 @@ plot_support <- function(
       upper = raw_mean
     ),
     yrep_est
-  ) |>
-    mutate(data = factor(data, levels = c("Raw", "Estimate")))
+  ) %>%
+    mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
 
   p <- ggplot(data = plot_df) +
     geom_point(
-      aes(x = data, y = median)
+      aes(x = .data$data, y = .data$median)
     ) +
     geom_errorbar(
-      aes(x = data, ymin = lower, ymax = upper),
+      aes(x = .data$data, ymin = .data$lower, ymax = .data$upper),
       width = 0
     ) +
     scale_y_continuous(
@@ -508,13 +508,13 @@ plot_ppc_covid_subset <- function(
     return(NULL)
   }
 
-  raw <- raw |>
-    group_by(time) |>
+  raw <- raw %>%
+    group_by(.data$time) %>%
     summarize(
-      prev = sum(positive) / sum(total)
+      prev = sum(.data$positive) / sum(.data$total)
     )
 
-  yrep <- yrep |> tidyr::pivot_longer(
+  yrep <- yrep %>% tidyr::pivot_longer(
     cols = setdiff(names(yrep), "time"),
     names_to = "name",
     values_to = "value"
@@ -528,8 +528,8 @@ plot_ppc_covid_subset <- function(
     geom_line(
       data = raw,
       aes(
-        x = time,
-        y = prev,
+        x = .data$time,
+        y = .data$prev,
         color = "Raw"
       ),
       linewidth = 2
@@ -537,9 +537,9 @@ plot_ppc_covid_subset <- function(
     geom_line(
       data = yrep,
       aes(
-        x = time,
-        y = value,
-        group = name,
+        x = .data$time,
+        y = .data$value,
+        group = .data$name,
         color = "Replicated"
       ),
       alpha = 0.8
@@ -579,15 +579,15 @@ plot_ppc_covid_all <- function(
     return(NULL)
   }
 
-  plot_df <- raw |>
-    group_by(time) |>
+  plot_df <- raw %>%
+    group_by(.data$time) %>%
     summarise(
-      prev = sum(positive) / sum(total)
-    ) |>
+      prev = sum(.data$positive) / sum(.data$total)
+    ) %>%
     right_join(
       data.frame(time = 1:max(raw$time, na.rm = TRUE)),
       by = "time"
-    ) |>
+    ) %>%
     left_join(yrep, by = "time")
 
   plot_df$lower[plot_df$lower < 0] <- 0
@@ -599,27 +599,27 @@ plot_ppc_covid_all <- function(
 
   p <- ggplot(
     data = plot_df,
-    aes(x = time)
+    aes(x = .data$time)
   ) +
     geom_line(
       aes(
-        y = prev,
+        y = .data$prev,
         color = "Raw"
       ),
       linewidth = 1.5
     ) +
     geom_line(
       aes(
-        y = median,
+        y = .data$median,
         color = "Replicated"
       ),
       linewidth = 1.5
     ) +
     geom_ribbon(
       aes(
-        y = median,
-        ymin = lower,
-        ymax = upper
+        y = .data$median,
+        ymin = .data$lower,
+        ymax = .data$upper
       ),
       fill = yrep_color,
       alpha = 0.5
@@ -672,10 +672,10 @@ plot_ppc_poll <- function(
   ggplot(data = plot_df) +
     geom_point(
       aes(
-        x = name,
-        y = value,
-        color = name,
-        shape = name
+        x = .data$name,
+        y = .data$value,
+        color = .data$name,
+        shape = .data$name
       ),
       size = 3
     ) +
@@ -696,17 +696,17 @@ plot_est_temporal <- function(df, dates) {
     return(NULL)
   }
 
-  levels <- unique(df$factor) |> sort()
-  labels <- levels |> as.character() |> tools::toTitleCase()
+  levels <- unique(df$factor) %>% sort()
+  labels <- levels %>% as.character() %>% tools::toTitleCase()
 
   colors <- RColorBrewer::brewer.pal(8, "Set1")[1:length(levels)]
   step <- max(1, floor(max(df$time, na.rm = TRUE) / 15))
   xticks <- seq(1, max(df$time, na.rm = TRUE), step)
   xticklabels <- if(!is.null(dates)) dates[xticks] else xticks
 
-  df <- df |> mutate(
-    bound_lower = est - std,
-    bound_upper = est + std
+  df <- df %>% mutate(
+    bound_lower = .data$est - .data$std,
+    bound_upper = .data$est + .data$std
   )
   df$bound_lower[df$bound_lower < 0] <- 0
   limits <- c(0, max(df$bound_upper, na.rm = TRUE))
@@ -717,13 +717,13 @@ plot_est_temporal <- function(df, dates) {
   plot_list[[i]] <- ggplot(
     data = df,
     aes(
-      x = time,
-      y = est,
-      group = factor
+      x = .data$time,
+      y = .data$est,
+      group = .data$factor
     )
   ) +
     geom_line(
-      aes(colour = factor),
+      aes(colour = .data$factor),
       alpha = 0.8,
       linewidth = 1.5
     ) +
@@ -735,23 +735,23 @@ plot_est_temporal <- function(df, dates) {
   for(level in levels) {
     i <- i + 1
     plot_list[[i]] <- ggplot(
-      data = df |> filter(factor == level),
+      data = df %>% filter(.data$factor == level),
       aes(
-        x = time,
-        y = est,
-        group = factor
+        x = .data$time,
+        y = .data$est,
+        group = .data$factor
       )
     ) +
       geom_line(
-        aes(color = factor),
+        aes(color = .data$factor),
         alpha = 0.8,
         linewidth = 1.5
       ) +
       geom_ribbon(
         aes(
-          fill = factor,
-          ymin = bound_lower,
-          ymax = bound_upper
+          fill = .data$factor,
+          ymin = .data$bound_lower,
+          ymax = .data$bound_upper
         ),
         alpha = 0.5
       ) +
@@ -785,7 +785,7 @@ plot_est_temporal <- function(df, dates) {
     ncol = 1,
     nrow = length(levels) + 1
   ) +
-    patchwork::plot_annotation(caption = "*The shaded areas represent ±1 SD of uncertainty") &
+    patchwork::plot_annotation(caption = "*The shaded areas represent \u00B11 SD of uncertainty") &
     theme(plot.caption = element_text(hjust = 0.5))
 
   return(p)
@@ -799,15 +799,15 @@ plot_est_static <- function(plot_df) {
   p <- ggplot(data = plot_df) +
     geom_point(
       aes(
-        x = factor,
-        y = est
+        x = .data$factor,
+        y = .data$est
       )
     ) +
     geom_errorbar(
       aes(
-        x = factor,
-        ymin = est - std,
-        ymax = est + std
+        x = .data$factor,
+        ymin = .data$est - .data$std,
+        ymax = .data$est + .data$std
       ),
       alpha = 0.8,
       width = 0
@@ -842,7 +842,7 @@ choro_map <- function(
   }
 
   # build the chart
-  hc <- highcharter::highchart(type = "map") |>
+  hc <- highcharter::highchart(type = "map") %>%
     highcharter::hc_add_series_map(
       map        = geojson,
       df         = plot_df,
@@ -854,17 +854,17 @@ choro_map <- function(
         pointFormat = "{point.hover}"
       ),
       borderWidth= 0.1
-    ) |>
+    ) %>%
     highcharter::hc_title(
       text = main_title,
       align = "center",
       style = list(fontSize = "20px")
-    ) |>
-    highcharter::hc_mapNavigation(enabled = TRUE) |>
+    ) %>%
+    highcharter::hc_mapNavigation(enabled = TRUE) %>%
     highcharter::hc_boost(enabled = FALSE)
 
   if(!is.null(config$minValue) && !is.null(config$maxValue)) {
-    hc <- hc |>
+    hc <- hc %>%
       highcharter::hc_colorAxis(
         min = config$minValue,
         max = config$maxValue

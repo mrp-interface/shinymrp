@@ -10,8 +10,8 @@
 #' @import purrr
 #' @import stringr
 create_formula <- function(effects) {
-  m_fix_c <- names(effects$m_fix_c) |>
-    purrr::map_chr(function(s) strsplit(s, "\\.")[[1]][1]) |>
+  m_fix_c <- names(effects$m_fix_c) %>%
+    purrr::map_chr(function(s) strsplit(s, "\\.")[[1]][1]) %>%
     unique()
 
   fixed <- c(names(effects$m_fix_bc), m_fix_c, names(effects$i_fixsl))
@@ -124,8 +124,8 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
     eff1 = main_effects,
     eff2 = main_effects,
     stringsAsFactors = FALSE
-  ) |>
-    filter(eff1 != eff2)
+  ) %>%
+    filter(.data$eff1 != .data$eff2)
   
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
   int <- paste0(df$eff1, ":", df$eff2)
@@ -275,7 +275,7 @@ data_ <- function(effects, gq_data) {
   m_fix_c_names <- purrr::map_chr(
     names(effects$m_fix_c),
     function(s) strsplit(s, split = "\\.")[[1]][1]
-  ) |> 
+  ) %>% 
     unique()
   for(s in union(m_fix_c_names, names(effects$m_var))) {
     scode <- paste0(scode, str_interp("
@@ -388,13 +388,13 @@ transformed_parameters_ <- function(effects) {
   scode <- ""
   
   struct_effects <- c(
-    names(effects$s_varsl) |>
+    names(effects$s_varsl) %>%
       map(function(s) strsplit(s, ':')[[1]][1]),
-    names(c(effects$s_varit, effects$s_varits)) |>
+    names(c(effects$s_varit, effects$s_varits)) %>%
       map(function(s) strsplit(s, ':')[[1]]) %>%
       do.call(c, .)
-  ) |>
-    unlist() |>
+  ) %>%
+    unlist() %>%
     unique()
   
   # varying main effects
@@ -643,37 +643,45 @@ generated quantities { ${gq}
 }
 
 stan_factor <- function(df, ignore_columns = NULL) {
-  # Get column names
+  # find the columns to mutate
   col_names <- setdiff(names(df), ignore_columns)
   
-  # Loop through columns and check data type
-  for (col in col_names) {
-    dtype <- data_type(df[[col]])
-    if(dtype == "bin" | dtype == "cat") {
-      # If column class is factor, convert to character
-      if(is.factor(df[[col]])) {
-        df[[col]] <- as.character(df[[col]])
-      }
-
-      # Rename raw column
-      raw_col <- paste0(col, "_raw")
-      df <- df |> rename(!!raw_col := !!col)
-      
-      # Create new numeric factor column
-      df[[col]] <- df[[raw_col]] |> factor() |> as.numeric()
-      
-      if(dtype == "bin") {
-        df[[col]] <- df[[col]] - 1
-      }
-    } else if(dtype == "cont") {
-      # Standardize continuous data
-      df[[col]] <- scale(df[[col]]) |> array()
-      
-    }
-  }
+  # save the “raw” columns
+  df_raw <- df %>%
+    select(all_of(col_names)) %>%
+    rename_with(~ paste0(.x, "_raw"), everything())
   
-  return(df)
+  # transform the original columns in-place
+  df_mutated <- df %>%
+    mutate(
+      across(
+        all_of(col_names),
+        ~ {
+          vec   <- .
+          dtype <- data_type(vec)
+          
+          if (dtype %in% c("bin", "cat")) {
+            if (is.factor(vec)) vec <- as.character(vec)
+            enc <- as.numeric(factor(vec))
+            if (dtype == "bin") enc <- enc - 1L
+            enc
+            
+          } else if (dtype == "cont") {
+            as.numeric(scale(vec))
+            
+          } else {
+            vec
+          }
+        }
+      )
+    )
+  
+  # concatenate the "raw" columns
+  df_out <- bind_cols(df_mutated, df_raw)
+  
+  return(df_out)
 }
+
 
 
 make_standata <- function(
@@ -704,8 +712,8 @@ make_standata <- function(
     subfix <- if(name == "input") '' else "_pop"
 
     # fixed main effects (continuous && binary)
-    X_cont <- dat |>
-      select(all_of(names(effects$m_fix_bc))) |>
+    X_cont <- dat %>%
+      select(all_of(names(effects$m_fix_bc))) %>%
       data.matrix()
 
     # fixed main effects (categorical)
@@ -731,7 +739,7 @@ make_standata <- function(
     m_fix_c_names <- purrr::map_chr(
       names(effects$m_fix_c),
       function(s) strsplit(s, split = "\\.")[[1]][1]
-    ) |> 
+    ) %>% 
       unique()
     for(s in union(m_fix_c_names, names(effects$m_var))) {
       stan_data[[str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
@@ -747,7 +755,7 @@ make_standata <- function(
       unq_int_lvls <- sort(unique(int_lvls))
       n_int_lvls <- length(unq_int_lvls)
       stan_data[[str_interp("N_${s}${subfix}")]] <- n_int_lvls
-      stan_data[[str_interp("J_${s}${subfix}")]] <- factor(int_lvls, levels = unq_int_lvls, labels = 1:n_int_lvls) |> as.numeric()
+      stan_data[[str_interp("J_${s}${subfix}")]] <- factor(int_lvls, levels = unq_int_lvls, labels = 1:n_int_lvls) %>% as.numeric()
       
       if(name == "input") {
         stan_data[[str_interp("I_${s}")]] <- unq_int_lvls
@@ -756,17 +764,17 @@ make_standata <- function(
   }
 
   # poststratification
-  pstrat_data <- new_data |> 
+  pstrat_data <- new_data %>%
     mutate(
-      sex = sex + 1,
+      sex = .data$sex + 1,
       overall = 1
     )
   for(s in c("overall", gq_data$subgroups)) {
     group_cols <- if(gq_data$temporal) c("time", s) else c(s)
     
-    pop_prop <- pstrat_data |>
-      group_by(!!!syms(group_cols)) |>
-      mutate(prop = total / sum(total))
+    pop_prop <- pstrat_data %>%
+      group_by(!!!syms(group_cols)) %>%
+      mutate(prop = .data$total / sum(.data$total))
     
     if(s != "overall") {
       stan_data[[str_interp("N_${s}_pstrat")]] <- n_distinct(pstrat_data[[s]])
@@ -826,7 +834,11 @@ run_mcmc <- function(
     seed = seed
   )
   
-  return(list(fit, stan_data, stan_code))
+  return(list(
+    fit = fit,
+    stan_data = stan_data,
+    stan_code = stan_code
+  ))
 }
 
 run_gq <- function(
@@ -836,14 +848,13 @@ run_gq <- function(
     n_chains
   ) {
   
-  suppressMessages({
-    mod_gq <- cmdstanr::cmdstan_model(
-      stan_file = cmdstanr::write_stan_file(stan_code),
-      cpp_options = list(stan_threads = TRUE)
-    )
-  })
+
+  mod_gq <- cmdstanr::cmdstan_model(
+    stan_file = cmdstanr::write_stan_file(stan_code),
+    cpp_options = list(stan_threads = TRUE)
+  )
   
-  capture.output({
+  utils::capture.output({
     fit_gq <- mod_gq$generate_quantities(
       fit_mcmc,
       data = stan_data,
@@ -857,10 +868,10 @@ run_gq <- function(
 
 add_ref_lvl <- function(df_fixed, effects, input_data) {
   ### include reference levels for binary variables
-  m_fix_bc_names <- names(effects$m_fix_bc) |>
+  m_fix_bc_names <- names(effects$m_fix_bc) %>%
     purrr::map_chr(function(s) {
       if (data_type(input_data[[s]]) == "bin") {
-        df <- data.frame(x = input_data[[s]]) |> stan_factor()
+        df <- data.frame(x = input_data[[s]]) %>% stan_factor()
         eq1 <- unique(df$x_raw[df$x == 1])
         paste0(s, ".", eq1)
       } else {
@@ -872,16 +883,16 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
 
   ### include reference levels for categorical variables
   # get variable names
-  m_fix_c_vars <- names(effects$m_fix_c) |>
-    purrr::map_chr(function(s) strsplit(s, split = '\\.')[[1]][1]) |>
+  m_fix_c_vars <- names(effects$m_fix_c) %>%
+    purrr::map_chr(function(s) strsplit(s, split = '\\.')[[1]][1]) %>%
     unique()
 
   # dummy variables including reference levels
-  m_fix_c_names <- m_fix_c_vars |>
+  m_fix_c_names <- m_fix_c_vars %>%
     purrr::map(function(s) {
       levels <- sort(unique(input_data[[s]]))
       paste0(s, ".", levels)
-    }) |>
+    }) %>%
     unlist(use.names = FALSE)
 
   row_names <- c("Intercept", m_fix_bc_names, m_fix_c_names, names(effects$i_fixsl))
@@ -906,8 +917,8 @@ extract_parameters <- function(fit, effects, input_data) {
       posterior::default_summary_measures()[1:4],
       quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
       posterior::default_convergence_measures()
-    ) |>
-      select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
+    ) %>%
+      select(.data$mean, .data$sd, .data$`q2.5`, .data$`q97.5`, .data$rhat, .data$ess_bulk, .data$ess_tail) %>%
       as.data.frame()
 
     # rename columns and rows
@@ -959,15 +970,18 @@ extract_parameters <- function(fit, effects, input_data) {
   }
 
   if(nrow(df_varying) > 0) {
-    df_varying <- df_varying |>
-      select(mean, sd, `q2.5`, `q97.5`, rhat, ess_bulk, ess_tail) |>
+    df_varying <- df_varying %>%
+      select(.data$mean, .data$sd, .data$`q2.5`, .data$`q97.5`, .data$rhat, .data$ess_bulk, .data$ess_tail) %>%
       as.data.frame()
 
     names(df_varying) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
     row.names(df_varying) <- row_names
   }
 
-  return(list(df_fixed, df_varying))
+  return(list(
+    fixed = df_fixed,
+    varying = df_varying
+  ))
 }
 
 extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
@@ -994,15 +1008,16 @@ extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
                        low_ebfmi_count, total_chains)
   
   # Create and return data frame
-  result <- data.frame(
+  summary <- data.frame(
     Metric = c("Divergence", "Maximum tree depth", "E-BFMI"),
     Message = c(divergent_msg, treedepth_msg, ebfmi_msg),
     stringsAsFactors = FALSE
   )
-
-  show_warnings <- total_divergent > 0
   
-  return(list(result, show_warnings))
+  return(list(
+    summary = summary,
+    show_warnings = total_divergent > 0
+  ))
 }
 
 extract_est <- function(
@@ -1014,9 +1029,9 @@ extract_est <- function(
 
   # convert new data to numeric factors
   col_names <- if(gq_data$temporal) c(gq_data$subgroups, "time") else gq_data$subgroups
-  new_data <- new_data |>
-    select(all_of(col_names)) |>
-    mutate(overall = "overall") |>  # add placeholder column for overall estimates
+  new_data <- new_data %>%
+    select(all_of(col_names)) %>%
+    mutate(overall = "overall") %>%  # add placeholder column for overall estimates
     stan_factor()
 
   est <- list()
@@ -1026,20 +1041,20 @@ extract_est <- function(
     pred_mat <- fit$draws(
       variables = str_interp("p_${s}_pop"),
       format = "draws_matrix"
-    ) |> t()
+    ) %>% t()
 
     col_names <- if(gq_data$temporal) c("time", s) else c(s)
     raw_col_names <- paste0(col_names, "_raw")
     new_col_names <- if(gq_data$temporal) c("time", "factor") else c("factor")
 
     # Order raw levels based on numeric levels to match order of posterior draws matrix
-    est[[s]] <- new_data |>
-      arrange(across(all_of(col_names))) |>
-      distinct(across(all_of(raw_col_names))) |>
-      setNames(new_col_names) |>
+    est[[s]] <- new_data %>%
+      arrange(across(all_of(col_names))) %>%
+      distinct(across(all_of(raw_col_names))) %>%
+      stats::setNames(new_col_names) %>%
       mutate(
-        est = pred_mat |> apply(1, mean),
-        std = pred_mat |> apply(1, sd)
+        est = pred_mat %>% apply(1, mean),
+        std = pred_mat %>% apply(1, stats::sd)
       )
   }
 
@@ -1059,7 +1074,7 @@ extract_yrep <- function(
   yrep_mat <- fit$draws(
     variables = "y_rep",
     format = "draws_matrix"
-  )|> t()
+  )%>% t()
   
   yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), N)]   # subset draws
   
@@ -1067,32 +1082,32 @@ extract_yrep <- function(
   qupper <- 1 - qlower
 
   if(gq_data$temporal) {
-    agg_df <- yrep_mat |>
-      as.data.frame() |>
+    agg_df <- yrep_mat %>%
+      as.data.frame() %>%
       mutate(
         time = input_data$time,
         total = input_data$total
-      ) |>
-      group_by(time) |>
-      summarise_all(sum) |>
+      ) %>%
+      group_by(.data$time) %>%
+      summarise_all(sum) %>%
       ungroup()
 
     agg_tests <- agg_df$total
     time <- agg_df$time
 
-    est <- agg_df |>
-      select(-c(time, total)) |>
+    est <- agg_df %>%
+      select(-c("time", "total")) %>%
       mutate_all(function(c) c / agg_tests)
 
     if(summarize) {
       est <- data.frame(
         time = time,
-        upper = est |> apply(1, quantile, qlower),
-        lower = est |> apply(1, quantile, qupper),
-        median = est |> apply(1, quantile, 0.5)
+        upper = est %>% apply(1, stats::quantile, qlower),
+        lower = est %>% apply(1, stats::quantile, qupper),
+        median = est %>% apply(1, stats::quantile, 0.5)
       )
     } else {
-      est <- est |> mutate(time = time)
+      est <- est %>% mutate(time = time)
     }
 
   } else {
@@ -1100,9 +1115,9 @@ extract_yrep <- function(
 
     if(summarize) {
       est <- data.frame(
-        upper  = quantile(est, qlower),
-        lower  = quantile(est, qupper),
-        median = quantile(est, 0.5)
+        upper  = stats::quantile(est, qlower),
+        lower  = stats::quantile(est, qupper),
+        median = stats::quantile(est, 0.5)
       )
     }
 

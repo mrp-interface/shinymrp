@@ -123,14 +123,14 @@ mod_analyze_result_server <- function(id, global){
           show_caption = TRUE
         )
       } else {
-        selected_model()$est$overall |>
+        selected_model()$est$overall %>%
           mutate(
             data = "Estimate",
-            lower = est - std,
-            median = est,
-            upper = est + std
-          ) |>
-          select(data, lower, median, upper) |>
+            lower = .data$est - .data$std,
+            median = .data$est,
+            upper = .data$est + .data$std
+          ) %>%
+          select(.data$data, .data$lower, .data$median, .data$upper) %>%
           plot_support(selected_model()$mrp$input)
       }
     }, height = function() GLOBAL$ui$plot_height)
@@ -176,7 +176,7 @@ mod_analyze_result_server <- function(id, global){
           } else {
             model_names <- purrr::map_chr(models, ~ .x$name)
             model_ids <- purrr::map_chr(models, ~ .x$IDs$main)
-            choices <- setNames(model_ids, model_names)
+            choices <- stats::setNames(model_ids, model_names)
             selected <- if(model_select_buffer() %in% choices) model_select_buffer() else choices[1]
             updateSelectInput(session, inputId = "model_select", choices = choices, selected = selected)
           }
@@ -202,7 +202,7 @@ mod_analyze_result_server <- function(id, global){
 
       # Update the geographic scale select options.
       choices <- intersect(names(selected_model()$est), GLOBAL$vars$geo)
-      choices <- setNames(choices, tools::toTitleCase(choices))
+      choices <- stats::setNames(choices, tools::toTitleCase(choices))
       updateSelectInput(session, inputId = "geo_scale_select", choices = choices)
     })
   
@@ -214,8 +214,8 @@ mod_analyze_result_server <- function(id, global){
       req(input$geo_scale_select, input$geo_view_select)
       
       geo <- isolate(input$geo_scale_select)
-      fips_df <- global$extdata$fips[[geo]] |>
-        filter(fips %in% selected_model()$mrp$levels[[geo]]) |>
+      fips_df <- global$extdata$fips[[geo]] %>%
+        filter(.data$fips %in% selected_model()$mrp$levels[[geo]]) %>%
         fips_upper()
       choices <- sort(fips_df[[geo]])
       updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])

@@ -7,7 +7,6 @@
 #' @noRd
 #'
 #' @import dplyr
-#' @import zeallot
 read_data <- function(file_path) {
   if(stringr::str_ends(file_path, "csv")) {
     readr::read_csv(file_path, show_col_types = FALSE)
@@ -19,18 +18,18 @@ read_data <- function(file_path) {
 }
 
 clean_names <- function(names) {
-  names |> 
-    tolower() |> 
-    gsub("[0-9]", "_", x = _) |>
-    gsub("[^[:alpha:]]", "_", x = _) |>
-    gsub("_{2,}", "_", x = _) |>
-    gsub("^_|_$", "", x = _)
+  names %>% 
+    tolower() %>% 
+    gsub("[0-9]", "_", .) %>%
+    gsub("[^[:alpha:]]", "_", .) %>%
+    gsub("_{2,}", "_", .) %>%
+    gsub("^_|_$", "", .)
 }
 
 
 clean_chr <- function(df) {
   # Convert character columns to lowercase and trim whitespace
-  df |> mutate(across(where(is.character), 
+  df %>% mutate(across(where(is.character), 
                 ~str_trim(tolower(.x))))
 }
 
@@ -91,7 +90,7 @@ clean_data <- function(
   df <- clean_chr(df)
 
   # Convert common NA strings to actual NA
-  df <- df |> 
+  df <- df %>% 
     mutate(across(everything(), 
                  ~if_else(.x %in% na_strings, NA, .x)))
 
@@ -157,28 +156,29 @@ impute <- function(v) {
 get_week_indices <- function(strings) {
   # extract week numbers, months and years from dates
   years_weeks <- ISOweek::ISOweek(strings)
-  years <- years_weeks |> sapply(substr, start = 1, stop = 4) |> as.numeric()
-  weeks <- years_weeks |> sapply(substr, start = 7, stop = 8) |> as.numeric()
-  months <- strings |> as.Date() |> format("%m") |> as.numeric()
+  years <- years_weeks %>% sapply(substr, start = 1, stop = 4) %>% as.numeric()
+  weeks <- years_weeks %>% sapply(substr, start = 7, stop = 8) %>% as.numeric()
+  months <- strings %>% as.Date() %>% format("%m") %>% as.numeric()
 
   # find year range
-  c(low, high) %<-% range(years)
-  all_years <- low:high
+  year_min <- min(years)
+  year_max <- max(years)
+  all_years <- year_min:year_max
 
 
-  if(low == high) {
+  if(year_min == year_max) {
     weeks_accum <- weeks
     timeline_week <- min(weeks_accum):max(weeks_accum)
-    timeline_year <- rep(low, length(timeline_week))
+    timeline_year <- rep(year_min, length(timeline_week))
   } else {
     # add offsets to week numbers in later years
-    weeks_per_year <- paste0(all_years, "-12-28") |>
-      ISOweek::ISOweek() |>
-      sapply(substr, start = 7, stop = 8) |>
+    weeks_per_year <- paste0(all_years, "-12-28") %>%
+      ISOweek::ISOweek() %>%
+      sapply(substr, start = 7, stop = 8) %>%
       as.numeric()
 
     weeks_offset <- c(0, cumsum(weeks_per_year[1:(length(weeks_per_year)-1)]))
-    offsets <- years |> sapply(function(y) weeks_offset[which(all_years == y)])
+    offsets <- years %>% sapply(function(y) weeks_offset[which(all_years == y)])
 
     weeks_accum <- weeks + offsets
     weeks_accum <- weeks_accum - min(weeks_accum) + 1
@@ -207,20 +207,23 @@ get_week_indices <- function(strings) {
   # get the start of each week
   timeline_date <- mapply(function(y, w) sprintf("%d-W%02d-1", y, w),
                           timeline_year,
-                          timeline_week) |>
+                          timeline_week) %>%
     ISOweek::ISOweek2date()
 
 
-  return(list(weeks_accum, timeline_date))
+  return(list(
+    indices = weeks_accum,
+    timeline = timeline_date
+  ))
 }
 
 get_dates <- function(df) {
-  df$date |>
-    na.omit() |>
-    unique() |>
-    as.Date() |>
-    sort() |>
-    format(GLOBAL$ui$date_format) |>
+  df$date %>%
+    stats::na.omit() %>%
+    unique() %>%
+    as.Date() %>%
+    sort() %>%
+    format(GLOBAL$ui$date_format) %>%
     as.character()
 }
 
@@ -234,18 +237,18 @@ recode_values <- function(df, expected_levels, covid=FALSE) {
   age_bounds <- regmatches(
     ranges,
     regexpr("^\\d+", ranges)
-  ) |>
+  ) %>%
     as.numeric()
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
   colnames <- names(df)
 
-  df <- df |> mutate(
-    sex  = if("sex" %in% colnames) if_else(sex %in% expected_levels$sex, sex, NA),
-    race = if("race" %in% colnames) if_else(race %in% c(expected_levels$race, NA), race, "other"),
-    age  = if("age" %in% colnames) cut(df$age, breaks, ranges) |> as.character(),
-    edu  = if("edu" %in% colnames) if_else(edu %in% expected_levels$edu, edu, NA),
+  df <- df %>% mutate(
+    sex  = if("sex" %in% colnames) if_else(.data$sex %in% expected_levels$sex, .data$sex, NA),
+    race = if("race" %in% colnames) if_else(.data$race %in% c(expected_levels$race, NA), .data$race, "other"),
+    age  = if("age" %in% colnames) cut(df$age, breaks, ranges) %>% as.character(),
+    edu  = if("edu" %in% colnames) if_else(.data$edu %in% expected_levels$edu, .data$edu, NA),
     positive = if("positive" %in% colnames) case_match(
-      as.character(positive),
+      as.character(.data$positive),
       c("positive", "detected", "yes", "y", "true", "1") ~ 1,
       c("negative", "undetected", "no", "n", "false", "0") ~ 0
     )
@@ -278,7 +281,7 @@ to_fips <- function(vec, fips_county_state, link_geo = c("county", "state")) {
     fips <- sprintf(fmt, vec)
   } else {
     # Otherwise, find best matching column
-    counts <- lookup_df |> apply(2, function(c) sum(vec %in% c))
+    counts <- lookup_df %>% apply(2, function(c) sum(vec %in% c))
     colname <- names(counts)[which.max(counts)]
 
     fips <- lookup_df$fips[match(vec, lookup_df[[colname]])]
@@ -288,16 +291,16 @@ to_fips <- function(vec, fips_county_state, link_geo = c("county", "state")) {
 }
 
 get_geo_predictors <- function(df, geo_col) {
-  bool <- df |>
-    group_by(!!sym(geo_col)) |>
-    summarize_all(n_distinct) |>
-    lapply(function(c) all(c == 1)) |>
+  bool <- df %>%
+    group_by(!!sym(geo_col)) %>%
+    summarize_all(n_distinct) %>%
+    lapply(function(c) all(c == 1)) %>%
     unlist()
 
   geo_pred_cols <- names(bool)[bool]
 
-  geo_preds <- df |>
-    select(all_of(c(geo_col, geo_pred_cols))) |>
+  geo_preds <- df %>%
+    select(all_of(c(geo_col, geo_pred_cols))) %>%
     distinct(!!sym(geo_col), .keep_all = TRUE)
 
   return(geo_preds)
@@ -305,7 +308,7 @@ get_geo_predictors <- function(df, geo_col) {
 
 get_smallest_geo <- function(col_names, geo_col) {
   # Find the smallest geographic index
-  idx <- match(col_names, GLOBAL$vars$geo) |> na.omit()
+  idx <- match(col_names, GLOBAL$vars$geo) %>% stats::na.omit()
   if (length(idx) == 0) {
     return(NULL)
   }
@@ -331,11 +334,11 @@ append_geo <- function(input_data, zip_county_state, geo_all) {
   geo_vars <- geo_all[smallest$idx:length(geo_all)]
 
   # Prepare geographic crosswalk
-  zip_county_state <- zip_county_state |>
-    select(zip, fips) |>
-    rename(county = fips) |>
-    mutate(state = substr(county, 1, 2)) |>
-    select(all_of(geo_vars)) |>
+  zip_county_state <- zip_county_state %>%
+    select(.data$zip, .data$fips) %>%
+    rename(county = .data$fips) %>%
+    mutate(state = substr(.data$county, 1, 2)) %>%
+    select(all_of(geo_vars)) %>%
     distinct()
   
   # Convert names to FIPS for smallest geographic scale
@@ -380,8 +383,8 @@ as_factor <- function(df, levels) {
 }
 
 find_nested <- function(df, cols, sep = "---") {
-  # generate all 2‑column combinations
-  pairs <- combn(cols, 2, simplify = FALSE)
+  # generate all 2-column combinations
+  pairs <- utils::combn(cols, 2, simplify = FALSE)
   
   # test each pair for a bijection via approach 2
   is_bij <- vapply(pairs, function(pr) {
@@ -401,8 +404,8 @@ find_nested <- function(df, cols, sep = "---") {
 clean_left_join <- function(df1, df2, by) {
   common <- intersect(names(df1), names(df2))
   to_drop <- setdiff(common, by)
-  df_join <- df2 |>
-    select(-all_of(to_drop)) |>
+  df_join <- df2 %>%
+    select(-all_of(to_drop)) %>%
     right_join(df1, by = by)
 
   
@@ -499,7 +502,7 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
   }
   
   # Check data types
-  types <- df |> select(all_of(expected_columns)) |> lapply(data_type) |> unlist()
+  types <- df %>% select(all_of(expected_columns)) %>% lapply(data_type) %>% unlist()
   valid <- unlist(expected_types) == types
   valid[expected_types == "ignore"] <- TRUE
   
@@ -509,8 +512,8 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
   }
   
   # Check for too many NAs
-  na_percents <- df |>
-    lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) |>
+  na_percents <- df %>%
+    lapply(function(c) sum(as.numeric(is.na(c))) / length(c)) %>%
     unlist()
   
   high_na_cols <- expected_columns[na_percents[expected_columns] > na_threshold]
@@ -523,7 +526,7 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
   # Check date format
   if("time" %in% expected_columns) {
     if("date" %in% names(df)) {
-      if (anyNA(as.Date(na.omit(df$date), optional = TRUE))) {
+      if (anyNA(as.Date(stats::na.omit(df$date), optional = TRUE))) {
         warning("Provided dates are not in expected format. Plots will use week indices instead.")
       }
     } else {
@@ -544,7 +547,7 @@ check_pstrat <- function(df, df_ref, expected_types) {
   if (length(missing_df))  stop("Missing in sample data:  ", paste(missing_df, collapse = ", "))
   if (length(missing_ref)) stop("Missing in postratification data: ", paste(missing_ref, collapse = ", "))
   
-  cols <- intersect(names(df), names(df_ref)) |> setdiff("total")
+  cols <- intersect(names(df), names(df_ref)) %>% setdiff("total")
   
   # compare unique values
   cond <- vapply(cols, function(col) {
@@ -595,22 +598,22 @@ preprocess <- function(
   if(!is_aggregated) {
     # remove NAs
     check_cols <- setdiff(names(data), indiv_vars)
-    data <- data |> tidyr::drop_na(all_of(check_cols))
+    data <- data %>% tidyr::drop_na(all_of(check_cols))
 
     # convert date to week indices if necessary
     if (need_time) {
       common <- intersect(names(data), c("date", "time"))
       if (length(common) == 1 && "date" %in% common) {
         # convert date to week indices
-        c(time_indices, timeline) %<-% get_week_indices(data$date)
-        data$time <- time_indices
+        week <- get_week_indices(data$date)
+        data$time <- week$indices
 
         # add the column containing first dates of the weeks
-        data <- data |>
+        data <- data %>%
           full_join(
             data.frame(
               time = 1:max(data$time),
-              date = timeline |> as.character()
+              date = as.character(week$timeline)
             ),
             by = "time"
           )
@@ -623,7 +626,7 @@ preprocess <- function(
     data <- recode_values(data, levels, covid)
 
     # impute missing demographic data based on frequency
-    data <- data |> mutate(across(all_of(indiv_vars), impute))
+    data <- data %>% mutate(across(all_of(indiv_vars), impute))
 
     # aggregate test records based on combinations of factors
     smallest <- get_smallest_geo(names(data), const$vars$geo)
@@ -631,13 +634,14 @@ preprocess <- function(
     group_vars <- c(indiv_vars, smallest_geo)
     geo_covars <- if(!is.null(smallest_geo)) names(get_geo_predictors(data, smallest_geo)) else NULL
 
-    data <- data |>
-      group_by(!!!syms(group_vars)) |>
+    # cross-tabulate data
+    data <- data %>%
+      group_by(!!!syms(group_vars)) %>%
       summarize(
         across(any_of(geo_covars), first),
-        total = if("weight" %in% names(data)) sum(weight) else n(),
-        positive = sum(positive)
-      ) |>
+        total = if("weight" %in% names(data)) sum(.data$weight) else n(),
+        positive = sum(.data$positive)
+      ) %>%
       ungroup()
   }
 
@@ -690,8 +694,8 @@ create_variable_list <- function(input_data, covariates, vars_global) {
 
   # Check for nested variables
   if (length(vars$varying[["Geographic Predictor"]]) >= 2) {
-    vars$omit$nested <- combn(vars$varying[["Geographic Predictor"]], 2, simplify = FALSE) |>
-      lapply(paste, collapse = ":") |>
+    vars$omit$nested <- utils::combn(vars$varying[["Geographic Predictor"]], 2, simplify = FALSE) %>%
+      lapply(paste, collapse = ":") %>%
       unlist()
   }
 
@@ -708,40 +712,40 @@ combine_tracts <- function(
 
   if(link_geo == "zip") {
     # join tract-level data with zip-tract conversion table then group by zip
-    by_zip <- zip_tract |>
-      select(geoid, zip) |>
-      rename("GEOID" = "geoid") |>
+    by_zip <- zip_tract %>%
+      select(.data$geoid, .data$zip) %>%
+      rename("GEOID" = "geoid") %>%
       inner_join(
         tract_data,
         by = "GEOID"
-      ) |>
-      group_by(zip)
+      ) %>%
+      group_by(.data$zip)
     
     # compute zip-level population size by aggregating across overlapping tracts
     all_colnames <- names(tract_data)
     pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
-    pstrat_data <- by_zip |>
+    pstrat_data <- by_zip %>%
       summarise(
         across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
-      ) |>
+      ) %>%
       rename("geocode" = "zip")
   } else if (link_geo == "county") {
-    pstrat_data <- tract_data |>
-      mutate(geocode = substr(GEOID, 1, 5)) |>
-      select(-GEOID) |>
-      group_by(geocode) |>
+    pstrat_data <- tract_data %>%
+      mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
+      select(-.data$GEOID) %>%
+      group_by(.data$geocode) %>%
       summarize_all(sum)
   } else if (link_geo == "state") {
-    pstrat_data <- tract_data |>
-      mutate(geocode = substr(GEOID, 1, 2)) |>
-      select(-GEOID) |>
-      group_by(geocode) |>
+    pstrat_data <- tract_data %>%
+      mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
+      select(-.data$GEOID) %>%
+      group_by(.data$geocode) %>%
       summarize_all(sum)
   } else {
-    pstrat_data <- tract_data |>
-      mutate(geocode = "place_holder") |>
-      select(-GEOID) |>
-      group_by(geocode) |>
+    pstrat_data <- tract_data %>%
+      mutate(geocode = "place_holder") %>%
+      select(-.data$GEOID) %>%
+      group_by(.data$geocode) %>%
       summarize_all(sum)
   }
 
@@ -762,15 +766,15 @@ prepare_mrp_custom <- function(
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
     shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(new_data[[link_geo]]))
-    input_data <- input_data |> filter(!!sym(link_geo) %in% shared_geocodes)
-    new_data <- new_data |> filter(!!sym(link_geo) %in% shared_geocodes)
+    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+    new_data <- new_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
   }
 
   # create lists of all factor levels
   n_time_indices <- 1
   levels <- demo_levels
   if(need_time) {
-    levels$time <- unique(input_data$time) |> sort()
+    levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
   }
   if(!is.null(link_geo)) {
@@ -789,13 +793,13 @@ prepare_mrp_custom <- function(
 
   # append levels for other geographic predictors
   for(v in intersect(names(new_data), vars_global$geo)) {
-    levels[[v]] <- unique(new_data[[v]]) |> sort()
+    levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
   # duplicate rows for each time index
   new_data <- purrr::map_dfr(
     seq_len(n_time_indices),
-    ~ new_data |> mutate(time = .x)
+    ~ new_data %>% mutate(time = .x)
   )
 
   vars <- create_variable_list(input_data, covariates, vars_global)
@@ -826,16 +830,16 @@ prepare_mrp_acs <- function(
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
     shared_geocodes <- intersect(unique(input_data[[link_geo]]), pstrat_data$geocode)
-    input_data <- input_data |> filter(!!sym(link_geo) %in% shared_geocodes)
-    pstrat_data <- pstrat_data |> filter(geocode %in% shared_geocodes)
+    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+    pstrat_data <- pstrat_data %>% filter(.data$geocode %in% shared_geocodes)
   }
-  cell_counts <- pstrat_data |> select(-geocode) |> t() |> c()
+  cell_counts <- pstrat_data %>% select(-.data$geocode) %>% t() %>% c()
 
   # create lists of all factor levels
   n_time_indices <- 1
   levels <- demo_levels
   if(need_time) {
-    levels$time <- unique(input_data$time) |> sort()
+    levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
   }
   if(!is.null(link_geo)) {
@@ -843,11 +847,11 @@ prepare_mrp_acs <- function(
   }
 
   # IMPORTANT: for sorting data frame to match cell order of poststratification table
-  sort_vars <- c("time", link_geo, "sex", "race", "age") |>
+  sort_vars <- c("time", link_geo, "sex", "race", "age") %>%
     intersect(names(levels))
 
-  new_data <- expand.grid(levels, stringsAsFactors = FALSE) |>
-    arrange(across(all_of(sort_vars))) |> # IMPORTANT: To match the cell order of poststratification data
+  new_data <- expand.grid(levels, stringsAsFactors = FALSE) %>%
+    arrange(across(all_of(sort_vars))) %>% # IMPORTANT: To match the cell order of poststratification data
     mutate(total = rep(cell_counts, n_time_indices))
 
   # append geographic predictors
@@ -864,7 +868,7 @@ prepare_mrp_acs <- function(
   # NOTE: this must be done after new_data is created
   # as these levels are not used in the poststratification table
   for(v in intersect(names(new_data), vars_global$geo)) {
-    levels[[v]] <- unique(new_data[[v]]) |> sort()
+    levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
   vars <- create_variable_list(input_data, covariates, vars_global)
@@ -880,12 +884,12 @@ prepare_mrp_acs <- function(
 
 create_zip_county_state <- function(zip_tract, fips_county_state) {
   # find the most common county for each zip code
-  zip_county_state <- zip_tract |>
-    mutate(county_fips = substr(geoid, 1, 5)) |>
-    group_by(zip) |>
+  zip_county_state <- zip_tract %>%
+    mutate(county_fips = substr(.data$geoid, 1, 5)) %>%
+    group_by(.data$zip) %>%
     summarise(
-      fips = names(which.max(table(county_fips)))
-    ) |>
+      fips = names(which.max(table(.data$county_fips)))
+    ) %>%
     left_join(
       fips_county_state,
       by = "fips"
@@ -895,15 +899,15 @@ create_zip_county_state <- function(zip_tract, fips_county_state) {
 }
 
 create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
-  fips_county_state <- zip_county_state |>
-    select(fips, county, state, state_name) |>
+  fips_county_state <- zip_county_state %>%
+    select(.data$fips, .data$county, .data$state, .data$state_name) %>%
     distinct()
 
   if(for_plotting) {
-    fips_county_state <- fips_county_state |> mutate(
-      state = toupper(state),
-      state_name = tools::toTitleCase(state_name),
-      county = tools::toTitleCase(county)
+    fips_county_state <- fips_county_state %>% mutate(
+      state = toupper(.data$state),
+      state_name = tools::toTitleCase(.data$state_name),
+      county = tools::toTitleCase(.data$county)
     )
   }
 
@@ -912,10 +916,10 @@ create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
 
 aggregate_fips <- function(df) {
 
-  df <- df |>
-    mutate(fips = substr(fips, 1, 2)) |>
-    select(-county) |>
-    distinct(fips, .keep_all = TRUE)
+  df <- df %>%
+    mutate(fips = substr(.data$fips, 1, 2)) %>%
+    select(-.data$county) %>%
+    distinct(.data$fips, .keep_all = TRUE)
 
   return(df)
 }

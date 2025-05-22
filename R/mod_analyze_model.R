@@ -8,7 +8,6 @@
 #'
 #' @importFrom shiny NS tagList
 #' @import shinyWidgets
-#' @import zeallot
 mod_analyze_model_ui <- function(id) {
   ns <- NS(id)
 
@@ -194,7 +193,7 @@ mod_analyze_model_server <- function(id, global){
       observeEvent(input[[paste0(id, "_open")]], {
         if(input[[paste0(id, "_open")]]) {
           other_id <- setdiff(c("fixed", "varying"), id)
-          choices <- global$mrp$vars[[id]] |>
+          choices <- global$mrp$vars[[id]] %>%
             purrr::map(function(l) as.list(setdiff(l, input[[other_id]])))
           selected = setdiff(input[[id]], input[[other_id]])
           
@@ -216,7 +215,7 @@ mod_analyze_model_server <- function(id, global){
           input$fixed,
           input$varying,
           global$mrp$input
-        ) |> 
+        ) %>% 
         pair_setdiff(global$mrp$vars$omit$nested)
 
         updateVirtualSelect(
@@ -243,10 +242,10 @@ mod_analyze_model_server <- function(id, global){
           updateVirtualSelect(
             inputId = paste0("prior_eff_", i),
             choices = list(
-              "Intercept" = setNames(c("Intercept_Intercept"), c("Intercept")),
-              "Fixed Effect" = if(length(input$fixed) > 0)  setNames(paste0("fixed_", input$fixed), input$fixed),
-              "Varying Effect" = if(length(input$varying) > 0)  setNames(paste0("varying_", input$varying), input$varying),
-              "Interaction" = if(length(input$interaction) > 0)  setNames(paste0("interaction_", input$interaction), input$interaction)
+              "Intercept" = stats::setNames(c("Intercept_Intercept"), c("Intercept")),
+              "Fixed Effect" = if(length(input$fixed) > 0)  stats::setNames(paste0("fixed_", input$fixed), input$fixed),
+              "Varying Effect" = if(length(input$varying) > 0)  stats::setNames(paste0("varying_", input$varying), input$varying),
+              "Interaction" = if(length(input$interaction) > 0)  stats::setNames(paste0("interaction_", input$interaction), input$interaction)
             ),
             selected = holder[[i]]$eff
           )
@@ -266,10 +265,10 @@ mod_analyze_model_server <- function(id, global){
         # update select inputs for prior assignment
         observeEvent(input[[eff_id_open]], {
           if(input[[eff_id_open]]) {
-            intercept <- setNames(c("Intercept_Intercept"), c("Intercept"))
-            fixed_effects <- if(length(input$fixed) > 0) setNames(paste0("fixed_", input$fixed), input$fixed)
-            varying_effects <- if(length(input$varying) > 0) setNames(paste0("varying_", input$varying), input$varying)
-            interactions <- if(length(input$interaction) > 0) setNames(paste0("interaction_", input$interaction), input$interaction)
+            intercept <- stats::setNames(c("Intercept_Intercept"), c("Intercept"))
+            fixed_effects <- if(length(input$fixed) > 0) stats::setNames(paste0("fixed_", input$fixed), input$fixed)
+            varying_effects <- if(length(input$varying) > 0) stats::setNames(paste0("varying_", input$varying), input$varying)
+            interactions <- if(length(input$interaction) > 0) stats::setNames(paste0("interaction_", input$interaction), input$interaction)
             
             # filter effects for structred prior
             if(input[[dist_id]] == "structured") {
@@ -280,7 +279,7 @@ mod_analyze_model_server <- function(id, global){
               
               if(length(input$interaction) > 0) {
                 interactions <- filter_interactions(input$interaction, input$fixed, global$mrp$input)
-                interactions <- setNames(paste0("interaction_", interactions), interactions)
+                interactions <- stats::setNames(paste0("interaction_", interactions), interactions)
               }
             }
 
@@ -349,7 +348,7 @@ mod_analyze_model_server <- function(id, global){
         selectizeInput(
           inputId = ns("model_select"),
           label = "Select one or more models",
-          choices = setNames(model_ids, model_names),
+          choices = stats::setNames(model_ids, model_names),
           multiple = TRUE
         ),
         tags$div(style = "margin-bottom: 18px",
@@ -481,7 +480,7 @@ mod_analyze_model_server <- function(id, global){
 
             # Extract log-likelihood from each model
             loo_list <- purrr::map(selected_models, function(m) {
-              capture.output({
+              utils::capture.output({
                 loo_output <- loo::loo(
                   m$fit$loo$draws("log_lik"),
                   cores = m$sampling$n_chains
@@ -507,10 +506,10 @@ mod_analyze_model_server <- function(id, global){
             pareto_k_dfs(dfs)
 
             # Compare the models using loo_compare
-            compare_df <- loo_list |>
-              loo::loo_compare() |>
-              as.data.frame() |>
-              select(elpd_diff, se_diff)
+            compare_df <- loo_list %>%
+              loo::loo_compare() %>%
+              as.data.frame() %>%
+              select(.data$elpd_diff, .data$se_diff)
 
           }, error = function(e) {
             message(paste0("Error during LOO-CV: ", e$message))
@@ -535,7 +534,7 @@ mod_analyze_model_server <- function(id, global){
         title = "LOO-CV Diagnostics",
         tags$div(class = "mt-0 mb-5",
           withMathJax(
-            "We provide a summary of the estimated Pareto shape parameter \\(\\kappa\\) values, which estimates how far an individual leave-one-out distribution is from the full distribution. High \\(\\kappa\\) values often indicate model misspecification, outliers or mistakes in data processing, resulting in an unreliable importance sampling estimate and an unreliable approximation of LOO-CV. See the ",
+            "We provide a summary of the estimated Pareto shape parameter \\(\\kappa\\) values, which estimates how far an individual leave-one-out distribution is from the full distribution. High \\(\\kappa\\) values often indicate model misspecification, outliers or mistakes in data processing, resulting in an unreliable importance sampling estimate and an unreliable approximation of LOO-CV. See the ",
             tags$a("LOO FAQ", href = "https://mc-stan.org/loo/articles/online-only/faq.html#pareto_shape_parameter_k", target = "_blank"),
             " for more details."
           )
@@ -557,10 +556,10 @@ mod_analyze_model_server <- function(id, global){
 
       purrr::map(seq_along(pareto_k_dfs()), function(i) {
         output[[paste0("pareto_k_table", i)]] <- renderTable(
-          pareto_k_dfs()[[i]] |>
-            as.data.frame() |>
-            mutate(Count = as.integer(Count)) |>
-            select(Count, Proportion),
+          pareto_k_dfs()[[i]] %>%
+            as.data.frame() %>%
+            mutate(Count = as.integer(.data$Count)) %>%
+            select(.data$Count, .data$Proportion),
           rownames = TRUE
         )
       })
@@ -613,17 +612,17 @@ mod_analyze_model_server <- function(id, global){
       n_chains <- input$chain_select
       seed <- input$seed_select
       
-      c(valid, errors) %<-% check_iter_chain(
+      check <- check_iter_chain(
         n_iter, GLOBAL$ui$iter_range,
         n_chains, GLOBAL$ui$chain_range,
         seed
       )
       
-      if(!valid) {
+      if(!check$valid) {
         show_alert(
           tagList(
             tags$ul(
-              purrr::map(errors, ~ tags$li(.x))
+              purrr::map(check$msg, ~ tags$li(.x))
             )
           ),
           global$session
@@ -645,10 +644,10 @@ mod_analyze_model_server <- function(id, global){
       
       # 5. Check if prior syntax is correct
       valid_priors <- purrr::map(1:(length(prior_buffer()) + 1), function(i) {
-        input[[paste0("prior_dist_", i)]] |>
-          clean_prior_syntax() |>
+        input[[paste0("prior_dist_", i)]] %>%
+          clean_prior_syntax() %>%
           check_prior_syntax()
-      }) |> unlist()
+      }) %>% unlist()
       
       if(!all(valid_priors)) {
         show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
@@ -673,7 +672,7 @@ mod_analyze_model_server <- function(id, global){
     
         # assign user-specified priors
         for(i in 1:(length(prior_buffer()) + 1)) {
-          dist <- input[[paste0("prior_dist_", i)]] |> clean_prior_syntax()
+          dist <- input[[paste0("prior_dist_", i)]] %>% clean_prior_syntax()
           eff <- input[[paste0("prior_eff_", i)]]
           if(is.null(nullify(dist))) {
             for(s in eff) {
@@ -684,8 +683,8 @@ mod_analyze_model_server <- function(id, global){
         }
         
         # classify effects
-        all_priors <- all_priors |>
-          group_effects(global$mrp$input) |>
+        all_priors <- all_priors %>%
+          group_effects(global$mrp$input) %>%
           ungroup_effects()
         
         # Create model object
@@ -704,7 +703,7 @@ mod_analyze_model_server <- function(id, global){
         )
         
         # run MCMC
-        c(model$fit, model$stan_data, model$stan_code) %<-% run_mcmc(
+        mcmc <- run_mcmc(
           input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
           new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
           effects = model$effects,
@@ -716,7 +715,7 @@ mod_analyze_model_server <- function(id, global){
           spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
         )
         
-        model_buffer(model)
+        model_buffer(c(model, mcmc))
         
       }, error = function(e) {
         message(paste0("Error fitting model: ", e$message))
@@ -731,7 +730,7 @@ mod_analyze_model_server <- function(id, global){
       )
       
       model <- qs::qread(input$fit_upload$datapath)
-      check_fit_object(model, global$data_format) |> model_feedback()
+      check_fit_object(model, global$data_format) %>% model_feedback()
 
       if(model_feedback() == "") {
         model_buffer(model)
@@ -764,15 +763,17 @@ mod_analyze_model_server <- function(id, global){
       # extract sampler diagnostics
       show_warnings <- FALSE
       if (is.null(model$diagnostics$mcmc)) {
-        c(model$diagnostics$mcmc, show_warnings) %<-% extract_diagnostics(
+        out <- extract_diagnostics(
           fit = model$fit$mcmc,
           total_transitions = model$sampling$n_iter / 2 * model$sampling$n_chains
         )
+        model$diagnostics$mcmc <- out$summary
+        show_warnings <- out$show_warnings
       }
       
       # extract posterior summary of coefficients
       if (is.null(model$params$fixed) || is.null(model$params$varying)) {
-        c(model$params$fixed, model$params$varying) %<-% extract_parameters(
+        model$params <- extract_parameters(
           model$fit$mcmc,
           model$effects,
           model$mrp$input
@@ -781,7 +782,7 @@ mod_analyze_model_server <- function(id, global){
       
       # run standalone generated quantities for LOO
       if (is.null(model$fit$loo)) {
-        model$fit$loo %<-% run_gq(
+        model$fit$loo <- run_gq(
           fit_mcmc = model$fit$mcmc,
           stan_code = model$stan_code$loo,
           stan_data = model$stan_data,
@@ -791,7 +792,7 @@ mod_analyze_model_server <- function(id, global){
       
       # run standalone generated quantities for PPC
       if (is.null(model$fit$ppc)) {
-        model$fit$ppc %<-% run_gq(
+        model$fit$ppc <- run_gq(
           fit_mcmc = model$fit$mcmc,
           stan_code = model$stan_code$ppc,
           stan_data = model$stan_data,
@@ -904,7 +905,7 @@ mod_analyze_model_server <- function(id, global){
           
           model <- global$models[[model_id]]
           
-          model$fit$pstrat %<-% run_gq(
+          model$fit$pstrat <- run_gq(
             fit_mcmc = model$fit$mcmc,
             stan_code = model$stan_code$pstrat,
             stan_data = model$stan_data,

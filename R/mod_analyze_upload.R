@@ -295,8 +295,8 @@ mod_analyze_upload_server <- function(id, global){
         global$data
       }
       
-      df |>
-        head(GLOBAL$ui$preview_size) |>
+      df %>%
+        utils::head(GLOBAL$ui$preview_size) %>%
         DT::datatable(
           options = list(
             columnDefs = list(
@@ -307,7 +307,7 @@ mod_analyze_upload_server <- function(id, global){
             searching = FALSE,
             info = FALSE
           )
-        ) |>
+        ) %>%
         DT::formatStyle(
           columns = c("positive"),
           `max-width` = "150px"
@@ -338,7 +338,7 @@ mod_analyze_upload_server <- function(id, global){
       global$plot_data <- NULL
 
       tryCatch({
-        read_data(input$sample_upload$datapath) |> raw_sample()
+        read_data(input$sample_upload$datapath) %>% raw_sample()
 
         global$data <- preprocess(
           data = raw_sample(),
@@ -383,10 +383,10 @@ mod_analyze_upload_server <- function(id, global){
         "static_other"   = "crosssectional_other_aggregated.csv"
       )
 
-      readr::read_csv(app_sys(paste0("extdata/example/data/", indiv_file_name)), show_col_types = FALSE) |> raw_sample()
-      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", agg_file_name)), show_col_types = FALSE) |>
-        clean_data() |>
-        mutate(state = to_fips(state, global$extdata$fips$county, "state"))
+      readr::read_csv(app_sys(paste0("extdata/example/data/", indiv_file_name)), show_col_types = FALSE) %>% raw_sample()
+      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", agg_file_name)), show_col_types = FALSE) %>%
+        clean_data() %>%
+        mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
       
       waiter::waiter_hide()
     })
@@ -405,10 +405,10 @@ mod_analyze_upload_server <- function(id, global){
         "static_other"   = "crosssectional_other_aggregated.csv"
       )
 
-      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) |> raw_sample()
-      global$data <- raw_sample() |>
-        clean_data() |>
-        mutate(state = to_fips(state, global$extdata$fips$county, "state"))
+      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) %>% raw_sample()
+      global$data <- raw_sample() %>%
+        clean_data() %>%
+        mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
 
       waiter::waiter_hide()
     })
@@ -428,7 +428,7 @@ mod_analyze_upload_server <- function(id, global){
         acs_years <- 2018
       } else {
         # find the smallest geography in the data
-        idx <- match(names(global$data), GLOBAL$vars$geo) |> na.omit()
+        idx <- match(names(global$data), GLOBAL$vars$geo) %>% stats::na.omit()
         link_geos <- if (length(idx) > 0) {
           c(GLOBAL$vars$geo[min(idx):length(GLOBAL$vars$geo)], "Do not include geography")
         } else {
@@ -496,12 +496,12 @@ mod_analyze_upload_server <- function(id, global){
             global$plot_data <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
               geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
-              raw_covariates = global$extdata$covar_covid |> filter(zip %in% unique(global$mrp$input$zip))
+              raw_covariates = global$extdata$covar_covid %>% filter(.data$zip %in% unique(global$mrp$input$zip))
             )
 
           } else if (global$data_format == "static_poll") {
-            new_data <- global$extdata$pstrat_poll |>
-              mutate(state = to_fips(state, global$extdata$fips$county, "state"))
+            new_data <- global$extdata$pstrat_poll %>%
+              mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
 
             global$mrp <- prepare_mrp_custom(
               input_data = global$data,
@@ -537,8 +537,8 @@ mod_analyze_upload_server <- function(id, global){
             # prepare data for plotting
             plot_data <- list()
             plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-            plot_data$geojson <- names(global$extdata$geojson) |>
-              setNames(nm = _) |>
+            plot_data$geojson <- names(global$extdata$geojson) %>%
+              stats::setNames(nm = .) %>%
               purrr::map(~filter_geojson(
                 geojson = global$extdata$geojson[[.x]], 
                 geoids = global$mrp$levels[[.x]]
@@ -595,7 +595,7 @@ mod_analyze_upload_server <- function(id, global){
 
       tryCatch({
         # Read in data first
-        read_data(input$pstrat_upload$datapath) |> raw_pstrat()
+        read_data(input$pstrat_upload$datapath) %>% raw_pstrat()
 
         # Process data
         new_data <- preprocess(
@@ -639,8 +639,8 @@ mod_analyze_upload_server <- function(id, global){
         # prepare data for plotting
         plot_data <- list()
         plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-        plot_data$geojson <- names(global$extdata$geojson) |>
-          setNames(nm = _) |>
+        plot_data$geojson <- names(global$extdata$geojson) %>%
+          stats::setNames(nm = .) %>%
           purrr::map(~filter_geojson(
             geojson = global$extdata$geojson[[.x]], 
             geoids = global$mrp$levels[[.x]]
@@ -729,7 +729,7 @@ mod_analyze_upload_server <- function(id, global){
         readr::read_csv(
           app_sys(paste0("extdata/example/data/", example_file)), 
           show_col_types = FALSE
-        ) |> 
+        ) %>% 
           readr::write_csv(file)
       }
     )
