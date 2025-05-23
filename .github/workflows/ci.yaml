@@ -20,7 +20,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libcurl4-openssl-dev \ 
+            libcurl4-openssl-dev \
             pkg-config \
             libssl-dev \
             libxml2-dev
@@ -28,6 +28,8 @@ jobs:
       - uses: r-lib/actions/setup-renv@v2
 
       - uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
 
   coverage:
     name: test-coverage
@@ -42,7 +44,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libcurl4-openssl-dev \ 
+            libcurl4-openssl-dev \
             pkg-config \
             libssl-dev \
             libxml2-dev
