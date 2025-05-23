@@ -26,12 +26,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libglpk-dev
 
-      - name: Deploy to shinyapps.io
-        uses: rstudio/rsconnect-action@v1
-        with:
-          server-url: https://shinyapps.io
-          account: ${{ secrets.SHINYAPPS_ACCOUNT }}
-          token:   ${{ secrets.SHINYAPPS_TOKEN }}
-          secret:  ${{ secrets.SHINYAPPS_SECRET }}
-          app-dir: .          
-          app-name: shinymrp
+      - name: Ensure rsconnect is available  
+        run: Rscript -e 'if (!requireNamespace("rsconnect", quietly=TRUE)) install.packages("rsconnect")'
+
+      - name: Authenticate with shinyapps.io  
+        run: |
+          Rscript -e "rsconnect::setAccountInfo(
+            name   = Sys.getenv('SHINYAPPS_ACCOUNT'),
+            token  = Sys.getenv('SHINYAPPS_TOKEN'),
+            secret = Sys.getenv('SHINYAPPS_SECRET')
+          )"  # The rsconnect package sends your app bundle up :contentReference[oaicite:1]{index=1}
+
+      - name: Deploy app  
+        run: |
+          Rscript -e "rsconnect::deployApp(
+            appDir  = '.',
+            appName = 'shinymrp',
+            server  = 'shinyapps.io'
+          )"
