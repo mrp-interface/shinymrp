@@ -1,4 +1,4 @@
-   a {
+  a {
     display: inline;
     word-break: break-all;
   }
@@ -8,26 +8,20 @@
   }
 
   p {
-    text-align: justify;
-    font-size: 1.03em;
+    /* text-align: justify; */
+    line-height: 2em;
   }
-
-  h1 h2 h3 h4 h5 {
-    font-size: 1.05em;
+  
+  ul {
+    line-height: 2em;
   }
 
   text {
     font-family: helvetica,arial,sans-serif;
   }
 
-  .pad_top {
+  .formula {
     margin-top: 15px;
-    width: 100%;
-  }
-
-  .pad_bottom {
-    margin-bottom: 15px;
-    width: 100%;
   }
 
   .break_line {
@@ -102,12 +96,13 @@
   .interface_buttons {
     width: 100%;
     margin-top: 10px;
-    margin-bottom: 50px;
+    margin-bottom: 40px;
+  }
+  
+  .interface_buttons a {
+    margin-right: 1em;
   }
 
-  .interface_buttons a {
-    width: 33%;
-  }
 
   .model_spec_buttons {
     width: 25%;
@@ -135,45 +130,131 @@
     display: inline;
   }
 
-  .learn_mrp {
-    text-align: justify;
-    font-size: 1.05em;
-  }
-
-  .feedback_container {
-    position: fixed;
-    top: 0.6%;
-    left: 94%;
-    z-index: 1000;
-    width: 5.5%;
-  }
-
-  .feedback {
-    float: right;
-  }
-
   .footnote_container {
     position: fixed;
     top: 96%;
     left: 94%;
-    z-index: 1000;
-    float: right;
+    z-index: 1001;
     width: 5.8%;
   }
 
   .footnote {
     float: right;
   }
-
-  .button_icon {
-    margin-right: 5px;
+  
+  .help_btn_container {
+    position: fixed;
+    top: 93.5%;
+    left: 96.5%;
+    z-index: 1002;
   }
 
-  .ref {
-    font-size: 0.9em;
+  
+  .guide_section_body * {
+    margin: 5px 15px 5px 15px; 
+  }
+  
+  .custom_label {
+    font-weight: bolder;
+    font-size: 1em;
+    margin-bottom: 2px;
+  }
+  
+  .alert {
+    background-color: red;
+  }
+  
+  .success {
+    background-color: #00b1fc;
   }
 
-  .summary {
-    display: list-item;
+  .success:hover {
+      background-color: #008ecf; /* Darker shade for hover */
   }
 
+  .success:active {
+      background-color: #006fa1; /* Even darker shade for clicked state */
+  }
+
+  .success:disabled {
+      background-color: #c4e4f8; /* Light shade for disabled state */
+      color: #a0a0a0;            /* Gray text to indicate disabled */
+      cursor: not-allowed;       /* Change cursor to indicate non-interactive */
+      opacity: 0.6;              /* Reduced opacity for visual cue */
+  }
+
+  .alt_text {
+    font-size: 1.25em;
+    font-style: italic;
+    text-align: center;
+    display: block;  /* Ensures center alignment works */
+    margin: 1.25em auto;  /* Adds some vertical spacing */
+  }
+
+  /* ANIMATION EFFECTS */
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .flicker {
+    animation: flicker 0.5s infinite;
+  }
+  
+  @keyframes vibrate {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    50% { transform: translateX(3px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+  }
+  .vibrate {
+    animation: vibrate 0.4s ease-in-out;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotateY(0deg); }
+    25% { transform: rotateY(90deg); }
+    50% { transform: rotateY(180deg); }
+    75% { transform: rotateY(270deg); }
+    100% { transform: rotateY(360deg); }
+  }
+  .spin {
+    animation: spin 0.5s infinite;  /* 1-second spin */
+  }
+
+  /* NAVIGATION BAR */
+  .nav-item a {
+    background: none;
+    border: none;
+  }
+
+  /* SLIDER STYLES */
+  /* main label above the slider */
+  #my_date_label,  /* or use .control-label for all sliders */
+  label[for='my_date'] {
+    font-size: 14px !important;
+  }
+
+  /* the grid / tick labels under the slider track */
+  .js-irs-0 .irs-grid-text {
+    font-size: 13px !important;
+  }
+
+  /* the min / max labels at ends */
+  .js-irs-0 .irs-min, 
+  .js-irs-0 .irs-max {
+    font-size: 13px !important;
+  }
+
+  /* the popup single‐value tooltip */
+  .js-irs-0 .irs-single {
+    font-size: 14px !important;
+  }
+  
+  .nav-brand {
+    font-size: 1.5em !important;
+  }
+  
+  
+  
+  

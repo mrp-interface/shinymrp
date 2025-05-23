@@ -9,83 +9,135 @@
 #' @importFrom shiny NS tagList
 mod_learn_preprocess_ui <- function(id){
   ns <- NS(id)
-  fluidRow(
-    column(width = 6, offset = 3,
-      tags$div(class = "pad_top",
-        tags$p("The input data for MRP consists of three components: the preprocessed survey/test data, the poststratification table, and geographic covariates. The survey/test data contains the geographic-demographic information about participants and their survey responses or test results. Inferring the relationship between them using regression models constitutes the first stage of MRP. Additionally, geographic covariates are included in these models to account for the structured difference among geographic areas such as states and counties. The second stage of MRP is poststratification, which involves adjusting the estimates based on the breakdown of the target population. Below are details about how these data components are prepared for both interfaces."),
-        tags$h3("Data Preparation for Cross-sectional Data"),
-        tags$h4("Survey/Test Data"),
-        tags$p("The current interface for cross-sectional data expects the following information in the data inputted by the user:"),
-        tags$ul(
-          tags$li("Sex"),
-          tags$li("Race"),
-          tags$li("Age"),
-          tags$li("Education level/Highest degree attained"),
-          tags$li("State (optional)")
+  bslib::layout_columns(
+    col_widths = c(-3, 6),
+    tags$div(
+      tags$p("The input data for MRP consists of two major components: the survey or test data and the corresponding poststratification table. The survey/test data contains the geographic-demographic information about participants and their survey responses or test results. Inferring the relationship between these variables using multilevel regression (MR) models constitutes the first stage of MRP. Additionally, geographic covariates can be included in these models to account for the structured differences among geographic areas such as states and counties. The second stage of MRP, poststratification (P), involves adjusting the estimates based on the demographic-geographic composition of the target population, which is the US population in the context of this application. Below are details about how these data components are prepared for all use cases of the MRP interface."),
+      
+      tags$h3("Survey/Test Data Preprocessing", class = "mt-5"),
+      tags$p("The preprocessing workflow follows these general steps for both cross-sectional and spatio-temporal data:"),
+      tags$ul(
+        tags$li(tags$b("Data cleaning:"), " standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes"),
+        tags$li(tags$b("Conversion to categorical data:"), " recoding categorical data, converting numeric values to categories using predefined intervals, assigning week indices to dates"),
+        tags$li(tags$b("Data imputation:"), " imputing missing data based on frequency distributions of converted categories in the data"),
+        tags$li(tags$b("Data aggregation:"), " aggregating individual-level records to create cell counts for each unique combination of relevant demographic-geographic factors")
+      ),
+      tags$p("The result is a cross tabulation of the following categories:"),
+      bslib::layout_columns(
+        col_widths = c(6, 6),
+
+        # Time-varying card
+        bslib::card(
+          bslib::card_header(tags$h4("Time-varying")),
+          bslib::card_body(
+            tags$h5("COVID Data"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
+              tags$li("ZIP code"),
+              tags$li("Week indices")
+            ),
+            
+            tags$h5("General", class = "mt-3"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
+              tags$li("Week indices"),
+              tags$li("User selected geograhic levels")
+            )
+          )
         ),
-        tags$p("The program first cleans the data by converting column names into snake case and character values into lowercase. It then imputes missing data and groups the raw values into the following categories:"),
-        tags$ul(
-          tags$li("Sex: male, female"),
-          tags$li("Race: White, Black, other"),
-          tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-          tags$li("Education: below high school, high school, some college, 4-year college, post-grad")
-        ),
-        tags$h4("Poststratification Table"),
-        tags$p("Following this ", tags$a("guide", href = "https://bookdown.org/jl5522/MRP-case-studies/introduction-to-mister-p.html", target = "_blank"), " by Juan Lopez-Martin, we obtain the American Community Survey data through IPUMS, convert the raw values to the same categories as the input data, and then find the count for each of the subgroups corresponding to unique combinations of the demographic factors: sex, race, age, education. If the program can find states in the input data, it automatically includes them in the poststratification table and produces state-level estimates."),
-        tags$h4("Geographic Covariates"),
-        tags$p("Currently, we do not retrieve this information from external data sources but, if there are variables with values unique to each state in the input data, the program automatically extracts them and allows them to be included in the models. In the future, we may draw from external data relevant state-level covariates that can improve the predictive power of the models."),
-        tags$h3("Data Preparation for Spatio-temporal Data"),
-        tags$p("To account for the difference between ZIP code areas in the models, we need quantities that are defined at the ZIP code level. Because ACS data are not provided at the ZIP code level, we obtain relevant quantities at the tract level and then use the USPS crosswalk table to obtain the ZIP code level covariates. Specifically, one ZIP code can span multiple tracts so we find the overlapping tracts for each ZIP code and aggregate the values. How the values are aggregated depends on the quantities and is described in detail below."),
-        tags$h4("Survey/Test Data"),
-        tags$p("The preprocessing code for spatio-temporal data currently works best with test records from hospitals that adopt the Epic system. The program can automatically identify the essential columns in data frames that follow the Epic naming convention. Specifically, the input data frame must contain columns corresponding to the following geographic-demographic factors and test information:"),
-        tags$ul(
-          tags$li("Sex"),
-          tags$li("Race"),
-          tags$li("Age"),
-          tags$li("ZIP code"),
-          tags$li("Test result"),
-          tags$li("Date of test result (optional)")
-        ),
-        tags$p("For raw data with individual cells, a unique ID associated with each test record is also required to identify duplicates."),
-        tags$p("One of the first steps in cleaning the data is filtering out zip codes and states with small sample sizes. Specifically, we omit samples from states that account for less than one percent of the data and then zip codes with five or fewer records. The expectation is that the vast majority of test samples were obtained from people living close to the hospital and our test datasets were consistent with this expectation. Next, we impute missing and invalid values for sex, race, and age based on the frequency of occurrence in the data. Finally, we aggregate the raw values for each of these demographic variables as follows:"),
-        tags$ul(
-          tags$li("Sex: male, female"),
-          tags$li("Race: White, Black, other"),
-          tags$li("Age: 0-17, 8-34, 35-64, 65-74, 75+")
-        ),
-        tags$p("Future versions will allow for specification of how the values are grouped but these are the default categories for the current version. Another future feature is allowing users to aggregate result dates into either weeks or months. The current implementation only allows for the former."),
-        tags$h4("Poststratification Table"),
-        tags$p("From the ACS data, we obtain the population size for each tract that is broken down into subgroups based on the aforementioned factors. An example of a subgroup would be white males who are between 8 and 34 years old, reside in the same tract, and receive the test result in the same week. We sum the population size over overlapping tracts for each zip code to get the poststratification cell counts for ZIP codes."),
-        tags$h4("Geographic Covariates"),
-        tags$p("We obtain the following tract-level measures from the ACS and other sources:"),
-        tags$ul(
-          tags$li("Binary indicators of whether tracts are classified as urban or not"),
-          tags$li("Population sizes based on levels of education"),
-          tags$li("Population sizes based on ratios of income to poverty level in the past 12 months"),
-          tags$li("Population sizes based on employment status"),
-          tags$li("Median household income in the past 12 months"),
-          tags$li(tags$a("Area Deprivation Index (ADI)", href = "https://www.neighborhoodatlas.medicine.wisc.edu", target = "_blank"))
-        ),
-        tags$p("To obtain zip-level estimates, we combine them as follows:"),
-        tags$ul(
-          tags$li("Urbanicity of a zip code is defined as the percentage of covered census tracts classified as urban, weighted by tract population counts."),
-          tags$li("Higher education measure of a zip code is defined as the percentage of the residing population who have earned an Associate's degree or higher."),
-          tags$li("Poverty measure of a zip code is defined as the percentage of the residing population whose ratio of income to poverty level in the past 12 months is below 100%."),
-          tags$li("Employment rate of a zip code is defined as the percentage of the residing population who are employed as a part of the civilian labor force."),
-          tags$li("Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts."),
-          tags$li("Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts, weighted by tract population counts")
+        
+        # Cross-sectional card
+        bslib::card(
+          bslib::card_header(tags$h4("Cross-sectional")),
+          bslib::card_body(
+            tags$h5("Poll Data"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 18-29, 30-39, 40-49, 50-59, 60-69, 70+"),
+              tags$li("Education level: below high school, high school, some college, 4-year college, post-grad"),
+              tags$li("State")
+            ),
+            
+            tags$h5("General", class = "mt-3"),
+            tags$ul(
+              tags$li("Sex: male, female"),
+              tags$li("Race: Black, White, other"),
+              tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
+              tags$li("User selected geograhic levels")
+            )
+          )
         )
-      )
+      ),
+      tags$p("Below are example scripts and data files for data preprocessing."),
+      div(class = "d-flex justify-content-between",
+        downloadButton(ns("save_code"), "Preprocessing Script"),
+        downloadButton(ns("save_geo_conversion"), "Geography Conversion Table"),
+        downloadButton(ns("save_week_conversion"), "Week Conversion Table")
+      ),
+      tags$h3("Geographic Identifiers & Covariates", class = "mt-5"),
+      tags$p("One of the major strengths of MRP is small-area estimation. To leverage this capability, information about geographic areas and their characteristics should be included so that the model can account for related group-level variation in the data. To this end, the interface gathers as much geographic information as possible based on what is provided in the data."),
+      tags$p("First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that overlaps with each ZIP code the most."),
+      tags$p("In addition to geographic areas, the application also gathers quantities associated with them either from the data or external sources. For use cases other than COVID data, the app scans the data to find quantities that have a one-to-one relationship with the geographic identifier of interest. For COVID data, we have identified certain ZIP code-level quantities that are informative in modeling COVID test results, such as education level and household income. We obtain these quantities at the tract level from the ACS and other sources, then aggregate over the tracts that overlap with each ZIP code based on the USPS crosswalk table."),
+      tags$p("We obtain the following tract-level measures from the ACS and other sources:"),
+      tags$ul(
+        tags$li("Binary indicators of whether tracts are classified as urban or not"),
+        tags$li("Population sizes based on levels of education"),
+        tags$li("Population sizes based on ratios of income to poverty level in the past 12 months"),
+        tags$li("Population sizes based on employment status"),
+        tags$li("Median household income in the past 12 months"),
+        tags$li(tags$a("Area Deprivation Index (ADI)", href = "https://www.neighborhoodatlas.medicine.wisc.edu", target = "_blank"))
+      ),
+      
+      tags$p("To obtain ZIP code-level estimates, we combine them as follows:"),
+      tags$ul(
+        tags$li("Urbanicity of a ZIP code is defined as the percentage of covered census tracts classified as urban, weighted by tract population counts."),
+        tags$li("Higher education measure of a ZIP code is defined as the percentage of the residing population who have earned an Associate's degree or higher."),
+        tags$li("Poverty measure of a ZIP code is defined as the percentage of the residing population whose ratio of income to poverty level in the past 12 months is below 100%."),
+        tags$li("Employment rate of a ZIP code is defined as the percentage of the residing population who are employed as a part of the civilian labor force."),
+        tags$li("Income measure of a ZIP code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts."),
+        tags$li("Area Deprivation Index (ADI) of a ZIP code is the average ADI across covered census tracts, weighted by tract population counts.")
+      ),
+      
+      tags$h3("Poststratification Table", class = "mt-5"),
+      tags$p("We obtain ACS data through the packages tidycensus and IPUMS to compute the poststratification tables, which contain the size of each subpopulation defined by the cross-tabulation of demographic-geographic factors. Each subpopulation consists of individuals corresponding to a unique combination of these factors. We precompute and store the poststratification table at the tract level, then aggregate across tracts to derive counts at larger geographic scales. Census tracts fall perfectly within counties and states but ZIP codes have many-to-many relationships with tracts. We address this by summing over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.")
     )
   )
 }
 
+
 #' learn_preprocess Server Functions
 #'
 #' @noRd
-mod_learn_preprocess_server <- function(id){
+mod_learn_preprocess_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
+    
+    output$save_code <- downloadHandler(
+      filename = function() { "preprocess.R" },
+      content = function(file) {
+        readLines(app_sys("extdata/preprocess.R")) %>% writeLines(file)
+      }
+    )
+    
+    output$save_geo_conversion <- downloadHandler(
+      filename = function() { "zip_county_state.csv" },
+      content = function(file) {
+        readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
+      }
+    )
+    
+    output$save_week_conversion <- downloadHandler(
+      filename = function() { "week_conversion.csv" },
+      content = function(file) {
+        readr::read_csv(app_sys("extdata/week_conversion.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
+      }
+    )
 
   })
 }
+
