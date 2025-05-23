@@ -12,18 +12,16 @@ jobs:
     name: R-CMD-check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: r-lib/actions/setup-r@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libglpk-dev \                  # existing dependency
-            libcurl4-openssl-dev \         # for R curl package
-            pkg-config \                   # pkg-config for .pc lookup
-            libfontconfig1-dev \           # for systemfonts package
-            libfreetype6-dev               # for systemfonts package
+          sudo apt-get install -y libglpk-dev libcurl4-openssl-dev pkg-config libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev
 
       - name: Cache R library
         uses: actions/cache@v3

@@ -24,7 +24,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglpk-dev libcurl4-openssl-dev pkg-config libfontconfig1-dev libfreetype6-dev
+          sudo apt-get install -y libglpk-dev libcurl4-openssl-dev pkg-config libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev
 
       - name: Cache R library
         uses: actions/cache@v3
