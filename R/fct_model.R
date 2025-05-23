@@ -849,10 +849,13 @@ run_gq <- function(
   ) {
   
 
-  mod_gq <- cmdstanr::cmdstan_model(
-    stan_file = cmdstanr::write_stan_file(stan_code),
-    cpp_options = list(stan_threads = TRUE)
-  )
+  utils::capture.output({
+    mod_gq <- cmdstanr::cmdstan_model(
+      stan_file = cmdstanr::write_stan_file(stan_code),
+      cpp_options = list(stan_threads = TRUE)
+    )
+  }, type = "message")
+
   
   utils::capture.output({
     fit_gq <- mod_gq$generate_quantities(
