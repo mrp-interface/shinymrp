@@ -945,7 +945,7 @@ mod_analyze_model_server <- function(id, global){
         )
         
         # change fit result download button color to indicate inclusion of postprocessing results
-        shinyjs::addClass(model$IDs$save_fit_btn, "success")
+        shinyjs::addClass(model$IDs$save_fit_btn, "btn btn-primary")
 
         # disable postprocessing button
         shinyjs::disable(model$IDs$postprocess_btn)

@@ -105,7 +105,7 @@ mod_analyze_upload_ui <- function(id) {
                 bslib::card_body(
                   selectizeInput(ns("link_geo"), label = "Select geography scale for poststratification", choices = NULL),
                   selectizeInput(ns("acs_year"), label = "Select 5-year ACS data to link to", choices = NULL, options = list(dropdownParent = "body")),
-                  actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100") 
+                  actionButton(ns("link_acs"), label = "Link", class = "btn w-100") 
                 )
               )
             )
@@ -174,7 +174,7 @@ mod_analyze_upload_ui <- function(id) {
               downloadButton(
                 outputId = ns("download_preprocessed"),
                 label = NULL,
-                class = "btn btn-primary btn-sm"
+                class = "btn btn-secondary btn-sm"
               )
             )
           )
