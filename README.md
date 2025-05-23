@@ -5,6 +5,8 @@
 [![Codecov test coverage](https://codecov.io/gh/mrp-interface/shinymrp/graph/badge.svg)](https://app.codecov.io/gh/mrp-interface/shinymrp)
 <!-- badges: end -->
 
+A GUI designed for intuitive applications of Multilevel Regression and Poststratification. Try the live demo [here](https://mrpinterface.shinyapps.io/shinymrp/).
+
 ## Installation
 
 ### Prerequisites:  C++ Toolchain
