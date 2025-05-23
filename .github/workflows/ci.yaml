@@ -90,6 +90,9 @@ jobs:
           cmdstanr::install_cmdstan(cores = 2)
         shell: Rscript {0}
 
+      - name: Ensure covr is available
+        run: Rscript -e 'if (!requireNamespace("covr", quietly = TRUE)) install.packages("covr")'
+
       - name: Upload coverage to Codecov
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
