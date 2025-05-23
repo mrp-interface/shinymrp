@@ -19,9 +19,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libglpk-dev \
-            libcurl4-openssl-dev \
-            pkg-config
+            libglpk-dev \                  # existing dependency
+            libcurl4-openssl-dev \         # for R curl package
+            pkg-config \                   # pkg-config for .pc lookup
+            libfontconfig1-dev \           # for systemfonts package
+            libfreetype6-dev               # for systemfonts package
 
       - name: Cache R library
         uses: actions/cache@v3
@@ -48,7 +50,6 @@ jobs:
           R CMD check --no-manual --as-cran .
 
 
-
   coverage:
     name: test-coverage
     needs: check
@@ -63,7 +64,9 @@ jobs:
           sudo apt-get install -y \
             libglpk-dev \
             libcurl4-openssl-dev \
-            pkg-config
+            pkg-config \
+            libfontconfig1-dev \
+            libfreetype6-dev
 
       - name: Cache R library
         uses: actions/cache@v3
