@@ -79,8 +79,8 @@ jobs:
       - name: Install covr
         run: Rscript -e 'install.packages("covr")'
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: mrp-interface/shinymrp
+      - name: Run tests and upload coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          Rscript -e 'covr::codecov(token = Sys.getenv("CODECOV_TOKEN"))'
