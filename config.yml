@@ -1,0 +1,7 @@
+default:
+  demo: FALSE
+  install_cmdstan: TRUE
+
+shinyapps:
+  demo: TRUE
+  install_cmdstan: FALSE

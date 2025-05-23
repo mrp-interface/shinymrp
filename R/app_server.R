@@ -12,7 +12,6 @@ app_server <- function(input, output, session) {
   ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 20))
 
   global <- reactiveValues(
-    web_version = FALSE,
     data_format = NULL,
     input = input,
     output = output,

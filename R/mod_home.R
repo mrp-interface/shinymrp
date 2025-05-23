@@ -139,28 +139,28 @@ mod_home_server <- function(id, global){
     output$panel_group <- reactive(panel_group())
     outputOptions(output, "panel_group", suspendWhenHidden = FALSE)
     
-    observe({
-      if(global$web_version) {
-        shinyWidgets::sendSweetAlert(
-          title = "Information",
-          text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
-          type = "info"
-        )
-      } else {
-        # install CmdStan if not installed already
-        if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-          waiter::waiter_show(
-            html = waiter_ui("setup"),
-            color = waiter::transparent(0.9)
-          )
+    if (config::get("demo")) {
+      shinyWidgets::sendSweetAlert(
+        title = "Information",
+        text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
+        type = "info"
+      )
+    }
 
-          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
-          cmdstanr::install_cmdstan(check_toolchain = FALSE)
+    # install CmdStan if not installed already
+    if (config::get("install_cmdstan") &&
+        is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
+          
+      waiter::waiter_show(
+        html = waiter_ui("setup"),
+        color = waiter::transparent(0.9)
+      )
 
-          waiter::waiter_hide()
-        }
-      }
-    })
+      cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+      cmdstanr::install_cmdstan(check_toolchain = FALSE)
+
+      waiter::waiter_hide()
+    }
     
     observeEvent(global$input$navbar, {
       if(global$input$navbar == "nav_home") {
