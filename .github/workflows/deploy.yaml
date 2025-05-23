@@ -9,7 +9,7 @@ jobs:
     name: Publish to shinyapps.io
     runs-on: ubuntu-latest
     env:
-      R_CONFIG_ACTIVE: shinyapps          # must match a section in your config.yml
+      R_CONFIG_ACTIVE: shinyapps
       SHINYAPPS_ACCOUNT: ${{ secrets.SHINYAPPS_ACCOUNT }}
       SHINYAPPS_TOKEN:   ${{ secrets.SHINYAPPS_TOKEN }}
       SHINYAPPS_SECRET:  ${{ secrets.SHINYAPPS_SECRET }}
@@ -21,21 +21,25 @@ jobs:
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
 
-      - name: Restore packages
-        run: Rscript -e 'renv::restore()'
-
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libglpk-dev \                  # existing dep
-            libcurl4-openssl-dev \         # for curl
-            pkg-config \                   # .pc lookup
-            libfontconfig1-dev \           # for systemfonts
-            libfreetype6-dev               # for systemfonts
+          sudo apt-get install -y libglpk-dev libcurl4-openssl-dev pkg-config libfontconfig1-dev libfreetype6-dev
+
+      - name: Cache R library
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('renv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+      - name: Restore packages
+        run: Rscript -e 'renv::restore()'
+
 
       - name: Ensure rsconnect is available
-        run: Rscript -e 'if (!requireNamespace("rsconnect", quietly=TRUE)) install.packages("rsconnect")'
+        run: Rscript -e 'if (!requireNamespace("rsconnect", quietly = TRUE)) install.packages("rsconnect")'
 
       - name: Authenticate with shinyapps.io
         run: |
