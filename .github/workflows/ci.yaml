@@ -80,4 +80,7 @@ jobs:
         run: Rscript -e 'install.packages("covr")'
 
       - name: Run tests and upload coverage
-        run: Rscript -e 'covr::codecov()'
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          Rscript -e 'covr::codecov(token = Sys.getenv("CODECOV_TOKEN"))'
