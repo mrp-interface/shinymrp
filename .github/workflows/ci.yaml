@@ -31,6 +31,15 @@ jobs:
       - name: Restore packages
         run: Rscript -e 'renv::restore()'
 
+      - name: Install cmdstan
+        run: |
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+          cmdstanr::install_cmdstan(cores = 2)
+        shell: Rscript {0}
+
+      - name: Install covr
+        run: Rscript -e 'install.packages("covr")'
+
       - name: Run R CMD check
         run: |
           R CMD check --no-manual --as-cran .
@@ -56,6 +65,15 @@ jobs:
 
       - name: Restore packages
         run: Rscript -e 'renv::restore()'
+
+      - name: Install cmdstan
+        run: |
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+          cmdstanr::install_cmdstan(cores = 2)
+        shell: Rscript {0}
+
+      - name: Install covr
+        run: Rscript -e 'install.packages("covr")'
 
       - name: Run tests and upload coverage
         run: Rscript -e 'covr::codecov()'
