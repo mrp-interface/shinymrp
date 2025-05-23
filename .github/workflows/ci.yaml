@@ -1,5 +1,4 @@
-# .github/workflows/ci.yaml
-name: CI
+name: R-CMD-check
 
 on:
   push:
@@ -41,6 +40,12 @@ jobs:
 
       - uses: r-lib/actions/setup-renv@v2
 
+      - name: Install cmdstan
+        run: |
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+          cmdstanr::install_cmdstan(cores = 2)
+        shell: Rscript {0}
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual", "--as-cran")'
@@ -78,6 +83,12 @@ jobs:
             build-essential
 
       - uses: r-lib/actions/setup-renv@v2
+
+      - name: Install cmdstan
+        run: |
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+          cmdstanr::install_cmdstan(cores = 2)
+        shell: Rscript {0}
 
       - name: Upload coverage to Codecov
         env:
