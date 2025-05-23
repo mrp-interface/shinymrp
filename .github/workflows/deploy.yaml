@@ -24,7 +24,10 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglpk-dev
+          sudo apt-get install -y \
+            libglpk-dev \
+            libcurl4-openssl-dev \
+            pkg-config
 
       - name: Ensure rsconnect is available  
         run: Rscript -e 'if (!requireNamespace("rsconnect", quietly=TRUE)) install.packages("rsconnect")'
