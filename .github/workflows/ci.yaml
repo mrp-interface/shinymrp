@@ -33,10 +33,7 @@ jobs:
 
       - name: Run R CMD check
         run: |
-          R CMD check \
-            --no-manual \
-            --as-cran \
-            .
+          R CMD check --no-manual --as-cran .
 
 
 
