@@ -24,10 +24,20 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglpk-dev libcurl4-openssl-dev pkg-config libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev
+          sudo apt-get install -y \
+            pkg-config \
+            libcurl4-openssl-dev \
+            libglpk-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            libpng-dev \
+            libtiff5-dev \
+            libjpeg-dev \
+            libcairo2-dev
 
       - uses: r-lib/actions/setup-renv@v2
-
 
       - name: Ensure rsconnect is available
         run: Rscript -e 'if (!requireNamespace("rsconnect", quietly = TRUE)) install.packages("rsconnect")'
