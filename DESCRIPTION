@@ -1,15 +1,24 @@
 Package: shinymrp
-Title: Point-and-click Interface for MRP
-Version: 0.0.1
+Title: Point-and-click interface for MRP
+Version: 0.5.0
 Authors@R: c(
-    person("Toan", "Tran", , "tntoan@umich.edu", role = c("cre", "aut")),
-    person("Jonah", "Gabry", , "jgabry@gmail.com", role = "aut"),
-    person("Yajuan", "Si", , "yajuan@umich.edu", role = "aut"),
-    person("Mitzi", "Morris", , "mitzi212@gmail.com", role = "aut")
+    person("Toan", "Tran", email = "trannttoan97@gmail.com", role = c("cre", "aut")),
+    person("Jonah", "Gabry", email = "jgabry@gmail.com", role = "aut"),
+    person("Yajuan", "Si", email = "yajuan@umich.edu", role = "aut"),
+    person("Mitzi", "Morris", email = "mitzi212@gmail.com", role = "aut")
   )
-Description: A GUI designed for intuitive applications of Multilevel Regression and Poststratification to cross-sectional and spatio-temporal datasets.
+Author:     Toan Tran [cre, aut], Jonah Gabry [aut], Yajuan Si [aut], Mitzi Morris [aut]
+Maintainer: Toan Tran <tranntoan97@gmail.com>
+Description: A GUI designed for intuitive applications of Multilevel
+    Regression and Poststratification.
 License: MIT + file LICENSE
+URL: https://github.com/mrp-interface/shinymrp
+BugReports: https://github.com/mrp-interface/shinymrp/issues
+Depends: 
+    R (>= 3.6.0)
 Imports: 
+    bsicons,
+    bslib,
     cmdstanr,
     config (>= 0.3.2),
     dplyr,
@@ -17,37 +26,32 @@ Imports:
     ggplot2,
     golem (>= 0.4.1),
     haven,
+    highcharter,
     ISOweek,
-    janitor,
     loo,
+    magrittr,
     patchwork,
-    pkgload,
-    plotly,
+    posterior,
     purrr,
+    qs,
     RColorBrewer,
     readr,
     readxl,
+    rlang,
+    scales,
     shiny (>= 1.8.0),
     shinyjs,
-    shinythemes,
     shinyWidgets,
-    sortable,
     stringr,
     tidyr,
-    waiter,
-    zeallot
-Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.3.1
-URL: https://github.com/mrp-interface/shinymrp
-BugReports: https://github.com/mrp-interface/shinymrp/issues
+    waiter
 Suggests: 
+    covr,
     spelling,
     testthat (>= 3.0.0)
-Additional_repositories:
-    https://stan-dev.r-universe.dev/
+Additional_repositories: https://stan-dev.r-universe.dev/
 Config/testthat/edition: 3
+Encoding: UTF-8
 Language: en-US
-Depends: 
-    R (>= 4.1),
-    shinyBS
+LazyData: true
+RoxygenNote: 7.3.2

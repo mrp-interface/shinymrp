@@ -3,71 +3,122 @@
 #' @param request Internal parameter for `{shiny}`.
 #'     DO NOT REMOVE.
 #' @import shiny
+#' @import bslib
 #' @noRd
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
-    navbarPage("Multilevel Regression & Poststratification",
-      theme = shinythemes::shinytheme("flatly"),
+    bslib::page_navbar(
+      title = "MRP",
       id = "navbar",
-      tabPanel("Home",
+      theme = bslib::bs_theme(version = 5) %>% 
+        bslib::bs_add_rules(GLOBAL$ui$style$global),
+      bslib::nav_panel(
+        title = "Home",
         value = "nav_home",
-        icon = icon("home", lib = "glyphicon"),
         mod_home_ui(module_ids$home)
       ),
-      tabPanel("Analyze",
+      bslib::nav_panel(
+        title = "Analyze",
         value = "nav_analyze",
-        icon = icon("stats", lib = "glyphicon"),
-        tabsetPanel(id = "navbar_analyze",
-          tabPanel(tagList("Upload data", icon("chevron-right", "fa")),
+        bslib::navset_card_underline(
+          id = "navbar_analyze",
+          bslib::nav_panel(
+            title = "Upload data",
             value = "nav_analyze_upload",
             mod_analyze_upload_ui(module_ids$analyze$upload)
           ),
-          tabPanel(tagList("Visualize data", icon("chevron-right", "fa")),
+          bslib::nav_panel(
+            title = "Visualize data",
             value = "nav_analyze_visualize",
             mod_analyze_visualize_ui(module_ids$analyze$visualize)
           ),
-          tabPanel(tagList("Fit model", icon("chevron-right", "fa")),
+          bslib::nav_panel(
+            title = "Fit model",
             value = "nav_analyze_model",
             mod_analyze_model_ui(module_ids$analyze$model)
           ),
-          tabPanel("View results",
+          bslib::nav_panel(
+            title = "View results",
             value = "nav_analyze_result",
             mod_analyze_result_ui(module_ids$analyze$result)
+          ),
+          bslib::nav_spacer(),
+          bslib::nav_item(
+            tags$div(
+              class = "d-flex align-items-center",
+              tags$span(
+                class = "me-2",
+                style = "font-size: 1.05rem;",
+                conditionalPanel(
+                  condition = "output.data_format == 'temporal_covid'",
+                  "Time-varying: COVID"
+                ),
+                conditionalPanel(
+                  condition = "output.data_format == 'temporal_other'",
+                  "Time-varying: General"
+                ),
+                conditionalPanel(
+                  condition = "output.data_format == 'static_poll'",
+                  "Cross-sectional: Poll"
+                ),
+                conditionalPanel(
+                  condition = "output.data_format == 'static_other'",
+                  "Cross-sectional: General"
+                )
+              ),
+              actionLink(
+                inputId = "show_guide",
+                label = bsicons::bs_icon("question-circle", size = "1.5em"),
+                class = "btn btn-link p-0"  # Remove padding from the button for tighter layout
+              )
+            )
           )
         )
       ),
-      navbarMenu("Learn",
-        icon = icon("book", lib = "glyphicon"),
-        tabPanel("Interface",
+      bslib::nav_menu(
+        title = "Learn",
+        value = "nav_learn",
+        bslib::nav_panel(
+          title = "User Guide",
           value = "nav_learn_interface",
           mod_learn_interface_ui(module_ids$learn$interface)
         ),
-        tabPanel("Preprocess",
+        bslib::nav_panel(
+          title = "Data Preprocessing",
           value = "nav_learn_preprocess",
           mod_learn_preprocess_ui(module_ids$learn$preprocess)
         ),
-        tabPanel("MRP",
+        bslib::nav_panel(
+          title = "MRP",
           value = "nav_learn_mrp",
           mod_learn_mrp_ui(module_ids$learn$mrp)
         )
       ),
-      tabPanel("About",
+      bslib::nav_panel(
+        title = "About",
         value = "nav_about",
-        icon = icon("user", lib = "glyphicon"),
         mod_about_ui(module_ids$about)
-      )
-    ),
-    tags$div(class = "feedback_container",
-      tags$a(
-        "Feedback",
-        href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
-        target = "_blank",
-        class = "btn btn-info feedback"
+      ),
+      bslib::nav_spacer(),
+      bslib::nav_item(
+        tags$a(
+          class = "btn",
+          href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
+          target = "_blank",
+          bsicons::bs_icon("chat-text-fill", size = "1.5em")
+        )
+      ),
+      bslib::nav_item(
+        tags$a(
+          class = "btn",
+          href = "https://github.com/mrp-interface/shinymrp",
+          target = "_blank",
+          bsicons::bs_icon("github", size = "1.5em")
+        )
       )
     )
-
   )
 }
 
@@ -83,11 +134,6 @@ golem_add_external_resources <- function() {
   add_resource_path(
     "www",
     app_sys("app/www")
-  )
-
-  add_resource_path(
-    "sbs",
-    system.file("www", package = "shinyBS")
   )
 
   tags$head(

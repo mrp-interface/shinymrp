@@ -52,11 +52,4 @@ rsconnect/
 .DS_Store
 inst/.DS_Store
 inst/extdata/.DS_Store
-
-.Rbuildignore
 .vscode/
-
-model_temp
-model_temp.stan
-
-shinymrp.Rproj

@@ -7,498 +7,730 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-mod_analyze_upload_ui <- function(id){
+mod_analyze_upload_ui <- function(id) {
   ns <- NS(id)
-  tags$div(class = "pad_top",
-    sidebarLayout(
-      sidebarPanel(width = 3,
-        tags$p("Indicate input data format then select a file (CSV/Excel/SAS)"),
-        shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_input"),
+  
+  bslib::layout_sidebar(
+    #---------------------------------------------------------------------------
+    # Sidebar
+    #---------------------------------------------------------------------------
+    sidebar = sidebar(
+      width = 375,
+
+      bslib::accordion(
+        id = ns("accordion"),
+        multiple = FALSE,
+        bslib::accordion_panel(
+          title = "Sample",
+          value = "sample",
+          tags$p(tags$strong("Upload individual-level or aggregated sample data")),
+          shinyWidgets::radioGroupButtons(
+            inputId = ns("toggle_sample"),
             label = NULL,
-            choices = c("Individual Data" = "indiv", "Aggregated Data" = "agg"),
+            choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
             selected = "agg",
             justified = TRUE,
-            size = "sm",
-            checkIcon = list(
-              yes = tags$i(class = "fa fa-circle-check", style = "color: white"),
-              no = tags$i(class = "fa fa-circle-o", style = "color: white")
+            size = "sm"
+          ),
+          fileInput(
+            inputId = ns("sample_upload"),
+            label = NULL,
+            accept = GLOBAL$ui$data_accept
+          ),
+          uiOutput(ns("sample_feedback")),
+          p(class = "mt-0 small",
+            "For", tags$u("input data requirements,"), "open the",
+            actionLink(ns("show_upload_guide"), label = "User Guide."),
+            "For a detailed description of the preprocessing procedure and examples of preprocessing code, go to the",
+            actionLink(ns("to_preprocess"), label = "Preprocessing"), "page."
+          ),
+          # Example data label
+          tags$div(class = "mt-4",
+            conditionalPanel(
+              condition = "output.data_format == 'temporal_covid'",
+              tags$p(tags$u("Example"), ": COVID-19 hospital test records")
+            ),
+            conditionalPanel(
+              condition = "output.data_format == 'static_poll'",
+              tags$p(tags$u("Example"), ": 2018 Cooperative Congressional Election Study")
+            ),
+            conditionalPanel(
+              condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+              tags$p(tags$u("Example data"))
+            ),
+            tags$div(
+              class = "d-flex gap-2 mb-3",
+              actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
+              actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
             )
+          )
         ),
-        fileInput(
-          inputId = ns("input_data"),
-          label = NULL,
-          accept = c(".csv", ".xlsx", ".sas7bdat")
-        ),
-        tags$div(class = "pad_bottom",
-          HTML("<details><summary class=summary>Example</summary>"),
-          tags$div(class = "justify pad_top",
-            actionButton(
-              inputId = ns("use_indiv_example"),
-              label = "Invididual data",
-              icon = icon("table", class = "fa button_icon"),
-              width = "49.5%"
+        bslib::accordion_panel(
+          title = "Poststratification Data",
+          value = "pstrat",
+          conditionalPanel(
+            condition = sprintf("!output['%s']", ns("data_processed")),
+            bslib::card(
+              class = "bg-warning mb-3",  # yellow background & border
+              bslib::card_body(
+                tags$div(
+                  style = "display: flex; align-items: center;",
+                  shiny::icon("exclamation-triangle", class = "me-2"),  # Bootstrap margin-end
+                  tags$span("Please upload sample data first", class = "fw-semibold")
+                )
+              )
+            )
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_covid' || output.data_format == 'static_poll'",
+            tags$p("Provide information for linking the input data to the ACS data.",
+              class = "small"
             ),
-            actionButton(
-              inputId = ns("use_agg_example"),
-              label = "Aggregated data",
-              icon = icon("table", class = "fa button_icon"),
-              width = "49.5%"
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+            tags$p("Provide information for linking the input data to the ACS data or upload poststratification data.",
+              class = "small"
             ),
           ),
-          HTML("</details>"),
+          tags$div(class = "mt-2",
+            actionButton(
+              inputId = ns("link_acs_popover_btn"),
+              label = "Link to ACS Data",
+              icon = icon("chevron-down"),
+              class = "btn btn-sm btn-secondary"
+            ),
+            tags$div(id = ns("link_acs_popover"),
+              bslib::card(class = "mt-2",
+                bslib::card_body(
+                  selectizeInput(ns("link_geo"), label = "Select geography scale for poststratification", choices = NULL),
+                  selectizeInput(ns("acs_year"), label = "Select 5-year ACS data to link to", choices = NULL, options = list(dropdownParent = "body")),
+                  actionButton(ns("link_acs"), label = "Link", class = "btn-primary w-100") 
+                )
+              )
+            )
+          ),
+          conditionalPanel(
+            condition = "output.data_format == 'temporal_other' || output.data_format == 'static_other'",
+            tags$div(class = "mt-2",
+              actionButton(
+                inputId = ns("pstrat_upload_popover_btn"),
+                label =  "Upload poststratification data",
+                icon = icon("chevron-down"),
+                class = "btn btn-sm btn-secondary"
+              ),
+              tags$div(id = ns("pstrat_upload_popover"),
+                bslib::card(class = "mt-2",
+                  bslib::card_body(class = "gap-3",
+                    tags$p(tags$strong("Upload individual-level or aggregated poststratification data")),
+                    shinyWidgets::radioGroupButtons(
+                      inputId = ns("toggle_pstrat"),
+                      label = NULL,
+                      choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
+                      selected = "agg",
+                      justified = TRUE,
+                      size = "sm"
+                    ),
+                    fileInput(
+                      inputId = ns("pstrat_upload"),
+                      label = NULL,
+                      accept = GLOBAL$ui$data_accept
+                    ),
+                    uiOutput(ns("pstrat_feedback")),
+                    tags$p(class = "mt-0", tags$u("Example data")),
+                    downloadButton(
+                      outputId = ns("save_pstrat_example"),
+                      label = "Aggregated",
+                      class = "btn w-100"
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+    #---------------------------------------------------------------------------
+    # Main Window
+    #---------------------------------------------------------------------------
+    conditionalPanel(
+      condition = sprintf("output['%s']", ns("file_uploaded")),
+      bslib::layout_columns(
+        col_widths = c(4, 8),
+        conditionalPanel(
+          condition = sprintf("output['%s'] == true", ns("data_processed")),
+          div(class = "d-flex align-items-start gap-2",
+            # Toggle button for table view
+            shinyWidgets::radioGroupButtons(
+              inputId = ns("toggle_table"),
+              label = NULL,
+              size = "sm",
+              choices = c("Raw" = "raw", "Preprocessed" = "prep")
+            ),
+            # Download button for preprocessed data 
+            conditionalPanel(
+              condition = sprintf("input['%s'] == 'prep'", ns("toggle_table")),
+              downloadButton(
+                outputId = ns("download_preprocessed"),
+                label = NULL,
+                class = "btn btn-primary btn-sm"
+              )
+            )
+          )
         ),
-        tags$p(class = "ref",
-          "For ", tags$u("requirements for input data"), "and preprocessing code, go to the",
-          actionLink(
-            inputId = ns("to_interface"),
-            label = "Interface",
-            class = "action_link"
-          ),
-          "page. For a detailed description of the prepropressing procedure, go to the",
-          actionLink(
-            inputId = ns("to_preprocess"),
-            label = "Preprocessing",
-            class = "action_link"
-          ),
-          "page."
+        # Info text
+        tags$p(
+          sprintf("*The preview only includes the first %d rows of the data", 
+                 GLOBAL$ui$preview_size), 
+          class = "small text-muted text-end"
         )
       ),
-      mainPanel(width = 9,
-        uiOutput(outputId = ns("main_panel"))
-      )
+      DT::dataTableOutput(outputId = ns("table"))
     )
   )
 }
+
 
 #' analyze_upload Server Functions
 #'
 #' @noRd
 mod_analyze_upload_server <- function(id, global){
-  moduleServer( id, function(input, output, session){
+  moduleServer(id, function(input, output, session){
     ns <- session$ns
+    
+    raw_sample <- reactiveVal()
+    raw_pstrat <- reactiveVal()
+    sample_errors <- reactiveVal()
+    pstrat_errors <- reactiveVal()
+    
 
-    rawdata <- reactiveVal()
+    #---------------------------------------------------------------------------
+    # Reactive outputs for conditional panels
+    #---------------------------------------------------------------------------
+    output$file_uploaded <- reactive(!is.null(raw_sample()))
+    outputOptions(output, "file_uploaded", suspendWhenHidden = FALSE)
+    
+    output$data_processed <- reactive(!is.null(global$data))
+    outputOptions(output, "data_processed", suspendWhenHidden = FALSE)
 
-    observeEvent(global$input$navbar, {
-      if(global$input$navbar == "nav_analyze" & is.null(global$covid)) {
-          showModal(
-            modalDialog(
-              title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-              "Please select a version of the interface.",
-              footer = actionButton(
-                inputId = ns("to_home"),
-                label = "Go to home"
-              )
-            )
+
+    # --------------------------------------------------------------------------
+    # Reset everything when data format changes
+    # --------------------------------------------------------------------------
+    observeEvent(global$data_format, {
+      shinyjs::reset("sample_upload")
+      shinyjs::reset("pstrat_upload")
+      shinyjs::reset("toggle_sample")
+      shinyjs::reset("toggle_pstrat")
+      shinyjs::reset("link_geo")
+      shinyjs::reset("acs_year")
+
+      raw_sample(NULL)
+      raw_pstrat(NULL)
+      sample_errors(NULL)
+      pstrat_errors(NULL)
+      global$data <- NULL
+      global$mrp <- NULL
+      global$plot_data <- NULL
+      global$link_data <- NULL
+
+      # reset the accordion to show the sample data panel
+      bslib::accordion_panel_open(
+        id = "accordion",
+        values = "sample",
+        session = session
+      )
+
+      # reset the poststratification data panel
+      shinyjs::show("link_acs_popover")
+      shinyjs::hide("pstrat_upload_popover")
+    })
+    
+    # --------------------------------------------------------------------------
+    # Make poststratification data options exclusive
+    # --------------------------------------------------------------------------
+    observeEvent(
+      eventExpr = list(
+        input$pstrat_upload_popover_btn,
+        input$link_acs_popover_btn
+      ),
+      handlerExpr = {
+        shinyjs::toggle(id = "pstrat_upload_popover")
+        shinyjs::toggle(id = "link_acs_popover")
+      }
+    )
+
+
+    # --------------------------------------------------------------------------
+    # Show feedback about input data
+    # --------------------------------------------------------------------------
+    output$sample_feedback <- renderUI({
+      req(raw_sample())
+
+      if (!is.null(sample_errors())) {
+        if (length(sample_errors()) > 0) {
+          tags$div(
+            tagList(icon("circle-xmark", "fa"), "Error"),
+            tags$p("Input data does not meet all requirements. Please check the user guide for data requirements.", class = "small"),
           )
+        } else {
+          tags$div(
+            tagList(icon("circle-check", "fa"), "Success"),
+            tags$p("All requirements are met. You may proceed to the Poststratification Data section'.", class = "small")
+          )
+        }
       }
     })
 
-    observeEvent(input$to_home, {
-      updateTabsetPanel(global$session,
-        inputId = "navbar",
-        selected = "nav_home"
-      )
-
-      removeModal(global$session)
-    })
-
-    observeEvent(global$covid, {
-      shinyjs::reset("input_data")
-      shinyjs::reset("toggle_input")
-
-      rawdata(NULL)
-      global$data <- NULL
-      global$mrp <- NULL
-      global$plotdata <- NULL
-    })
-
-    output$main_panel <- renderUI({
-      req(rawdata())
-
-      tagList(
-        tags$div(class = "justify",
-          shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_table"),
-            label = NULL,
-            choices = c("Raw" = "raw", "Preprocessed" = "prep"),
-            checkIcon = list(
-              yes = tags$i(class = "fa fa-circle-check", style = "color: white"),
-              no = tags$i(class = "fa fa-circle-o", style = "color: white")
-            )
-          ),
-          shinyBS::bsTooltip(ns("toggle_table"), "\"Preprocessed\" table only shows when data has been preprocessed properly", placement = "right"),
-          tags$p("*The table only shows a subset of the data")
-        ),
-        DT::dataTableOutput(outputId = ns("table")),
-        downloadButton(
-          outputId = ns("download_data"),
-          label = "Download"
-        )
-      )
-    })
-
-
-    output$table <- DT::renderDataTable({
-      df <- if(input$toggle_table == "raw") rawdata() else global$data
-
-      df |>
-        head(100) |>
+    
+    # Table output renderer
+    output$table <- DT::renderDT({
+      req(raw_sample())
+      
+      df <- if(is.null(input$toggle_table) || input$toggle_table == "raw") {
+        raw_sample()
+      } else {
+        req(global$data) # Ensure global$data exists when "prep" is selected
+        global$data
+      }
+      
+      df %>%
+        utils::head(GLOBAL$ui$preview_size) %>%
         DT::datatable(
           options = list(
+            columnDefs = list(
+              list(className = "dt-left", targets = "_all")
+            ),
             scrollX = TRUE,
-            lengthChange = FALSE
+            lengthChange = FALSE,
+            searching = FALSE,
+            info = FALSE
           )
+        ) %>%
+        DT::formatStyle(
+          columns = c("positive"),
+          `max-width` = "150px"
         )
     })
 
-    observeEvent(input$input_data, {
+    # Preprocessed data download handler
+    output$download_preprocessed <- downloadHandler(
+      filename = function() {
+        paste0("preprocessed_data_", format(Sys.Date(), "%Y%m%d"), ".csv")
+      },
+      content = function(file) {
+        req(global$data)
+        readr::write_csv(global$data, file)
+      }
+    )
 
-      # reset variables
-      global$data <- NULL
-      global$mrp <- NULL
-      global$plotdata <- NULL
-
-      # read in data
-      path <- input$input_data$datapath
-      if(stringr::str_ends(path, "csv")) {
-        readr::read_csv(path, show_col_types = FALSE) |> rawdata()
-      } else if (stringr::str_ends(path, "(xlsx|xls)")) {
-        readxl::read_excel(path, guess_max = 5000) |> rawdata()
-      } else if (stringr::str_ends(path, "sas7bdat")) {
-        haven::read_sas(path) |> rawdata()
-      } # else no necessary due to fileInput constraint
-
-
+    # Handle sample data upload
+    observeEvent(input$sample_upload, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
+      
+      # Reset state
+      global$data <- NULL
+      global$mrp <- NULL
+      global$plot_data <- NULL
 
+      tryCatch({
+        read_data(input$sample_upload$datapath) %>% raw_sample()
 
-      if(input$toggle_input == "indiv") {
-        # aggregate raw data
-        out <- try({
-          if(global$covid) {
-            global$data <- rawdata() |>
-              aggregate_covid(age_bounds = global$static$bounds$covid$age) |>
-              prep(list(), to_char = c("zip"))
-          } else {
-            global$data <- rawdata() |>
-              aggregate_poll(age_bounds = global$static$bounds$poll$age)
-          }
-        }, silent = TRUE)
+        global$data <- preprocess(
+          data = raw_sample(),
+          data_format = global$data_format,
+          zip_county_state = global$extdata$zip_county_state,
+          const = GLOBAL,
+          is_sample = TRUE,
+          is_aggregated = input$toggle_sample == "agg"
+        )
 
-        if ("try-error" %in% class(out)) {
-          show_alert("Unsuccessful data processing. Please check the Learn > Interface page for input data requirements.", global$session)
-        } else {
-          show_notif("Input data has been preprocessed. You may proceed to the next page.", global$session)
-        }
-
-      } else {
-        # check input aggregated data
-        out <- try({
-          if(global$covid) {
-            errors <- check_covid_data(rawdata(), global$static$expected_columns$covid)
-
-            if(length(errors) == 0) {
-              global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$covid) |>
-                prep(global$static$levels$covid,
-                  to_lower = c("sex", "race"),
-                  to_char = c("zip")
-                )
-            } else if(length(errors) == 1 & "date" %in% names(errors)) {
-              global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$covid) |>
-                prep(global$static$levels$covid,
-                  to_lower = c("sex", "race"),
-                  to_char = c("zip")
-                ) |>
-                select(-date)
-            }
-          } else {
-            errors <- check_poll_data(rawdata(), global$static$expected_columns$poll)
-
-            if(length(errors) == 0) {
-              global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$poll) |>
-                prep(global$static$levels$poll,
-                  to_lower = c("sex", "race", "edu")
-                )
-            } else if(length(errors) == 1 & "state" %in% names(errors)) {
-              global$data <- rawdata() |>
-                find_columns(global$static$expected_columns$poll) |>
-                prep(global$static$levels$poll,
-                  to_lower = c("sex", "race", "edu")
-                ) |>
-                select(-state)
-            }
-          }
-        }, silent = TRUE)
-
-        if ("try-error" %in% class(out)) {
-          show_alert("Input data does not meet all requirements. Please check the Learn > Interface page for input data requirements.", global$session)
-        } else {
-          if(length(errors) == 0) {
-            show_notif("All requirements are met. You may proceed to the next page.", global$session)
-          } else {
-            show_alert(
-              tagList(
-                tags$ul(
-                  purrr::map(unlist(errors), ~ tags$li(.x))
-                )
-              ),
-              global$session
-            )
-          }
-        }
-      }
-
-      # prepare data for model fitting and plotting
-      if(!is.null(global$data)) {
-        if(global$covid) {
-          c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
-              global$data,
-              global$extdata$covid$tract_data,
-              global$extdata$covid$zip_tract
-            )
-
-          c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-              patient,
-              pstrat_data,
-              covariates,
-              global$static$levels$covid
-            )
-
-
-          global$mrp <- list(
-            input = input_data,
-            input_stan = stan_factor_covid(input_data, global$static$levels$covid),
-            new = new_data,
-            new_stan = stan_factor_covid(new_data, global$static$levels$covid),
-            levels = levels,
-            vars = vars
-          )
-
-          global$plotdata <- list(
-            dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-            geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
-            raw_covariates = raw_covariates
-          )
-
-        } else {
-          global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
-
-          covariates <- get_state_predictors(rawdata())
-          covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
-
-          c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-            global$data,
-            global$extdata$poll$pstrat_data,
-            covariates,
-            global$static$levels$poll
-          )
-
-          global$mrp <- list(
-            input = input_data,
-            input_stan = stan_factor_poll(input_data, global$static$levels$poll),
-            new = new_data,
-            new_stan = stan_factor_poll(new_data, global$static$levels$poll),
-            levels = levels,
-            vars = vars
-          )
-
-          if("state" %in% names(global$data)) {
-            global$plotdata <- list(
-              geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
-            )
-          }
-        }
-      }
-
-      waiter::waiter_hide()
-
+        sample_errors(character(0))
+      
+      }, error = function(e) {
+        # show error message
+        error_message <- paste("Error processing data:\n", e$message)
+        sample_errors(error_message)
+        message(error_message)
+      }, finally = {
+        # Always hide the waiter
+        waiter::waiter_hide()
+      })
     })
-
+    
+    # Use individual-level example data
     observeEvent(input$use_indiv_example, {
       waiter::waiter_show(
         html = waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
 
-      if(global$covid) {
-        readr::read_csv(app_sys("extdata/covid_test_records_individual.csv"), show_col_types = FALSE) |> rawdata()
+      indiv_file_name <- switch(global$data_format,
+        "temporal_covid" = "timevarying_covid_individual.csv",
+        "temporal_other" = "timevarying_other_individual.csv",
+        "static_poll"    = "crosssectional_poll_individual.csv",
+        "static_other"   = "crosssectional_other_individual.csv"
+      )
 
-        global$data <- rawdata() |>
-          aggregate_covid(age_bounds = global$static$bounds$covid$age) |>
-          prep(list(), to_char = c("zip"))
-      } else {
-        readr::read_csv(app_sys("extdata/CES_data_individual.csv"), show_col_types = FALSE) |> rawdata()
+      agg_file_name <- switch(global$data_format,
+        "temporal_covid" = "timevarying_covid_aggregated.csv",
+        "temporal_other" = "timevarying_other_aggregated.csv",
+        "static_poll"    = "crosssectional_poll_aggregated.csv",
+        "static_other"   = "crosssectional_other_aggregated.csv"
+      )
 
-        global$data <- rawdata() |>
-          aggregate_poll(age_bounds = global$static$bounds$poll$age)
-      }
+      readr::read_csv(app_sys(paste0("extdata/example/data/", indiv_file_name)), show_col_types = FALSE) %>% raw_sample()
+      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", agg_file_name)), show_col_types = FALSE) %>%
+        clean_data() %>%
+        mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
+      
+      waiter::waiter_hide()
+    })
 
+    # Use aggregated example data
+    observeEvent(input$use_agg_example, {
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
+      )
 
-      if(global$covid) {
-        c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
-            global$data,
-            global$extdata$covid$tract_data,
-            global$extdata$covid$zip_tract
-          )
+      file_name <- switch(global$data_format,
+        "temporal_covid" = "timevarying_covid_aggregated.csv",
+        "temporal_other" = "timevarying_other_aggregated.csv",
+        "static_poll"    = "crosssectional_poll_aggregated.csv",
+        "static_other"   = "crosssectional_other_aggregated.csv"
+      )
 
-        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-            patient,
-            pstrat_data,
-            covariates,
-            global$static$levels$covid
-          )
-
-
-        global$mrp <- list(
-          input = input_data,
-          input_stan = stan_factor_covid(input_data, global$static$levels$covid),
-          new = new_data,
-          new_stan = stan_factor_covid(new_data, global$static$levels$covid),
-          levels = levels,
-          vars = vars
-        )
-
-        global$plotdata <- list(
-          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
-          raw_covariates = raw_covariates
-        )
-
-      } else {
-        global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
-
-        covariates <- get_state_predictors(rawdata())
-        covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
-
-        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-          global$data,
-          global$extdata$poll$pstrat_data,
-          covariates,
-          global$static$levels$poll
-        )
-
-        global$mrp <- list(
-          input = input_data,
-          input_stan = stan_factor_poll(input_data, global$static$levels$poll),
-          new = new_data,
-          new_stan = stan_factor_poll(new_data, global$static$levels$poll),
-          levels = levels,
-          vars = vars
-        )
-
-        if("state" %in% names(global$data)) {
-          global$plotdata <- list(
-            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
-          )
-        }
-      }
+      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) %>% raw_sample()
+      global$data <- raw_sample() %>%
+        clean_data() %>%
+        mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
 
       waiter::waiter_hide()
     })
 
-    observeEvent(input$use_agg_example, {
-      if(global$covid) {
-        readr::read_csv(app_sys("extdata/covid_test_records_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata() |> mutate(zip = as.character(zip))
+
+    #---------------------------------------------------------------------------
+    # Update select input for linking to ACS
+    #---------------------------------------------------------------------------
+    observeEvent(global$data, {
+      req(global$data)
+
+      if(global$data_format == "temporal_covid") {
+        link_geos <- c("zip")
+        acs_years <- 2021
+      } else if (global$data_format == "static_poll") {
+        link_geos <- c("state")
+        acs_years <- 2018
       } else {
-        readr::read_csv(app_sys("extdata/CES_data_aggregated.csv"), show_col_types = FALSE) |> rawdata()
-        global$data <- rawdata()
+        # find the smallest geography in the data
+        idx <- match(names(global$data), GLOBAL$vars$geo) %>% stats::na.omit()
+        link_geos <- if (length(idx) > 0) {
+          c(GLOBAL$vars$geo[min(idx):length(GLOBAL$vars$geo)], "Do not include geography")
+        } else {
+          "Do not include geography"
+        }
+
+        acs_years <- 2019:2023
       }
 
-      if(global$covid) {
-        c(patient, pstrat_data, covariates, raw_covariates) %<-% link_ACS(
-            global$data,
-            global$extdata$covid$tract_data,
-            global$extdata$covid$zip_tract
+      updateSelectInput(session,
+        inputId = "link_geo",
+        choices = link_geos
+      )
+
+      updateSelectInput(session,
+        inputId = "acs_year",
+        choices = paste0(acs_years - 4, "-", acs_years)
+      )
+
+      # Update the accordion to show the poststratification data panel
+      bslib::accordion_panel_open(
+        id = "accordion",
+        values = "pstrat",
+        session = session
+      )
+
+      waiter::waiter_hide()
+    })
+    
+
+    #---------------------------------------------------------------------------
+    # Create poststratification data from ACS data
+    #---------------------------------------------------------------------------
+    observeEvent(input$link_acs, {
+      req(global$data)
+
+      start_busy(
+        session = session,
+        id = "link_acs",
+        label = "Linking..."
+      )
+
+      # delay the execution to allow the UI to update
+      shinyjs::delay(10, {
+        success <- FALSE
+
+        tryCatch({
+          # store user's selections for data linking
+          global$link_data <- list(
+            link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
+            acs_year = input$acs_year
           )
 
-        c(input_data, new_data, levels, vars) %<-% prepare_data_covid(
-            patient,
-            pstrat_data,
-            covariates,
-            global$static$levels$covid
+          if(global$data_format == "temporal_covid") {
+            # prepare data for MRP
+            global$mrp <- prepare_mrp_covid(
+              input_data = global$data,
+              pstrat_data = global$extdata$pstrat_covid,
+              covariates = global$extdata$covar_covid,
+              demo_levels = create_expected_levels(global$data_format),
+              vars_global = GLOBAL$vars
+            )
+
+            # prepare data for plotting
+            global$plot_data <- list(
+              dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
+              geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
+              raw_covariates = global$extdata$covar_covid %>% filter(.data$zip %in% unique(global$mrp$input$zip))
+            )
+
+          } else if (global$data_format == "static_poll") {
+            new_data <- global$extdata$pstrat_poll %>%
+              mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
+
+            global$mrp <- prepare_mrp_custom(
+              input_data = global$data,
+              new_data = new_data,
+              fips_county_state = global$extdata$fips$county,
+              demo_levels = create_expected_levels(global$data_format),
+              vars_global = GLOBAL$vars,
+              link_geo = "state",
+              need_time = global$data_format %in% c("temporal_covid", "temporal_other")
+            )
+
+            # prepare data for plotting
+            global$plot_data <- list(
+              geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
+            )
+
+          } else {
+            # retrieve ACS data based on user's selection
+            tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
+
+            # prepare data for MRP
+            global$mrp <- prepare_mrp_acs(
+              input_data = global$data,
+              tract_data = tract_data,
+              zip_tract = global$extdata$zip_tract,
+              demo_levels = create_expected_levels(global$data_format),
+              vars_global = GLOBAL$vars,
+              link_geo = global$link_data$link_geo,
+              need_time = global$data_format %in% c("temporal_covid", "temporal_other")
+            )
+
+
+            # prepare data for plotting
+            plot_data <- list()
+            plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+            plot_data$geojson <- names(global$extdata$geojson) %>%
+              stats::setNames(nm = .) %>%
+              purrr::map(~filter_geojson(
+                geojson = global$extdata$geojson[[.x]], 
+                geoids = global$mrp$levels[[.x]]
+              ))
+
+            global$plot_data <- nullify(plot_data)
+          }
+          
+          # set success to TRUE if no errors occurred
+          success <- TRUE
+
+        }, error = function(e) {
+          message(paste("Error linking data:\n", e$message))
+        }, finally = {
+          stop_busy(
+            session = session,
+            id = "link_acs",
+            label = if(success) "Linking complete" else "Linking failed",
+            success = success
           )
+        })
+      })
+    })
 
+    #----------------------------------------------------------------------------
+    # Show feedback about poststratification data
+    #----------------------------------------------------------------------------
+    output$pstrat_feedback <- renderUI({
+      req(raw_pstrat())
 
-        global$mrp <- list(
-          input = input_data,
-          input_stan = stan_factor_covid(input_data, global$static$levels$covid),
-          new = new_data,
-          new_stan = stan_factor_covid(new_data, global$static$levels$covid),
-          levels = levels,
-          vars = vars
-        )
-
-        global$plotdata <- list(
-          dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-          geojson = filter_geojson(global$extdata$covid$map_geojson, global$mrp$levels$county),
-          raw_covariates = raw_covariates
-        )
-
-      } else {
-        global$data$state <- to_fips(global$data$state, global$extdata$poll$fips)
-
-        covariates <- get_state_predictors(rawdata())
-        covariates$state <- to_fips(covariates$state, global$extdata$poll$fips)
-
-        c(input_data, new_data, levels, vars) %<-% prepare_data_poll(
-          global$data,
-          global$extdata$poll$pstrat_data,
-          covariates,
-          global$static$levels$poll
-        )
-
-        global$mrp <- list(
-          input = input_data,
-          input_stan = stan_factor_poll(input_data, global$static$levels$poll),
-          new = new_data,
-          new_stan = stan_factor_poll(new_data, global$static$levels$poll),
-          levels = levels,
-          vars = vars
-        )
-
-        if("state" %in% names(global$data)) {
-          global$plotdata <- list(
-            geojson = filter_geojson(global$extdata$poll$map_geojson, global$mrp$levels$state)
+      if (!is.null(pstrat_errors())) {
+        if (length(pstrat_errors()) > 0) {
+          tags$div(
+            tagList(icon("circle-xmark", "fa"), "Error"),
+            tags$p("Poststratification data does not meet all requirements. Please check the user guide for data requirements.", class = "small"),
+          )
+        } else {
+          tags$div(
+            tagList(icon("circle-check", "fa"), "Success"),
+            tags$p("All requirements are met. You may proceed to the next page.", class = "small")
           )
         }
       }
-
     })
 
-    observeEvent(input$to_interface, {
-      updateNavbarPage(global$session,
-        inputId = "navbar",
-        selected = "nav_learn_interface"
+    #----------------------------------------------------------------------------
+    # Handle poststratification data upload
+    #----------------------------------------------------------------------------
+    observeEvent(input$pstrat_upload, {
+      waiter::waiter_show(
+        html = waiter_ui("wait"),
+        color = waiter::transparent(0.9)
       )
+
+      tryCatch({
+        # Read in data first
+        read_data(input$pstrat_upload$datapath) %>% raw_pstrat()
+
+        # Process data
+        new_data <- preprocess(
+          data = raw_pstrat(),
+          data_format = global$data_format,
+          zip_county_state = global$extdata$zip_county_state,
+          const = GLOBAL,
+          is_sample = FALSE,
+          is_aggregated = input$toggle_pstrat == "agg"
+        )
+
+        # Compare to sample data
+        check_pstrat(new_data, global$data, create_expected_levels(global$data_format))
+
+        # Find the smallest common geography
+        link_geo <- NULL
+        common <- intersect(names(global$data), names(new_data))
+        smallest <- get_smallest_geo(common, GLOBAL$vars$geo)
+        if (!is.null(smallest)) {
+          link_geo <- smallest$geo
+        }
+
+        # Store linking geography
+        global$link_data <- list(
+          link_geo = link_geo,
+          acs_year = NULL
+        )
+
+        # Prepare data for MRP
+        global$mrp <- prepare_mrp_custom(
+          input_data = global$data,
+          new_data = new_data,
+          fips_county_state = global$extdata$fips$county,
+          demo_levels = create_expected_levels(global$data_format),
+          vars_global = GLOBAL$vars,
+          link_geo = link_geo,
+          need_time = global$data_format %in% c("temporal_covid", "temporal_other")
+        )
+
+
+        # prepare data for plotting
+        plot_data <- list()
+        plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+        plot_data$geojson <- names(global$extdata$geojson) %>%
+          stats::setNames(nm = .) %>%
+          purrr::map(~filter_geojson(
+            geojson = global$extdata$geojson[[.x]], 
+            geoids = global$mrp$levels[[.x]]
+          ))
+
+        global$plot_data <- nullify(plot_data)
+
+        # Trigger success feedback
+        pstrat_errors(character(0))
+
+      }, error = function(e) {
+        # show error message
+        error_message <- paste("Error processing data:\n", e$message)
+        pstrat_errors(error_message)
+        message(error_message)
+        
+        # reset reactives
+        global$link_data <- NULL
+        global$mrp <- NULL
+        global$plot_data <- NULL
+        
+      }, finally = {
+        # Always hide the waiter
+        waiter::waiter_hide()
+      })
+    })
+
+
+
+
+    #----------------------------------------------------------------------------
+    # Reset link button
+    #----------------------------------------------------------------------------
+    observeEvent(
+      eventExpr = list(
+        global$data_format,
+        global$data,
+        input$link_geo,
+        input$acs_year
+      ),
+      handlerExpr = {
+        updateActionButton(
+          session = session,
+          inputId = "link_acs",
+          label = "Link",
+          icon = character(0)
+        )
+      }
+    )
+
+
+    observeEvent(input$show_upload_guide, {
+      show_guide("upload")
     })
 
     observeEvent(input$to_preprocess, {
-      updateNavbarPage(global$session,
-        inputId = "navbar",
-        selected = "nav_learn_preprocess"
+      bslib::nav_select(
+        id = "navbar",
+        selected = "nav_learn_preprocess",
+        session = global$session
       )
     })
 
-    output$download_data <- downloadHandler(
-      filename = function() { if(input$toggle_table == "raw") "raw_data.csv" else "preprocessed_data.csv" },
+    # Example poststratification data download handler
+    output$save_pstrat_example <- downloadHandler(
+      filename = function() {
+        # Name based on data format
+        prefix <- switch(global$data_format,
+          "temporal_other" = "timevarying_other",
+          "static_other" = "crosssectional_other",
+          "temporal_covid" = "timevarying_covid",
+          "static_poll" = "crosssectional_poll"
+        )
+        paste0(prefix, "_pstrat_example_", format(Sys.Date(), "%Y%m%d"), ".csv")
+      },
       content = function(file) {
-        df <- if(input$toggle_table == "raw") rawdata() else global$data
-
-        if(is.null(df)) {
-          readr::write_csv(data.frame(), file)
-        } else {
-          readr::write_csv(df, file)
-        }
-
+        # Determine which example file to use based on data format
+        example_file <- switch(global$data_format,
+          "temporal_other" = "timevarying_other_pstrat.csv",
+          "static_other" = "crosssectional_other_pstrat.csv",
+          "temporal_covid" = "timevarying_covid_pstrat.csv",
+          "static_poll" = "crosssectional_poll_pstrat.csv"
+        )
+        
+        # Read the example file and write it to the download location
+        readr::read_csv(
+          app_sys(paste0("extdata/example/data/", example_file)), 
+          show_col_types = FALSE
+        ) %>% 
+          readr::write_csv(file)
       }
     )
   })
