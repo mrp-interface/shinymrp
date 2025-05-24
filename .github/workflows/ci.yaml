@@ -54,9 +54,6 @@ jobs:
     name: test-coverage
     needs: check
     runs-on: ubuntu-latest
-    env:
-      R_CONFIG_ACTIVE: default
-      
     steps:
       - uses: actions/checkout@v3
 

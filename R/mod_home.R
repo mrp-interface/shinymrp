@@ -139,7 +139,7 @@ mod_home_server <- function(id, global){
     output$panel_group <- reactive(panel_group())
     outputOptions(output, "panel_group", suspendWhenHidden = FALSE)
     
-    if (config::get("demo")) {
+    if (get_config("demo")) {
       shinyWidgets::sendSweetAlert(
         title = "Information",
         text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
@@ -148,7 +148,7 @@ mod_home_server <- function(id, global){
     }
 
     # install CmdStan if not installed already
-    if (config::get("install_cmdstan") &&
+    if (get_config("install_cmdstan") &&
         is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
           
       waiter::waiter_show(
