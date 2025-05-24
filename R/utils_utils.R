@@ -40,3 +40,11 @@ generate_id <- function(n = 8) {
   # Sample with replacement and collapse into one string
   paste0(sample(chars, size = n, replace = TRUE), collapse = "")
 }
+
+get_config <- function(value) {
+  config::get(
+    value  = value,
+    config = Sys.getenv("R_CONFIG_ACTIVE", "default"),
+    file   = app_sys("config.yml")
+  )
+}
