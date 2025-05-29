@@ -182,9 +182,9 @@ group_interactions <- function(interactions, dat) {
     type2 <- data_type(dat[[ss[2]]])
     
     # binary x continuous or continuous x continuous
-    if((type1 == "cont" && type2 == "cont") |
-       (type1 == "bin" && type2 == "bin") |
-       (type1 == "cont" && type2 == "bin") |
+    if((type1 == "cont" && type2 == "cont") ||
+       (type1 == "bin" && type2 == "bin") ||
+       (type1 == "cont" && type2 == "bin") ||
        (type1 == "bin" && type2 == "cont")) {
       out$fixed_slope[[s]] <- interactions[[s]]
       
@@ -218,7 +218,7 @@ group_effects <- function(effects, dat) {
   out$fixed <- group_fixed(effects$fixed, dat)
   
   # varying main effects
-  out$varying <- effects$varying
+  out$varying <- if(is.null(effects$varying)) list() else effects$varying
   
   # reorder terms in interactions
   if(!is.null(effects$interaction)) {
@@ -259,7 +259,7 @@ ungroup_effects <- function(effects) {
 
 
 # Stan code and data generation functions
-data_ <- function(effects, gq_data) {
+data_ <- function(effects, gq_data = NULL) {
   scode <- "
   int<lower=1> N;
   array[N] int y;
@@ -299,24 +299,27 @@ data_ <- function(effects, gq_data) {
   }
   
   # for poststratification
-  scode <- paste0(scode, "
+    if(!is.null(gq_data)) {
+      scode <- paste0(scode, "
   vector<lower=0, upper=1>[N_pop] P_overall_pstrat;
   ")
   
-  for(s in gq_data$subgroups) {
-    scode <- paste0(scode, str_interp("
+    for(s in gq_data$subgroups) {
+      scode <- paste0(scode, str_interp("
   int<lower=1> N_${s}_pstrat;
   array[N_pop] int<lower=1, upper=N_${s}_pstrat> J_${s}_pstrat;
   vector<lower=0, upper=1>[N_pop] P_${s}_pstrat;
   ")) 
-  }
+    }
   
-  if(gq_data$temporal) {
-    scode <- paste0(scode, "
+    if(gq_data$temporal) {
+      scode <- paste0(scode, "
   int<lower=1> N_time_pstrat;
   array[N_pop] int<lower=1, upper=N_time_pstrat> J_time_pstrat;
   ")
+    }
   }
+
   
   # sensitivity and specificity
   scode <- paste0(scode, "
@@ -516,7 +519,11 @@ gq_ppc <- function() {
   array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);")
 }
 
-gq_pstrat <- function(effects, gq_data) {
+gq_pstrat <- function(effects, gq_data=NULL) {
+  if(is.null(gq_data)) {
+    return("")
+  }
+
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -597,7 +604,7 @@ gq_pstrat <- function(effects, gq_data) {
 }
 
 
-make_stancode_mcmc <- function(effects, gq_data) {
+make_stancode_mcmc <- function(effects, gq_data=NULL) {
   
   scode <- str_interp("
 data { ${data_(effects, gq_data)}
@@ -616,7 +623,7 @@ model { ${model_(effects)}
   return(scode)
 }
 
-make_stancode_gq <- function(effects, gq_data, gq_type = c("loo", "ppc", "pstrat")) {
+make_stancode_gq <- function(effects, gq_type = c("loo", "ppc", "pstrat"), gq_data = NULL) {
   gq_type <- match.arg(gq_type)
   if(gq_type == "loo") {
     gq <- gq_loo()
@@ -688,9 +695,9 @@ make_standata <- function(
     input_data,
     new_data,
     effects,
-    gq_data,
-    sens,
-    spec
+    gq_data = NULL,
+    sens = 1,
+    spec = 1
 ) {
 
   stan_data <- list(
@@ -764,28 +771,30 @@ make_standata <- function(
   }
 
   # poststratification
-  pstrat_data <- new_data %>%
-    mutate(
-      sex = .data$sex + 1,
-      overall = 1
-    )
-  for(s in c("overall", gq_data$subgroups)) {
-    group_cols <- if(gq_data$temporal) c("time", s) else c(s)
-    
-    pop_prop <- pstrat_data %>%
-      group_by(!!!syms(group_cols)) %>%
-      mutate(prop = .data$total / sum(.data$total))
-    
-    if(s != "overall") {
-      stan_data[[str_interp("N_${s}_pstrat")]] <- n_distinct(pstrat_data[[s]])
-      stan_data[[str_interp("J_${s}_pstrat")]] <- pstrat_data[[s]] 
+  if (!is.null(gq_data)) {
+    pstrat_data <- new_data %>%
+      mutate(
+        across(everything(), ~ if(n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
+        overall = 1
+      )
+    for(s in c("overall", gq_data$subgroups)) {
+      group_cols <- if(gq_data$temporal) c("time", s) else c(s)
+      
+      pop_prop <- pstrat_data %>%
+        group_by(!!!syms(group_cols)) %>%
+        mutate(prop = .data$total / sum(.data$total))
+      
+      if(s != "overall") {
+        stan_data[[str_interp("N_${s}_pstrat")]] <- n_distinct(pstrat_data[[s]])
+        stan_data[[str_interp("J_${s}_pstrat")]] <- pstrat_data[[s]] 
+      }
+      stan_data[[str_interp("P_${s}_pstrat")]] <- pop_prop$prop
     }
-    stan_data[[str_interp("P_${s}_pstrat")]] <- pop_prop$prop
-  }
-  
-  if(gq_data$temporal) {
-    stan_data$N_time_pstrat <- n_distinct(new_data$time)
-    stan_data$J_time_pstrat <- new_data$time
+    
+    if(gq_data$temporal) {
+      stan_data$N_time_pstrat <- n_distinct(new_data$time)
+      stan_data$J_time_pstrat <- new_data$time
+    }
   }
 
   return(stan_data)
@@ -795,23 +804,24 @@ run_mcmc <- function(
     input_data,
     new_data,
     effects,
-    gq_data,
+    gq_data = NULL,
     n_iter = 1000,
     n_chains = 4,
     seed = NULL,
     sens = 1,
     spec = 1,
-    code_fout = NULL
+    code_fout = NULL,
+    silent = FALSE
 ) {
 
   stan_code <- list()
   stan_code$mcmc <- make_stancode_mcmc(effects, gq_data)
-  stan_code$ppc <- make_stancode_gq(effects, gq_data, "ppc")
-  stan_code$loo <- make_stancode_gq(effects, gq_data, "loo")
-  stan_code$pstrat <- make_stancode_gq(effects, gq_data, "pstrat")
+  stan_code$ppc <- make_stancode_gq(effects, "ppc")
+  stan_code$loo <- make_stancode_gq(effects, "loo")
+  stan_code$pstrat <- make_stancode_gq(effects, "pstrat", gq_data)
   
   stan_data <- make_standata(input_data, new_data, effects, gq_data, sens, spec)
-  
+
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)
   }
@@ -829,8 +839,10 @@ run_mcmc <- function(
     chains = n_chains,
     parallel_chains = n_chains,
     threads_per_chain = 1,
-    refresh = n_iter / 10,
+    refresh = if(silent) 0 else n_iter / 10,
     diagnostics = NULL,
+    show_messages = !silent,
+    show_exceptions = !silent,
     seed = seed
   )
   
