@@ -61,418 +61,611 @@ create_test_data <- function(
   }
 }
 
-test_that("all models compile", {
+test_that("estimated parameters match saved values", {
+  seed <- 1234
+
   intercept_prior <- "normal(0, 5)"
   effect_prior <- "normal(0, 3)"
   struct_prior <- "structured"
 
-  data <- create_test_data(seed = 1234) %>%
+  data <- create_test_data(seed = seed) %>%
     stan_factor(ignore_columns = c("positive", "total"))
 
   # fixed effect of continuous variables only
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cont1 = effect_prior,
-          cont2 = effect_prior,
-          cont3 = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cont1 = effect_prior,
+      cont2 = effect_prior,
+      cont3 = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  out <- result$fit$mcmc$summary()
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # fixed effects of binary variables only
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          bin1 = effect_prior,
-          bin2 = effect_prior,
-          bin3 = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      bin1 = effect_prior,
+      bin2 = effect_prior,
+      bin3 = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # fixed effects of categorical variables only
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior,
-          cat3 = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior,
+      cat3 = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # varying effects of categorical variables only
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior,
-          cat3 = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior,
+      cat3 = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between fixed effects of
   # continous variables
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cont1 = effect_prior,
-          cont2 = effect_prior,
-          cont3 = effect_prior
-        ),
-        interaction = list(
-          `cont1:cont2` = effect_prior,
-          `cont2:cont3` = effect_prior,
-          `cont3:cont1` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cont1 = effect_prior,
+      cont2 = effect_prior,
+      cont3 = effect_prior
+    ),
+    interaction = list(
+      `cont1:cont2` = effect_prior,
+      `cont2:cont3` = effect_prior,
+      `cont3:cont1` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between fixed effects of
   # binary variables
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          bin1 = effect_prior,
-          bin2 = effect_prior,
-          bin3 = effect_prior
-        ),
-        interaction = list(
-          `bin1:bin2` = effect_prior,
-          `bin2:bin3` = effect_prior,
-          `bin3:bin1` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      bin1 = effect_prior,
+      bin2 = effect_prior,
+      bin3 = effect_prior
+    ),
+    interaction = list(
+      `bin1:bin2` = effect_prior,
+      `bin2:bin3` = effect_prior,
+      `bin3:bin1` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between fixed effects of
   # categorical variables
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior,
-          cat3 = effect_prior
-        ),
-        interaction = list(
-          `cat1:cat2` = effect_prior,
-          `cat2:cat3` = effect_prior,
-          `cat3:cat1` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior,
+      cat3 = effect_prior
+    ),
+    interaction = list(
+      `cat1:cat2` = effect_prior,
+      `cat2:cat3` = effect_prior,
+      `cat3:cat1` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between varying effects of
   # categorical variables (without structured prior)
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior,
-          cat3 = effect_prior
-        ),
-        interaction = list(
-          `cat1:cat2` = effect_prior,
-          `cat2:cat3` = effect_prior,
-          `cat3:cat1` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior,
+      cat3 = effect_prior
+    ),
+    interaction = list(
+      `cat1:cat2` = effect_prior,
+      `cat2:cat3` = effect_prior,
+      `cat3:cat1` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between fixed effects of
   # binary variables and continous variables
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          bin1 = effect_prior,
-          bin2 = effect_prior,
-          cont1 = effect_prior,
-          cont2 = effect_prior
-        ),
-        interaction = list(
-          `bin1:cont1` = effect_prior,
-          `bin1:cont2` = effect_prior,
-          `bin2:cont1` = effect_prior,
-          `bin2:cont2` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      bin1 = effect_prior,
+      bin2 = effect_prior,
+      cont1 = effect_prior,
+      cont2 = effect_prior
+    ),
+    interaction = list(
+      `bin1:cont1` = effect_prior,
+      `bin1:cont2` = effect_prior,
+      `bin2:cont1` = effect_prior,
+      `bin2:cont2` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between fixed effects of
   # categorical variables and fixed effects of
   # continuous variables
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior,
-          cont1 = effect_prior,
-          cont2 = effect_prior
-        ),
-        interaction = list(
-          `cat1:cont1` = effect_prior,
-          `cat1:cont2` = effect_prior,
-          `cat2:cont1` = effect_prior,
-          `cat2:cont2` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior,
+      cont1 = effect_prior,
+      cont2 = effect_prior
+    ),
+    interaction = list(
+      `cat1:cont1` = effect_prior,
+      `cat1:cont2` = effect_prior,
+      `cat2:cont1` = effect_prior,
+      `cat2:cont2` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
   )
 
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
+  )
 
   # interaction between varying effects of
   # categorical variables and fixed effects of
   # continuous variables (without structured prior)
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cont1 = effect_prior,
-          cont2 = effect_prior
-        ),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior
-        ),
-        interaction = list(
-          `cat1:cont1` = effect_prior,
-          `cat1:cont2` = effect_prior,
-          `cat2:cont1` = effect_prior,
-          `cat2:cont2` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cont1 = effect_prior,
+      cont2 = effect_prior
+    ),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior
+    ),
+    interaction = list(
+      `cat1:cont1` = effect_prior,
+      `cat1:cont2` = effect_prior,
+      `cat2:cont1` = effect_prior,
+      `cat2:cont2` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between fixed effects of
   # categorical variables and fixed effects of
   # binary variables
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          bin1 = effect_prior,
-          bin2 = effect_prior,
-          cat1 = effect_prior,
-          cat2 = effect_prior
-        ),
-        interaction = list(
-          `bin1:cat1` = effect_prior,
-          `bin1:cat2` = effect_prior,
-          `bin2:cat1` = effect_prior,
-          `bin2:cat2` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      bin1 = effect_prior,
+      bin2 = effect_prior,
+      cat1 = effect_prior,
+      cat2 = effect_prior
+    ),
+    interaction = list(
+      `bin1:cat1` = effect_prior,
+      `bin1:cat2` = effect_prior,
+      `bin2:cat1` = effect_prior,
+      `bin2:cat2` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between varying effects of
   # categorical variables and fixed effects of
   # binary variables (without structured prior)
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          bin1 = effect_prior,
-          bin2 = effect_prior
-        ),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior
-        ),
-        interaction = list(
-          `bin1:cat1` = effect_prior,
-          `bin1:cat2` = effect_prior,
-          `bin2:cat1` = effect_prior,
-          `bin2:cat2` = effect_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      bin1 = effect_prior,
+      bin2 = effect_prior
+    ),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior
+    ),
+    interaction = list(
+      `bin1:cat1` = effect_prior,
+      `bin1:cat2` = effect_prior,
+      `bin2:cat1` = effect_prior,
+      `bin2:cat2` = effect_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
   )
 
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
+  )
 
   # interaction between varying effects of
   # categorical variables (with structured prior)
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior,
-          cat3 = effect_prior
-        ),
-        interaction = list(
-          `cat1:cat2` = struct_prior,
-          `cat2:cat3` = struct_prior,
-          `cat3:cat1` = struct_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior,
+      cat3 = effect_prior
+    ),
+    interaction = list(
+      `cat1:cat2` = struct_prior,
+      `cat2:cat3` = struct_prior,
+      `cat3:cat1` = struct_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between varying effects of
   # categorical variables and fixed effects of
   # continuous variables (with structured prior)
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          cont1 = effect_prior,
-          cont2 = effect_prior
-        ),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior
-        ),
-        interaction = list(
-          `cat1:cont1` = struct_prior,
-          `cat1:cont2` = struct_prior,
-          `cat2:cont1` = struct_prior,
-          `cat2:cont2` = struct_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      cont1 = effect_prior,
+      cont2 = effect_prior
+    ),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior
+    ),
+    interaction = list(
+      `cat1:cont1` = struct_prior,
+      `cat1:cont2` = struct_prior,
+      `cat2:cont1` = struct_prior,
+      `cat2:cont2` = struct_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
   # interaction between varying effects of
   # categorical variables and fixed effects of
   # binary variables (with structured prior)
-  expect_no_error(
-    run_mcmc(
-      input_data = data,
-      new_data = data,
-      effects = list(
-        Intercept = list(Intercept = intercept_prior),
-        fixed = list(
-          bin1 = effect_prior,
-          bin2 = effect_prior
-        ),
-        varying = list(
-          cat1 = effect_prior,
-          cat2 = effect_prior
-        ),
-        interaction = list(
-          `bin1:cat1` = struct_prior,
-          `bin1:cat2` = struct_prior,
-          `bin2:cat1` = struct_prior,
-          `bin2:cat2` = struct_prior
-        )
-      ) %>%
-        group_effects(data) %>%
-        ungroup_effects(),
-      silent = TRUE
+  effects <- list(
+    Intercept = list(Intercept = intercept_prior),
+    fixed = list(
+      bin1 = effect_prior,
+      bin2 = effect_prior
+    ),
+    varying = list(
+      cat1 = effect_prior,
+      cat2 = effect_prior
+    ),
+    interaction = list(
+      `bin1:cat1` = struct_prior,
+      `bin1:cat2` = struct_prior,
+      `bin2:cat1` = struct_prior,
+      `bin2:cat2` = struct_prior
     )
+  ) %>%
+    group_effects(data) %>%
+    ungroup_effects()
+
+  result <- run_mcmc(
+    input_data = data,
+    new_data = data,
+    effects = effects,
+    seed = seed,
+    silent = TRUE
+  )
+
+  ref <- paste0("testdata/", create_filename(effects)) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+  expect_equal(
+    result$fit$mcmc$summary(),
+    ref,
+    tolerance = 1e-8,
+    ignore_attr = TRUE
   )
 
 })
