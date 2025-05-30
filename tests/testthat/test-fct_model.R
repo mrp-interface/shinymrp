@@ -61,6 +61,31 @@ create_test_data <- function(
   }
 }
 
+make_hashed_filename <- function(
+  effects,
+  prefix = NULL,
+  ext    = ".csv",
+  algo   = "sha1",
+  n      = 8
+) {
+
+  # 1) recursively sort each sub‐list by name
+  normalize <- function(z) {
+    if (!is.list(z)) return(z)
+    z <- z[sort(names(z))]
+    lapply(z, normalize)
+  }
+
+  # 2) compute the digest of the normalized object
+  h <- digest::digest(normalize(effects), algo = algo, serialize = TRUE)
+
+  # 3) take only the first n chars
+  short <- substr(h, 1, n)
+
+  # 4) glue together: e.g. "priors_ab12cd34.csv"
+  paste0(prefix, "_", short, ext)
+}
+
 test_that("estimated parameters match saved values", {
   seed <- 1234
 
@@ -92,7 +117,7 @@ test_that("estimated parameters match saved values", {
   )
 
   out <- result$fit$mcmc$summary()
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -123,7 +148,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -154,7 +179,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -185,7 +210,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -222,7 +247,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -259,7 +284,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -296,7 +321,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -333,7 +358,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -372,7 +397,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -412,7 +437,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -454,7 +479,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -494,7 +519,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -536,7 +561,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -573,7 +598,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -615,7 +640,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
@@ -657,7 +682,7 @@ test_that("estimated parameters match saved values", {
     silent = TRUE
   )
 
-  ref <- paste0("testdata/", create_filename(effects)) %>%
+  ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 
