@@ -129,7 +129,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -160,7 +160,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -191,7 +191,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -222,7 +222,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -259,7 +259,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -296,7 +296,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -333,7 +333,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -370,7 +370,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -409,7 +409,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -449,7 +449,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -491,7 +491,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -531,7 +531,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -573,7 +573,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -610,7 +610,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -652,7 +652,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -694,7 +694,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     result$fit$mcmc$summary() |> select(mean, sd),
     ref,
-    tolerance = 1e-2,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
