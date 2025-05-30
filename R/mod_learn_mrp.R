@@ -1,12 +1,24 @@
-#' learn_mrp UI Function
+#' MRP Theory Guide Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the user interface for the MRP (Multilevel Regression
+#' and Poststratification) theory and methodology guide page. Provides detailed
+#' mathematical explanations of MRP for both cross-sectional and spatio-temporal
+#' data, including model specifications, Bayesian frameworks, and measurement
+#' error correction for COVID-19 testing data.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_columns} containing the MRP theory guide with:
+#' \itemize{
+#'   \item Mathematical formulations for cross-sectional MRP models
+#'   \item Spatio-temporal MRP models with measurement error correction
+#'   \item Bayesian hierarchical model specifications
+#'   \item Poststratification procedures and small area estimation
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList withMathJax tags
 mod_learn_mrp_ui <- function(id){
   ns <- NS(id)
 
@@ -116,9 +128,22 @@ mod_learn_mrp_ui <- function(id){
   )
 }
 
-#' learn_mrp Server Functions
+#' MRP Theory Guide Module Server Function
+#'
+#' @description Server logic for the MRP theory guide module. Currently contains
+#' minimal server-side functionality as the MRP theory page is primarily static
+#' mathematical content. Maintains the module structure for potential future
+#' enhancements such as interactive mathematical demonstrations or dynamic
+#' content updates.
+#'
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return Server function for the MRP theory guide module. Currently provides
+#' basic module server structure without active reactive functionality.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer
 mod_learn_mrp_server <- function(id){
   moduleServer( id, function(input, output, session){
     ns <- session$ns

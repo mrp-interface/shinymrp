@@ -15,6 +15,8 @@ mod_est_map_ui <- function(id) {
 #' est_map Server Functions
 #'
 #' @noRd 
+#' @importFrom dplyr rename left_join filter
+#' @importFrom rlang .data
 mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subset){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

@@ -15,6 +15,8 @@ mod_indiv_plot_ui <- function(id) {
 #' indiv_plot Server Functions
 #'
 #' @noRd 
+#' @importFrom dplyr mutate select filter
+#' @importFrom rlang sym .data
 mod_indiv_plot_server <- function(id, data, demo_var){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

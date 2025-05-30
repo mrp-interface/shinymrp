@@ -1,12 +1,15 @@
-#' data
+#' Read data from various file formats
 #'
-#' @description A fct function
+#' @description Reads data from CSV, Excel (xlsx/xls), or SAS (sas7bdat) files
+#' based on the file extension. Automatically detects the file format and uses
+#' the appropriate reading function.
 #'
-#' @return The return value, if any, from executing the function.
+#' @param file_path Character string. Path to the data file to be read.
+#'
+#' @return A data frame containing the data from the specified file.
 #'
 #' @noRd
 #'
-#' @import dplyr
 read_data <- function(file_path) {
   if(stringr::str_ends(file_path, "csv")) {
     readr::read_csv(file_path, show_col_types = FALSE)
@@ -17,6 +20,17 @@ read_data <- function(file_path) {
   }
 }
 
+#' Clean and standardize column names
+#'
+#' @description Converts column names to lowercase, replaces numbers and
+#' non-alphabetic characters with underscores, removes multiple consecutive
+#' underscores, and trims leading/trailing underscores.
+#'
+#' @param names Character vector of column names to be cleaned.
+#'
+#' @return Character vector of cleaned column names.
+#'
+#' @noRd
 clean_names <- function(names) {
   names %>% 
     tolower() %>% 
@@ -27,12 +41,35 @@ clean_names <- function(names) {
 }
 
 
+#' Clean character columns in a data frame
+#'
+#' @description Converts all character columns to lowercase and trims
+#' leading/trailing whitespace.
+#'
+#' @param df Data frame with character columns to be cleaned.
+#'
+#' @return Data frame with cleaned character columns.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr mutate across where
 clean_chr <- function(df) {
   # Convert character columns to lowercase and trim whitespace
-  df %>% mutate(across(where(is.character), 
-                ~str_trim(tolower(.x))))
+  df %>% mutate(
+    across(where(is.character), ~ stringr::str_trim(tolower(.x)))
+  )
 }
 
+#' Validate and clean geocodes
+#'
+#' @description Validates geocodes by checking if they are exactly 5 digits.
+#' Invalid geocodes (including non-character inputs) are replaced with NA.
+#'
+#' @param geocodes Vector of geocodes to be validated. Can be numeric or character.
+#'
+#' @return Character vector of validated geocodes with invalid entries as NA.
+#'
+#' @noRd
 find_bad_geocode <- function(geocodes) {
   # Coerce to character (so that NA stays NA_character_)
   geocodes <- as.character(geocodes)
@@ -46,6 +83,17 @@ find_bad_geocode <- function(geocodes) {
   return(geocodes)
 }
 
+#' Format geographic identifier columns
+#'
+#' @description Formats zip, county, and state columns to ensure proper
+#' formatting. Zip and county codes are formatted as 5-digit strings with
+#' leading zeros, state codes as 2-digit strings with leading zeros.
+#'
+#' @param df Data frame containing geographic identifier columns (zip, county, state).
+#'
+#' @return Data frame with properly formatted geographic identifiers.
+#'
+#' @noRd
 format_geocode <- function(df) {
   if ("zip" %in% names(df)) {
     if (is.numeric(df$zip)) {
@@ -73,6 +121,21 @@ format_geocode <- function(df) {
 }
 
 
+#' Main data cleaning function
+#'
+#' @description Comprehensive data cleaning that includes: cleaning column names,
+#' removing duplicate columns, converting character columns to lowercase and
+#' trimming whitespace, converting common NA strings to actual NA values, and
+#' formatting geographic identifiers.
+#'
+#' @param df Data frame to be cleaned.
+#' @param na_strings Character vector of strings to be converted to NA.
+#'   Default includes common representations of missing values.
+#'
+#' @return Cleaned data frame.
+#'
+#' @noRd
+#' @importFrom dplyr mutate across everything if_else
 clean_data <- function(
     df,
     na_strings = c("", "na", "n/a", "none", "null", "unknown")
@@ -100,6 +163,21 @@ clean_data <- function(
   return(df)
 }
 
+#' Rename columns based on expected variable names
+#'
+#' @description Renames columns in the data frame to match expected variable
+#' names defined in the constants. For COVID individual data, uses a specialized
+#' renaming function.
+#'
+#' @param df Data frame with columns to be renamed.
+#' @param const List containing variable name mappings and constants.
+#' @param covid_indiv Logical. If TRUE, uses COVID-specific individual data
+#'   column renaming. Default is FALSE.
+#'
+#' @return Data frame with renamed columns.
+#'
+#' @noRd
+#'
 rename_columns <- function(df, const, covid_indiv = FALSE) {
   if (covid_indiv) {
     return(rename_columns_covid(df))
@@ -128,6 +206,18 @@ rename_columns <- function(df, const, covid_indiv = FALSE) {
   dplyr::rename(df, !!!rename_spec)
 }
 
+#' Impute missing values using frequency-based sampling
+#'
+#' @description Imputes missing values in a vector by sampling from the
+#' observed values based on their frequency distribution. If no missing
+#' values exist, returns the original vector unchanged.
+#'
+#' @param v Vector with potential missing values to be imputed.
+#'
+#' @return Vector with missing values imputed based on frequency distribution
+#'   of observed values.
+#'
+#' @noRd
 impute <- function(v) {
   cond <- is.na(v)
  
@@ -153,6 +243,20 @@ impute <- function(v) {
   return(v)
 }
 
+#' Convert dates to week indices and create timeline
+#'
+#' @description Converts date strings to ISO week indices and creates a
+#' timeline of dates. Handles single and multi-year date ranges by calculating
+#' cumulative week numbers and generating a complete timeline.
+#'
+#' @param strings Character vector of date strings to be converted.
+#'
+#' @return List containing:
+#'   \item{indices}{Numeric vector of cumulative week indices}
+#'   \item{timeline}{Date vector of first day of each week in the timeline}
+#'
+#' @noRd
+#'
 get_week_indices <- function(strings) {
   # extract week numbers, months and years from dates
   years_weeks <- ISOweek::ISOweek(strings)
@@ -217,6 +321,18 @@ get_week_indices <- function(strings) {
   ))
 }
 
+#' Extract and format unique dates from data frame
+#'
+#' @description Extracts unique dates from the 'date' column of a data frame,
+#' removes missing values, sorts them, and formats them according to the
+#' global date format setting.
+#'
+#' @param df Data frame containing a 'date' column.
+#'
+#' @return Character vector of formatted unique dates in sorted order.
+#'
+#' @noRd
+#'
 get_dates <- function(df) {
   df$date %>%
     stats::na.omit() %>%
@@ -227,6 +343,22 @@ get_dates <- function(df) {
     as.character()
 }
 
+#' Recode values to match expected levels
+#'
+#' @description Recodes demographic and response variables to match expected
+#' levels. For COVID data, uses a specialized recoding function. Handles age
+#' binning, categorical variable validation, and binary response coding.
+#'
+#' @param df Data frame with variables to be recoded.
+#' @param expected_levels List containing expected levels for each variable.
+#' @param covid Logical. If TRUE, uses COVID-specific recoding. Default is FALSE.
+#'
+#' @return Data frame with recoded variables matching expected levels.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr mutate if_else case_match
+#' @importFrom rlang .data
 recode_values <- function(df, expected_levels, covid=FALSE) {
   if (covid) {
     return(recode_covid(df, expected_levels))
@@ -257,6 +389,20 @@ recode_values <- function(df, expected_levels, covid=FALSE) {
   return(df)
 }
 
+#' Filter GeoJSON features by geographic identifiers
+#'
+#' @description Filters GeoJSON features to include only those with FIPS codes
+#' that match the provided geographic identifiers.
+#'
+#' @param geojson GeoJSON object containing geographic features.
+#' @param geoids Character vector of geographic identifiers (FIPS codes) to filter by.
+#' @param omit Logical. Currently unused parameter. Default is FALSE.
+#'
+#' @return Filtered GeoJSON object containing only matching features, or NULL
+#'   if input is NULL.
+#'
+#' @noRd
+#'
 filter_geojson <- function(geojson, geoids, omit = FALSE) {
   if(is.null(geojson) | is.null(geoids)) {
     return(NULL)
@@ -270,6 +416,20 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
   return(geojson)
 }
 
+#' Convert geographic identifiers to FIPS codes
+#'
+#' @description Converts geographic identifiers (names or codes) to standardized
+#' FIPS codes. If input is already numeric, formats with appropriate leading zeros.
+#' Otherwise, matches against lookup table to find corresponding FIPS codes.
+#'
+#' @param vec Vector of geographic identifiers to be converted.
+#' @param fips_county_state Data frame containing FIPS code lookup information.
+#' @param link_geo Character string specifying geographic level. Must be either
+#'   "county" or "state". Default is "county".
+#'
+#' @return Character vector of FIPS codes with proper formatting.
+#'
+#' @noRd
 to_fips <- function(vec, fips_county_state, link_geo = c("county", "state")) {
   link_geo <- match.arg(link_geo)
 
@@ -290,6 +450,21 @@ to_fips <- function(vec, fips_county_state, link_geo = c("county", "state")) {
   return(fips)
 }
 
+#' Extract geographic predictors from data
+#'
+#' @description Identifies columns that have constant values within each
+#' geographic unit, indicating they are geographic predictors rather than
+#' individual-level variables.
+#'
+#' @param df Data frame containing geographic and predictor variables.
+#' @param geo_col Character string specifying the name of the geographic column.
+#'
+#' @return Data frame containing unique combinations of geographic units and
+#'   their associated geographic predictors.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr group_by summarize_all select distinct all_of sym n_distinct
 get_geo_predictors <- function(df, geo_col) {
   bool <- df %>%
     group_by(!!sym(geo_col)) %>%
@@ -306,6 +481,21 @@ get_geo_predictors <- function(df, geo_col) {
   return(geo_preds)
 }
 
+#' Find the smallest geographic scale in data
+#'
+#' @description Identifies the smallest (most granular) geographic scale
+#' present in the data based on the hierarchy defined in GLOBAL$vars$geo.
+#'
+#' @param col_names Character vector of column names in the data.
+#' @param geo_col Character string specifying geographic column (currently unused).
+#'
+#' @return List containing:
+#'   \item{geo}{Character string of the smallest geographic scale}
+#'   \item{idx}{Numeric index of the geographic scale in the hierarchy}
+#'   Returns NULL if no geographic variables are found.
+#'
+#' @noRd
+#'
 get_smallest_geo <- function(col_names, geo_col) {
   # Find the smallest geographic index
   idx <- match(col_names, GLOBAL$vars$geo) %>% stats::na.omit()
@@ -322,6 +512,22 @@ get_smallest_geo <- function(col_names, geo_col) {
   ))
 }
 
+#' Append geographic variables at larger scales
+#'
+#' @description Adds geographic variables at larger scales (county, state)
+#' based on the smallest geographic scale present in the data. Converts
+#' geographic names to FIPS codes and joins with geographic crosswalk data.
+#'
+#' @param input_data Data frame containing input data with geographic variables.
+#' @param zip_county_state Data frame containing geographic crosswalk information.
+#' @param geo_all Character vector of all possible geographic scales in hierarchy.
+#'
+#' @return Data frame with additional geographic variables at larger scales.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr select rename mutate distinct
+#' @importFrom rlang .data
 append_geo <- function(input_data, zip_county_state, geo_all) {
   smallest <- get_smallest_geo(names(input_data), geo_all)
   if (is.null(smallest)) {
@@ -368,6 +574,19 @@ append_geo <- function(input_data, zip_county_state, geo_all) {
   return(input_data)
 }
 
+#' Convert columns to factors with specified levels
+#'
+#' @description Converts specified columns in a data frame to factors using
+#' predefined levels. Only processes columns that exist in both the data frame
+#' and the levels specification.
+#'
+#' @param df Data frame with columns to be converted to factors.
+#' @param levels Named list where names correspond to column names and values
+#'   are character vectors of factor levels.
+#'
+#' @return Data frame with specified columns converted to factors.
+#'
+#' @noRd
 as_factor <- function(df, levels) {
   # Find columns that exist in both df and have defined levels
   cols_to_convert <- intersect(names(df), names(levels))
@@ -382,6 +601,21 @@ as_factor <- function(df, levels) {
   return(df)
 }
 
+#' Find nested relationships between categorical variables
+#'
+#' @description Identifies pairs of categorical variables that have a bijective
+#' (one-to-one) relationship, indicating potential nesting or perfect correlation.
+#'
+#' @param df Data frame containing categorical variables to test.
+#' @param cols Character vector of column names to test for nesting relationships.
+#' @param sep Character string used as separator when combining variable values.
+#'   Default is "---".
+#'
+#' @return Character vector of variable pairs that show nesting relationships,
+#'   formatted as "var1:var2".
+#'
+#' @noRd
+#'
 find_nested <- function(df, cols, sep = "---") {
   # generate all 2-column combinations
   pairs <- utils::combn(cols, 2, simplify = FALSE)
@@ -401,6 +635,20 @@ find_nested <- function(df, cols, sep = "---") {
 }
 
 
+#' Perform a clean left join between data frames
+#'
+#' @description Performs a left join while avoiding column name conflicts by
+#' removing common columns (except join keys) from the right data frame before joining.
+#'
+#' @param df1 Left data frame for the join.
+#' @param df2 Right data frame for the join.
+#' @param by Character vector specifying the join keys.
+#'
+#' @return Data frame resulting from the clean left join operation.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr select right_join
 clean_left_join <- function(df1, df2, by) {
   common <- intersect(names(df1), names(df2))
   to_drop <- setdiff(common, by)
@@ -412,6 +660,23 @@ clean_left_join <- function(df1, df2, by) {
   return(df_join)
 }
 
+#' Determine data type of a column
+#'
+#' @description Classifies a column as binary, categorical, or continuous based
+#' on its values and distribution. Uses uniqueness threshold to distinguish
+#' between categorical and continuous numeric variables.
+#'
+#' @param col Vector representing a data column to be classified.
+#' @param num Logical. If TRUE, returns numeric codes (1=binary, 2=categorical,
+#'   3=continuous). If FALSE, returns character labels. Default is FALSE.
+#' @param threshold Numeric. Threshold for determining if numeric data should be
+#'   treated as continuous (proportion of unique values). Default is 0.1.
+#'
+#' @return Character string ("bin", "cat", "cont") or numeric code (1, 2, 3)
+#'   indicating the data type.
+#'
+#' @noRd
+#'
 data_type <- function(col, num = FALSE, threshold = 0.1) {
   if(is.numeric(col)) {
     if(!all(as.integer(col) == col) | mean(table(col) == 1) > threshold) {
@@ -432,6 +697,21 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
   return(dtype)
 }
 
+#' Create expected data types for variables
+#'
+#' @description Creates a list of expected data types for variables based on
+#' the data format and structure. Different data formats have different
+#' expected variable types.
+#'
+#' @param data_format Character string specifying the data format. Must be one of:
+#'   "temporal_covid", "temporal_other", "static_poll", "static_other".
+#' @param is_sample Logical. Whether the data represents sample data. Default is TRUE.
+#' @param is_aggregated Logical. Whether the data is aggregated. Default is FALSE.
+#'
+#' @return Named list where names are variable names and values are expected
+#'   data types ("bin", "cat", "ignore").
+#'
+#' @noRd
 create_expected_types <- function(
   data_format = c("temporal_covid", "temporal_other", "static_poll", "static_other"),
   is_sample = TRUE,
@@ -463,6 +743,19 @@ create_expected_types <- function(
   return(types)
 }
 
+#' Create expected levels for categorical variables
+#'
+#' @description Creates a list of expected levels for categorical variables
+#' based on the data format. Different data formats have different expected
+#' demographic categories and age groupings.
+#'
+#' @param data_format Character string specifying the data format. Must be one of:
+#'   "temporal_covid", "temporal_other", "static_poll", "static_other".
+#'
+#' @return Named list where names are variable names and values are character
+#'   vectors of expected levels for each categorical variable.
+#'
+#' @noRd
 create_expected_levels <- function(
   data_format = c("temporal_covid", "temporal_other", "static_poll", "static_other")
 ) {
@@ -490,6 +783,22 @@ create_expected_levels <- function(
   )
 }
 
+#' Validate data against expected structure
+#'
+#' @description Performs comprehensive data validation including checking for
+#' missing columns, validating data types, checking for excessive missing values,
+#' and validating date formats for temporal data.
+#'
+#' @param df Data frame to be validated.
+#' @param expected_types Named list of expected data types for each variable.
+#' @param na_threshold Numeric. Maximum allowed proportion of missing values
+#'   per column. Default is 0.5 (50%).
+#'
+#' @return No return value. Throws errors if validation fails, issues warnings
+#'   for date format problems.
+#'
+#' @noRd
+#'
 check_data <- function(df, expected_types, na_threshold = 0.5) {
   expected_columns <- names(expected_types)
   
@@ -535,6 +844,19 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
   }
 }
 
+#' Validate poststratification data against sample data
+#'
+#' @description Ensures that poststratification data has the same structure
+#' and categorical levels as the sample data. Checks for missing columns and
+#' validates that unique values match between datasets.
+#'
+#' @param df Data frame containing poststratification data.
+#' @param df_ref Data frame containing reference sample data.
+#' @param expected_types Named list of expected data types for validation.
+#'
+#' @return No return value. Throws errors if validation fails.
+#'
+#' @noRd
 check_pstrat <- function(df, df_ref, expected_types) {
   if (is.null(df_ref)) {
     stop("Sample data is not provided.")
@@ -562,6 +884,26 @@ check_pstrat <- function(df, df_ref, expected_types) {
 
 
 # Process uploaded data 
+#' Main preprocessing function for uploaded data
+#'
+#' @description Comprehensive preprocessing pipeline that cleans data, renames
+#' columns, validates structure, handles aggregation, converts dates to time
+#' indices, recodes values, imputes missing data, and appends geographic variables.
+#'
+#' @param data Data frame containing raw uploaded data.
+#' @param data_format Character string specifying the data format type.
+#' @param zip_county_state Data frame containing geographic crosswalk information.
+#' @param const List containing constants and variable mappings.
+#' @param is_sample Logical. Whether the data represents sample data. Default is TRUE.
+#' @param is_aggregated Logical. Whether the data is already aggregated. Default is TRUE.
+#'
+#' @return Preprocessed data frame ready for analysis.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
+#' @importFrom tidyr drop_na
+#' @importFrom rlang syms .data
 preprocess <- function(
   data,
   data_format,
@@ -651,6 +993,23 @@ preprocess <- function(
   return(data)
 }
 
+#' Create variable lists for model specification
+#'
+#' @description Creates organized lists of variables for model specification,
+#' categorizing them as fixed effects, varying effects, or variables to omit.
+#' Identifies variables with single levels or nested relationships.
+#'
+#' @param input_data Data frame containing input data with individual-level variables.
+#' @param covariates Data frame containing geographic covariates.
+#' @param vars_global List containing global variable definitions and hierarchies.
+#'
+#' @return Named list containing:
+#'   \item{fixed}{List of fixed effect variables by category}
+#'   \item{varying}{List of varying effect variables by category}
+#'   \item{omit}{List of variables to omit due to single levels or nesting}
+#'
+#' @noRd
+#'
 create_variable_list <- function(input_data, covariates, vars_global) {
   # list of variables for model specification
   vars <- list(
@@ -702,6 +1061,25 @@ create_variable_list <- function(input_data, covariates, vars_global) {
   return(vars)
 }
 
+#' Combine tract-level data to larger geographic scales
+#'
+#' @description Aggregates tract-level demographic data to larger geographic
+#' scales (zip, county, state, or national level) by summing population counts
+#' across relevant geographic units.
+#'
+#' @param tract_data Data frame containing tract-level demographic data with
+#'   GEOID column and demographic variables.
+#' @param zip_tract Data frame containing tract-to-zip crosswalk information.
+#' @param link_geo Character string specifying target geographic scale. Must be
+#'   one of: "", "zip", "county", "state". Default is "".
+#'
+#' @return Data frame with demographic data aggregated to the specified
+#'   geographic scale, with 'geocode' column containing geographic identifiers.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr select rename inner_join group_by summarise across mutate summarize_all
+#' @importFrom rlang .data
 combine_tracts <- function(
     tract_data,
     zip_tract,
@@ -752,6 +1130,31 @@ combine_tracts <- function(
   return(pstrat_data)
 }
 
+#' Prepare MRP data using custom poststratification table
+#'
+#' @description Prepares data for MRP analysis using a custom poststratification
+#' table. Filters data to common geographic units, creates factor levels,
+#' appends geographic predictors, and duplicates data for time indices.
+#'
+#' @param input_data Data frame containing sample data.
+#' @param new_data Data frame containing custom poststratification data.
+#' @param fips_county_state Data frame containing FIPS code mappings.
+#' @param demo_levels Named list of demographic variable levels.
+#' @param vars_global List containing global variable definitions.
+#' @param link_geo Character string specifying geographic linking variable.
+#'   Default is NULL.
+#' @param need_time Logical. Whether time indices are needed. Default is FALSE.
+#'
+#' @return Named list containing:
+#'   \item{input}{Filtered input data}
+#'   \item{new}{Prepared poststratification data}
+#'   \item{levels}{Complete list of factor levels}
+#'   \item{vars}{Variable lists for model specification}
+#'
+#' @noRd
+#'
+#' @importFrom dplyr filter mutate
+#' @importFrom rlang sym
 prepare_mrp_custom <- function(
   input_data,
   new_data,
@@ -812,6 +1215,33 @@ prepare_mrp_custom <- function(
   ))
 }
 
+#' Prepare MRP data using ACS-based poststratification
+#'
+#' @description Prepares data for MRP analysis using American Community Survey
+#' (ACS) tract-level data for poststratification. Combines tract data to the
+#' appropriate geographic scale, creates complete factor level combinations,
+#' and appends geographic predictors.
+#'
+#' @param input_data Data frame containing sample data.
+#' @param tract_data Data frame containing ACS tract-level demographic data.
+#' @param zip_tract Data frame containing tract-to-zip crosswalk.
+#' @param zip_county_state Data frame containing geographic crosswalk information.
+#' @param demo_levels Named list of demographic variable levels.
+#' @param vars_global List containing global variable definitions.
+#' @param link_geo Character string specifying geographic linking variable.
+#'   Default is NULL.
+#' @param need_time Logical. Whether time indices are needed. Default is FALSE.
+#'
+#' @return Named list containing:
+#'   \item{input}{Filtered input data}
+#'   \item{new}{Complete poststratification data with population weights}
+#'   \item{levels}{Complete list of factor levels}
+#'   \item{vars}{Variable lists for model specification}
+#'
+#' @noRd
+#'
+#' @importFrom dplyr filter select mutate arrange across left_join
+#' @importFrom rlang sym .data
 prepare_mrp_acs <- function(
     input_data,
     tract_data,
@@ -882,6 +1312,22 @@ prepare_mrp_acs <- function(
 }
 
 
+#' Create zip-to-county-state crosswalk
+#'
+#' @description Creates a crosswalk table linking ZIP codes to counties and
+#' states by finding the most common county for each ZIP code and joining
+#' with FIPS county-state information.
+#'
+#' @param zip_tract Data frame containing ZIP-to-tract crosswalk with 'zip'
+#'   and 'geoid' columns.
+#' @param fips_county_state Data frame containing FIPS county-state mappings.
+#'
+#' @return Data frame with ZIP codes linked to their most common county and state.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr mutate group_by summarise left_join
+#' @importFrom rlang .data
 create_zip_county_state <- function(zip_tract, fips_county_state) {
   # find the most common county for each zip code
   zip_county_state <- zip_tract %>%
@@ -898,6 +1344,22 @@ create_zip_county_state <- function(zip_tract, fips_county_state) {
   return(zip_county_state)
 }
 
+#' Create FIPS county-state lookup table
+#'
+#' @description Creates a lookup table of unique FIPS codes with corresponding
+#' county and state information. Optionally formats names for plotting with
+#' proper capitalization.
+#'
+#' @param zip_county_state Data frame containing ZIP-county-state crosswalk.
+#' @param for_plotting Logical. If TRUE, formats names with proper capitalization
+#'   for plotting. Default is FALSE.
+#'
+#' @return Data frame with unique FIPS codes and corresponding geographic names.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr select distinct mutate
+#' @importFrom rlang .data
 create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
   fips_county_state <- zip_county_state %>%
     select(.data$fips, .data$county, .data$state, .data$state_name) %>%
@@ -914,6 +1376,20 @@ create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
   return(fips_county_state)
 }
 
+#' Aggregate FIPS codes to state level
+#'
+#' @description Converts county-level FIPS codes to state-level by taking the
+#' first two digits and removing county information while keeping unique
+#' state-level records.
+#'
+#' @param df Data frame containing FIPS codes and geographic information.
+#'
+#' @return Data frame with state-level FIPS codes and corresponding information.
+#'
+#' @noRd
+#'
+#' @importFrom dplyr mutate select distinct
+#' @importFrom rlang .data
 aggregate_fips <- function(df) {
 
   df <- df %>%

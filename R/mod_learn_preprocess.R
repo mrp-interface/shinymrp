@@ -1,12 +1,24 @@
-#' learn_preprocess UI Function
+#' Data Preprocessing Guide Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the user interface for the data preprocessing guide page.
+#' Provides comprehensive documentation about data preprocessing workflows,
+#' geographic identifier handling, and poststratification table preparation.
+#' Includes detailed information about data cleaning, categorization, imputation,
+#' and aggregation procedures for both time-varying and cross-sectional data.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_columns} containing the preprocessing guide with:
+#' \itemize{
+#'   \item Detailed preprocessing workflow documentation
+#'   \item Geographic identifier and covariate information
+#'   \item Download buttons for preprocessing scripts and conversion tables
+#'   \item Poststratification table preparation guidelines
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList downloadButton tags div
 mod_learn_preprocess_ui <- function(id){
   ns <- NS(id)
   bslib::layout_columns(
@@ -110,9 +122,24 @@ mod_learn_preprocess_ui <- function(id){
 }
 
 
-#' learn_preprocess Server Functions
+#' Data Preprocessing Guide Module Server Function
+#'
+#' @description Server logic for the data preprocessing guide module. Provides
+#' download handlers for preprocessing scripts and geographic/temporal conversion
+#' tables. Manages file downloads for users to access example preprocessing
+#' code and reference data for their own data preparation workflows.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state
+#' (not actively used in this module but maintained for consistency).
+#'
+#' @return Server function for the preprocessing guide module. Creates download
+#' handlers for preprocessing scripts, geographic conversion tables, and week
+#' conversion tables to support user data preparation.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer downloadHandler
 mod_learn_preprocess_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns

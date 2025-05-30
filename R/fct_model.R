@@ -1,14 +1,29 @@
-#' model
+#' Create Model Formula from Effects Structure
 #'
-#' @description A fct function
+#' @description Creates a formula string for multilevel regression models based on
+#' the effects structure. Combines fixed effects, varying intercepts, and varying
+#' slopes into a single formula suitable for statistical modeling frameworks.
 #'
-#' @return The return value, if any, from executing the function.
+#' @param effects A list containing model effects structure with components:
+#'   \itemize{
+#'     \item m_fix_bc: Binary/continuous fixed main effects
+#'     \item m_fix_c: Categorical fixed main effects
+#'     \item i_fixsl: Fixed-slope interactions
+#'     \item i_varsl: Varying-slope interactions
+#'     \item s_varsl: Structured varying-slope interactions
+#'     \item m_var: Varying main effects
+#'     \item i_varit: Varying-intercept interactions
+#'     \item i_varits: Special varying-intercept interactions
+#'     \item s_varit: Structured varying-intercept interactions
+#'     \item s_varits: Special structured varying-intercept interactions
+#'   }
+#'
+#' @return A character string representing the model formula with fixed effects,
+#'   varying intercepts (1 | group), and varying slopes (0 + variable | group)
 #'
 #' @noRd
 #'
-#' @import dplyr
-#' @import purrr
-#' @import stringr
+#' @importFrom stringr str_interp
 create_formula <- function(effects) {
   m_fix_c <- names(effects$m_fix_c) %>%
     purrr::map_chr(function(s) strsplit(s, "\\.")[[1]][1]) %>%
@@ -32,6 +47,16 @@ create_formula <- function(effects) {
   return(formula)
 }
 
+#' Clean Prior Distribution Syntax
+#'
+#' @description Standardizes prior distribution syntax by removing whitespace
+#' and converting to lowercase for consistent parsing and validation.
+#'
+#' @param s A character string representing a prior distribution specification
+#'
+#' @return A cleaned character string with whitespace removed and converted to lowercase
+#'
+#' @noRd
 clean_prior_syntax <- function(s) {
   # Remove whitespace
   s <- gsub("\\s+", "", s)
@@ -42,6 +67,23 @@ clean_prior_syntax <- function(s) {
   return(s)
 }
 
+#' Validate Prior Distribution Syntax
+#'
+#' @description Validates that a prior distribution string follows the expected
+#' syntax patterns for normal, student_t, or structured priors. Returns TRUE
+#' for valid syntax or NULL inputs.
+#'
+#' @param s A character string representing a prior distribution specification.
+#'   Expected formats:
+#'   \itemize{
+#'     \item normal(mean, sd): e.g., "normal(0,1)"
+#'     \item student_t(df, location, scale): e.g., "student_t(3,0,1)"
+#'     \item structured: "structured"
+#'   }
+#'
+#' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE)
+#'
+#' @noRd
 check_prior_syntax <- function(s) {
   if(is.null(nullify(s))) {
     return(TRUE)
@@ -62,6 +104,20 @@ check_prior_syntax <- function(s) {
   }
 }
 
+#' Set Difference for Interaction Pairs
+#'
+#' @description Computes set difference between two sets of interaction pairs,
+#' treating "a:b" and "b:a" as equivalent by normalizing pair order before comparison.
+#' Useful for filtering interaction terms in model specifications.
+#'
+#' @param pairs1 Character vector of interaction pairs (e.g., c("age:gender", "income:education"))
+#' @param pairs2 Character vector of interaction pairs to exclude
+#' @param sep Character separator used in interaction pairs (default ":")
+#'
+#' @return Character vector containing pairs from pairs1 that are not present in pairs2,
+#'   accounting for order-invariant matching
+#'
+#' @noRd
 pair_setdiff <- function(pairs1, pairs2, sep = ":") {
   # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
   norm_pair <- function(p) {
@@ -81,6 +137,21 @@ pair_setdiff <- function(pairs1, pairs2, sep = ":") {
 
 
 # filter interactions for structured prior
+#' Filter Interactions for Structured Priors
+#'
+#' @description Filters interaction terms to identify those suitable for structured
+#' priors. An interaction is kept if at least one variable is categorical and not
+#' included as a fixed effect, enabling hierarchical modeling of the interaction.
+#'
+#' @param interactions Character vector of interaction terms in "var1:var2" format
+#' @param fixed_effects Character vector of variable names included as fixed effects
+#' @param dat Data frame containing the variables referenced in interactions
+#'
+#' @return Character vector of filtered interaction terms suitable for structured priors
+#'
+#' @noRd
+#'
+#' @importFrom purrr map_lgl
 filter_interactions <- function(interactions, fixed_effects, dat) {
   bool <- map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -96,6 +167,21 @@ filter_interactions <- function(interactions, fixed_effects, dat) {
 
 # Keep interaction in expected order for Stan code generation:
 # binary first, then categorical, then continuous.
+#' Sort Interaction Terms by Variable Type
+#'
+#' @description Reorders variables within interaction terms to follow Stan code
+#' generation conventions: binary variables first, then categorical, then continuous.
+#' This ensures consistent parameter ordering in the generated Stan model.
+#'
+#' @param interactions Character vector of interaction terms in "var1:var2" format
+#' @param dat Data frame containing the variables referenced in interactions
+#'
+#' @return Character vector of interaction terms with variables reordered within
+#'   each term according to type hierarchy (binary < categorical < continuous)
+#'
+#' @noRd
+#'
+#' @importFrom purrr map_chr
 sort_interactions <- function(interactions, dat) {
   interactions <- map_chr(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -112,6 +198,23 @@ sort_interactions <- function(interactions, dat) {
   return(interactions)
 }
 
+#' Create All Possible Two-Way Interactions
+#'
+#' @description Generates all unique two-way interaction terms from the combination
+#' of fixed and varying effects. Returns empty list if fewer than 2 main effects
+#' are available for interaction.
+#'
+#' @param fixed_effects Character vector of fixed effect variable names
+#' @param varying_effects Character vector of varying effect variable names
+#' @param dat Data frame containing the variables (used for validation)
+#'
+#' @return Character vector of interaction terms in "var1:var2" format, where
+#'   var1 <= var2 alphabetically to ensure uniqueness
+#'
+#' @noRd
+#'
+#' @importFrom dplyr filter n_distinct
+#' @importFrom rlang .data
 create_interactions <- function(fixed_effects, varying_effects, dat) {
   main_effects <- c(fixed_effects, varying_effects)
   
@@ -133,6 +236,21 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
   return(int)
 }
 
+#' Compute Interaction Levels for Categorical Variables
+#'
+#' @description Calculates interaction level indices for two categorical variables,
+#' handling the special case where one variable is binary (2 levels) differently
+#' from general categorical interactions.
+#'
+#' @param levels1 Numeric vector of factor levels for first variable
+#' @param levels2 Numeric vector of factor levels for second variable
+#'
+#' @return Numeric vector of interaction level indices. For binary interactions,
+#'   uses element-wise multiplication with 0s converted to 1s. For categorical
+#'   interactions, uses formula: (levels1 - 1) * n_categories2 + levels2
+#'
+#' @noRd
+#'
 interaction_levels <- function(levels1, levels2) {
   numcat1 <- n_distinct(levels1)
   numcat2 <- n_distinct(levels2)
@@ -147,6 +265,22 @@ interaction_levels <- function(levels1, levels2) {
   return(levels_interaction)
 }
 
+#' Group Fixed Effects by Variable Type
+#'
+#' @description Separates fixed effects into categorical and binary/continuous
+#' groups. For categorical variables, creates dummy variable names excluding
+#' the reference level (first level alphabetically).
+#'
+#' @param fixed Named list of fixed effects with prior specifications
+#' @param dat Data frame containing the variables to determine types
+#'
+#' @return List with two components:
+#'   \itemize{
+#'     \item cat: Named list of categorical dummy variables with their priors
+#'     \item bincont: Named list of binary/continuous variables with their priors
+#'   }
+#'
+#' @noRd
 group_fixed <- function(fixed, dat) {
   out <- list(
     cat = list(),
@@ -168,6 +302,24 @@ group_fixed <- function(fixed, dat) {
   return(out)
 }
 
+#' Group Interaction Terms by Statistical Type
+#'
+#' @description Classifies interaction terms into different modeling categories
+#' based on the variable types involved. This determines how interactions are
+#' implemented in the hierarchical model structure.
+#'
+#' @param interactions Named list of interaction terms with their prior specifications
+#' @param dat Data frame containing the variables to determine types
+#'
+#' @return List with four components:
+#'   \itemize{
+#'     \item fixed_slope: Continuous×continuous, binary×binary, binary×continuous interactions
+#'     \item varying_slope: Categorical×continuous interactions
+#'     \item varying_intercept: Categorical×categorical interactions
+#'     \item varying_intercept_special: Binary×categorical interactions
+#'   }
+#'
+#' @noRd
 group_interactions <- function(interactions, dat) {
   out <- list(
     fixed_slope = list(),
@@ -208,6 +360,31 @@ group_interactions <- function(interactions, dat) {
   return(out)
 }
 
+#' Group All Model Effects by Type and Prior Structure
+#'
+#' @description Organizes all model effects (intercept, fixed, varying, interactions)
+#' into a structured format suitable for Stan code generation. Separates interactions
+#' with and without structured priors.
+#'
+#' @param effects List containing all model effects:
+#'   \itemize{
+#'     \item Intercept: Global intercept prior
+#'     \item fixed: Fixed effects specifications
+#'     \item varying: Varying effects specifications
+#'     \item interaction: Interaction effects specifications
+#'   }
+#' @param dat Data frame containing model variables for type determination
+#'
+#' @return Structured list with components:
+#'   \itemize{
+#'     \item Intercept: Global intercept specification
+#'     \item fixed: Grouped fixed effects (categorical vs binary/continuous)
+#'     \item varying: Varying main effects
+#'     \item interaction: Grouped interactions without structured priors
+#'     \item structured: Grouped interactions with structured priors
+#'   }
+#'
+#' @noRd
 group_effects <- function(effects, dat) {
   out <- list()
   
@@ -237,6 +414,29 @@ group_effects <- function(effects, dat) {
   return(out)
 }
 
+#' Ungroup Effects into Flat Structure for Stan Code Generation
+#'
+#' @description Flattens the grouped effects structure into individual components
+#' with standardized naming conventions for easier Stan code generation.
+#'
+#' @param effects Grouped effects structure from group_effects()
+#'
+#' @return List with flattened effect components:
+#'   \itemize{
+#'     \item Intercept: Global intercept
+#'     \item m_fix_bc: Binary/continuous fixed main effects
+#'     \item m_fix_c: Categorical fixed main effects
+#'     \item m_var: Varying main effects
+#'     \item i_fixsl: Fixed-slope interactions
+#'     \item i_varsl: Varying-slope interactions
+#'     \item i_varit: Varying-intercept interactions
+#'     \item i_varits: Special varying-intercept interactions
+#'     \item s_varsl: Structured varying-slope interactions
+#'     \item s_varit: Structured varying-intercept interactions
+#'     \item s_varits: Special structured varying-intercept interactions
+#'   }
+#'
+#' @noRd
 ungroup_effects <- function(effects) {
   # for cleaner code
   out <- list(
@@ -506,6 +706,15 @@ model_ <- function(effects) {
 }
 
 
+#' Generate Stan Code for Leave-One-Out Cross-Validation
+#'
+#' @description Creates generated quantities block code for computing log-likelihood
+#' values needed for leave-one-out cross-validation (LOO-CV) model comparison.
+#'
+#' @return Character string containing Stan generated quantities code that computes
+#'   log_lik vector with binomial log probability mass function values for each observation
+#'
+#' @noRd
 gq_loo <- function() {
   return("
   vector[N] log_lik;
@@ -514,11 +723,44 @@ gq_loo <- function() {
   }")
 }
 
+#' Generate Stan Code for Posterior Predictive Checks
+#'
+#' @description Creates generated quantities block code for posterior predictive
+#' checking by generating replicated datasets from the fitted model.
+#'
+#' @return Character string containing Stan generated quantities code that generates
+#'   y_rep array with binomial random draws using fitted probabilities
+#'
+#' @noRd
 gq_ppc <- function() {
   return("
   array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);")
 }
 
+#' Generate Stan Code for Poststratification
+#'
+#' @description Creates generated quantities block code for multilevel regression
+#' and poststratification (MRP). Generates population-level predictions and
+#' aggregates them using poststratification weights.
+#'
+#' @param effects Ungrouped effects structure from ungroup_effects()
+#' @param gq_data List containing poststratification specifications:
+#'   \itemize{
+#'     \item subgroups: Character vector of demographic subgroups
+#'     \item temporal: Logical indicating temporal aggregation
+#'   }
+#'
+#' @return Character string containing Stan generated quantities code for:
+#'   \itemize{
+#'     \item Sampling new varying effect levels for population prediction
+#'     \item Computing population-level probabilities (p_pop)
+#'     \item Aggregating by subgroups using poststratification weights
+#'     \item Temporal aggregation if specified
+#'   }
+#'
+#' @noRd
+#'
+#' @importFrom stringr str_interp
 gq_pstrat <- function(effects, gq_data=NULL) {
   if(is.null(gq_data)) {
     return("")
@@ -604,6 +846,22 @@ gq_pstrat <- function(effects, gq_data=NULL) {
 }
 
 
+#' Generate Complete Stan Code for MCMC Sampling
+#'
+#' @description Creates a complete Stan program for MCMC sampling by combining
+#' data, parameters, transformed parameters, and model blocks. This is the main
+#' function for generating Stan code for model fitting.
+#'
+#' @param effects Ungrouped effects structure from ungroup_effects()
+#' @param gq_data Optional list containing generated quantities specifications for
+#'   poststratification. If provided, includes additional data declarations.
+#'
+#' @return Character string containing complete Stan program with data, parameters,
+#'   transformed parameters, and model blocks ready for compilation and sampling
+#'
+#' @noRd
+#'
+#' @importFrom stringr str_interp
 make_stancode_mcmc <- function(effects, gq_data=NULL) {
   
   scode <- str_interp("
@@ -623,6 +881,27 @@ model { ${model_(effects)}
   return(scode)
 }
 
+#' Generate Stan Code for Generated Quantities
+#'
+#' @description Creates Stan programs for generated quantities including
+#' leave-one-out cross-validation, posterior predictive checks, and poststratification.
+#' Uses fitted parameters from MCMC to generate additional quantities of interest.
+#'
+#' @param effects Ungrouped effects structure from ungroup_effects()
+#' @param gq_type Character string specifying type of generated quantities:
+#'   \itemize{
+#'     \item "loo": Leave-one-out cross-validation log-likelihood
+#'     \item "ppc": Posterior predictive check replications
+#'     \item "pstrat": Poststratification estimates
+#'   }
+#' @param gq_data List containing specifications for poststratification (required if gq_type="pstrat")
+#'
+#' @return Character string containing complete Stan program with data, parameters,
+#'   transformed parameters, and generated quantities blocks
+#'
+#' @noRd
+#'
+#' @importFrom stringr str_interp
 make_stancode_gq <- function(effects, gq_type = c("loo", "ppc", "pstrat"), gq_data = NULL) {
   gq_type <- match.arg(gq_type)
   if(gq_type == "loo") {
@@ -649,6 +928,25 @@ generated quantities { ${gq}
   return(scode)
 }
 
+#' Convert Data Frame Variables to Stan-Compatible Format
+#'
+#' @description Transforms variables in a data frame to formats suitable for Stan
+#' modeling. Binary and categorical variables are converted to integer factors,
+#' continuous variables are standardized, and original values are preserved with "_raw" suffix.
+#'
+#' @param df Data frame to transform
+#' @param ignore_columns Character vector of column names to exclude from transformation
+#'
+#' @return Data frame with transformed variables and original values preserved:
+#'   \itemize{
+#'     \item Binary variables: Converted to 0/1 integers
+#'     \item Categorical variables: Converted to 1-based integer factors
+#'     \item Continuous variables: Standardized (mean=0, sd=1)
+#'     \item Original values: Saved with "_raw" suffix
+#'   }
+#'
+#' @noRd
+#' @importFrom dplyr mutate select rename_with bind_cols across all_of
 stan_factor <- function(df, ignore_columns = NULL) {
   # find the columns to mutate
   col_names <- setdiff(names(df), ignore_columns)
@@ -691,6 +989,39 @@ stan_factor <- function(df, ignore_columns = NULL) {
 
 
 
+#' Create Stan Data List for Model Fitting
+#'
+#' @description Constructs the data list required for Stan model fitting, including
+#' observation data, design matrices, grouping variables, and optional poststratification
+#' data. Handles both input data for fitting and new data for prediction.
+#'
+#' @param input_data Data frame containing observations for model fitting with columns:
+#'   \itemize{
+#'     \item positive: Number of positive outcomes
+#'     \item total: Total number of trials
+#'     \item Additional variables specified in effects
+#'   }
+#' @param new_data Data frame containing population data for prediction/poststratification
+#' @param effects Ungrouped effects structure from ungroup_effects()
+#' @param gq_data Optional list for poststratification with subgroups and temporal specifications
+#' @param sens Numeric value for sensitivity parameter (default 1)
+#' @param spec Numeric value for specificity parameter (default 1)
+#'
+#' @return Named list containing all data elements required by Stan:
+#'   \itemize{
+#'     \item N, y, n_sample: Observation counts and sample sizes
+#'     \item K, X: Fixed effects design matrix dimensions and values
+#'     \item N_pop, K_pop, X_pop: Population data for prediction
+#'     \item Grouping variables (N_*, J_*) for varying effects
+#'     \item Poststratification weights and indices (if gq_data provided)
+#'     \item sens, spec: Sensitivity and specificity parameters
+#'   }
+#'
+#' @noRd
+#'
+#' @importFrom dplyr select mutate group_by n_distinct
+#' @importFrom stringr str_interp
+#' @importFrom rlang syms .data
 make_standata <- function(
     input_data,
     new_data,
@@ -845,7 +1176,7 @@ run_mcmc <- function(
     show_exception = !silent,
     seed = seed
   )
-  
+
   return(list(
     fit = fit,
     stan_data = stan_data,
@@ -918,6 +1249,8 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
   return(df_fixed)
 }
 
+#' @importFrom dplyr select
+#' @importFrom rlang .data
 extract_parameters <- function(fit, effects, input_data) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
@@ -1035,6 +1368,7 @@ extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
   ))
 }
 
+#' @importFrom dplyr select mutate arrange distinct across all_of
 extract_est <- function(
   fit,
   new_data,
@@ -1076,6 +1410,31 @@ extract_est <- function(
   return(est)
 }
 
+#' Extract Posterior Predictive Replications
+#'
+#' @description Extracts posterior predictive replications (y_rep) from generated
+#' quantities for posterior predictive checking. Can aggregate temporally and
+#' provide summary statistics or full posterior draws.
+#'
+#' @param fit CmdStanR generated quantities fit object from posterior predictive checks
+#' @param input_data Original input data frame used for model fitting
+#' @param gq_data List containing model specifications (temporal indicator)
+#' @param N Integer number of posterior draws to extract (default 10)
+#' @param summarize Logical whether to return summary statistics (default FALSE)
+#' @param pred_interval Numeric prediction interval coverage (default 0.95)
+#'
+#' @return Posterior predictive replications:
+#'   \itemize{
+#'     \item If temporal=FALSE & summarize=FALSE: Numeric vector of proportion estimates
+#'     \item If temporal=FALSE & summarize=TRUE: Data frame with quantiles (upper, lower, median)
+#'     \item If temporal=TRUE & summarize=FALSE: Data frame with time and proportion columns
+#'     \item If temporal=TRUE & summarize=TRUE: Data frame with time and quantile summaries
+#'   }
+#'
+#' @noRd
+#'
+#' @importFrom rlang .data
+#' @importFrom dplyr select mutate group_by summarise_all ungroup mutate_all
 extract_yrep <- function(
   fit,
   input_data,

@@ -1,11 +1,24 @@
-#' analyze_visualize UI Function
+#' Data Visualization Module UI Function
 #'
-#' @description A Shiny Module that uses selectInputs in a sidebar to pick which plot to display.
+#' @description Creates the user interface for data visualization and exploratory
+#' analysis in the MRP application. Provides a sidebar layout with dynamic
+#' selection controls for different plot categories including individual-level
+#' characteristics, geographic patterns, and positive response rates. Supports
+#' both temporal and cross-sectional data visualization with interactive maps
+#' and plots.
 #'
-#' @param id A unique id for the module.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_sidebar} containing the visualization interface with:
+#' \itemize{
+#'   \item Sidebar with dynamic plot category and subcategory selection
+#'   \item Conditional panels for temporal data options
+#'   \item Main panel with dynamic plot output based on selections
+#' }
 #'
 #' @noRd
-#' @importFrom shiny NS tagList sidebarLayout sidebarPanel mainPanel uiOutput selectInput conditionalPanel
+#'
+#' @importFrom shiny NS tagList uiOutput selectInput conditionalPanel plotOutput
 mod_analyze_visualize_ui <- function(id){
   ns <- NS(id)
   
@@ -46,9 +59,29 @@ mod_analyze_visualize_ui <- function(id){
   )
 }
 
-#' analyze_visualize Server Functions
+#' Data Visualization Module Server Function
+#'
+#' @description Server logic for the data visualization module. Manages dynamic
+#' UI updates based on data format and linking geography, renders various types
+#' of plots including individual-level characteristics, geographic patterns,
+#' and positive response rates. Handles both temporal and cross-sectional data
+#' with appropriate visualization methods including interactive maps and charts.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state,
+#' including mrp data, link_data, plot_data, data_format, and extdata.
+#'
+#' @return Server function for the visualization module. Creates reactive
+#' updates for plot selection, renders dynamic UI components, and generates
+#' various types of plots and maps for data exploration.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer observeEvent updateSelectInput renderUI renderPlot req isolate
+#' @importFrom dplyr mutate
+#' @importFrom dplyr mutate
+#' @importFrom rlang .data
+#' @importFrom shinyjs reset
 mod_analyze_visualize_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

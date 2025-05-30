@@ -1,13 +1,23 @@
-#' analyze_result UI Function
+#' Results Visualization Module UI Function
 #'
-#' @description A shiny Module that uses a sidebar layout with dynamic selectInputs
-#'              to choose which result (plot) to display.
+#' @description Creates the user interface for visualizing MRP estimation results.
+#' Provides a sidebar layout with dynamic selection controls for model choice,
+#' result type (overall vs subgroup), and specific visualization options.
+#' Supports both temporal and cross-sectional data visualization with geographic
+#' mapping and demographic subgroup analysis.
 #'
-#' @param id A unique id for the module.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_sidebar} containing the results interface with:
+#' \itemize{
+#'   \item Sidebar with model selection and result type controls
+#'   \item Conditional panels for subgroup and geographic options
+#'   \item Main panel with dynamic plot output based on selections
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList conditionalPanel selectInput selectizeInput uiOutput plotOutput
 mod_analyze_result_ui <- function(id){
   ns <- NS(id)
   
@@ -71,9 +81,32 @@ mod_analyze_result_ui <- function(id){
   )
 }
 
-#' analyze_result Server Functions
+#' Results Visualization Module Server Function
+#'
+#' @description Server logic for the results visualization module. Manages model
+#' selection, generates dynamic UI based on user choices, and renders various
+#' types of plots including overall estimates, demographic subgroup comparisons,
+#' and geographic visualizations. Handles both temporal and cross-sectional
+#' data formats with appropriate plot types.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state,
+#' including models, poststratified_models, data_format, extdata, and session.
+#'
+#' @return Server function for the results module. Creates reactive values for
+#' model selection, renders dynamic UI components, and generates plots for
+#' MRP estimation results visualization.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer reactive req isolate renderUI renderPlot observeEvent updateSelectInput updateTabsetPanel showModal modalDialog removeModal actionButton
+#' @importFrom dplyr mutate select filter
+#' @importFrom purrr keep map_chr
+#' @importFrom shinyjs reset
+#' @importFrom tools toTitleCase
+#' @importFrom dplyr mutate select filter
+#' @importFrom rlang .data
+#' @importFrom stats setNames
 mod_analyze_result_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

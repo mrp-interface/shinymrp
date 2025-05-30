@@ -1,12 +1,24 @@
-#' about UI Function
+#' About Page Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the user interface for the about page displaying
+#' information about the development team, acknowledgements, references,
+#' and support resources. Provides a centered layout with team member
+#' information, funding acknowledgements, academic references, and
+#' links for user feedback and issue reporting.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{tagList} containing the about page interface with:
+#' \itemize{
+#'   \item Development team member information
+#'   \item Funding and acknowledgement details
+#'   \item Academic references and publications
+#'   \item Links for feedback and issue reporting
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList fluidRow column tags
 mod_about_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -45,9 +57,21 @@ mod_about_ui <- function(id){
   )
 }
 
-#' about Server Functions
+#' About Page Module Server Function
+#'
+#' @description Server logic for the about page module. Currently contains
+#' minimal server-side functionality as the about page is primarily static
+#' content. Maintains the module structure for potential future enhancements
+#' such as dynamic content updates or user interaction tracking.
+#'
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return Server function for the about module. Currently provides basic
+#' module server structure without active reactive functionality.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer
 mod_about_server <- function(id){
   moduleServer( id, function(input, output, session){
     ns <- session$ns

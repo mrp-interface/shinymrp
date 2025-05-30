@@ -1,12 +1,18 @@
-#' home UI Function
+#' Home Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the home page interface for the MRP application, providing
+#' navigation options for different data types (time-varying vs cross-sectional) and
+#' specific data formats (COVID, poll, other). The UI presents a hierarchical selection
+#' system with cards for each data type option.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{tagList} containing the home page UI elements including title,
+#' data type selection cards, and conditional panels for different workflows.
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList conditionalPanel actionButton tags
 mod_home_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -128,9 +134,23 @@ mod_home_ui <- function(id) {
 
 
 
-#' home Server Functions
+#' Home Module Server Function
+#'
+#' @description Server logic for the home page module. Manages panel navigation,
+#' handles data format selection, updates global state, and navigates to the
+#' analyze section based on user choices. Also handles CmdStan installation
+#' and demo mode notifications.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state,
+#' including session, input, and data_format variables.
+#'
+#' @return Server function for the home module. Sets up reactive values for
+#' panel navigation and observes user interactions to update global state.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateNavbarPage
 mod_home_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns

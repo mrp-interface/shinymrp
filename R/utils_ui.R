@@ -1,8 +1,18 @@
-#' ui
+#' Check MCMC iteration and chain parameters
 #'
-#' @description A utils function
+#' @description Validates MCMC sampling parameters including number of iterations,
+#' chains, and seed values to ensure they fall within acceptable ranges and are
+#' of correct numeric types.
 #'
-#' @return The return value, if any, from executing the utility.
+#' @param n_iter Numeric. Number of MCMC iterations to validate
+#' @param n_iter_range Numeric vector of length 2. Minimum and maximum allowed iterations
+#' @param n_chains Numeric. Number of MCMC chains to validate
+#' @param n_chains_range Numeric vector of length 2. Minimum and maximum allowed chains
+#' @param seed Numeric. Random seed value to validate
+#'
+#' @return A list containing:
+#'   \item{valid}{Logical indicating if all parameters are valid}
+#'   \item{msg}{Character vector of validation error messages, empty if valid}
 #'
 #' @noRd
 check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, seed) {
@@ -70,6 +80,21 @@ check_fit_object <- function(model, expected_format) {
   return("")
 }
 
+#' Create loading UI elements
+#'
+#' @description Creates different types of loading spinners and messages for
+#' various application processes including model fitting, poststratification,
+#' diagnostics, and setup operations.
+#'
+#' @param type Character. Type of loading UI to create. Options include:
+#'   "fit" (model fitting), "pstrat" (poststratification), "loo" (diagnostics),
+#'   "setup" (CmdStan installation), "wait" (general waiting), or "" (NULL)
+#'
+#' @return A tagList containing spinner and message elements, or NULL for empty type
+#'
+#' @importFrom shiny tagList tags
+#'
+#' @noRd
 waiter_ui <- function(type = "") {
   if(type == "fit") {
     tagList(
@@ -101,6 +126,19 @@ waiter_ui <- function(type = "") {
   }
 }
 
+#' Show alert modal dialog
+#'
+#' @description Displays a warning modal dialog with a triangle exclamation icon
+#' and custom message to alert users of important information or errors.
+#'
+#' @param message Character. The message content to display in the alert modal
+#' @param session Shiny session object for displaying the modal
+#'
+#' @return No return value, called for side effect of showing modal
+#'
+#' @importFrom shiny showModal modalDialog tagList icon
+#'
+#' @noRd
 show_alert <- function(message, session) {
   showModal(
     modalDialog(
@@ -111,6 +149,19 @@ show_alert <- function(message, session) {
   )
 }
 
+#' Show notification modal dialog
+#'
+#' @description Displays a notification modal dialog with a bell icon and
+#' custom message to inform users of status updates or general information.
+#'
+#' @param message Character. The message content to display in the notification modal
+#' @param session Shiny session object for displaying the modal
+#'
+#' @return No return value, called for side effect of showing modal
+#'
+#' @importFrom shiny showModal modalDialog tagList icon
+#'
+#' @noRd
 show_notif <- function(message, session) {
   showModal(
     modalDialog(
@@ -121,6 +172,20 @@ show_notif <- function(message, session) {
   )
 }
 
+#' Create user guide accordion
+#'
+#' @description Creates a comprehensive user guide accordion interface with
+#' multiple panels covering workflow, data upload, model specification, and
+#' model fitting instructions for the MRP application.
+#'
+#' @param open Character. Which accordion panel should be open by default.
+#'   Options: "workflow", "upload", "model_spec", "model_fit"
+#'
+#' @return A bslib accordion object containing detailed user guide content
+#'
+#' @importFrom shiny tags withMathJax
+#'
+#' @noRd
 create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit")) {
   open <- match.arg(open)
 
@@ -363,6 +428,20 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
   )
 }
 
+#' Show user guide modal
+#'
+#' @description Displays the user guide in a modal dialog with specified
+#' accordion panel open. Provides comprehensive help documentation for
+#' application usage.
+#'
+#' @param open Character. Which accordion panel should be open by default.
+#'   If NULL, uses default from create_guide function
+#'
+#' @return No return value, called for side effect of showing modal
+#'
+#' @importFrom shiny showModal modalDialog modalButton
+#'
+#' @noRd
 show_guide <- function(open = NULL) {
   showModal(
     modalDialog(
@@ -375,6 +454,22 @@ show_guide <- function(open = NULL) {
   )
 }
 
+#' Create model result tabs
+#'
+#' @description Creates dynamic navigation tabs for displaying model results
+#' including formula, diagnostics, parameter tables, and posterior predictive
+#' checks. Includes interactive elements for model management and saving.
+#'
+#' @param ns Namespace function for the Shiny module
+#' @param model List containing model information including IDs, formula,
+#'   sampling parameters, and fitted results
+#' @param last_tab_id Character. ID of the last tab for positioning the new tab
+#'
+#' @return No return value, called for side effect of inserting navigation tab
+#'
+#' @importFrom shiny tags actionButton downloadButton textOutput plotOutput tableOutput icon HTML
+#'
+#' @noRd
 create_model_tab <- function(ns, model, last_tab_id) {
   
   tab_header <- tags$div(
@@ -485,20 +580,34 @@ create_model_tab <- function(ns, model, last_tab_id) {
   
 }
 
+#' Reset form inputs
+#'
+#' @description Resets all model specification form inputs to their default
+#' states, clearing selections and resetting input fields for predictor
+#' selection, MCMC parameters, and file uploads.
+#'
+#' @param vars List containing variable choices for fixed effects, varying
+#'   effects, and interactions to reset selection inputs
+#'
+#' @return No return value, called for side effect of resetting form inputs
+#'
+#' @importFrom shinyjs reset
+#'
+#' @noRd
 reset_inputs <- function(vars) {
-  updateVirtualSelect(
+  shinyWidgets::updateVirtualSelect(
     inputId = "fixed",
     choices = vars$fixed,
     selected = NULL
   )
   
-  updateVirtualSelect(
+  shinyWidgets::updateVirtualSelect(
     inputId = "varying",
     choices = vars$varying,
     selected = NULL
   )
   
-  updateVirtualSelect(
+  shinyWidgets::updateVirtualSelect(
     inputId = "interaction",
     choices = list(),
     selected = NULL
@@ -514,6 +623,22 @@ reset_inputs <- function(vars) {
   shinyjs::reset("fit_upload")
 }
 
+#' Start busy state
+#'
+#' @description Initiates a busy state for a button by adding a spinning icon,
+#' disabling the button, and showing a loading overlay to indicate ongoing
+#' processing to users.
+#'
+#' @param session Shiny session object for updating UI elements
+#' @param id Character. Input ID of the button to set to busy state
+#' @param label Character. New label text to display on the busy button
+#'
+#' @return No return value, called for side effect of updating UI state
+#'
+#' @importFrom shiny updateActionButton icon
+#' @importFrom shinyjs disable
+#'
+#' @noRd
 start_busy <- function(session, id, label) {
   updateActionButton(
     session = session,
@@ -529,6 +654,23 @@ start_busy <- function(session, id, label) {
   )
 }
 
+#' Stop busy state
+#'
+#' @description Ends a busy state for a button by updating the icon to indicate
+#' success or failure, re-enabling the button, and hiding the loading overlay.
+#'
+#' @param session Shiny session object for updating UI elements
+#' @param id Character. Input ID of the button to remove from busy state
+#' @param label Character. New label text to display on the button
+#' @param success Logical. Whether the operation was successful (TRUE shows
+#'   check icon, FALSE shows warning icon)
+#'
+#' @return No return value, called for side effect of updating UI state
+#'
+#' @importFrom shiny updateActionButton icon
+#' @importFrom shinyjs enable
+#'
+#' @noRd
 stop_busy <- function(session, id, label, success) {
   updateActionButton(
     session = session,

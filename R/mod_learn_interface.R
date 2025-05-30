@@ -1,12 +1,24 @@
-#' learn_interface UI Function
+#' User Guide Interface Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the user interface for the comprehensive user guide page.
+#' Provides detailed documentation about the MRP application workflow, data
+#' requirements, model specification, and visualization options. Includes
+#' information about data formats, preprocessing steps, geographic linking,
+#' and Bayesian model fitting procedures.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_columns} containing the user guide interface with:
+#' \itemize{
+#'   \item Comprehensive workflow documentation
+#'   \item Data upload requirements and format specifications
+#'   \item Model specification and prior distribution information
+#'   \item Geographic linking and visualization guidelines
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList withMathJax tags
 mod_learn_interface_ui <- function(id){
   ns <- NS(id)
   bslib::layout_columns(
@@ -227,9 +239,25 @@ mod_learn_interface_ui <- function(id){
   )
 }
 
-#' learn_interface Server Functions
+#' User Guide Interface Module Server Function
+#'
+#' @description Server logic for the user guide interface module. Handles
+#' navigation events, renders example data tables, and provides download
+#' handlers for preprocessing code and example datasets. Manages display
+#' of cross-sectional and time-varying data examples with appropriate
+#' formatting and file downloads.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state,
+#' including session information for navigation updates.
+#'
+#' @return Server function for the user guide module. Creates download handlers
+#' for example data and preprocessing code, renders data tables, and manages
+#' navigation between guide sections.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer observeEvent updateTabsetPanel downloadHandler
 mod_learn_interface_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
