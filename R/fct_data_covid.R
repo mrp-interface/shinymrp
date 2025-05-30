@@ -1,11 +1,17 @@
-#' data_covid
+#' Rename columns for COVID data processing
 #'
-#' @description A fct function
+#' @description Standardizes column names in COVID datasets by identifying and
+#' renaming columns based on pattern matching. Maps columns containing ID,
+#' demographic information, test results, and dates to standardized names.
 #'
-#' @return The return value, if any, from executing the function.
+#' @param df A data frame containing COVID test data with various column naming conventions
+#'
+#' @return A data frame with standardized column names: id, sex, race, age, zip, positive, date
+#'
+#' @importFrom dplyr select all_of
+#' @importFrom magrittr %>%
 #'
 #' @noRd
-
 rename_columns_covid <- function(df) {
   all_names <- names(df)
   patterns <- c("(encrypted|masked).*id", "sex", "race", "age", "zip")
@@ -29,6 +35,24 @@ rename_columns_covid <- function(df) {
   return(df)
 }
 
+#' Recode COVID data values to expected levels
+#'
+#' @description Recodes demographic variables and test results in COVID data to
+#' match expected factor levels. Converts sex to binary (male/female), race to
+#' three categories (white/black/other), age to specified ranges, and test
+#' results to binary (0/1).
+#'
+#' @param df A data frame containing COVID data with columns: sex, race, age, positive
+#' @param expected_levels A list containing expected factor levels, particularly
+#'   for age ranges used to create age categories
+#'
+#' @return A data frame with recoded demographic and test result variables
+#'
+#' @importFrom dplyr mutate case_when if_else
+#' @importFrom stringr str_detect regex
+#' @importFrom rlang .data
+#'
+#' @noRd
 recode_covid <- function(df, expected_levels) {
   ranges <- expected_levels$age
   age_bounds <- regmatches(
@@ -54,6 +78,21 @@ recode_covid <- function(df, expected_levels) {
   return(df)
 }
 
+#' Remove duplicate COVID test records
+#'
+#' @description Removes duplicate COVID test records for the same individual
+#' within the same time period, keeping only one test per person per week.
+#'
+#' @param df A data frame containing COVID test data with columns: id, time
+#'
+#' @return A data frame with duplicate records removed, keeping one test per
+#'   individual per time period
+#'
+#' @importFrom dplyr distinct
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
+#'
+#' @noRd
 remove_dup_covid <- function(df) {
   # remove all but one test of a df in the same week
   df <- df %>% distinct(.data$id, .data$time, .keep_all = TRUE)
@@ -61,6 +100,25 @@ remove_dup_covid <- function(df) {
   return(df)
 }
 
+#' Filter data based on state and ZIP code thresholds
+#'
+#' @description Filters COVID data to include only ZIP codes and states that
+#' meet minimum sample size requirements. Removes areas with insufficient data
+#' for reliable statistical analysis.
+#'
+#' @param df A data frame containing COVID data with columns: zip, total
+#' @param covariates A data frame containing geographic covariates with columns:
+#'   zip, county (where county contains state FIPS codes)
+#' @param zip_threshold Numeric. Minimum number of observations required per ZIP code (default: 5)
+#' @param state_threshold Numeric. Minimum proportion of total sample required per state (default: 0.01)
+#'
+#' @return A data frame filtered to include only ZIP codes meeting both thresholds
+#'
+#' @importFrom dplyr group_by summarize mutate select distinct inner_join filter ungroup
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
+#'
+#' @noRd
 filter_state_zip <- function(
     df,
     covariates,
@@ -98,6 +156,31 @@ filter_state_zip <- function(
 }
 
 
+#' Prepare COVID data for MRP analysis
+#'
+#' @description Prepares COVID data for Multilevel Regression and Poststratification
+#' (MRP) analysis by filtering geographic areas, merging datasets, creating
+#' poststratification frames, and organizing variable lists for modeling.
+#'
+#' @param input_data A data frame containing individual-level COVID test data
+#' @param pstrat_data A data frame containing poststratification population counts
+#'   by demographic groups and geographic areas
+#' @param covariates A data frame containing geographic covariates and predictors
+#' @param demo_levels A list containing expected demographic factor levels
+#'   (sex, race, age categories)
+#' @param vars_global A list of global variable specifications for model building
+#'
+#' @return A list containing:
+#'   \item{input}{Processed individual-level data merged with covariates}
+#'   \item{new}{Poststratification frame with population counts}
+#'   \item{levels}{List of all factor levels for model variables}
+#'   \item{vars}{Organized variable lists for model specification}
+#'
+#' @importFrom dplyr filter select left_join arrange mutate
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
+#'
+#' @noRd
 prepare_mrp_covid <- function(
     input_data,
     pstrat_data,

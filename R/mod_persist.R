@@ -1,12 +1,23 @@
-#' persist UI Function
+#' Persistent UI Elements Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates persistent UI elements that remain visible across all
+#' pages of the application. Includes a feedback button that links to an external
+#' form and a help button that shows user guides. The feedback button visibility
+#' is controlled by scroll position, appearing only when the user is at the top
+#' of the page.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
 #'
-#' @noRd 
+#' @return A \code{tagList} containing persistent UI elements:
+#' \itemize{
+#'   \item Feedback button linking to external Google Form
+#'   \item Help button for displaying user guides
+#'   \item JavaScript code for scroll position tracking
+#' }
 #'
-#' @importFrom shiny NS tagList 
+#' @noRd
+#'
+#' @importFrom shiny NS tagList tags icon
 mod_persist_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -38,9 +49,25 @@ mod_persist_ui <- function(id) {
   )
 }
     
-#' persist Server Functions
+#' Persistent UI Elements Module Server Function
 #'
-#' @noRd 
+#' @description Server logic for persistent UI elements. Manages the visibility
+#' of the feedback button based on scroll position, handles help button clicks
+#' to show user guides, and provides visual feedback with animations. Uses
+#' JavaScript integration to track scroll position and dynamically show/hide
+#' elements.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state
+#' (not actively used in this module but maintained for consistency).
+#'
+#' @return Server function for the persistent UI module. Handles scroll-based
+#' visibility, help guide display, and UI animations for persistent elements.
+#'
+#' @noRd
+#'
+#' @importFrom shiny moduleServer observeEvent
+#' @importFrom shinyjs addClass removeClass delay show hide
 mod_persist_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

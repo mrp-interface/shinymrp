@@ -1,8 +1,12 @@
-#' utils 
+#' Convert empty values to NULL
 #'
-#' @description A utils function
+#' @description Converts various types of empty or missing values to NULL,
+#' including empty vectors, NA values, empty strings, and empty data frames.
+#' Useful for standardizing empty inputs in data processing pipelines.
 #'
-#' @return The return value, if any, from executing the utility.
+#' @param x Any R object to check for emptiness
+#'
+#' @return NULL if the input is considered empty, otherwise returns x unchanged
 #'
 #' @noRd
 nullify <- function(x) {
@@ -23,6 +27,19 @@ nullify <- function(x) {
   return(x)
 }
 
+#' Create human-readable data format labels
+#'
+#' @description Converts internal data format codes to human-readable labels
+#' for display in the user interface. Maps technical format names to
+#' descriptive category labels.
+#'
+#' @param data_format Character. Internal data format code such as
+#'   "static_poll", "static_other", "temporal_covid", or "temporal_other"
+#'
+#' @return Character. Human-readable label corresponding to the data format,
+#'   or "Unknown Data Format" if the format is not recognized
+#'
+#' @noRd
 data_format_label <- function(data_format) {
   switch(data_format,
          static_poll = "Cross-Sectional: Poll",
@@ -33,6 +50,17 @@ data_format_label <- function(data_format) {
 }
 
 
+#' Generate random IDs
+#'
+#' @description Generates random alphanumeric identifiers of specified length
+#' using digits (0-9), lowercase letters (a-z), and uppercase letters (A-Z).
+#' Useful for creating unique identifiers for UI elements or temporary objects.
+#'
+#' @param n Integer. Length of the ID to generate (default: 8)
+#'
+#' @return Character. A random alphanumeric string of length n
+#'
+#' @noRd
 generate_id <- function(n = 8) {
   # Define the pool of characters: digits, lowercase and uppercase letters
   chars <- c(0:9, letters, LETTERS)
@@ -41,6 +69,19 @@ generate_id <- function(n = 8) {
   paste0(sample(chars, size = n, replace = TRUE), collapse = "")
 }
 
+#' Get configuration values
+#'
+#' @description Retrieves configuration values from the application's config.yml
+#' file using the config package. Respects the R_CONFIG_ACTIVE environment
+#' variable for different configuration environments.
+#'
+#' @param value Character. The configuration key to retrieve from config.yml
+#'
+#' @return The configuration value associated with the specified key
+#'
+#' @importFrom config get
+#'
+#' @noRd
 get_config <- function(value) {
   config::get(
     value  = value,

@@ -15,6 +15,8 @@ mod_est_plot_ui <- function(id) {
 #' est_plot Server Functions
 #'
 #' @noRd 
+#' @importFrom dplyr mutate
+#' @importFrom rlang .data
 mod_est_plot_server <- function(id, model, var) {
   moduleServer(id, function(input, output, session){
     ns <- session$ns

@@ -1,12 +1,24 @@
-#' analyze_upload UI Function
+#' Data Upload Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the user interface for data upload and preprocessing in the MRP
+#' application. Provides a sidebar layout with accordion panels for sample data upload
+#' and poststratification data configuration. Supports both individual-level and
+#' aggregated data formats, with options to link to ACS data or upload custom
+#' poststratification data. Includes data preview and validation feedback.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_sidebar} containing the upload interface with:
+#' \itemize{
+#'   \item Sidebar with accordion panels for sample and poststratification data
+#'   \item File upload inputs with format toggles
+#'   \item Example data buttons and validation feedback
+#'   \item Main panel with data table preview and download options
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom shiny NS tagList conditionalPanel fileInput actionButton downloadButton uiOutput selectizeInput actionLink tags
 mod_analyze_upload_ui <- function(id) {
   ns <- NS(id)
   
@@ -192,9 +204,30 @@ mod_analyze_upload_ui <- function(id) {
 }
 
 
-#' analyze_upload Server Functions
+#' Data Upload Module Server Function
+#'
+#' @description Server logic for the data upload module. Handles file uploads,
+#' data preprocessing, validation, and preparation for MRP analysis. Manages
+#' both sample data and poststratification data workflows, including linking
+#' to ACS data and custom data uploads. Provides real-time feedback and
+#' error handling throughout the upload process.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state,
+#' including data_format, session, extdata, and processed data objects
+#' (data, mrp, plot_data, link_data).
+#'
+#' @return Server function for the upload module. Creates reactive values for
+#' data storage and validation, handles file processing, and updates global
+#' state with preprocessed data ready for analysis.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateSelectInput updateActionButton renderUI req
+#' @importFrom dplyr mutate filter
+#' @importFrom dplyr mutate filter
+#' @importFrom rlang .data
+#' @importFrom shinyjs reset toggle show hide delay
 mod_analyze_upload_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

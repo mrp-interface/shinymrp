@@ -30,6 +30,8 @@ mod_indiv_map_ui <- function(id) {
 #' indiv_map Server Functions
 #'
 #' @noRd 
+#' @importFrom dplyr mutate
+#' @importFrom rlang .data
 mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

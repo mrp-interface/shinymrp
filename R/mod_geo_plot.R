@@ -23,6 +23,8 @@ mod_geo_plot_ui <- function(id) {
 #' geo_plot Server Functions
 #'
 #' @noRd 
+#' @importFrom dplyr mutate select rename
+#' @importFrom rlang sym .data
 mod_geo_plot_server <- function(id, data, varname, config){
   moduleServer(id, function(input, output, session){
     # Render the plot

@@ -1,14 +1,17 @@
-#' plot
+#' Convert FIPS codes to uppercase format
 #'
-#' @description A fct function
+#' @description Converts state and county names in FIPS data to proper case formatting
+#' for consistent display in plots and maps.
 #'
-#' @return The return value, if any, from executing the function.
+#' @param fips A data frame containing FIPS codes with columns for state, state_name,
+#'   and optionally county
+#'
+#' @return A data frame with state names converted to uppercase, state_name to title case,
+#'   and county names to title case if present
 #'
 #' @noRd
-#'
-#' @import dplyr
-#' @import ggplot2
-
+#' @importFrom dplyr mutate
+#' @importFrom rlang .data
 fips_upper <- function(fips) {
   has_county <- "county" %in% names(fips)
 
@@ -19,6 +22,24 @@ fips_upper <- function(fips) {
   )
 }
 
+#' Prepare sample size data for visualization
+#'
+#' @description Aggregates input data by geographic unit and prepares it for plotting
+#' as either map visualizations or tabular displays. Calculates counts and percentages
+#' by geographic area.
+#'
+#' @param input_data A data frame containing survey data with columns for geographic
+#'   identifiers and total counts
+#' @param fips_codes A data frame containing FIPS codes and geographic names
+#' @param geo Character string specifying geographic level, either "county" or "state"
+#' @param for_map Logical indicating whether to format data for map display (TRUE) or
+#'   tabular display (FALSE)
+#'
+#' @return A data frame formatted for visualization with geographic identifiers, counts,
+#'   percentages, and hover text for maps or cleaned names for tables
+#'
+#' @noRd
+#' @importFrom dplyr mutate group_by summarize left_join select arrange desc
 prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"), for_map = TRUE) {
   geo <- match.arg(geo)
 
@@ -67,7 +88,22 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
   return(plot_df)
 }
 
-prep_raw_support <- function(    
+#' Prepare raw support data for visualization
+#'
+#' @description Calculates support rates (positive responses / total responses) by
+#' geographic unit and prepares data for map visualization with hover text.
+#'
+#' @param input_data A data frame containing survey data with columns for positive
+#'   responses, total responses, and geographic identifiers
+#' @param fips_codes A data frame containing FIPS codes and geographic names
+#' @param geo Character string specifying geographic level, either "county" or "state"
+#'
+#' @return A data frame with support rates, sample sizes, and formatted hover text
+#'   for map visualization
+#'
+#' @noRd
+#' @importFrom dplyr mutate group_by summarize left_join
+prep_raw_support <- function(
     input_data,
     fips_codes,
     geo = c("county", "state")
@@ -105,6 +141,24 @@ prep_raw_support <- function(
   return(plot_df)
 }
 
+#' Prepare raw prevalence data for visualization
+#'
+#' @description Calculates extreme (minimum or maximum) prevalence values over time
+#' by geographic unit and prepares data for map visualization. Useful for showing
+#' peak or lowest prevalence periods.
+#'
+#' @param input_data A data frame containing time series survey data with columns
+#'   for positive responses, total responses, time, and geographic identifiers
+#' @param fips_codes A data frame containing FIPS codes and geographic names
+#' @param geo Character string specifying geographic level, either "county" or "state"
+#' @param extreme_type Character string specifying whether to find "max" or "min"
+#'   prevalence values over time
+#'
+#' @return A data frame with extreme prevalence values, sample sizes, and formatted
+#'   hover text for map visualization
+#'
+#' @noRd
+#' @importFrom dplyr mutate group_by summarize left_join filter
 prep_raw_prev <- function(
     input_data,
     fips_codes,
@@ -171,6 +225,24 @@ prep_raw_prev <- function(
   return(plot_df)
 }
 
+#' Prepare model estimates for visualization
+#'
+#' @description Prepares model estimates for map visualization by joining with
+#' geographic data and formatting hover text. Can filter to specific time points
+#' for temporal data.
+#'
+#' @param est_df A data frame containing model estimates with columns for factor
+#'   (geographic identifier), est (estimate), std (standard error), and optionally time
+#' @param fips_codes A data frame containing FIPS codes and geographic names
+#' @param geo Character string specifying geographic level, either "county" or "state"
+#' @param time_index Optional integer specifying which time point to filter to
+#'   for temporal estimates
+#'
+#' @return A data frame with estimates, geographic information, and formatted hover
+#'   text for map visualization
+#'
+#' @noRd
+#' @importFrom dplyr rename left_join mutate filter
 prep_est <- function(
     est_df,
     fips_codes,
@@ -213,6 +285,26 @@ prep_est <- function(
 }
 
 
+#' Create demographic comparison plots
+#'
+#' @description Creates bar plots comparing demographic distributions between
+#' input survey data and target population data. Can display as separate plots
+#' or side-by-side comparison.
+#'
+#' @param input_data A data frame containing input survey data with demo and total columns
+#' @param new_data A data frame containing target population data with demo and total columns
+#' @param levels Character vector of demographic levels (currently unused in function)
+#' @param separate Logical indicating whether to create separate plots (TRUE) or
+#'   side-by-side comparison (FALSE)
+#'
+#' @return A ggplot object or patchwork object showing demographic comparisons
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot aes geom_bar scale_x_discrete scale_y_continuous labs theme element_text margin
+#' @importFrom scales percent
+#' @importFrom tools toTitleCase
+#' @importFrom patchwork wrap_plots
+#' @importFrom dplyr group_by summarize mutate filter
 plot_demographic <- function(
     input_data,
     new_data,
@@ -305,6 +397,22 @@ plot_demographic <- function(
 }
 
 
+#' Create geographic covariate distribution plots
+#'
+#' @description Creates histogram plots showing the distribution of geographic
+#' covariates across zip codes or other geographic units.
+#'
+#' @param covariates A data frame containing covariate values with a covar column
+#' @param breaks Numeric vector specifying histogram break points
+#' @param description Character string providing a description of the covariate
+#' @param definition Character string providing the definition of the covariate
+#' @param name Character string specifying the name/label for the x-axis
+#'
+#' @return A ggplot object showing the covariate distribution histogram
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot aes geom_histogram scale_y_continuous scale_x_continuous labs theme element_text margin expansion ggplot_build
+#' @importFrom scales breaks_width
 plot_geographic <- function(
     covariates,
     breaks,
@@ -360,6 +468,23 @@ plot_geographic <- function(
   return(p)
 }
 
+#' Create prevalence time series plots
+#'
+#' @description Creates line plots showing prevalence over time, with optional
+#' model estimates and uncertainty bands. Supports both raw data and MRP estimates.
+#'
+#' @param raw A data frame containing raw survey data with time, positive, and total columns
+#' @param dates Optional character vector of date labels for x-axis
+#' @param estimate Optional data frame containing model estimates with time, est, and std columns
+#' @param show_caption Logical indicating whether to show uncertainty caption
+#' @param raw_color Character string specifying color for raw data line
+#' @param mrp_color Character string specifying color for MRP estimate line and ribbon
+#'
+#' @return A ggplot object showing prevalence time series with optional estimates
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot aes geom_line geom_ribbon labs scale_x_continuous scale_y_continuous scale_color_manual theme element_blank element_text margin expansion
+#' @importFrom dplyr group_by summarize right_join left_join mutate
 plot_prev <- function(
   raw,
   dates,
@@ -456,6 +581,21 @@ plot_prev <- function(
 
 }
 
+#' Create support comparison plots
+#'
+#' @description Creates point plots with error bars comparing raw support rates
+#' with model estimates and uncertainty intervals.
+#'
+#' @param yrep_est A data frame containing model estimates with data, lower, median,
+#'   and upper columns
+#' @param raw A data frame containing raw survey data with positive and total columns
+#'
+#' @return A ggplot object showing support comparison with error bars
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot geom_point geom_errorbar scale_y_continuous labs theme element_text margin
+#' @importFrom scales percent
+#' @importFrom dplyr mutate
 plot_support <- function(
     yrep_est,
     raw
@@ -497,6 +637,25 @@ plot_support <- function(
   return(p)
 }
 
+#' Create COVID posterior predictive check subset plots
+#'
+#' @description Creates line plots comparing raw COVID data with multiple
+#' posterior predictive replications over time. Shows individual replication
+#' trajectories for model validation.
+#'
+#' @param yrep A data frame containing posterior predictive replications with
+#'   time column and multiple replication columns
+#' @param raw A data frame containing raw survey data with time, positive, and total columns
+#' @param dates Optional character vector of date labels for x-axis
+#' @param yrep_color Character string specifying color for replication lines
+#' @param raw_color Character string specifying color for raw data line
+#'
+#' @return A ggplot object showing posterior predictive check with multiple replications
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot geom_line aes labs scale_x_continuous scale_y_continuous scale_color_manual theme element_blank margin expansion
+#' @importFrom tidyr pivot_longer
+#' @importFrom dplyr group_by summarize
 plot_ppc_covid_subset <- function(
     yrep,
     raw,
@@ -567,6 +726,24 @@ plot_ppc_covid_subset <- function(
 
 }
 
+#' Create COVID posterior predictive check aggregate plots
+#'
+#' @description Creates line plots comparing raw COVID data with aggregated
+#' posterior predictive statistics (median and uncertainty bands) over time.
+#' Shows summary of model fit quality.
+#'
+#' @param yrep A data frame containing posterior predictive summary statistics
+#'   with time, median, lower, and upper columns
+#' @param raw A data frame containing raw survey data with time, positive, and total columns
+#' @param dates Optional character vector of date labels for x-axis
+#' @param yrep_color Character string specifying color for replication line and ribbon
+#' @param raw_color Character string specifying color for raw data line
+#'
+#' @return A ggplot object showing posterior predictive check with summary statistics
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot geom_line geom_ribbon aes labs scale_x_continuous scale_y_continuous scale_color_manual theme element_blank margin expansion
+#' @importFrom dplyr group_by summarise right_join left_join
 plot_ppc_covid_all <- function(
     yrep,
     raw,
@@ -648,6 +825,21 @@ plot_ppc_covid_all <- function(
   return(p)
 }
 
+#' Create poll posterior predictive check plots
+#'
+#' @description Creates point plots comparing raw poll support rates with
+#' posterior predictive replications for cross-sectional polling data validation.
+#'
+#' @param yrep Numeric vector containing posterior predictive replication values
+#' @param raw A data frame containing raw survey data with positive and total columns
+#' @param yrep_color Character string specifying color for replication points
+#' @param raw_color Character string specifying color for raw data points
+#'
+#' @return A ggplot object showing posterior predictive check for polling data
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot geom_point aes scale_y_continuous labs theme element_blank element_text margin
+#' @importFrom scales percent
 plot_ppc_poll <- function(
     yrep,
     raw,
@@ -691,6 +883,23 @@ plot_ppc_poll <- function(
     )
 }
 
+#' Create temporal estimate plots
+#'
+#' @description Creates multi-panel line plots showing model estimates over time
+#' for different factor levels. Includes an overview plot and individual plots
+#' with uncertainty bands for each factor level.
+#'
+#' @param df A data frame containing temporal estimates with factor, time, est, and std columns
+#' @param dates Optional character vector of date labels for x-axis
+#'
+#' @return A patchwork object containing multiple ggplot panels showing temporal estimates
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot geom_line geom_ribbon aes labs scale_x_continuous scale_y_continuous scale_color_manual scale_fill_manual theme element_blank margin expansion
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom patchwork wrap_plots plot_annotation
+#' @importFrom tools toTitleCase
+#' @importFrom dplyr mutate filter
 plot_est_temporal <- function(df, dates) {
   if(is.null(nullify(df))) {
     return(NULL)
@@ -791,6 +1000,20 @@ plot_est_temporal <- function(df, dates) {
   return(p)
 }
 
+#' Create static estimate plots
+#'
+#' @description Creates point plots with error bars showing model estimates
+#' for different factor levels in cross-sectional data.
+#'
+#' @param plot_df A data frame containing estimates with factor, est, and std columns
+#'
+#' @return A ggplot object showing static estimates with error bars
+#'
+#' @noRd
+#' @importFrom ggplot2 ggplot geom_point geom_errorbar aes scale_x_discrete scale_y_continuous labs theme element_text margin
+#' @importFrom scales percent
+#' @importFrom tools toTitleCase
+#' @importFrom dplyr n_distinct
 plot_est_static <- function(plot_df) {
   if(is.null(nullify(plot_df))) {
     return(NULL)
@@ -829,6 +1052,21 @@ plot_est_static <- function(plot_df) {
   return(p)
 }
 
+#' Create choropleth maps
+#'
+#' @description Creates interactive choropleth maps using Highcharter for
+#' visualizing geographic data with color-coded values and hover tooltips.
+#'
+#' @param plot_df A data frame containing geographic data with fips, value, and hover columns
+#' @param geojson A geojson object containing geographic boundaries
+#' @param main_title Character string for the map title
+#' @param sub_title Character string for the legend/series title
+#' @param geo Character string specifying geographic level (used for context)
+#' @param config Optional list containing minValue and maxValue for color scale limits
+#'
+#' @return A highcharter map object showing choropleth visualization
+#'
+#' @noRd
 choro_map <- function(
     plot_df,
     geojson,

@@ -1,13 +1,24 @@
-#' analyze_model UI Function
+#' Model Fitting Module UI Function
 #'
-#' @description A shiny Module.
+#' @description Creates the user interface for Bayesian model specification, fitting,
+#' and comparison in the MRP application. Provides a sidebar layout with accordion
+#' panels for model specification (effects selection, priors, sampling options) and
+#' model upload. The main panel includes tabs for model comparison with LOO-CV
+#' analysis and posterior predictive checks.
 #'
-#' @param id,input,output,session Internal parameters for {shiny}.
+#' @param id Character string. The module's namespace identifier.
+#'
+#' @return A \code{bslib::layout_sidebar} containing the model fitting interface with:
+#' \itemize{
+#'   \item Sidebar with model specification controls and file upload
+#'   \item Virtual select inputs for fixed/varying effects and interactions
+#'   \item Prior specification interface and sampling parameter controls
+#'   \item Main panel with model comparison tabs and diagnostic plots
+#' }
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList
-#' @import shinyWidgets
+#' @importFrom shiny NS tagList conditionalPanel fileInput actionButton uiOutput selectizeInput actionLink numericInput selectInput fluidRow column tags
 mod_analyze_model_ui <- function(id) {
   ns <- NS(id)
 
@@ -117,9 +128,32 @@ mod_analyze_model_ui <- function(id) {
   )
 }
 
-#' analyze_model Server Functions
+#' Model Fitting Module Server Function
+#'
+#' @description Server logic for the model fitting module. Handles Bayesian model
+#' specification, MCMC sampling, model comparison, and diagnostics. Manages effect
+#' selection, prior specification, model fitting with CmdStan, and provides
+#' comprehensive model evaluation including LOO-CV and posterior predictive checks.
+#' Supports model upload/download and dynamic tab management for multiple models.
+#'
+#' @param id Character string. The module's namespace identifier.
+#' @param global Reactive values object containing global application state,
+#' including mrp data, models list, data_format, and session information.
+#'
+#' @return Server function for the model fitting module. Creates reactive values
+#' for model management, handles MCMC fitting, generates model comparison tables
+#' and diagnostic plots, and manages model tabs dynamically.
 #'
 #' @noRd
+#'
+#' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateSelectInput renderUI renderTable renderPlot req isolate showModal modalDialog modalButton
+#' @importFrom shinyWidgets virtualSelectInput
+#' @importFrom loo loo loo_compare pareto_k_table
+#' @importFrom shinyjs reset toggle show hide delay addClass disable click
+#' @importFrom qs qread qsave
+#' @importFrom purrr map map_chr
+#' @importFrom dplyr select mutate
+#' @importFrom rlang .data
 mod_analyze_model_server <- function(id, global){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
@@ -197,7 +231,7 @@ mod_analyze_model_server <- function(id, global){
             purrr::map(function(l) as.list(setdiff(l, input[[other_id]])))
           selected = setdiff(input[[id]], input[[other_id]])
           
-          updateVirtualSelect(
+          shinyWidgets::updateVirtualSelect(
             inputId = id,
             choices = choices,
             selected = selected
@@ -218,7 +252,7 @@ mod_analyze_model_server <- function(id, global){
         ) %>% 
         pair_setdiff(global$mrp$vars$omit$nested)
 
-        updateVirtualSelect(
+        shinyWidgets::updateVirtualSelect(
           inputId = "interaction",
           choices = choices,
           selected = input$interaction
@@ -239,7 +273,7 @@ mod_analyze_model_server <- function(id, global){
         holder[[length(holder) + 1]] <- list(dist = "", eff = NULL)
 
         for(i in 1:length(holder)) {
-          updateVirtualSelect(
+          shinyWidgets::updateVirtualSelect(
             inputId = paste0("prior_eff_", i),
             choices = list(
               "Intercept" = stats::setNames(c("Intercept_Intercept"), c("Intercept")),
@@ -284,7 +318,7 @@ mod_analyze_model_server <- function(id, global){
             }
 
             
-            updateVirtualSelect(
+            shinyWidgets::updateVirtualSelect(
               inputId = eff_id,
               choices = list(
                 "Intercept" = intercept,
@@ -318,7 +352,7 @@ mod_analyze_model_server <- function(id, global){
           )
         ),
         column(width = 6,
-          virtualSelectInput(
+          shinyWidgets::virtualSelectInput(
             inputId = ns(paste0("prior_eff_", .x)),
             label = NULL,
             choices = list(
