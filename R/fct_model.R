@@ -839,10 +839,10 @@ run_mcmc <- function(
     chains = n_chains,
     parallel_chains = n_chains,
     threads_per_chain = 1,
-    refresh = if(silent) 0 else n_iter / 10,
+    refresh = n_iter / 10,
     diagnostics = NULL,
     show_messages = !silent,
-    show_exceptions = !silent,
+    show_exception = !silent,
     seed = seed
   )
   
