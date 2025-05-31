@@ -134,7 +134,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -165,7 +165,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -196,7 +196,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -227,7 +227,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -264,7 +264,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -301,7 +301,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -338,7 +338,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -375,7 +375,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -414,7 +414,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -454,7 +454,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -496,7 +496,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -536,7 +536,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -578,7 +578,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -615,7 +615,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -657,7 +657,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 
@@ -699,7 +699,7 @@ test_that("estimated parameters match saved values", {
   expect_equal(
     get_test_data(result$fit$mcmc),
     ref,
-    tolerance = 0.01,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 

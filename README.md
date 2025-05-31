@@ -61,7 +61,7 @@ xcode-select --install
 For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Install the appropriate version based on the version of R on your machine.
 
 ### shinymrp Installation
-R version 4.1.0 or beyond is required. Install the app by executing the R code below:
+Install the app by executing the R code below:
 ```
 # install remotes if necessary
 install.packages('remotes')
