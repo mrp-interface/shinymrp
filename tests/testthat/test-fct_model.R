@@ -124,6 +124,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -155,6 +156,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -186,6 +188,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -217,6 +220,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -254,6 +258,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -291,6 +296,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -328,6 +334,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -365,6 +372,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -404,6 +412,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -444,6 +453,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -486,6 +496,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -526,6 +537,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -568,6 +580,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -605,6 +618,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -647,6 +661,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
@@ -689,6 +704,7 @@ test_that("estimated parameters match saved values", {
     new_data = data,
     effects = effects,
     seed = seed,
+    iter = 2000,
     silent = TRUE
   )
 
