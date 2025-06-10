@@ -73,7 +73,7 @@ mod_analyze_model_ui <- function(id) {
           numericInput(ns("seed_select"), "Seed", value = 123, min = 1, max = 100000),
 
           conditionalPanel(
-            condition = "output.data_format == 'temporal_covid'",
+            condition = "output.special_case == 'covid'",
             fluidRow(
               column(6, numericInput(ns("spec_kb"), "Specificity", value = 0.999, min = 0, max = 1, step = 0.01)),
               column(6, numericInput(ns("sens_kb"), "Sensitivity", value = 0.7, min = 0, max = 1, step = 0.01))
@@ -137,8 +137,7 @@ mod_analyze_model_ui <- function(id) {
 #' Supports model upload/download and dynamic tab management for multiple models.
 #'
 #' @param id Character string. The module's namespace identifier.
-#' @param global Reactive values object containing global application state,
-#' including mrp data, models list, data_format, and session information.
+#' @param global Reactive values object containing global application state
 #'
 #' @return Server function for the model fitting module. Creates reactive values
 #' for model management, handles MCMC fitting, generates model comparison tables
@@ -400,7 +399,7 @@ mod_analyze_model_server <- function(id, global){
     #-----------------------------------------------------------------------
     output$loo_ui <- renderUI({
       req(global$models)
-      global$data_format
+      global$metadata
       input$compare_btn
 
       selected_ids <- isolate(input$model_select)
@@ -438,7 +437,7 @@ mod_analyze_model_server <- function(id, global){
     # Render posterior predictive check UI
     #-----------------------------------------------------------------------
     output$ppc_plots <- renderUI({
-      global$data_format
+      global$metadata
       input$compare_btn
 
       selected_ids <- isolate(input$model_select)
@@ -451,7 +450,8 @@ mod_analyze_model_server <- function(id, global){
         tagList(
           bslib::card(
             bslib::card_header(tags$b("Note")),
-            if(global$data_format == "temporal_covid") {
+            if(!is.null(global$metadata$special_case) &&
+               global$metadata$special_case == "covid") {
               bslib::card_body(tags$p("The plots show the weekly postive response rates computed from the observed data and 10 sets of replicated data."))
             } else {
               bslib::card_body(tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data."))
@@ -485,7 +485,7 @@ mod_analyze_model_server <- function(id, global){
 
         purrr::map(seq_along(yreps), function(i) {
           output[[paste0("compare_ppc", i)]] <- renderPlot({
-            if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+            if(global$metadata$is_timevar) {
               req(global$models)
 
               plot_ppc_covid_subset(
@@ -517,7 +517,7 @@ mod_analyze_model_server <- function(id, global){
               utils::capture.output({
                 loo_output <- loo::loo(
                   m$fit$loo$draws("log_lik"),
-                  cores = m$sampling$n_chains
+                  cores = m$metadata$n_chains
                 )
               }, type = "message")
 
@@ -723,30 +723,31 @@ mod_analyze_model_server <- function(id, global){
         
         # Create model object
         model <- list()
-        model$data_format <- global$data_format
         model$effects <- all_priors
         model$formula <- create_formula(all_priors)
-        model$sampling$n_iter <- n_iter
-        model$sampling$n_chains <- n_chains
         model$mrp <- global$mrp
         model$plot_data <- global$plot_data
         model$link_data <- global$link_data
-        model$gq_data <- list(
-          subgroups = intersect(GLOBAL$vars$subgroups, names(model$mrp$new)),
-          temporal = model$data_format %in% c("temporal_covid", "temporal_other")
-        )
+        model$metadata <- c(global$metadata, list(
+          n_iter = n_iter,
+          n_chains = n_chains,
+          pstrat_vars = intersect(GLOBAL$vars$pstrat, names(model$mrp$new))
+        ))
+
         
         # run MCMC
         mcmc <- run_mcmc(
           input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
           new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
           effects = model$effects,
-          gq_data = model$gq_data,
-          n_iter = model$sampling$n_iter,
-          n_chains = model$sampling$n_chains,
+          metadata = model$metadata,
+          n_iter = model$metadata$n_iter,
+          n_chains = model$metadata$n_chains,
           seed = input$seed_select,
-          sens = if(global$data_format == "temporal_covid") input$sens_kb else 1,
-          spec = if(global$data_format == "temporal_covid") input$spec_kb else 1
+          sens = if(!is.null(global$metadata$special_case) &&
+                    global$metadata$special_case == "covid") input$sens_kb else 1,
+          spec = if(!is.null(global$metadata$special_case) &&
+                    global$metadata$special_case == "covid") input$spec_kb else 1
         )
         
         model_buffer(c(model, mcmc))
@@ -764,7 +765,7 @@ mod_analyze_model_server <- function(id, global){
       )
       
       model <- qs::qread(input$fit_upload$datapath)
-      check_fit_object(model, global$data_format) %>% model_feedback()
+      check_fit_object(model, global$metadata) %>% model_feedback()
 
       if(model_feedback() == "") {
         model_buffer(model)
@@ -779,15 +780,21 @@ mod_analyze_model_server <- function(id, global){
         html = waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
-      
-      model <- switch(global$data_format,
-        "temporal_covid" = qs::qread(app_sys("extdata/example/fit/fit_timevarying_covid.RDS")),
-        "temporal_other" = qs::qread(app_sys("extdata/example/fit/fit_timevarying_other.RDS")),
-        "static_poll" = qs::qread(app_sys("extdata/example/fit/fit_crosssectional_poll.RDS")),
-        "static_other" = qs::qread(app_sys("extdata/example/fit/fit_crosssectional_other.RDS"))
-      )
 
-      model_buffer(model)
+      path <- if (!is.null(global$metadata$special_case)) {
+        switch(global$metadata$special_case,
+          covid = "extdata/example/fit/fit_timevarying_covid.RDS",
+          poll = "extdata/example/fit/fit_crosssectional_poll.RDS"
+        )
+      } else {
+        if (global$metadata$is_timevar) {
+          "extdata/example/fit/fit_timevarying_other.RDS"
+        } else {
+          "extdata/example/fit/fit_crosssectional_other.RDS"
+        }
+      }
+
+      model_buffer(qs::qread(app_sys(path)))
     })
     
     # create new model tab
@@ -799,7 +806,7 @@ mod_analyze_model_server <- function(id, global){
       if (is.null(model$diagnostics$mcmc)) {
         out <- extract_diagnostics(
           fit = model$fit$mcmc,
-          total_transitions = model$sampling$n_iter / 2 * model$sampling$n_chains
+          total_transitions = model$metadata$n_iter / 2 * model$metadata$n_chains
         )
         model$diagnostics$mcmc <- out$summary
         show_warnings <- out$show_warnings
@@ -820,7 +827,7 @@ mod_analyze_model_server <- function(id, global){
           fit_mcmc = model$fit$mcmc,
           stan_code = model$stan_code$loo,
           stan_data = model$stan_data,
-          n_chains = model$sampling$n_chains
+          n_chains = model$metadata$n_chains
         )
       }
       
@@ -830,7 +837,7 @@ mod_analyze_model_server <- function(id, global){
           fit_mcmc = model$fit$mcmc,
           stan_code = model$stan_code$ppc,
           stan_data = model$stan_data,
-          n_chains = model$sampling$n_chains
+          n_chains = model$metadata$n_chains
         )
       }
       
@@ -839,7 +846,7 @@ mod_analyze_model_server <- function(id, global){
         model$yrep <- extract_yrep(
           model$fit$ppc,
           model$mrp$input,
-          model$gq_data
+          model$metadata$is_timevar
         )
       }
       
@@ -914,7 +921,7 @@ mod_analyze_model_server <- function(id, global){
       output[[model$IDs$ppc_plot]] <- renderPlot({
         req(model$yrep)
         
-        if(global$data_format == "temporal_covid" | global$data_format == "temporal_other") {
+        if(global$metadata$is_timevar) {
           plot_ppc_covid_subset(
             model$yrep,
             model$mrp$input,
@@ -943,13 +950,13 @@ mod_analyze_model_server <- function(id, global){
             fit_mcmc = model$fit$mcmc,
             stan_code = model$stan_code$pstrat,
             stan_data = model$stan_data,
-            n_chains = model$sampling$n_chains
+            n_chains = model$metadata$n_chains
           )
           
           model$est <- extract_est(
             model$fit$pstrat,
             model$mrp$new,
-            model$gq_data
+            model$metadata
           )
 
           # update reactiveValues
@@ -1036,7 +1043,7 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(
       eventExpr = list(
         global$data,
-        global$data_format,
+        global$metadata,
         global$link_data
       ), 
       handlerExpr = {

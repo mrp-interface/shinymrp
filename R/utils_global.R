@@ -24,16 +24,11 @@ module_ids <- list(
 )
 
 GLOBAL <- list(
-  bounds = list(
-    covid = list(
-      poverty = c(0, 1, 2)
-    )
-  ),
   vars = list(
-    subgroups = c("sex", "race", "age", "edu", "county", "state"),
-    indiv = c("sex", "race", "age", "edu", "time"),
-    geo = c("zip", "county", "state"),
-    time = c("time", "date"),
+    pstrat = c("sex", "race", "age", "edu", "county", "state"),
+    indiv  = c("sex", "race", "age", "edu", "time"),
+    geo    = c("zip", "county", "state"),
+    time   = c("time", "date"),
     ignore = c("date", "total", "positive")
   ),
   ui = list(
@@ -98,6 +93,12 @@ GLOBAL <- list(
         "Education" = "edu",
         "Geography" = "geo"
       )
+    ),
+    use_case_labels = list(
+      covid = "Time-varying: COVID",
+      poll = "Cross-sectional: Poll",
+      timevar_general = "Time-varying: General",
+      static_general = "Cross-sectional: General"
     )
   ),
   default_priors = list(

@@ -62,7 +62,7 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
 #'   \item{valid}{Logical indicating if the format is valid}
 #'   \item{message}{Warning message if invalid, or NULL if valid}
 #' @noRd
-check_fit_object <- function(model, expected_format) {
+check_fit_object <- function(model, expected_metadata) {
   example_model <- qs::qread(app_sys("extdata/example/fit/fit_crosssectional_other.RDS"))
   
   # Check if the model object has all the required fields
@@ -71,10 +71,11 @@ check_fit_object <- function(model, expected_format) {
   }
 
   # Check if the model object has the expected data format
-  if(model$data_format != expected_format) {
-      return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
-                     data_format_label(model$data_format),
-                     data_format_label(expected_format)))
+  if(model$metadata$special_case != expected_metadata$special_case ||
+     model$metadata$is_timevar != expected_metadata$is_timevar) {
+    return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
+                    use_case_label(model$metadata),
+                    use_case_label(expected_metadata)))
   }
 
   return("")
@@ -104,7 +105,7 @@ waiter_ui <- function(type = "") {
   } else if(type == "pstrat") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Running poststratification...", style = "color: black")
+      tags$h4("Running post-stratification...", style = "color: black")
     )
   } else if(type == "loo") {
     tagList(
@@ -121,6 +122,12 @@ waiter_ui <- function(type = "") {
       waiter::spin_loaders(15, color = "black"),
       tags$h4("Please wait...", style = "color: black")
     )
+  } else if (type == "init") {
+    tagList(
+      waiter::spin_loaders(15, color = "black"),
+      tags$h4("Initializing...", style = "color: black")
+    )
+  
   } else {
     NULL
   }
@@ -537,7 +544,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
           )
         ),
         tags$p(paste0("A binomial model with a logit function of the positive response rate. ",
-                       "Samples are generated using ", model$sampling$n_chains, " chains with ", model$sampling$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small"),
+                       "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small"),
         actionButton(
           inputId = ns(model$IDs$postprocess_btn),
           label = "Run poststratification"
@@ -681,4 +688,18 @@ stop_busy <- function(session, id, label, success) {
 
   shinyjs::enable(id)
   waiter::waiter_hide()
+}
+
+to_analyze <- function(session) {
+  bslib::nav_select(
+    id = "navbar",
+    selected = "nav_analyze",
+    session = session
+  )
+
+  bslib::nav_select(
+    id = "navbar_analyze",
+    selected = "nav_analyze_upload",
+    session = session
+  )
 }

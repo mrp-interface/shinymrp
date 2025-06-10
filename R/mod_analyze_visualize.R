@@ -4,7 +4,7 @@
 #' analysis in the MRP application. Provides a sidebar layout with dynamic
 #' selection controls for different plot categories including individual-level
 #' characteristics, geographic patterns, and positive response rates. Supports
-#' both temporal and cross-sectional data visualization with interactive maps
+#' both time-varying and cross-sectional data visualization with interactive maps
 #' and plots.
 #'
 #' @param id Character string. The module's namespace identifier.
@@ -12,7 +12,7 @@
 #' @return A \code{bslib::layout_sidebar} containing the visualization interface with:
 #' \itemize{
 #'   \item Sidebar with dynamic plot category and subcategory selection
-#'   \item Conditional panels for temporal data options
+#'   \item Conditional panels for time-varying data options
 #'   \item Main panel with dynamic plot output based on selections
 #' }
 #'
@@ -42,7 +42,7 @@ mod_analyze_visualize_ui <- function(id){
         width = "100%"
       ),
       conditionalPanel(
-        condition = sprintf("(output.data_format == 'temporal_covid' || output.data_format == 'temporal_other') && input['%s'] == 'by_geo'", 
+        condition = sprintf("output.is_timevar && input['%s'] == 'by_geo'", 
                             ns("plot_subcategory")),
         bslib::card(
           selectizeInput(
@@ -64,12 +64,11 @@ mod_analyze_visualize_ui <- function(id){
 #' @description Server logic for the data visualization module. Manages dynamic
 #' UI updates based on data format and linking geography, renders various types
 #' of plots including individual-level characteristics, geographic patterns,
-#' and positive response rates. Handles both temporal and cross-sectional data
+#' and positive response rates. Handles both time-varying and cross-sectional data
 #' with appropriate visualization methods including interactive maps and charts.
 #'
 #' @param id Character string. The module's namespace identifier.
-#' @param global Reactive values object containing global application state,
-#' including mrp data, link_data, plot_data, data_format, and extdata.
+#' @param global Reactive values object containing global application state
 #'
 #' @return Server function for the visualization module. Creates reactive
 #' updates for plot selection, renders dynamic UI components, and generates
@@ -108,23 +107,21 @@ mod_analyze_visualize_server <- function(id, global){
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
-        if(global$data_format != "static_poll") {
+        if(global$metadata$special_case != "poll") {
           choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {
         label <- "2. Select characteristic"
-        choices <- switch(global$data_format,
-          "temporal_covid" = c(GLOBAL$ui$plot_selection$geo,
-                               GLOBAL$ui$plot_selection$geo_covar),
-          "temporal_other" = GLOBAL$ui$plot_selection$geo,
-          "static_poll"    = GLOBAL$ui$plot_selection$geo,
-          "static_other"   = GLOBAL$ui$plot_selection$geo
-        )
+        choices <- GLOBAL$ui$plot_selection$geo
+        if (!is.null(global$metadata$special_case) &&
+            global$metadata$special_case == "covid") {
+          choices <- c(choices, GLOBAL$ui$plot_selection$geo_covar)
+        }
       } else if (input$plot_category == "pos_rate") {
         label <- "2. Select plot type"
         choices <- GLOBAL$ui$plot_selection$pos_rate
 
-        if (global$data_format %in% c("static_poll", "static_other")) {
+        if (!global$metadata$is_timevar) {
           choices <- choices[!choices == "overall"]
         }
 
@@ -270,7 +267,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
 
-      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
+      if(global$metadata$is_timevar) {
         plot_df <- global$mrp$input %>%
           prep_raw_prev(
             fips_codes = global$extdata$fips[[geo]],

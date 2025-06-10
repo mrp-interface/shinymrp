@@ -439,17 +439,14 @@ check_simulation_result <- function(
   effects <- effects %>% group_effects(sim_data) %>% ungroup_effects()
   
   # Setup generated quantities data
-  gq_data <- list(
-    subgroups = c("sex", "race", "age"),
-    temporal = "time" %in% names(sim_data)
-  )
+  metadata <- list()
 
   # Run MCMC
   mod <- run_mcmc(
     input_data = sim_data %>% stan_factor(ignore_vars),
     new_data = sim_data %>% stan_factor(ignore_vars),
     effects = effects,
-    gq_data = gq_data,
+    metadata = metadata,
     spec = 1,
     sens = 1
   )

@@ -36,7 +36,7 @@ mod_est_plot_server <- function(id, model, var) {
     }, height = function() {
       req(model())
       
-      if(model()$data_format %in% c("temporal_covid", "temporal_other")) {
+      if(model()$metadata$is_timevar) {
         GLOBAL$ui$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
       } else {
         GLOBAL$ui$plot_height

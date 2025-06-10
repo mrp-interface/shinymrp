@@ -459,7 +459,7 @@ ungroup_effects <- function(effects) {
 
 
 # Stan code and data generation functions
-data_ <- function(effects, gq_data = NULL) {
+data_ <- function(effects, metadata = NULL) {
   scode <- "
   int<lower=1> N;
   array[N] int y;
@@ -499,12 +499,12 @@ data_ <- function(effects, gq_data = NULL) {
   }
   
   # for poststratification
-    if(!is.null(gq_data)) {
+    if(!is.null(metadata)) {
       scode <- paste0(scode, "
   vector<lower=0, upper=1>[N_pop] P_overall_pstrat;
   ")
   
-    for(s in gq_data$subgroups) {
+    for(s in metadata$pstrat_vars) {
       scode <- paste0(scode, str_interp("
   int<lower=1> N_${s}_pstrat;
   array[N_pop] int<lower=1, upper=N_${s}_pstrat> J_${s}_pstrat;
@@ -512,7 +512,7 @@ data_ <- function(effects, gq_data = NULL) {
   ")) 
     }
   
-    if(gq_data$temporal) {
+    if(metadata$is_timevar) {
       scode <- paste0(scode, "
   int<lower=1> N_time_pstrat;
   array[N_pop] int<lower=1, upper=N_time_pstrat> J_time_pstrat;
@@ -744,10 +744,10 @@ gq_ppc <- function() {
 #' aggregates them using poststratification weights.
 #'
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param gq_data List containing poststratification specifications:
+#' @param metadata List containing poststratification specifications:
 #'   \itemize{
-#'     \item subgroups: Character vector of demographic subgroups
-#'     \item temporal: Logical indicating temporal aggregation
+#'     \item pstrat_vars: Character vector of demographic subgroups
+#'     \item is_timevar: Logical indicating whether data contains time information
 #'   }
 #'
 #' @return Character string containing Stan generated quantities code for:
@@ -761,8 +761,8 @@ gq_ppc <- function() {
 #' @noRd
 #'
 #' @importFrom stringr str_interp
-gq_pstrat <- function(effects, gq_data=NULL) {
-  if(is.null(gq_data)) {
+gq_pstrat <- function(effects, metadata=NULL) {
+  if(is.null(metadata)) {
     return("")
   }
 
@@ -784,13 +784,13 @@ gq_pstrat <- function(effects, gq_data=NULL) {
   }
   
   # poststratification
-  if(gq_data$temporal) {
+  if(metadata$is_timevar) {
     init_overall <- "vector<lower=0, upper=1>[N_time_pstrat] p_overall_pop = rep_vector(0, N_time_pstrat);"
-    init_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
+    init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
   matrix<lower=0, upper=1>[N_${.x}_pstrat, N_time_pstrat] p_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
   } else {
     init_overall <- "real<lower=0, upper=1> p_overall_pop;"
-    init_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
+    init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
   vector<lower=0, upper=1>[N_${.x}_pstrat] p_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
   }
   
@@ -808,14 +808,14 @@ gq_pstrat <- function(effects, gq_data=NULL) {
                   }), collapse = "")
   )
   
-  if(gq_data$temporal) {
+  if(metadata$is_timevar) {
     est_overall <- "
     p_pop_scaled = p_pop .* P_overall_pstrat;
     for (i in 1:N_pop) {
       p_overall_pop[J_time_pstrat[i]] += p_pop_scaled[i];
     }"
     
-    est_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
+    est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
     p_pop_scaled = p_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
       p_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += p_pop_scaled[i];
@@ -825,7 +825,7 @@ gq_pstrat <- function(effects, gq_data=NULL) {
     p_pop_scaled = p_pop .* P_overall_pstrat;
     p_overall_pop = sum(p_pop_scaled);")
     
-    est_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
+    est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
     p_pop_scaled = p_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
       p_${.x}_pop[J_${.x}_pstrat[i]] += p_pop_scaled[i];
@@ -853,7 +853,7 @@ gq_pstrat <- function(effects, gq_data=NULL) {
 #' function for generating Stan code for model fitting.
 #'
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param gq_data Optional list containing generated quantities specifications for
+#' @param metadata Optional list containing generated quantities specifications for
 #'   poststratification. If provided, includes additional data declarations.
 #'
 #' @return Character string containing complete Stan program with data, parameters,
@@ -862,10 +862,10 @@ gq_pstrat <- function(effects, gq_data=NULL) {
 #' @noRd
 #'
 #' @importFrom stringr str_interp
-make_stancode_mcmc <- function(effects, gq_data=NULL) {
+make_stancode_mcmc <- function(effects, metadata=NULL) {
   
   scode <- str_interp("
-data { ${data_(effects, gq_data)}
+data { ${data_(effects, metadata)}
 }
 
 parameters { ${parameters_(effects)}
@@ -894,7 +894,7 @@ model { ${model_(effects)}
 #'     \item "ppc": Posterior predictive check replications
 #'     \item "pstrat": Poststratification estimates
 #'   }
-#' @param gq_data List containing specifications for poststratification (required if gq_type="pstrat")
+#' @param metadata List containing specifications for poststratification (required if gq_type="pstrat")
 #'
 #' @return Character string containing complete Stan program with data, parameters,
 #'   transformed parameters, and generated quantities blocks
@@ -902,17 +902,17 @@ model { ${model_(effects)}
 #' @noRd
 #'
 #' @importFrom stringr str_interp
-make_stancode_gq <- function(effects, gq_type = c("loo", "ppc", "pstrat"), gq_data = NULL) {
+make_stancode_gq <- function(effects, gq_type = c("loo", "ppc", "pstrat"), metadata = NULL) {
   gq_type <- match.arg(gq_type)
   if(gq_type == "loo") {
     gq <- gq_loo()
   } else if (gq_type == "ppc") {
     gq <- gq_ppc()
   } else if (gq_type == "pstrat")
-    gq <- gq_pstrat(effects, gq_data)
+    gq <- gq_pstrat(effects, metadata)
   
   scode <- str_interp("
-data { ${data_(effects, gq_data)}
+data { ${data_(effects, metadata)}
 }
 
 parameters { ${parameters_(effects)}
@@ -1003,7 +1003,7 @@ stan_factor <- function(df, ignore_columns = NULL) {
 #'   }
 #' @param new_data Data frame containing population data for prediction/poststratification
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param gq_data Optional list for poststratification with subgroups and temporal specifications
+#' @param metadata Optional list for poststratification specifications
 #' @param sens Numeric value for sensitivity parameter (default 1)
 #' @param spec Numeric value for specificity parameter (default 1)
 #'
@@ -1013,7 +1013,7 @@ stan_factor <- function(df, ignore_columns = NULL) {
 #'     \item K, X: Fixed effects design matrix dimensions and values
 #'     \item N_pop, K_pop, X_pop: Population data for prediction
 #'     \item Grouping variables (N_*, J_*) for varying effects
-#'     \item Poststratification weights and indices (if gq_data provided)
+#'     \item Poststratification weights and indices (if metadata provided)
 #'     \item sens, spec: Sensitivity and specificity parameters
 #'   }
 #'
@@ -1026,7 +1026,7 @@ make_standata <- function(
     input_data,
     new_data,
     effects,
-    gq_data = NULL,
+    metadata = NULL,
     sens = 1,
     spec = 1
 ) {
@@ -1102,14 +1102,14 @@ make_standata <- function(
   }
 
   # poststratification
-  if (!is.null(gq_data)) {
+  if (!is.null(metadata)) {
     pstrat_data <- new_data %>%
       mutate(
         across(everything(), ~ if(n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
         overall = 1
       )
-    for(s in c("overall", gq_data$subgroups)) {
-      group_cols <- if(gq_data$temporal) c("time", s) else c(s)
+    for(s in c("overall", metadata$pstrat_vars)) {
+      group_cols <- if(metadata$is_timevar) c("time", s) else c(s)
       
       pop_prop <- pstrat_data %>%
         group_by(!!!syms(group_cols)) %>%
@@ -1122,7 +1122,7 @@ make_standata <- function(
       stan_data[[str_interp("P_${s}_pstrat")]] <- pop_prop$prop
     }
     
-    if(gq_data$temporal) {
+    if(metadata$is_timevar) {
       stan_data$N_time_pstrat <- n_distinct(new_data$time)
       stan_data$J_time_pstrat <- new_data$time
     }
@@ -1135,7 +1135,7 @@ run_mcmc <- function(
     input_data,
     new_data,
     effects,
-    gq_data = NULL,
+    metadata = NULL,
     n_iter = 1000,
     n_chains = 4,
     seed = NULL,
@@ -1146,12 +1146,12 @@ run_mcmc <- function(
 ) {
 
   stan_code <- list()
-  stan_code$mcmc <- make_stancode_mcmc(effects, gq_data)
+  stan_code$mcmc <- make_stancode_mcmc(effects, metadata)
   stan_code$ppc <- make_stancode_gq(effects, "ppc")
   stan_code$loo <- make_stancode_gq(effects, "loo")
-  stan_code$pstrat <- make_stancode_gq(effects, "pstrat", gq_data)
+  stan_code$pstrat <- make_stancode_gq(effects, "pstrat", metadata)
   
-  stan_data <- make_standata(input_data, new_data, effects, gq_data, sens, spec)
+  stan_data <- make_standata(input_data, new_data, effects, metadata, sens, spec)
 
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)
@@ -1372,12 +1372,12 @@ extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 extract_est <- function(
   fit,
   new_data,
-  gq_data
+  metadata
 ) {
   
 
   # convert new data to numeric factors
-  col_names <- if(gq_data$temporal) c(gq_data$subgroups, "time") else gq_data$subgroups
+  col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
   new_data <- new_data %>%
     select(all_of(col_names)) %>%
     mutate(overall = "overall") %>%  # add placeholder column for overall estimates
@@ -1385,16 +1385,16 @@ extract_est <- function(
 
   est <- list()
 
-  for(s in c("overall", gq_data$subgroups)) {
+  for(s in c("overall", metadata$pstrat_vars)) {
     # get posterior draws for each subgroup
     pred_mat <- fit$draws(
       variables = str_interp("p_${s}_pop"),
       format = "draws_matrix"
     ) %>% t()
 
-    col_names <- if(gq_data$temporal) c("time", s) else c(s)
+    col_names <- if(metadata$is_timevar) c("time", s) else c(s)
     raw_col_names <- paste0(col_names, "_raw")
-    new_col_names <- if(gq_data$temporal) c("time", "factor") else c("factor")
+    new_col_names <- if(metadata$is_timevar) c("time", "factor") else c("factor")
 
     # Order raw levels based on numeric levels to match order of posterior draws matrix
     est[[s]] <- new_data %>%
@@ -1418,17 +1418,17 @@ extract_est <- function(
 #'
 #' @param fit CmdStanR generated quantities fit object from posterior predictive checks
 #' @param input_data Original input data frame used for model fitting
-#' @param gq_data List containing model specifications (temporal indicator)
+#' @param boolean indicator for whether data contains time information
 #' @param N Integer number of posterior draws to extract (default 10)
 #' @param summarize Logical whether to return summary statistics (default FALSE)
 #' @param pred_interval Numeric prediction interval coverage (default 0.95)
 #'
 #' @return Posterior predictive replications:
 #'   \itemize{
-#'     \item If temporal=FALSE & summarize=FALSE: Numeric vector of proportion estimates
-#'     \item If temporal=FALSE & summarize=TRUE: Data frame with quantiles (upper, lower, median)
-#'     \item If temporal=TRUE & summarize=FALSE: Data frame with time and proportion columns
-#'     \item If temporal=TRUE & summarize=TRUE: Data frame with time and quantile summaries
+#'     \item If is_timevar=FALSE & summarize=FALSE: Numeric vector of proportion estimates
+#'     \item If is_timevar=FALSE & summarize=TRUE: Data frame with quantiles (upper, lower, median)
+#'     \item If is_timevar=TRUE & summarize=FALSE: Data frame with time and proportion columns
+#'     \item If is_timevar=TRUE & summarize=TRUE: Data frame with time and quantile summaries
 #'   }
 #'
 #' @noRd
@@ -1438,7 +1438,7 @@ extract_est <- function(
 extract_yrep <- function(
   fit,
   input_data,
-  gq_data,
+  is_timevar,
   N = 10,
   summarize = FALSE,
   pred_interval = 0.95
@@ -1455,7 +1455,7 @@ extract_yrep <- function(
   qlower <- (1 - pred_interval) / 2
   qupper <- 1 - qlower
 
-  if(gq_data$temporal) {
+  if(is_timevar) {
     agg_df <- yrep_mat %>%
       as.data.frame() %>%
       mutate(

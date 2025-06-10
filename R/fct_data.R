@@ -351,7 +351,7 @@ get_dates <- function(df) {
 #'
 #' @param df Data frame with variables to be recoded.
 #' @param expected_levels List containing expected levels for each variable.
-#' @param covid Logical. If TRUE, uses COVID-specific recoding. Default is FALSE.
+#' @param is_covid Logical. If TRUE, uses COVID-specific recoding. Default is FALSE.
 #'
 #' @return Data frame with recoded variables matching expected levels.
 #'
@@ -359,8 +359,8 @@ get_dates <- function(df) {
 #'
 #' @importFrom dplyr mutate if_else case_match
 #' @importFrom rlang .data
-recode_values <- function(df, expected_levels, covid=FALSE) {
-  if (covid) {
+recode_values <- function(df, expected_levels, is_covid=FALSE) {
+  if (is_covid) {
     return(recode_covid(df, expected_levels))
   }
 
@@ -703,8 +703,6 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
 #' the data format and structure. Different data formats have different
 #' expected variable types.
 #'
-#' @param data_format Character string specifying the data format. Must be one of:
-#'   "temporal_covid", "temporal_other", "static_poll", "static_other".
 #' @param is_sample Logical. Whether the data represents sample data. Default is TRUE.
 #' @param is_aggregated Logical. Whether the data is aggregated. Default is FALSE.
 #'
@@ -713,12 +711,10 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
 #'
 #' @noRd
 create_expected_types <- function(
-  data_format = c("temporal_covid", "temporal_other", "static_poll", "static_other"),
+  metadata,
   is_sample = TRUE,
   is_aggregated = FALSE
 ) {
-
-  data_format <- match.arg(data_format)
   
   types <- list(
     sex  = "bin",
@@ -726,13 +722,13 @@ create_expected_types <- function(
     age  = "cat"
   )
   
-  if (data_format == "temporal_covid") types$zip <- "cat"
-  if (data_format == "static_poll")   types$edu <- "cat"
+  if (metadata$special_case == "covid") types$zip <- "cat"
+  if (metadata$special_case == "poll")   types$edu <- "cat"
 
   if (is_sample) {
     types$positive <- "ignore"
     if (is_aggregated) {
-      if (data_format %in% c("temporal_covid", "temporal_other")) types$time  <- "cat"
+      if (metadata$is_timevar) types$time  <- "cat"
     }
   }
 
@@ -749,45 +745,32 @@ create_expected_types <- function(
 #' based on the data format. Different data formats have different expected
 #' demographic categories and age groupings.
 #'
-#' @param data_format Character string specifying the data format. Must be one of:
-#'   "temporal_covid", "temporal_other", "static_poll", "static_other".
-#'
 #' @return Named list where names are variable names and values are character
 #'   vectors of expected levels for each categorical variable.
 #'
 #' @noRd
-create_expected_levels <- function(
-  data_format = c("temporal_covid", "temporal_other", "static_poll", "static_other")
-) {
-  
-  data_format <- match.arg(data_format)
-
-  levels <- list(
-    static_poll = list(
+create_expected_levels <- function(metadata) {
+  if (metadata$special_case == "poll") {
+    list(
       sex = c("male", "female"),
       race = c("white", "black", "other"),
       age = c("18-29", "30-39", "40-49", "50-59", "60-69", "70+"),
       edu = c("no hs", "hs", "some college", "4-year college", "post-grad")
-    ),
-    other = list(
+    )
+  } else {
+    list(
       sex = c("male", "female"),
       race = c("white", "black", "other"),
       age = c("0-17", "18-34", "35-64", "65-74", "75+")
     )
-  )
-
-  switch(
-    data_format,
-    static_poll = levels$static_poll,
-    levels$other
-  )
+  }
 }
 
 #' Validate data against expected structure
 #'
 #' @description Performs comprehensive data validation including checking for
 #' missing columns, validating data types, checking for excessive missing values,
-#' and validating date formats for temporal data.
+#' and validating date formats for time-varying data.
 #'
 #' @param df Data frame to be validated.
 #' @param expected_types Named list of expected data types for each variable.
@@ -891,7 +874,6 @@ check_pstrat <- function(df, df_ref, expected_types) {
 #' indices, recodes values, imputes missing data, and appends geographic variables.
 #'
 #' @param data Data frame containing raw uploaded data.
-#' @param data_format Character string specifying the data format type.
 #' @param zip_county_state Data frame containing geographic crosswalk information.
 #' @param const List containing constants and variable mappings.
 #' @param is_sample Logical. Whether the data represents sample data. Default is TRUE.
@@ -906,19 +888,17 @@ check_pstrat <- function(df, df_ref, expected_types) {
 #' @importFrom rlang syms .data
 preprocess <- function(
   data,
-  data_format,
+  metadata,
   zip_county_state,
   const,
   is_sample = TRUE,
   is_aggregated = TRUE
 ) {
   
-  # set up flags
-  covid <- data_format == "temporal_covid"
-  need_time <- is_sample && data_format %in% c("temporal_covid", "temporal_other")
-  levels <- create_expected_levels(data_format)
+  is_covid <- metadata$special_case == "temporal_covid"
+  levels <- create_expected_levels(metadata)
   indiv_vars <- names(levels)
-  if (need_time) {
+  if (metadata$is_timevar) {
     indiv_vars <- c(indiv_vars, "time")
   }
   
@@ -926,11 +906,11 @@ preprocess <- function(
   data <- clean_data(data)
   
   # Find and rename columns
-  data <- rename_columns(data, const, covid && !is_aggregated)
+  data <- rename_columns(data, const, is_covid && !is_aggregated)
   
   # Check for common dataframe issues
   types <- create_expected_types(
-    data_format = data_format,
+    metadata = metadata,
     is_sample = is_sample,
     is_aggregated = is_aggregated
   )
@@ -943,7 +923,7 @@ preprocess <- function(
     data <- data %>% tidyr::drop_na(all_of(check_cols))
 
     # convert date to week indices if necessary
-    if (need_time) {
+    if (metadata$is_timevar) {
       common <- intersect(names(data), c("date", "time"))
       if (length(common) == 1 && "date" %in% common) {
         # convert date to week indices
@@ -965,7 +945,7 @@ preprocess <- function(
     }
 
     # recode values to expected levels
-    data <- recode_values(data, levels, covid)
+    data <- recode_values(data, levels, is_covid)
 
     # impute missing demographic data based on frequency
     data <- data %>% mutate(across(all_of(indiv_vars), impute))
@@ -1143,7 +1123,7 @@ combine_tracts <- function(
 #' @param vars_global List containing global variable definitions.
 #' @param link_geo Character string specifying geographic linking variable.
 #'   Default is NULL.
-#' @param need_time Logical. Whether time indices are needed. Default is FALSE.
+#' @param is_timevar Logical. Whether time indices are needed. Default is FALSE.
 #'
 #' @return Named list containing:
 #'   \item{input}{Filtered input data}
@@ -1162,7 +1142,7 @@ prepare_mrp_custom <- function(
   demo_levels,
   vars_global,
   link_geo = NULL,
-  need_time = FALSE
+  is_timevar = FALSE
 ) {
 
   # filter based on common GEOIDs
@@ -1176,7 +1156,7 @@ prepare_mrp_custom <- function(
   # create lists of all factor levels
   n_time_indices <- 1
   levels <- demo_levels
-  if(need_time) {
+  if(is_timevar) {
     levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
   }
@@ -1230,7 +1210,7 @@ prepare_mrp_custom <- function(
 #' @param vars_global List containing global variable definitions.
 #' @param link_geo Character string specifying geographic linking variable.
 #'   Default is NULL.
-#' @param need_time Logical. Whether time indices are needed. Default is FALSE.
+#' @param is_timevar Logical. Whether time indices are needed. Default is FALSE.
 #'
 #' @return Named list containing:
 #'   \item{input}{Filtered input data}
@@ -1250,7 +1230,7 @@ prepare_mrp_acs <- function(
     demo_levels,
     vars_global,
     link_geo = NULL,
-    need_time = FALSE
+    is_timevar = FALSE
 ) {
 
   # create poststratification table
@@ -1268,7 +1248,7 @@ prepare_mrp_acs <- function(
   # create lists of all factor levels
   n_time_indices <- 1
   levels <- demo_levels
-  if(need_time) {
+  if(is_timevar) {
     levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
   }
