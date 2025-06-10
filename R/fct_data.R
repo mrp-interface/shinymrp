@@ -321,6 +321,29 @@ get_week_indices <- function(strings) {
   ))
 }
 
+add_week_indices <- function(df, time_cols = GLOBAL$vars$time) {
+  common <- intersect(names(df), time_cols)
+  if (length(common) == 1 && "date" %in% common) {
+    # convert date to week indices
+    week <- get_week_indices(df$date)
+    df$time <- week$indices
+
+    # add the column containing first dates of the weeks
+    df <- df %>%
+      full_join(
+        data.frame(
+          time = 1:max(df$time),
+          date = as.character(week$timeline)
+        ),
+        by = "time"
+      )
+  } else if (length(common) == 0) {
+    stop("No dates or week indices found.")
+  }
+
+  return(df)
+}
+
 #' Extract and format unique dates from data frame
 #'
 #' @description Extracts unique dates from the 'date' column of a data frame,
@@ -707,7 +730,7 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
 #' @param is_aggregated Logical. Whether the data is aggregated. Default is FALSE.
 #'
 #' @return Named list where names are variable names and values are expected
-#'   data types ("bin", "cat", "ignore").
+#'   data types ("bin", "cat", "cont", "ignore").
 #'
 #' @noRd
 create_expected_types <- function(
@@ -726,7 +749,11 @@ create_expected_types <- function(
   if (metadata$special_case == "poll")   types$edu <- "cat"
 
   if (is_sample) {
-    types$positive <- "ignore"
+    if (metadata$family == "binomial") {
+      types$positive <- "ignore"
+    } else if (metadata$family == "multinomial") {
+      types$outcome <- "ignore"
+    }
     if (is_aggregated) {
       if (metadata$is_timevar) types$time  <- "cat"
     }
@@ -840,7 +867,7 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
 #' @return No return value. Throws errors if validation fails.
 #'
 #' @noRd
-check_pstrat <- function(df, df_ref, expected_types) {
+check_pstrat <- function(df, df_ref, expected_types, ignore_cols = GLOBAL$vars$ignore) {
   if (is.null(df_ref)) {
     stop("Sample data is not provided.")
   }
@@ -852,7 +879,7 @@ check_pstrat <- function(df, df_ref, expected_types) {
   if (length(missing_df))  stop("Missing in sample data:  ", paste(missing_df, collapse = ", "))
   if (length(missing_ref)) stop("Missing in postratification data: ", paste(missing_ref, collapse = ", "))
   
-  cols <- intersect(names(df), names(df_ref)) %>% setdiff("total")
+  cols <- intersect(names(df), names(df_ref)) %>% setdiff(ignore_cols)
   
   # compare unique values
   cond <- vapply(cols, function(col) {
@@ -916,40 +943,23 @@ preprocess <- function(
   )
   check_data(data, types)
 
+  # remove NAs
+  check_cols <- setdiff(names(data), indiv_vars)
+  data <- data %>% tidyr::drop_na(all_of(check_cols))
+
+  # convert date to week indices if necessary
+  if (metadata$is_timevar) {
+    data <- add_week_indices(data)
+  }
+
+  # recode values to expected levels
+  data <- recode_values(data, levels, is_covid)
+
+  # impute missing demographic data based on frequency
+  data <- data %>% mutate(across(all_of(indiv_vars), impute))
+
   # Aggregate if needed
-  if(!is_aggregated) {
-    # remove NAs
-    check_cols <- setdiff(names(data), indiv_vars)
-    data <- data %>% tidyr::drop_na(all_of(check_cols))
-
-    # convert date to week indices if necessary
-    if (metadata$is_timevar) {
-      common <- intersect(names(data), c("date", "time"))
-      if (length(common) == 1 && "date" %in% common) {
-        # convert date to week indices
-        week <- get_week_indices(data$date)
-        data$time <- week$indices
-
-        # add the column containing first dates of the weeks
-        data <- data %>%
-          full_join(
-            data.frame(
-              time = 1:max(data$time),
-              date = as.character(week$timeline)
-            ),
-            by = "time"
-          )
-      } else if (length(common) == 0) {
-        stop("No dates or week indices found.")
-      }
-    }
-
-    # recode values to expected levels
-    data <- recode_values(data, levels, is_covid)
-
-    # impute missing demographic data based on frequency
-    data <- data %>% mutate(across(all_of(indiv_vars), impute))
-
+  if(!is_aggregated && metadata$family != "gaussian") {) {
     # aggregate test records based on combinations of factors
     smallest <- get_smallest_geo(names(data), const$vars$geo)
     smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL

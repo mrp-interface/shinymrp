@@ -105,7 +105,7 @@ test_that("estimated parameters match saved values", {
   struct_prior <- "structured"
 
   data <- create_test_data(seed = seed) %>%
-    stan_factor(ignore_columns = c("positive", "total"))
+    stan_factor(ignore_cols = c("positive", "total"))
 
   # fixed effect of continuous variables only
   effects <- list(

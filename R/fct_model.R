@@ -935,7 +935,7 @@ generated quantities { ${gq}
 #' continuous variables are standardized, and original values are preserved with "_raw" suffix.
 #'
 #' @param df Data frame to transform
-#' @param ignore_columns Character vector of column names to exclude from transformation
+#' @param ignore_cols Character vector of column names to exclude from transformation
 #'
 #' @return Data frame with transformed variables and original values preserved:
 #'   \itemize{
@@ -947,9 +947,9 @@ generated quantities { ${gq}
 #'
 #' @noRd
 #' @importFrom dplyr mutate select rename_with bind_cols across all_of
-stan_factor <- function(df, ignore_columns = NULL) {
+stan_factor <- function(df, ignore_cols = GLOBAL$vars$ignore) {
   # find the columns to mutate
-  col_names <- setdiff(names(df), ignore_columns)
+  col_names <- setdiff(names(df), ignore_cols)
   
   # save the “raw” columns
   df_raw <- df %>%
@@ -1375,7 +1375,6 @@ extract_est <- function(
   metadata
 ) {
   
-
   # convert new data to numeric factors
   col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
   new_data <- new_data %>%
