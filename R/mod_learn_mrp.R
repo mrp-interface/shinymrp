@@ -2,7 +2,7 @@
 #'
 #' @description Creates the user interface for the MRP (Multilevel Regression
 #' and Poststratification) theory and methodology guide page. Provides detailed
-#' mathematical explanations of MRP for both cross-sectional and spatio-temporal
+#' mathematical explanations of MRP for both cross-sectional and time-varying
 #' data, including model specifications, Bayesian frameworks, and measurement
 #' error correction for COVID-19 testing data.
 #'
@@ -11,7 +11,7 @@
 #' @return A \code{bslib::layout_columns} containing the MRP theory guide with:
 #' \itemize{
 #'   \item Mathematical formulations for cross-sectional MRP models
-#'   \item Spatio-temporal MRP models with measurement error correction
+#'   \item Time-varying MRP models with measurement error correction
 #'   \item Bayesian hierarchical model specifications
 #'   \item Poststratification procedures and small area estimation
 #' }
@@ -84,7 +84,7 @@ mod_learn_mrp_ui <- function(id){
         withMathJax("We obtain inference based on Bayesian posterior predictive samples of the estimates.")
       ),
       
-      tags$h3("MRP for spatio-temporal data with measurement error"),
+      tags$h3("MRP for time-varying data with measurement error"),
       tags$div(class = "mb-3",
         withMathJax("We use a Bayesian framework to account for the PCR testing sensitivity and specificity and apply MRP to COVID testing records for population representation, here using the following adjustment variables: the biological variable of sex, age, race, and zip codes.")
       ),

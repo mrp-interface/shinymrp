@@ -229,14 +229,14 @@ prep_raw_prev <- function(
 #'
 #' @description Prepares model estimates for map visualization by joining with
 #' geographic data and formatting hover text. Can filter to specific time points
-#' for temporal data.
+#' for time-varying data.
 #'
 #' @param est_df A data frame containing model estimates with columns for factor
 #'   (geographic identifier), est (estimate), std (standard error), and optionally time
 #' @param fips_codes A data frame containing FIPS codes and geographic names
 #' @param geo Character string specifying geographic level, either "county" or "state"
 #' @param time_index Optional integer specifying which time point to filter to
-#'   for temporal estimates
+#'   for time-varying estimates
 #'
 #' @return A data frame with estimates, geographic information, and formatted hover
 #'   text for map visualization
@@ -883,16 +883,16 @@ plot_ppc_poll <- function(
     )
 }
 
-#' Create temporal estimate plots
+#' Create time-varying estimate plots
 #'
 #' @description Creates multi-panel line plots showing model estimates over time
 #' for different factor levels. Includes an overview plot and individual plots
 #' with uncertainty bands for each factor level.
 #'
-#' @param df A data frame containing temporal estimates with factor, time, est, and std columns
+#' @param df A data frame containing time-varying estimates with factor, time, est, and std columns
 #' @param dates Optional character vector of date labels for x-axis
 #'
-#' @return A patchwork object containing multiple ggplot panels showing temporal estimates
+#' @return A patchwork object containing multiple ggplot panels showing time-varying estimates
 #'
 #' @noRd
 #' @importFrom ggplot2 ggplot geom_line geom_ribbon aes labs scale_x_continuous scale_y_continuous scale_color_manual scale_fill_manual theme element_blank margin expansion

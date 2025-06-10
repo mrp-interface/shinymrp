@@ -34,7 +34,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
             outputId = ns("map"),
             height = GLOBAL$ui$map_height
           ),
-          # Only show slider if we have temporal data
+          # Only show slider if we have time-varying data
           if (!is.null(time_indices)) {
             if(!is.null(dates)) {
               div(
@@ -123,7 +123,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         rename("factor" = geo) %>%
         filter(factor %in% geo_subset())
 
-      if(model()$data_format %in% c("temporal_covid", "temporal_other")) {
+      if(model()$metadata$is_timevar) {
         plot_est_temporal(plot_df, model()$plot_data$dates)
       } else {
         plot_est_static(plot_df)
@@ -131,7 +131,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
     }, height = function() {
       req(model())
 
-      if(model()$data_format %in% c("temporal_covid", "temporal_other")) {
+      if(model()$metadata$is_timevar) {
         GLOBAL$ui$subplot_height * (length(geo_subset()) + 1)
       } else {
         GLOBAL$ui$plot_height

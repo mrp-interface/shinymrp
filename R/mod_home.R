@@ -24,105 +24,50 @@ mod_home_ui <- function(id) {
       tags$p("An Interface for applying Multilevel Regression and Poststratification", 
              class = "fs-3 fst-italic text-center pb-4"),
       
-      # Main panel group: two panels side-by-side with reduced width
+      
+      # Time-varying panel group
       conditionalPanel(
-        condition = sprintf("output['%s'] == 'main'", ns("panel_group")),
-        tags$div(class = "row justify-content-center mx-auto mt-5",
-          tags$div(class = "col-md-6", 
-            card(
-              card_header(
-                tags$p("Time-varying Data", class = "fs-4 fw-bold text-center m-0")
-              ),
-              card_body(
-                tags$p("Collected over time", class = "fst-italic text-center"),
-                actionButton(inputId = ns("set_temporal"), label = "Select", 
-                             class = "w-100 mt-3")
+        condition = sprintf("output['%s'] != 'main'", ns("panel_group")),
+        tags$div(class = "mb-3 ms-3",
+          actionButton(inputId = ns("back_btn"), label = "\u2190 Back", 
+                       class = "btn btn-secondary")
+        )
+      ),
+      tags$div(class = "row justify-content-center mx-auto mt-1",
+        tags$div(class = "col-md-6", 
+          bslib::card(class = "h-100",
+            bslib::card_header(
+              tags$div(class = "fs-4 fw-bold text-center m-2",
+                textOutput(ns("left_panel_title"))
               )
-            )
-          ),
-          tags$div(class = "col-md-6", 
-            card(
-              card_header(
-                tags$p("Cross-sectional Data", class = "fs-4 fw-bold text-center m-0")
+            ),
+            bslib::card_body(class = "d-flex flex-column",
+              tags$div(class = "fst-italic text-center",
+                textOutput(ns("left_panel_text"))
               ),
-              card_body(
-                tags$p("Collected at a single time point", class = "fst-italic text-center"),
-                actionButton(inputId = ns("set_static"), label = "Select", 
-                             class = "w-100 mt-3")
+              actionButton(
+                inputId = ns("left_panel_btn"),
+                label = "Start", 
+                class = "w-100 mt-auto"
               )
             )
           )
-        )
-      ),
-      
-      # Temporal panel group: two panels side-by-side with reduced width
-      conditionalPanel(
-        condition = sprintf("output['%s'] == 'temporal'", ns("panel_group")),
-        tags$div(class = "mb-3 ms-3",
-          actionButton(inputId = ns("back_to_main"), label = "\u2190 Back", 
-                       class = "btn btn-secondary")
         ),
-        tags$div(class = "row justify-content-center mx-auto mt-1",
-          tags$div(class = "col-md-6", 
-            card(
-              card_header(
-                tags$p("COVID Data", class = "fs-4 fw-bold text-center m-0")
-              ),
-              card_body(
-                tags$p("Data linking for ZIP-code-level covariates and poststratification", 
-                       class = "fst-italic text-center"),
-                actionButton(inputId = ns("set_temporal_covid"), label = "Start", 
-                             class = "w-100 mt-3")
+        tags$div(class = "col-md-6", 
+          bslib::card(class = "h-100",
+            bslib::card_header(
+              tags$div(class = "fs-4 fw-bold text-center m-2",
+                textOutput(ns("right_panel_title"))
               )
-            )
-          ),
-          tags$div(class = "col-md-6", 
-            card(
-              card_header(
-                tags$p("Other Time-varying Data", class = "fs-4 fw-bold text-center m-0")
+            ),
+            bslib::card_body(class = "d-flex flex-column",
+              tags$div(class = "fst-italic text-center",
+                textOutput(ns("right_panel_text"))
               ),
-              card_body(
-                tags$p("Data linking for poststratification at state, county, or ZIP-code level", 
-                       class = "fst-italic text-center"),
-                actionButton(inputId = ns("set_temporal_other"), label = "Start", 
-                             class = "w-100 mt-3")
-              )
-            )
-          )
-        )
-      ),
-      
-      # Static panel group: two panels side-by-side with reduced width
-      conditionalPanel(
-        condition = sprintf("output['%s'] == 'static'", ns("panel_group")),
-        tags$div(class = "mb-3 ms-3",
-          actionButton(inputId = ns("back_to_main"), label = "\u2190 Back", 
-                       class = "btn btn-secondary")
-        ),
-        tags$div(class = "row justify-content-center mx-auto mt-1",
-          tags$div(class = "col-md-6", 
-            card(
-              card_header(
-                tags$p("Poll Data", class = "fs-4 fw-bold text-center m-0")
-              ),
-              card_body(
-                tags$p("Data linking for poststratification at state level", 
-                       class = "fst-italic text-center"),
-                actionButton(inputId = ns("set_static_poll"), label = "Start", 
-                             class = "w-100 mt-3")
-              )
-            )
-          ),
-          tags$div(class = "col-md-6", 
-            card(
-              card_header(
-                tags$p("Other Cross-sectional Data", class = "fs-4 fw-bold text-center m-0")
-              ),
-              card_body(
-                tags$p("Data linking for poststratification at state, county or ZIP-code level", 
-                       class = "fst-italic text-center"),
-                actionButton(inputId = ns("set_static_other"), label = "Start", 
-                             class = "w-100 mt-3")
+              actionButton(
+                inputId = ns("right_panel_btn"),
+                label = "Start", 
+                class = "w-100 mt-auto"
               )
             )
           )
@@ -152,7 +97,7 @@ mod_home_ui <- function(id) {
 #'
 #' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateNavbarPage
 mod_home_server <- function(id, global){
-  moduleServer( id, function(input, output, session){
+  moduleServer(id, function(input, output, session){
     ns <- session$ns
 
     panel_group <- reactiveVal("main")
@@ -181,73 +126,148 @@ mod_home_server <- function(id, global){
 
       waiter::waiter_hide()
     }
+
+    output$left_panel_title <- renderText({
+      req(panel_group())
+      
+      switch(panel_group(),
+        "main" = "Time-varying Data",
+        "timevar" = "COVID Data",
+        "static" = "Polling Data",
+        "timevar_general" = "Binary Outcome",
+        "static_general" = "Binary Outcome"
+      )
+    })
     
+    output$left_panel_text <- renderText({
+      req(panel_group())
+      
+      switch(panel_group(),
+        "main" = "Collected over time",
+        "timevar" = "Data linking for ZIP-code-level covariates and poststratification",
+        "static" = "Data linking for post-stratification at state level",
+        "timevar_general" = "Data with a binary outcome variable",
+        "static_general" = "Data with a binary outcome variable"
+      )
+    })
+    
+    output$right_panel_title <- renderText({
+      req(panel_group())
+      
+      switch(panel_group(),
+        "main" = "Cross-sectional Data",
+        "timevar" = "General Time-varying Data",
+        "static" = "General Cross-sectional Data",
+        "timevar_general" = "Continuous Outcome",
+        "static_general" = "Continuous Outcome"
+      )
+    })
+
+    output$right_panel_text <- renderText({
+      req(panel_group())
+      
+      switch(panel_group(),
+        "main" = "Collected at a single time point",
+        "timevar" = "Data linking for post-stratification at state, county, or ZIP-code level",
+        "static" = "Data linking for post-stratification at state, county, or ZIP-code level",
+        "timevar_general" = "Data with a continuous outcome variable",
+        "static_general" = "Data with a continuous outcome variable"
+      )
+    })
+
+    observeEvent(input$left_panel_btn, {
+      req(panel_group())
+
+      if (panel_group() == "main") {
+        panel_group("timevar")
+      } else if (panel_group() == "timevar") {
+        global$metadata <- list(
+          is_timevar = TRUE,
+          special_case = "covid",
+          family = "binomial"
+        )
+
+        to_analyze(global$session)
+      } else if (panel_group() == "static") {
+        global$metadata <- list(
+          is_timevar = FALSE,
+          special_case = "poll",
+          family = "binomial"
+        )
+
+        to_analyze(global$session)
+      } else if (panel_group() == "timevar_general") {
+        global$metadata <- list(
+          is_timevar = TRUE,
+          special_case = NULL,
+          family = "binomial"
+        )
+
+        to_analyze(global$session)
+      } else if (panel_group() == "static_general") {
+        global$metadata <- list(
+          is_timevar = FALSE,
+          special_case = NULL,
+          family = "binomial"
+        )
+
+        to_analyze(global$session)
+      }
+    })
+
+    observeEvent(input$right_panel_btn, {
+      req(panel_group())
+
+      if (panel_group() == "main") {
+        panel_group("static")
+      } else if (panel_group() == "timevar") {
+        panel_group("timevar_general")
+      } else if (panel_group() == "static") {
+        panel_group("static_general")
+      } else if (panel_group() == "timevar_general") {
+        global$metadata <- list(
+          is_timevar = TRUE,
+          special_case = NULL,
+          family = "gaussian"
+        )
+
+        to_analyze(global$session)
+      } else if (panel_group() == "static_general") {
+        global$metadata <- list(
+          is_timevar = FALSE,
+          special_case = NULL,
+          family = "gaussian"
+        )
+
+        to_analyze(global$session)
+      }
+    })
+
+
+    #------------------------------------------------------------------
+    # When the navbar is set to home, reset the panel group to main
+    #------------------------------------------------------------------
     observeEvent(global$input$navbar, {
       if(global$input$navbar == "nav_home") {
         panel_group("main")
       }
     })
-  
 
+    #------------------------------------------------------------------
+    # Event handlers for back button
+    #------------------------------------------------------------------
+    observeEvent(input$back_btn, {
+      req(panel_group())
 
-    observeEvent(input$back_to_main, {
-      panel_group("main")
-    })
-
-    observeEvent(input$set_static, {
-      panel_group("static")
-    })
-
-    observeEvent(input$set_temporal, {
-      panel_group("temporal")
-    })
-
-    observeEvent(input$set_static_poll, {
-      updateNavbarPage(global$session,
-                       inputId = "navbar",
-                       selected = "nav_analyze")
-      
-      updateNavbarPage(global$session,
-                       inputId = "navbar_analyze",
-                       selected = "nav_analyze_upload")
-                       
-      global$data_format <- "static_poll"
-    })
-
-    observeEvent(input$set_static_other, {
-      updateNavbarPage(global$session,
-                       inputId = "navbar",
-                       selected = "nav_analyze")
-      
-      updateNavbarPage(global$session,
-                       inputId = "navbar_analyze",
-                       selected = "nav_analyze_upload")
-
-      global$data_format <- "static_other"
-    })
-    
-    observeEvent(input$set_temporal_covid, {
-      updateNavbarPage(global$session,
-                       inputId = "navbar",
-                       selected = "nav_analyze")
-      
-      updateNavbarPage(global$session,
-                       inputId = "navbar_analyze",
-                       selected = "nav_analyze_upload")
-
-      global$data_format <- "temporal_covid"
-    })
-
-    observeEvent(input$set_temporal_other, {      
-      updateNavbarPage(global$session,
-                       inputId = "navbar",
-                       selected = "nav_analyze")
-      
-      updateNavbarPage(global$session,
-                       inputId = "navbar_analyze",
-                       selected = "nav_analyze_upload")
-
-      global$data_format <- "temporal_other"
+      if (panel_group() == "timevar") {
+        panel_group("main")
+      } else if (panel_group() == "static") {
+        panel_group("main")
+      } else if (panel_group() == "timevar_general") {
+        panel_group("timevar")
+      } else if (panel_group() == "static_general") {
+        panel_group("static")
+      }
     })
   })
 }

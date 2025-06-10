@@ -27,7 +27,7 @@ mod_learn_preprocess_ui <- function(id){
       tags$p("The input data for MRP consists of two major components: the survey or test data and the corresponding poststratification table. The survey/test data contains the geographic-demographic information about participants and their survey responses or test results. Inferring the relationship between these variables using multilevel regression (MR) models constitutes the first stage of MRP. Additionally, geographic covariates can be included in these models to account for the structured differences among geographic areas such as states and counties. The second stage of MRP, poststratification (P), involves adjusting the estimates based on the demographic-geographic composition of the target population, which is the US population in the context of this application. Below are details about how these data components are prepared for all use cases of the MRP interface."),
       
       tags$h3("Survey/Test Data Preprocessing", class = "mt-5"),
-      tags$p("The preprocessing workflow follows these general steps for both cross-sectional and spatio-temporal data:"),
+      tags$p("The preprocessing workflow follows these general steps for both cross-sectional and time-varying data:"),
       tags$ul(
         tags$li(tags$b("Data cleaning:"), " standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes"),
         tags$li(tags$b("Conversion to categorical data:"), " recoding categorical data, converting numeric values to categories using predefined intervals, assigning week indices to dates"),
@@ -131,7 +131,6 @@ mod_learn_preprocess_ui <- function(id){
 #'
 #' @param id Character string. The module's namespace identifier.
 #' @param global Reactive values object containing global application state
-#' (not actively used in this module but maintained for consistency).
 #'
 #' @return Server function for the preprocessing guide module. Creates download
 #' handlers for preprocessing scripts, geographic conversion tables, and week

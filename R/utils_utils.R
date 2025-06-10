@@ -33,20 +33,26 @@ nullify <- function(x) {
 #' for display in the user interface. Maps technical format names to
 #' descriptive category labels.
 #'
-#' @param data_format Character. Internal data format code such as
-#'   "static_poll", "static_other", "temporal_covid", or "temporal_other"
-#'
 #' @return Character. Human-readable label corresponding to the data format,
 #'   or "Unknown Data Format" if the format is not recognized
 #'
 #' @noRd
-data_format_label <- function(data_format) {
-  switch(data_format,
-         static_poll = "Cross-Sectional: Poll",
-         static_other = "Cross-Sectional: Other",
-         temporal_covid = "Time-Varying: COVID",
-         temporal_other = "Time-Varying: Other",
-         "Unknown Data Format")
+use_case_label <- function(metadata, labels = GLOBAL$ui$use_case_labels) {
+  if (!is.null(metadata$special_case)) {
+    switch(metadata$special_case,
+      poll = labels$poll,
+      covid = labels$covid,
+      "Unknown"
+    )
+  } else {
+    if (metadata$is_timevar) {
+      labels$timevar_general
+    } else {
+      labels$static_general
+    }
+  }
+
+
 }
 
 
@@ -88,4 +94,27 @@ get_config <- function(value) {
     config = Sys.getenv("R_CONFIG_ACTIVE", "default"),
     file   = app_sys("config.yml")
   )
+}
+
+create_example_filename <- function(
+  metadata,
+  suffix = c("individual", "aggregated", "pstrat"),
+  ext = ".csv"
+) {
+  suffix <- match.arg(suffix)
+
+  prefix <- if (!is.null(metadata$special_case)) {
+    switch(metadata$special_case,
+      poll = "poll",
+      covid = "covid"
+    )
+  } else {
+    if (metadata$is_timevar) {
+      "timevarying_general"
+    } else {
+      "crosssectional_general"
+    }
+  }
+  
+  paste0(prefix, '_', suffix, ext)
 }

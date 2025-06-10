@@ -12,7 +12,6 @@ app_server <- function(input, output, session) {
   ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 20))
 
   global <- reactiveValues(
-    data_format = NULL,
     input = input,
     output = output,
     session = session,
@@ -31,6 +30,8 @@ app_server <- function(input, output, session) {
         state = qs::qread(app_sys("extdata/geojson_state.RDS"))
       )
     ),
+    is_timevar = NULL,
+    special_case = NULL,
     link_data = NULL,
     plot_data = NULL,
     uploaded_model = NULL,
@@ -39,13 +40,14 @@ app_server <- function(input, output, session) {
   )
 
   
-  # make interface selection flag available for conditionalPanel
-  output$data_format <- reactive(global$data_format)
-  outputOptions(output, "data_format", suspendWhenHidden = FALSE)
+  ### flags for conditionalPanel
+  # whether data has time information
+  output$is_timevar <- reactive(global$metadata$is_timevar)
+  outputOptions(output, "is_timevar", suspendWhenHidden = FALSE)
 
-  # make link data flag available for conditionalPanel
-  output$no_geo <- reactive(is.null(global$link_data$link_geo))
-  outputOptions(output, "no_geo", suspendWhenHidden = FALSE)
+  # special use case
+  output$special_case <- reactive(global$metadata$special_case)
+  outputOptions(output, "special_case", suspendWhenHidden = FALSE)
 
   # initialize modules
   mod_home_server(module_ids$home, global)
@@ -63,7 +65,7 @@ app_server <- function(input, output, session) {
   # Check if a version of the interface is selected
   observeEvent(input$navbar, {
     if(input$navbar == "nav_analyze") {
-      if(is.null(global$data_format)) {
+      if(is.null(global$metadata)) {
         showModal(
           modalDialog(
             title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
@@ -121,5 +123,9 @@ app_server <- function(input, output, session) {
   observeEvent(input$show_guide, {
     show_guide()
   })
+
+  # close loading spinner
+  Sys.sleep(1) # prevent flashing
+  waiter::waiter_hide()
 }
 
