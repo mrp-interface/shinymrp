@@ -737,8 +737,8 @@ mod_analyze_model_server <- function(id, global){
         
         # run MCMC
         mcmc <- run_mcmc(
-          input_data = stan_factor(model$mrp$input, GLOBAL$vars$ignore),
-          new_data = stan_factor(model$mrp$new, GLOBAL$vars$ignore),
+          input_data = stan_factor(model$mrp$input),
+          new_data = stan_factor(model$mrp$new),
           effects = model$effects,
           metadata = model$metadata,
           n_iter = model$metadata$n_iter,
@@ -755,6 +755,7 @@ mod_analyze_model_server <- function(id, global){
       }, error = function(e) {
         message(paste0("Error fitting model: ", e$message))
         show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
+        waiter::waiter_hide()
       })
     })
 
