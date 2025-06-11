@@ -61,8 +61,8 @@ recode_covid <- function(df, expected_levels) {
   ) %>%
     as.numeric()
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
-  is_pos <- grepl("positive|detected", df$positive, ignore.case = TRUE)
-  is_neg <- grepl("not|negative|undetected", df$positive, ignore.case = TRUE)
+  is_pos <- grepl("positive|detected|1", df$positive, ignore.case = TRUE)
+  is_neg <- grepl("not|negative|undetected|0", df$positive, ignore.case = TRUE)
 
   df <- df %>% mutate(
     sex = if_else(str_detect(.data$sex, regex("female", ignore_case = TRUE)), "female", "male"),

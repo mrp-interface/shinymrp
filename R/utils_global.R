@@ -24,6 +24,7 @@ module_ids <- list(
 )
 
 GLOBAL <- list(
+  family = c("binomial", "normal"),
   vars = list(
     pstrat = c("sex", "race", "age", "edu", "county", "state"),
     indiv  = c("sex", "race", "age", "edu", "time"),

@@ -218,7 +218,8 @@ mod_analyze_result_server <- function(id, global){
 
       # Update the subgroup select options.
       choices <- GLOBAL$ui$plot_selection$subgroup
-      if(selected_model()$metadata$special_case != "poll") {
+      if(!is.null(selected_model()$metadata$special_case) &&
+         selected_model()$metadata$special_case != "poll") {
         choices <- choices[!choices =="edu"]
       }
       if(is.null(selected_model()$link_data$link_geo)) {
