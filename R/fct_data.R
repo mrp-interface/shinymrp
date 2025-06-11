@@ -964,7 +964,7 @@ preprocess <- function(
     # impute missing demographic data based on frequency
     data <- data %>% mutate(across(all_of(indiv_vars), impute))
 
-    if (metadata$family != "gaussian") {
+    if (metadata$family != "normal") {
       # aggregate test records based on combinations of factors
       smallest <- get_smallest_geo(names(data), const$vars$geo)
       smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
@@ -1135,11 +1135,10 @@ combine_tracts <- function(
 #' @param input_data Data frame containing sample data.
 #' @param new_data Data frame containing custom poststratification data.
 #' @param fips_county_state Data frame containing FIPS code mappings.
-#' @param demo_levels Named list of demographic variable levels.
+#' @param metadata List containing metadata.
 #' @param vars_global List containing global variable definitions.
 #' @param link_geo Character string specifying geographic linking variable.
 #'   Default is NULL.
-#' @param is_timevar Logical. Whether time indices are needed. Default is FALSE.
 #'
 #' @return Named list containing:
 #'   \item{input}{Filtered input data}
@@ -1155,10 +1154,9 @@ prepare_mrp_custom <- function(
   input_data,
   new_data,
   fips_county_state,
-  demo_levels,
-  vars_global,
-  link_geo = NULL,
-  is_timevar = FALSE
+  metadata,
+  vars_global = GLOBAL$vars,
+  link_geo = NULL
 ) {
 
   # filter based on common GEOIDs
@@ -1171,8 +1169,8 @@ prepare_mrp_custom <- function(
 
   # create lists of all factor levels
   n_time_indices <- 1
-  levels <- demo_levels
-  if(is_timevar) {
+  levels <- create_expected_levels(metadata)
+  if(metadata$is_timevar) {
     levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
   }
@@ -1222,11 +1220,10 @@ prepare_mrp_custom <- function(
 #' @param tract_data Data frame containing ACS tract-level demographic data.
 #' @param zip_tract Data frame containing tract-to-zip crosswalk.
 #' @param zip_county_state Data frame containing geographic crosswalk information.
-#' @param demo_levels Named list of demographic variable levels.
+#' @param metadata List containing metadata.
 #' @param vars_global List containing global variable definitions.
 #' @param link_geo Character string specifying geographic linking variable.
 #'   Default is NULL.
-#' @param is_timevar Logical. Whether time indices are needed. Default is FALSE.
 #'
 #' @return Named list containing:
 #'   \item{input}{Filtered input data}
@@ -1242,11 +1239,9 @@ prepare_mrp_acs <- function(
     input_data,
     tract_data,
     zip_tract,
-    zip_county_state,
-    demo_levels,
-    vars_global,
-    link_geo = NULL,
-    is_timevar = FALSE
+    metadata,
+    vars_global = GLOBAL$vars,
+    link_geo = NULL
 ) {
 
   # create poststratification table
@@ -1263,8 +1258,8 @@ prepare_mrp_acs <- function(
 
   # create lists of all factor levels
   n_time_indices <- 1
-  levels <- demo_levels
-  if(is_timevar) {
+  levels <- create_expected_levels(metadata)
+  if(metadata$is_timevar) {
     levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
   }
@@ -1297,7 +1292,13 @@ prepare_mrp_acs <- function(
     levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
+  # create variable lists for model specification
   vars <- create_variable_list(input_data, covariates, vars_global)
+
+  # add 'total' column to interface with plotting functions
+  if (metadata$family == "normal") {
+    input_data <- input_data %>% mutate(total = 1)
+  }
 
   return(list(
     input = input_data,

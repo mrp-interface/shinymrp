@@ -49,6 +49,10 @@ app_server <- function(input, output, session) {
   output$special_case <- reactive(global$metadata$special_case)
   outputOptions(output, "special_case", suspendWhenHidden = FALSE)
 
+  # distribution family
+  output$family <- reactive(global$metadata$family)
+  outputOptions(output, "family", suspendWhenHidden = FALSE)
+
   # initialize modules
   mod_home_server(module_ids$home, global)
   mod_analyze_upload_server(module_ids$analyze$upload, global)

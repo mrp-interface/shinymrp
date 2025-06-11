@@ -6,7 +6,7 @@ create_test_data <- function(
       bin  = list(n = 3),
       cat  = list(categories = 1:3, n = 3)
     ),
-    family = c("binomial", "gaussian")
+    family = c("binomial", "normal")
 ) {
   family <- match.arg(family)
   set.seed(seed)
@@ -54,7 +54,7 @@ create_test_data <- function(
       positive = sample(1:5, N, replace = TRUE),
       total = sample(6:10, N, replace = TRUE)
     )
-  } else if (family == "gaussian") {
+  } else if (family == "normal") {
     df %>% mutate(
       value = runif(N, 0, 10)
     )

@@ -40,7 +40,12 @@ fips_upper <- function(fips) {
 #'
 #' @noRd
 #' @importFrom dplyr mutate group_by summarize left_join select arrange desc
-prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"), for_map = TRUE) {
+prep_sample_size <- function(
+  input_data,
+  fips_codes,
+  geo = c("county", "state"),
+  for_map = TRUE
+) {
   geo <- match.arg(geo)
 
   if(is.null(input_data)) {
