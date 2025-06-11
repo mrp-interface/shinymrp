@@ -228,7 +228,7 @@ mod_home_server <- function(id, global){
         global$metadata <- list(
           is_timevar = TRUE,
           special_case = NULL,
-          family = "gaussian"
+          family = "normal"
         )
 
         to_analyze(global$session)
@@ -236,7 +236,7 @@ mod_home_server <- function(id, global){
         global$metadata <- list(
           is_timevar = FALSE,
           special_case = NULL,
-          family = "gaussian"
+          family = "normal"
         )
 
         to_analyze(global$session)

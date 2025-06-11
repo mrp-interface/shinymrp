@@ -107,7 +107,8 @@ mod_analyze_visualize_server <- function(id, global){
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
-        if(global$metadata$special_case != "poll") {
+        if(is.null(global$metadata$special_case) ||
+           global$metadata$special_case != "poll") {
           choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {

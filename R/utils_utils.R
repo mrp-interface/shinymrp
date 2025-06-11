@@ -99,22 +99,26 @@ get_config <- function(value) {
 create_example_filename <- function(
   metadata,
   suffix = c("individual", "aggregated", "pstrat"),
-  ext = ".csv"
+  ext = ".csv",
+  valid_families = GLOBAL$family
 ) {
   suffix <- match.arg(suffix)
+  if (!metadata$family %in% valid_families) {
+    stop("Invalid family specified in metadata")
+  }
 
-  prefix <- if (!is.null(metadata$special_case)) {
+  use_case <- if (!is.null(metadata$special_case)) {
     switch(metadata$special_case,
       poll = "poll",
       covid = "covid"
     )
   } else {
     if (metadata$is_timevar) {
-      "timevarying_general"
+      "timevarying"
     } else {
-      "crosssectional_general"
+      "crosssectional"
     }
   }
   
-  paste0(prefix, '_', suffix, ext)
+  paste0(use_case, '_', metadata$family, '_', suffix, ext)
 }

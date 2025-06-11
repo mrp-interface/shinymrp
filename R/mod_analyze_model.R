@@ -176,7 +176,7 @@ mod_analyze_model_server <- function(id, global){
     #--------------------------------------------------------------------------
     observeEvent(global$mrp, {
       req(global$mrp)
-      show_effect_warning(length(global$mrp$vars$omit$one_level) > 0)
+      show_effect_warning(!is.null(unlist(global$mrp$vars$omit)))
     })
   
     observeEvent(global$input$navbar_analyze, {

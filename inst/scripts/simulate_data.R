@@ -4,8 +4,8 @@ library(purrr)
 library(bayesplot)
 library(cmdstanr)
 
-source("/path/to/fct_data.R")
-source("/path/to/fct_model.R")
+source("/Users/tntoan/Desktop/repos/shinymrp/R/fct_data.R")
+source("/Users/tntoan/Desktop/repos/shinymrp/R/fct_model.R")
 
 #' Add Date Information to Dataset
 #'
@@ -172,22 +172,21 @@ create_base_data <- function(
 #' Generates binary outcome data using a logistic model with the specified 
 #' fixed and random effects.
 #'
-#' @param base_dat Base data frame with predictor variables
+#' @param base_data Base data frame with predictor variables
 #' @param effects List of fixed and varying effects
 #' @param params List of parameter values for intercept, fixed effects, and hyperparameters
-#' @param sens Sensitivity of the binary test (true positive rate)
-#' @param spec Specificity of the binary test (true negative rate)
+#' @param extra Sensitivity and specificity of the binary test
 #' @param seed Random seed for reproducibility
 #'
 #' @return List containing simulated data, effects specification, and parameters
 #' @export
 simulate_data <- function(
-    base_dat,
+    base_data,
     effects,
     params,
-    sens = 1,
-    spec = 1,
-    seed = NULL
+    family,
+    seed = NULL,
+    extra = NULL
 ) {
 
   if (!is.null(seed)) set.seed(seed)
@@ -197,7 +196,7 @@ simulate_data <- function(
     lambda_name <- paste0("lambda_", effect)
     a_name <- paste0("a_", effect)
     if(lambda_name %in% names(params)) {
-      params[[lambda_name]] <- rnorm(n_distinct(base_dat[[effect]]), 0, params[[lambda_name]])
+      params[[lambda_name]] <- rnorm(n_distinct(base_data[[effect]]), 0, params[[lambda_name]])
     }
   }
   
@@ -218,14 +217,99 @@ simulate_data <- function(
 
   # Generate data
   print(formula_terms)
-  dat <- base_dat %>% mutate(
-    mu = !!rlang::parse_expr(formula_terms),
-    ptrue = 1 / (1 + exp(-mu)),
-    psample = sens*ptrue + (1-spec)*(1-ptrue),
-    positive = rbinom(n(), 1, psample)
-  )
+
+  if (family == "binomial") {
+    data <- base_data %>% mutate(
+      mu = !!rlang::parse_expr(formula_terms),
+      ptrue = 1 / (1 + exp(-mu)),
+      psample = extra$sens*ptrue + (1-extra$spec)*(1-ptrue),
+      positive = rbinom(n(), 1, psample)
+    )
+  } else if (family == "normal") {
+    data <- base_data %>% mutate(
+      mu = !!rlang::parse_expr(formula_terms),
+      outcome = rnorm(n(), mu, 1)
+    )
+  }
   
-  return(list(dat, effects, params))
+  return(list(
+    data = data,
+    effects = effects,
+    params = params
+  ))
+}
+
+#' Generate random IDs
+#'
+#' @description Generates random alphanumeric identifiers of specified length
+#' using digits (0-9), lowercase letters (a-z), and uppercase letters (A-Z).
+#' Useful for creating unique identifiers for UI elements or temporary objects.
+#'
+#' @param n Integer. Length of the ID to generate (default: 8)
+#'
+#' @return Character. A random alphanumeric string of length n
+#'
+#' @noRd
+generate_id <- function(n = 8) {
+  # Define the pool of characters: digits, lowercase and uppercase letters
+  chars <- c(0:9, letters, LETTERS)
+  
+  # Sample with replacement and collapse into one string
+  paste0(sample(chars, size = n, replace = TRUE), collapse = "")
+}
+
+prepare_indiv_agg <- function(
+  base_data,
+  sim_data,
+  vars,
+  family,
+  include_date,
+  extra
+) {
+
+  # convert age categories to numeric values
+  data_indiv <- base_data %>%
+    mutate(
+      age = sapply(age, function(x) {
+        bounds <- if(grepl("\\+", x)) {
+          c(as.numeric(sub("\\+", "", x)), 100) 
+        } else 
+          as.numeric(strsplit(x, "-")[[1]])
+        sample(bounds[1]:bounds[2], 1)
+      })
+    )
+  
+  if (family == "normal") {
+    data_indiv <- data_indiv %>% mutate(outcome = sim_data$outcome)
+  } else if (family == "binomial") {
+    data_indiv <- data_indiv %>% mutate(positive = sim_data$positive)
+  }
+
+  if (extra$covid) {
+    data_indiv <- data_indiv %>% 
+      rename(result_date = date) %>%
+      mutate(masked_id = purrr::map_chr(seq_len(n()), ~ generate_id())) %>% 
+      select(masked_id, everything())
+  }
+
+  data_agg <- NULL
+  if (family == "binomial") {
+    data_agg <- base_data %>%
+      mutate(positive = sim_data$positive) %>%
+      group_by(across(all_of(c(vars$indiv, vars$geo)))) %>%
+      summarise(
+        date = if(include_date) first(date),
+        across(all_of(vars$covar), first),
+        total = n(),
+        positive = sum(positive),
+        .groups = "drop"
+      )
+  }
+
+  return(list(
+    indiv = data_indiv,
+    agg = data_agg
+  ))
 }
 
 #' Check Simulation Input
@@ -239,7 +323,10 @@ simulate_data <- function(
 #'
 #' @return TRUE if all checks pass
 #' @export
-check_simulation_input <- function(effects, params, covar_geo, include_date) {
+check_simulation_input <- function(effects, params, family, covar_geo, include_date) {
+  # Check family argument
+  family <- match.arg(family, c("binomial", "normal"))
+
   # Check for Intercept
   if (!"Intercept" %in% names(params)) {
     stop("Intercept parameter missing from params")
@@ -303,22 +390,24 @@ check_simulation_input <- function(effects, params, covar_geo, include_date) {
 run_simulation <- function(
     effects,
     params,
+    family = NULL,
     covar_geo = NULL,
     n_time = 12,
     n_geo = 10,
     n_samples = 10000,
     include_date = FALSE,
     seed = sample(1:10000, 1),
-    save_path = NULL
+    save_path = NULL,
+    extra = NULL
 ) {
 
   # Check simulation input
-  if(!check_simulation_input(effects, params, covar_geo, include_date)) {
+  if(!check_simulation_input(effects, params, family, covar_geo, include_date)) {
     return(NULL)
   }
 
-  week_date <- readr::read_csv("/path/to/week_conversion.csv")
-  zip_county_state <- readr::read_csv("/path/to/zip_county_state.csv")
+  week_date <- readr::read_csv("/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/week_conversion.csv")
+  zip_county_state <- readr::read_csv("/Users/tntoan/Desktop/repos/shinymrp/inst/extdata/zip_county_state.csv")
   
   
   # All individual and geographic variables
@@ -359,44 +448,36 @@ run_simulation <- function(
     base_data_stan,
     effects,
     params,
-    spec = 1,
-    sens = 1,
-    seed = seed
+    family = family,
+    seed = seed,
+    extra = extra
   )
 
-  data_indiv <- base_data %>%
-    mutate(
-      age = sapply(age, function(x) {
-        bounds <- if(grepl("\\+", x)) {
-          c(as.numeric(sub("\\+", "", x)), 100) 
-        } else 
-          as.numeric(strsplit(x, "-")[[1]])
-        sample(bounds[1]:bounds[2], 1)
-      }),
-      positive = sim$data$positive
-    )
-    
-
-  data_agg <- base_data %>%
-    mutate(positive = sim$data$positive) %>%
-    group_by(across(all_of(c(indiv_vars, geo_vars)))) %>%
-    summarise(
-      date = if(include_date) first(date),
-      across(all_of(covar_vars), first),
-      total = n(),
-      positive = sum(positive),
-      .groups = "drop"
-    )
+  # prepare individual and aggregated data
+  out <- prepare_indiv_agg(
+    base_data = base_data,
+    sim_data = sim$dat,
+    vars = list(
+      indiv = indiv_vars,
+      geo = geo_vars,
+      covar = covar_vars
+    ),
+    family = family,
+    include_date = include_date,
+    extra = extra
+  )
 
   if(!is.null(save_path)) {
-    readr::write_csv(data_indiv, paste0(save_path, "data_individual.csv"))
-    readr::write_csv(data_agg, paste0(save_path, "data_aggregated.csv"))
+    readr::write_csv(out$indiv, file.path(save_path, "data_individual.csv"))
+    if (!is.null(out$agg)) {
+      readr::write_csv(out$agg, file.path(save_path, "data_aggregated.csv"))
+    }
   }
 
   return(list(
-    data_indiv = data_indiv,
-    data_agg = data_agg,
-    effects = sim$effects,
+    data_indiv = out$indiv,
+    data_agg   = out$agg,
+    effects    = sim$effects,
     true_coefs = sim$params
   ))
 }
@@ -463,38 +544,58 @@ check_simulation_result <- function(
   print(hist_plot)
 }
 
-effects <- list(
-  Intercepts = list(
-    Intercept = "normal(0, 5)"
+path <- "/Users/tntoan/Desktop/repos/shinymrp/dev/data/crosssectional_normal_sim.RDS"
+
+qs::qsave(
+  list(
+    effects = list(
+      Intercepts = list(
+        Intercept = "normal(0, 5)"
+      ),
+      fixed = list(
+        sex = "normal(0, 3)"
+      ),
+      varying = list(
+        race = "normal(0, 3)",
+        age = "normal(0, 3)",
+        # time = "normal(0, 3)",
+        zip = "normal(0, 3)",
+        county = "normal(0, 3)",
+        state = "normal(0, 3)"
+      )
+    ),
+    params = list(
+      Intercept = 0.5,
+      beta_sex = -0.25,
+      lambda_race = 0.3,
+      lambda_age = 0.4,
+      # lambda_time = 0.2,
+      lambda_zip = 0.5
+    ),
+    family = "normal",
+    covar_geo = "zip",
+    n_geo = 10,
+    include_date = FALSE,
+    extra = list(
+      covid = FALSE,
+      spec = 1,
+      sens = 1
+    )
   ),
-  fixed = list(
-    sex = "normal(0, 3)"
-  ),
-  varying = list(
-    race = "normal(0, 3)",
-    age = "normal(0, 3)",
-    time = "normal(0, 3)",
-    zip = "normal(0, 3)",
-    county = "normal(0, 3)",
-    state = "normal(0, 3)"
-  )
+  file = path
 )
 
-params <- list(
-  Intercept = -4.5,
-  beta_sex = -0.25,
-  lambda_race = 0.3,
-  lambda_age = 0.4,
-  lambda_time = 0.9,
-  lambda_zip = 0.5
-)
+sim_inputs <- qs::qread(path)
 
 sim <- run_simulation(
-  effects = effects,
-  params = params,
-  covar_geo = "zip",
-  include_date = TRUE,
-  save_path = NULL
+  effects = sim_inputs$effects,
+  params = sim_inputs$params,
+  family = sim_inputs$family,
+  covar_geo = sim_inputs$covar_geo,
+  n_geo = sim_inputs$n_geo,
+  include_date = sim_inputs$include_date,
+  save_path = "/Users/tntoan/Downloads",
+  extra = sim_inputs$extra
 )
 
 View(sim$data_indiv)

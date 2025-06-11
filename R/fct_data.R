@@ -745,8 +745,10 @@ create_expected_types <- function(
     age  = "cat"
   )
   
-  if (metadata$special_case == "covid") types$zip <- "cat"
-  if (metadata$special_case == "poll")   types$edu <- "cat"
+  if (!is.null(metadata$special_case) &&
+      metadata$special_case == "covid") types$zip <- "cat"
+  if (!is.null(metadata$special_case) &&
+      metadata$special_case == "poll") types$edu <- "cat"
 
   if (is_sample) {
     if (metadata$family == "binomial") {
@@ -777,7 +779,8 @@ create_expected_types <- function(
 #'
 #' @noRd
 create_expected_levels <- function(metadata) {
-  if (metadata$special_case == "poll") {
+  if (!is.null(metadata$special_case) &&
+      metadata$special_case == "poll") {
     list(
       sex = c("male", "female"),
       race = c("white", "black", "other"),
@@ -811,7 +814,7 @@ create_expected_levels <- function(metadata) {
 #'
 check_data <- function(df, expected_types, na_threshold = 0.5) {
   expected_columns <- names(expected_types)
-  
+
   # Check for missing columns
   missing <- setdiff(expected_columns, names(df))
   if(length(missing) > 0) {
@@ -922,7 +925,8 @@ preprocess <- function(
   is_aggregated = TRUE
 ) {
   
-  is_covid <- metadata$special_case == "temporal_covid"
+  is_covid <- !is.null(metadata$special_case) &&
+              metadata$special_case == "covid"
   levels <- create_expected_levels(metadata)
   indiv_vars <- names(levels)
   if (metadata$is_timevar) {
@@ -931,10 +935,10 @@ preprocess <- function(
   
   # Clean data
   data <- clean_data(data)
-  
+
   # Find and rename columns
   data <- rename_columns(data, const, is_covid && !is_aggregated)
-  
+
   # Check for common dataframe issues
   types <- create_expected_types(
     metadata = metadata,
@@ -943,38 +947,40 @@ preprocess <- function(
   )
   check_data(data, types)
 
-  # remove NAs
-  check_cols <- setdiff(names(data), indiv_vars)
-  data <- data %>% tidyr::drop_na(all_of(check_cols))
-
-  # convert date to week indices if necessary
-  if (metadata$is_timevar) {
-    data <- add_week_indices(data)
-  }
-
-  # recode values to expected levels
-  data <- recode_values(data, levels, is_covid)
-
-  # impute missing demographic data based on frequency
-  data <- data %>% mutate(across(all_of(indiv_vars), impute))
-
   # Aggregate if needed
-  if(!is_aggregated && metadata$family != "gaussian") {) {
-    # aggregate test records based on combinations of factors
-    smallest <- get_smallest_geo(names(data), const$vars$geo)
-    smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
-    group_vars <- c(indiv_vars, smallest_geo)
-    geo_covars <- if(!is.null(smallest_geo)) names(get_geo_predictors(data, smallest_geo)) else NULL
+  if (!is_aggregated) {
+    # remove NAs
+    check_cols <- setdiff(names(data), indiv_vars)
+    data <- data %>% tidyr::drop_na(all_of(check_cols))
 
-    # cross-tabulate data
-    data <- data %>%
-      group_by(!!!syms(group_vars)) %>%
-      summarize(
-        across(any_of(geo_covars), first),
-        total = if("weight" %in% names(data)) sum(.data$weight) else n(),
-        positive = sum(.data$positive)
-      ) %>%
-      ungroup()
+    # convert date to week indices if necessary
+    if (metadata$is_timevar) {
+      data <- add_week_indices(data)
+    }
+
+    # recode values to expected levels
+    data <- recode_values(data, levels, is_covid)
+
+    # impute missing demographic data based on frequency
+    data <- data %>% mutate(across(all_of(indiv_vars), impute))
+
+    if (metadata$family != "gaussian") {
+      # aggregate test records based on combinations of factors
+      smallest <- get_smallest_geo(names(data), const$vars$geo)
+      smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
+      group_vars <- c(indiv_vars, smallest_geo)
+      geo_covars <- if(!is.null(smallest_geo)) names(get_geo_predictors(data, smallest_geo)) else NULL
+
+      # cross-tabulate data
+      data <- data %>%
+        group_by(!!!syms(group_vars)) %>%
+        summarize(
+          across(any_of(geo_covars), first),
+          total = if("weight" %in% names(data)) sum(.data$weight) else n(),
+          positive = sum(.data$positive)
+        ) %>%
+        ungroup()
+    }
   }
 
   # append geographic areas at larger scales if missing

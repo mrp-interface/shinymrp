@@ -382,11 +382,11 @@ mod_analyze_upload_server <- function(id, global){
 
         sample_errors(character(0))
       
-      }, error = function(e) {
-        # show error message
-        error_message <- paste("Error processing data:\n", e$message)
-        sample_errors(error_message)
-        message(error_message)
+      # }, error = function(e) {
+      #   # show error message
+      #   error_message <- paste("Error processing data:\n", e$message)
+      #   sample_errors(error_message)
+      #   message(error_message)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
