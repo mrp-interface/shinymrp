@@ -734,8 +734,16 @@ mod_analyze_model_server <- function(id, global){
           pstrat_vars = intersect(GLOBAL$vars$pstrat, names(model$mrp$new))
         ))
 
-        
         # run MCMC
+        extra <- NULL
+        if (!is.null(global$metadata$special_case) &&
+            global$metadata$special_case == "covid") {
+          extra <- list(
+            sens = input$sens_kb,
+            spec = input$spec_kb
+          )
+        }
+
         mcmc <- run_mcmc(
           input_data = stan_factor(model$mrp$input),
           new_data = stan_factor(model$mrp$new),
@@ -744,10 +752,7 @@ mod_analyze_model_server <- function(id, global){
           n_iter = model$metadata$n_iter,
           n_chains = model$metadata$n_chains,
           seed = input$seed_select,
-          sens = if(!is.null(global$metadata$special_case) &&
-                    global$metadata$special_case == "covid") input$sens_kb else 1,
-          spec = if(!is.null(global$metadata$special_case) &&
-                    global$metadata$special_case == "covid") input$spec_kb else 1
+          extra = extra
         )
         
         model_buffer(c(model, mcmc))
@@ -832,7 +837,7 @@ mod_analyze_model_server <- function(id, global){
         )
       }
       
-      # run standalone generated quantities for PPC
+      # run standalone generated quantities for PPC)
       if (is.null(model$fit$ppc)) {
         model$fit$ppc <- run_gq(
           fit_mcmc = model$fit$mcmc,
