@@ -35,14 +35,21 @@ mod_analyze_upload_ui <- function(id) {
         bslib::accordion_panel(
           title = "Sample",
           value = "sample",
-          tags$p(tags$strong("Upload individual-level or aggregated sample data")),
-          shinyWidgets::radioGroupButtons(
-            inputId = ns("toggle_sample"),
-            label = NULL,
-            choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
-            selected = "agg",
-            justified = TRUE,
-            size = "sm"
+          conditionalPanel(
+            condition = "output.family != 'normal'",
+            tags$p(tags$strong("Upload individual-level or aggregated sample data")),
+            shinyWidgets::radioGroupButtons(
+              inputId = ns("toggle_sample"),
+              label = NULL,
+              choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
+              selected = "agg",
+              justified = TRUE,
+              size = "sm"
+            )
+          ),
+          conditionalPanel(
+            condition = "output.family == 'normal'",
+            tags$p(tags$strong("Upload individual-level sample data")),
           ),
           fileInput(
             inputId = ns("sample_upload"),
@@ -70,11 +77,19 @@ mod_analyze_upload_ui <- function(id) {
               condition = "output.special_case === null",
               tags$p(tags$u("Example data"))
             ),
-            tags$div(
-              class = "d-flex gap-2 mb-3",
-              actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
-              actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
-            )
+            conditionalPanel(
+              condition = "output.family != 'normal'",
+              tags$div(
+                class = "d-flex gap-2 mb-3",
+                actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
+                actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
+              )
+            ),
+            conditionalPanel(
+              condition = "output.family == 'normal'",
+              actionButton(ns("use_indiv_example"), "Individual-level", icon("table"), class = "w-100")
+            ),
+
           )
         ),
         bslib::accordion_panel(
@@ -319,14 +334,14 @@ mod_analyze_upload_server <- function(id, global){
     output$table <- DT::renderDT({
       req(raw_sample())
       
-      df <- if(is.null(input$toggle_table) || input$toggle_table == "raw") {
+      df <- if(is.null(input$toggle_table) ||
+               input$toggle_table == "raw") {
         raw_sample()
       } else {
-        req(global$data) # Ensure global$data exists when "prep" is selected
         global$data
       }
       
-      df %>%
+      df <- df %>%
         utils::head(GLOBAL$ui$preview_size) %>%
         DT::datatable(
           options = list(
@@ -338,11 +353,23 @@ mod_analyze_upload_server <- function(id, global){
             searching = FALSE,
             info = FALSE
           )
-        ) %>%
-        DT::formatStyle(
-          columns = c("positive"),
-          `max-width` = "150px"
         )
+        
+      if (global$metadata$family == "normal") {
+        df <- df %>%
+          DT::formatRound(
+            columns = c("outcome"),
+            digits = 2
+          )
+      } else {
+        df <- df %>%
+          DT::formatStyle(
+            columns = c("positive"),
+            `max-width` = "150px"
+          )
+      }
+
+      return(df)
     })
 
     # Preprocessed data download handler
@@ -377,7 +404,8 @@ mod_analyze_upload_server <- function(id, global){
           zip_county_state = global$extdata$zip_county_state,
           const = GLOBAL,
           is_sample = TRUE,
-          is_aggregated = input$toggle_sample == "agg"
+          is_aggregated = global$metadata$family != "normal" &&
+            input$toggle_sample == "agg"
         )
 
         sample_errors(character(0))
@@ -526,10 +554,8 @@ mod_analyze_upload_server <- function(id, global){
               input_data = global$data,
               new_data = new_data,
               fips_county_state = global$extdata$fips$county,
-              demo_levels = create_expected_levels(global$metadata),
-              vars_global = GLOBAL$vars,
-              link_geo = "state",
-              is_timevar = global$metadata$is_timevar
+              metadata = global$metadata,
+              link_geo = "state"
             )
 
             # prepare data for plotting
@@ -546,12 +572,9 @@ mod_analyze_upload_server <- function(id, global){
               input_data = global$data,
               tract_data = tract_data,
               zip_tract = global$extdata$zip_tract,
-              demo_levels = create_expected_levels(global$metadata),
-              vars_global = GLOBAL$vars,
-              link_geo = global$link_data$link_geo,
-              is_timevar = global$metadata$is_timevar
+              metadata = global$metadata,
+              link_geo = global$link_data$link_geo
             )
-
 
             # prepare data for plotting
             plot_data <- list()
@@ -648,10 +671,8 @@ mod_analyze_upload_server <- function(id, global){
           input_data = global$data,
           new_data = new_data,
           fips_county_state = global$extdata$fips$county,
-          demo_levels = create_expected_levels(global$metadata),
-          vars_global = GLOBAL$vars,
-          link_geo = link_geo,
-          is_timevar = global$metadata$is_timevar
+          metadata = global$metadata,
+          link_geo = link_geo
         )
 
 
