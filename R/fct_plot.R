@@ -146,6 +146,59 @@ prep_raw_support <- function(
   return(plot_df)
 }
 
+#' Prepare raw outcome data for visualization
+#'
+#' @description Calculates outcome averages by geographic unit and prepares data
+#' for map visualization with hover text. Computes the mean outcome value for each
+#' FIPS code.
+#'
+#' @param input_data A data frame containing outcome data with columns for outcome
+#'   values and geographic identifiers
+#' @param fips_codes A data frame containing FIPS codes and geographic names
+#' @param geo Character string specifying geographic level, either "county" or "state"
+#'
+#' @return A data frame with outcome averages, sample sizes, and formatted hover text
+#'   for map visualization
+#'
+#' @noRd
+#' @importFrom dplyr mutate group_by summarize left_join
+prep_raw_outcome <- function(
+    input_data,
+    fips_codes,
+    geo = c("county", "state")
+) {
+  geo <- match.arg(geo)
+
+  if(is.null(input_data)) {
+    return(NULL)
+  }
+
+  input_data <- input_data %>% mutate(fips = input_data[[geo]])
+  fips_codes <- fips_codes %>% fips_upper()
+
+  plot_df <- input_data %>%
+    group_by(.data$fips) %>%
+    summarize(
+      total_obs = sum(.data$total),
+      avg_outcome = mean(.data$outcome)  # Computing average instead of support rate
+    ) %>%
+    left_join(fips_codes, by = "fips")
+
+  if(geo == "state") {
+    plot_df <- plot_df %>% mutate(
+      value = .data$avg_outcome,
+      hover = paste0(.data$state, ": ", round(.data$avg_outcome, 4), " (avg, n=", .data$total_obs, ")")
+    )
+  } else {
+    plot_df <- plot_df %>% mutate(
+      value = .data$avg_outcome,
+      hover = paste0(.data$county, " (", .data$state, "): ", round(.data$avg_outcome, 4), " (avg, n=", .data$total_obs, ")")
+    )
+  }
+
+  return(plot_df)
+}
+
 #' Prepare raw prevalence data for visualization
 #'
 #' @description Calculates extreme (minimum or maximum) prevalence values over time

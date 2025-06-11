@@ -456,6 +456,8 @@ ungroup_effects <- function(effects) {
   return(out)
 }
 
+
+
 # Stan code and data generation functions
 data_ <- function(effects, metadata) {
   scode <- "
@@ -534,7 +536,6 @@ data_ <- function(effects, metadata) {
   return(scode)
 }
 
-
 parameters_ <- function(effects, metadata) {
   scode <- "
   real Intercept;"
@@ -585,8 +586,8 @@ parameters_ <- function(effects, metadata) {
   # include residual SD for normally distributed outcome
   if(metadata$family == "normal") {
     scode <- paste0(scode, "
-  real<lower=0> sigma;")
-  }
+  real<lower=0> sigma;
+  ")
   
   # include the parameters below if structured prior is used
   int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
@@ -671,7 +672,7 @@ transformed_parameters_ <- function(effects, metadata) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
-  s_formula <- if (metadata$family == "binomial") {
+  s_main <- if (metadata$family == "binomial") {
     "
   vector<lower=0, upper=1>[N] p = inv_logit(Intercept%s%s%s%s);
   vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);"
@@ -688,7 +689,7 @@ transformed_parameters_ <- function(effects, metadata) {
     return(str_interp(" + b_${s}[J_${ss[1]}] .* X[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
   }), collapse = "")
   
-  scode <- paste0(scode, sprintf(s_formula, s_fixed, s_mvar, s_int_varit, s_int_varsl))
+  scode <- paste0(scode, sprintf(s_main, s_fixed, s_mvar, s_int_varit, s_int_varsl))
   
   return(scode)
 }
@@ -734,28 +735,22 @@ model_ <- function(effects, metadata) {
   return(scode)
 }
 
+
 #' Generate Stan Code for Leave-One-Out Cross-Validation
 #'
 #' @description Creates generated quantities block code for computing log-likelihood
 #' values needed for leave-one-out cross-validation (LOO-CV) model comparison.
-#' 
-#' @param metadata List containing model specifications, including outcome distribution family
-#' 
+#'
 #' @return Character string containing Stan generated quantities code that computes
 #'   log_lik vector with binomial log probability mass function values for each observation
 #'
 #' @noRd
 gq_loo <- function(metadata) {
-  lpf <- switch(metadata$family,
-    binomial = "binomial_lpmf(y[n] | n_sample[n], p_sample[n])",
-    normal = "normal_lpdf(y[n] | mu[n], sigma)"
-  )
-
-  scode <- stringr::str_interp("
-  vector[N] log_lik;
-  for (n in 1:N) {
-    log_lik[n] = ${lpf};
-  }")
+  scode <- if (metadata$family == "binomial") {
+    "\n  log_lik = binomial_lpmf(y | n_sample, p_sample);"
+  } else if (metadata$family == "normal") {
+    "\n  log_lik = normal_lpdf(y | mu, rep_vector(sigma, N));"
+  }
 
   return(scode)
 }
@@ -770,10 +765,11 @@ gq_loo <- function(metadata) {
 #'
 #' @noRd
 gq_ppc <- function(metadata) {
-  scode <- switch(metadata$family,
-    binomial = "\n  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);",
-    normal = "\n  array[N] real<lower = 0> y_rep = normal_rng(mu, sigma);"
-  )
+  scode <- if (metadata$family == "binomial") {
+    "\n  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);"
+  } else if (metadata$family == "normal") {
+    "\n  array[N] real y_rep = normal_rng(mu, rep_vector(sigma, N));"
+  }
 
   return(scode)
 }
@@ -803,6 +799,10 @@ gq_ppc <- function(metadata) {
 #'
 #' @importFrom stringr str_interp
 gq_pstrat <- function(effects, metadata) {
+  if(is.null(metadata)) {
+    return("")
+  }
+
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -820,75 +820,64 @@ gq_pstrat <- function(effects, metadata) {
   }"))
   }
   
-  ### poststratification
-  # initialize vectors
+  # poststratification
   if(metadata$is_timevar) {
-    init_overall <- "vector<lower=0, upper=1>[N_time_pstrat] theta_overall_pop = rep_vector(0, N_time_pstrat);"
+    init_overall <- "vector<lower=0, upper=1>[N_time_pstrat] p_overall_pop = rep_vector(0, N_time_pstrat);"
     init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
-  matrix<lower=0, upper=1>[N_${.x}_pstrat, N_time_pstrat] theta_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
+  matrix<lower=0, upper=1>[N_${.x}_pstrat, N_time_pstrat] p_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
   } else {
-    init_overall <- "real<lower=0, upper=1> theta_overall_pop;"
+    init_overall <- "real<lower=0, upper=1> p_overall_pop;"
     init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
-  vector<lower=0, upper=1>[N_${.x}_pstrat] theta_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
+  vector<lower=0, upper=1>[N_${.x}_pstrat] p_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
   }
   
-  # propulation estimates
-  est_cell <- "
-    vector[N_pop] theta_pop_scaled;"
-
-  if (metadata$family == "binomial") {
-    est_cell <- paste0(est_cell, "
-    vector[N_pop] theta_pop = inv_logit(Intercept%s%s%s%s);")
-  } else if (metadata$family == "normal") {
-    est_cell <- paste0(est_cell, "
-    vector[N_pop] theta_pop = Intercept%s%s%s%s;")
-  }
-
-  s_fixed <- if(length(fixed) > 0) " + X_pop * beta" else ""
-  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
-  s_int_varit <- paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
-  s_int_varsl <- paste(map(names(int_varsl), function(s) {
-    ss <- strsplit(s, split = ':')[[1]]
-    s <- paste0(ss[1], ss[2])
-    return(str_interp(" + b_${s}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
-  }), collapse = "")
-
-  est_cell <- sprintf(est_cell, s_fixed, s_mvar, s_int_varit, s_int_varsl)
+  p_pop <- sprintf("
+    vector[N_pop] p_pop;
+    vector[N_pop] p_pop_scaled;
+    p_pop = inv_logit(Intercept%s%s%s%s);",
+                  if(length(fixed) > 0) " + X_pop * beta" else "",
+                  paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = ""),
+                  paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = ""),
+                  paste(map(names(int_varsl), function(s) {
+                    ss <- strsplit(s, split = ':')[[1]]
+                    s <- paste0(ss[1], ss[2])
+                    return(str_interp(" + b_${s}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
+                  }), collapse = "")
+  )
   
   if(metadata$is_timevar) {
     est_overall <- "
-    theta_pop_scaled = theta_pop .* P_overall_pstrat;
+    p_pop_scaled = p_pop .* P_overall_pstrat;
     for (i in 1:N_pop) {
-      theta_overall_pop[J_time_pstrat[i]] += theta_pop_scaled[i];
+      p_overall_pop[J_time_pstrat[i]] += p_pop_scaled[i];
     }"
     
     est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
-    theta_pop_scaled = theta_pop .* P_${.x}_pstrat;
+    p_pop_scaled = p_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
-      theta_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += theta_pop_scaled[i];
+      p_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += p_pop_scaled[i];
     }")), collapse = "")
   } else {
     est_overall <- str_interp("
-    theta_pop_scaled = theta_pop .* P_overall_pstrat;
-    theta_overall_pop = sum(theta_pop_scaled);")
+    p_pop_scaled = p_pop .* P_overall_pstrat;
+    p_overall_pop = sum(p_pop_scaled);")
     
     est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
-    theta_pop_scaled = theta_pop .* P_${.x}_pstrat;
+    p_pop_scaled = p_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
-      theta_${.x}_pop[J_${.x}_pstrat[i]] += theta_pop_scaled[i];
+      p_${.x}_pop[J_${.x}_pstrat[i]] += p_pop_scaled[i];
     }")), collapse = "") 
   }
   
   scode <- paste0(scode, str_interp("
   ${init_overall}
   ${init_marginal}
-  {  ${est_cell}
+  {  ${p_pop}
      ${est_overall}
      ${est_marginal}
   }                
   "))
 
-  
   return(scode)
 }
 
@@ -978,7 +967,6 @@ generated quantities { ${gq_code}
   return(scode)
 }
 
-
 #' Convert Data Frame Variables to Stan-Compatible Format
 #'
 #' @description Transforms variables in a data frame to formats suitable for Stan
@@ -1054,11 +1042,20 @@ stan_factor <- function(df, ignore_cols = GLOBAL$vars$ignore) {
 #'   }
 #' @param new_data Data frame containing population data for prediction/poststratification
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param metadata List for model specifications
-#' @param extra Sensitivity and specificity parameters for covid models
+#' @param metadata Optional list for poststratification specifications
+#' @param sens Numeric value for sensitivity parameter (default 1)
+#' @param spec Numeric value for specificity parameter (default 1)
 #'
-#' @return Named list containing all data elements required by Stan
-#' 
+#' @return Named list containing all data elements required by Stan:
+#'   \itemize{
+#'     \item N, y, n_sample: Observation counts and sample sizes
+#'     \item K, X: Fixed effects design matrix dimensions and values
+#'     \item N_pop, K_pop, X_pop: Population data for prediction
+#'     \item Grouping variables (N_*, J_*) for varying effects
+#'     \item Poststratification weights and indices (if metadata provided)
+#'     \item sens, spec: Sensitivity and specificity parameters
+#'   }
+#'
 #' @noRd
 #'
 #' @importFrom dplyr select mutate group_by n_distinct
@@ -1069,23 +1066,18 @@ make_standata <- function(
     new_data,
     effects,
     metadata,
-    extra = NULL
+    sens = 1,
+    spec = 1
 ) {
 
   stan_data <- list(
     N = nrow(input_data),
     N_pop = nrow(new_data),
-    sens = if(!is.null(extra$sens)) extra$sens else 1,
-    spec = if(!is.null(extra$spec)) extra$spec else 1
+    y = input_data$positive,
+    n_sample = input_data$total,
+    sens = sens,
+    spec = spec
   )
-
-  # outcome variable
-  if (metadata$family == "binomial") {
-    stan_data$y <- input_data$positive
-    stan_data$n_sample <- input_data$total
-  } else if (metadata$family == "normal") {
-    stan_data$y <- input_data$outcome
-  }
   
   holder <- list(
     input = input_data,
@@ -1185,8 +1177,9 @@ run_mcmc <- function(
     metadata,
     n_iter = 1000,
     n_chains = 4,
-    extra = NULL,
     seed = NULL,
+    sens = 1,
+    spec = 1,
     code_fout = NULL,
     silent = FALSE
 ) {
@@ -1197,7 +1190,7 @@ run_mcmc <- function(
   stan_code$loo <- make_stancode_gq(effects, metadata, "loo")
   stan_code$pstrat <- make_stancode_gq(effects, metadata, "pstrat")
   
-  stan_data <- make_standata(input_data, new_data, effects, metadata, extra)
+  stan_data <- make_standata(input_data, new_data, effects, metadata, sens, spec)
 
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)
@@ -1237,12 +1230,14 @@ run_gq <- function(
     n_chains
   ) {
   
+
   utils::capture.output({
     mod_gq <- cmdstanr::cmdstan_model(
       stan_file = cmdstanr::write_stan_file(stan_code),
       cpp_options = list(stan_threads = TRUE)
     )
   }, type = "message")
+
   
   utils::capture.output({
     fit_gq <- mod_gq$generate_quantities(
@@ -1431,7 +1426,7 @@ extract_est <- function(
   for(s in c("overall", metadata$pstrat_vars)) {
     # get posterior draws for each subgroup
     pred_mat <- fit$draws(
-      variables = str_interp("theta_${s}_pop"),
+      variables = str_interp("p_${s}_pop"),
       format = "draws_matrix"
     ) %>% t()
 
