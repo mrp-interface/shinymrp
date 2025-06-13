@@ -30,7 +30,7 @@ GLOBAL <- list(
     indiv  = c("sex", "race", "age", "edu", "time"),
     geo    = c("zip", "county", "state"),
     time   = c("time", "date"),
-    ignore = c("date", "total", "positive")
+    ignore = c("date", "total", "positive", "outcome")
   ),
   ui = list(
     style = list(
@@ -60,6 +60,11 @@ GLOBAL <- list(
       delay = 100
     ),
     data_accept = c(".csv", ".xlsx", ".sas7bdat"),
+    color = list(
+      raw_color = "darkblue",
+      yrep_color = "darkorange",
+      mrp_color = "darkorange"  
+    ),
     plot_selection = list(
       vis_main = c(
         "Individual Characteristics" = "indiv",

@@ -772,7 +772,7 @@ gq_loo <- function(metadata) {
 gq_ppc <- function(metadata) {
   scode <- switch(metadata$family,
     binomial = "\n  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);",
-    normal = "\n  array[N] real<lower = 0> y_rep = normal_rng(mu, sigma);"
+    normal = "\n  array[N] real y_rep = normal_rng(mu, sigma);"
   )
 
   return(scode)
@@ -809,6 +809,7 @@ gq_pstrat <- function(effects, metadata) {
   scode <- ""
   
   # sample from posterior for parameters of new levels
+  print(names(int_varit))
   for(s in gsub(':', '', names(int_varit))) {
     scode <- paste0(scode, str_interp("
   vector[N_${s}_pop] a_${s}_pop;
@@ -823,13 +824,13 @@ gq_pstrat <- function(effects, metadata) {
   ### poststratification
   # initialize vectors
   if(metadata$is_timevar) {
-    init_overall <- "vector<lower=0, upper=1>[N_time_pstrat] theta_overall_pop = rep_vector(0, N_time_pstrat);"
+    init_overall <- "vector[N_time_pstrat] theta_overall_pop = rep_vector(0, N_time_pstrat);"
     init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
-  matrix<lower=0, upper=1>[N_${.x}_pstrat, N_time_pstrat] theta_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
+  matrix[N_${.x}_pstrat, N_time_pstrat] theta_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
   } else {
-    init_overall <- "real<lower=0, upper=1> theta_overall_pop;"
+    init_overall <- "real theta_overall_pop;"
     init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
-  vector<lower=0, upper=1>[N_${.x}_pstrat] theta_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
+  vector[N_${.x}_pstrat] theta_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
   }
   
   # propulation estimates
@@ -845,7 +846,7 @@ gq_pstrat <- function(effects, metadata) {
   }
 
   s_fixed <- if(length(fixed) > 0) " + X_pop * beta" else ""
-  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
+  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = "")
   s_int_varit <- paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
   s_int_varsl <- paste(map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -1196,7 +1197,7 @@ run_mcmc <- function(
   stan_code$ppc <- make_stancode_gq(effects, metadata, "ppc")
   stan_code$loo <- make_stancode_gq(effects, metadata, "loo")
   stan_code$pstrat <- make_stancode_gq(effects, metadata, "pstrat")
-  
+
   stan_data <- make_standata(input_data, new_data, effects, metadata, extra)
 
   if(!is.null(code_fout)) {
@@ -1481,11 +1482,13 @@ extract_est <- function(
 extract_yrep <- function(
   fit,
   input_data,
-  is_timevar,
+  metadata,
   N = 10,
-  summarize = FALSE,
   pred_interval = 0.95
 ) {
+
+  qlower <- (1 - pred_interval) / 2
+  qupper <- 1 - qlower
 
   # get draws from cmdstanr fit
   yrep_mat <- fit$draws(
@@ -1493,13 +1496,11 @@ extract_yrep <- function(
     format = "draws_matrix"
   )%>% t()
   
-  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), N)]   # subset draws
-  
-  qlower <- (1 - pred_interval) / 2
-  qupper <- 1 - qlower
+  # subset draws
+  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), N)]
 
-  if(is_timevar) {
-    agg_df <- yrep_mat %>%
+  yrep <- if (metadata$is_timevar) {
+    yrep_mat %>%
       as.data.frame() %>%
       mutate(
         time = input_data$time,
@@ -1507,38 +1508,17 @@ extract_yrep <- function(
       ) %>%
       group_by(.data$time) %>%
       summarise_all(sum) %>%
-      ungroup()
-
-    agg_tests <- agg_df$total
-    time <- agg_df$time
-
-    est <- agg_df %>%
-      select(-c("time", "total")) %>%
-      mutate_all(function(c) c / agg_tests)
-
-    if(summarize) {
-      est <- data.frame(
-        time = time,
-        upper = est %>% apply(1, stats::quantile, qlower),
-        lower = est %>% apply(1, stats::quantile, qupper),
-        median = est %>% apply(1, stats::quantile, 0.5)
-      )
-    } else {
-      est <- est %>% mutate(time = time)
-    }
-
+      ungroup() %>%
+      mutate(
+        across(
+          -c(.data$time, .data$total),
+          ~ .x / .data$total
+        )
+      ) %>%
+      select(-.data$total)
   } else {
-    est <- colSums(yrep_mat) / sum(input_data$total)
-
-    if(summarize) {
-      est <- data.frame(
-        upper  = stats::quantile(est, qlower),
-        lower  = stats::quantile(est, qupper),
-        median = stats::quantile(est, 0.5)
-      )
-    }
-
+    colSums(yrep_mat) / sum(input_data$total)
   }
 
-  return(est)
+  return(yrep)
 }

@@ -546,44 +546,44 @@ check_simulation_result <- function(
 
 path <- "/Users/tntoan/Desktop/repos/shinymrp/dev/data/crosssectional_normal_sim.RDS"
 
-qs::qsave(
-  list(
-    effects = list(
-      Intercepts = list(
-        Intercept = "normal(0, 5)"
-      ),
-      fixed = list(
-        sex = "normal(0, 3)"
-      ),
-      varying = list(
-        race = "normal(0, 3)",
-        age = "normal(0, 3)",
-        # time = "normal(0, 3)",
-        zip = "normal(0, 3)",
-        county = "normal(0, 3)",
-        state = "normal(0, 3)"
-      )
-    ),
-    params = list(
-      Intercept = 0.5,
-      beta_sex = -0.25,
-      lambda_race = 0.3,
-      lambda_age = 0.4,
-      # lambda_time = 0.2,
-      lambda_zip = 0.5
-    ),
-    family = "normal",
-    covar_geo = "zip",
-    n_geo = 10,
-    include_date = FALSE,
-    extra = list(
-      covid = FALSE,
-      spec = 1,
-      sens = 1
-    )
-  ),
-  file = path
-)
+# qs::qsave(
+#   list(
+#     effects = list(
+#       Intercepts = list(
+#         Intercept = "normal(0, 5)"
+#       ),
+#       fixed = list(
+#         sex = "normal(0, 3)"
+#       ),
+#       varying = list(
+#         race = "normal(0, 3)",
+#         age = "normal(0, 3)",
+#         # time = "normal(0, 3)",
+#         zip = "normal(0, 3)",
+#         county = "normal(0, 3)",
+#         state = "normal(0, 3)"
+#       )
+#     ),
+#     params = list(
+#       Intercept = 0.5,
+#       beta_sex = -0.25,
+#       lambda_race = 0.3,
+#       lambda_age = 0.4,
+#       # lambda_time = 0.2,
+#       lambda_zip = 0.5
+#     ),
+#     family = "normal",
+#     covar_geo = "zip",
+#     n_geo = 10,
+#     include_date = FALSE,
+#     extra = list(
+#       covid = FALSE,
+#       spec = 1,
+#       sens = 1
+#     )
+#   ),
+#   file = path
+# )
 
 sim_inputs <- qs::qread(path)
 

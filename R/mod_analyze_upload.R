@@ -428,11 +428,21 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      indiv_file_name <- create_example_filename(global$metadata, suffix = "individual")
-      agg_file_name <- create_example_filename(global$metadata, suffix = "aggregated")
+      file_name <- create_example_filename(global$metadata, suffix = "individual")
+      readr::read_csv(
+        app_sys(paste0("extdata/example/data/", file_name)),
+        show_col_types = FALSE
+      ) %>%
+        raw_sample()
 
-      readr::read_csv(app_sys(paste0("extdata/example/data/", indiv_file_name)), show_col_types = FALSE) %>% raw_sample()
-      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", agg_file_name)), show_col_types = FALSE) %>%
+      file_name <- create_example_filename(
+        global$metadata,
+        suffix = switch(global$metadata$family,
+          "binomial" = "aggregated",
+          "normal" = "individual"
+        )
+      )
+      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) %>%
         clean_data() %>%
         mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
       

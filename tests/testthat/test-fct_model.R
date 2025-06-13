@@ -107,6 +107,12 @@ test_that("estimated parameters match saved values", {
   data <- create_test_data(seed = seed) %>%
     stan_factor(ignore_cols = c("positive", "total"))
 
+  metadata <- list(
+    special_case = NULL,
+    family = "binomial",
+    is_timevar = FALSE
+  )
+
   # fixed effect of continuous variables only
   effects <- list(
     Intercept = list(Intercept = intercept_prior),
@@ -123,6 +129,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -155,6 +162,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -187,6 +195,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -219,6 +228,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -257,6 +267,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -295,6 +306,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -333,6 +345,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -371,6 +384,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -411,6 +425,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -452,6 +467,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -495,6 +511,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -536,6 +553,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -579,6 +597,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -617,6 +636,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -660,6 +680,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -703,6 +724,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE

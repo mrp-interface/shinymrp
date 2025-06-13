@@ -92,18 +92,15 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
           fips_codes = global$extdata$fips[[geo]],
           geo = geo,
           time_index = time_index
-        )
-
-
-      plot_df %>%
+        ) %>%
         choro_map(
           model()$plot_data$geojson[[geo]],
-          main_title = "MRP Estimate of Positive Response Rate",
-          sub_title = "MRP Estimate",
           geo = geo,
           config = list(
             minValue = 0,
-            maxValue = max(model()$est[[geo]]$est)
+            maxValue = max(model()$est[[geo]]$est),
+            main_title = "MRP Estimate",
+            hover_title = "Estimate"
           )
         )
     })
@@ -124,9 +121,16 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         filter(factor %in% geo_subset())
 
       if(model()$metadata$is_timevar) {
-        plot_est_temporal(plot_df, model()$plot_data$dates)
+        plot_est_temporal(
+          plot_df = plot_df,
+          dates = model()$plot_data$dates,
+          metadata = model()$metadata
+        )
       } else {
-        plot_est_static(plot_df)
+        plot_est_static(
+          plot_df = plot_df,
+          metadata = model()$metadata
+        )
       }
     }, height = function() {
       req(model())
