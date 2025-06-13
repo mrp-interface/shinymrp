@@ -46,7 +46,7 @@ mod_analyze_visualize_ui <- function(id){
                             ns("plot_subcategory")),
         bslib::card(
           selectizeInput(
-            inputId = ns("extreme_select"),
+            inputId = ns("summary_slt"),
             label = "Select quantity",
             choices = c("Highest Weekly Rate" = "max",
                         "Lowest Weekly Rate" = "min"),
@@ -96,7 +96,7 @@ mod_analyze_visualize_server <- function(id, global){
       updateSelectInput(session, "plot_category", choices = choices)
       
       # Reset extreme select input
-      shinyjs::reset("extreme_select")
+      shinyjs::reset("summary_slt")
     })
 
 
@@ -253,54 +253,50 @@ mod_analyze_visualize_server <- function(id, global){
 
 
     # --------------------------------------------------------------------------
-    # Plot for Positive Response Rate
+    # Plot for Positive Response Rate/Outcome Variable
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
       req(input$plot_subcategory == "overall")
-      plot_prev(global$mrp$input, global$plot_data$dates)
+
+      plot_outcome_timevar(
+        raw = global$mrp$input,
+        dates = global$plot_data$dates,
+        metadata = global$metadata
+      )
     })
 
     # --------------------------------------------------------------------------
-    # Map for Positive Response Rate
+    # Map for Positive Response Rate/Outcome Variable
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
       req(global$link_data$link_geo)
 
-      geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
-
-      if(global$metadata$is_timevar) {
-        plot_df <- global$mrp$input %>%
-          prep_raw_prev(
-            fips_codes = global$extdata$fips[[geo]],
-            geo = geo,
-            extreme_type = input$extreme_select
-          )
-
-        choro_map(
-          plot_df,
-          global$plot_data$geojson[[geo]],
-          main_title = "Weekly Positive Response Rate By Geography",
-          sub_title = switch(input$extreme_select,
-            "max" = "Highest Weekly Rate",
-            "min" = "Lowest Weekly Rate"
-          ),
-          geo = geo,
-          config = if (max(plot_df$value) == 0) list(minValue = 0, maxValue = 1) else NULL
-        )
-      } else {
-        global$mrp$input %>%
-          prep_raw_support(
-            fips_codes = global$extdata$fips[[geo]],
-            geo = geo
-          ) %>%
-          mutate(value = .data$support) %>%
-          choro_map(
-            global$plot_data$geojson[[geo]],
-            main_title = "Positive Response Rate By Geography",
-            sub_title = "Positive Response Rate",
-            geo = geo
-          )
+      geo <- global$link_data$link_geo
+      if (geo == "zip") {
+        geo <- "county"  # Plot county-level map for ZIP codes
       }
+
+      out <- prep_raw(
+        global$mrp$input,
+        global$extdata$fips[[geo]],
+        geo = geo,
+        summary_type = input$summary_slt,
+        metadata = global$metadata
+      )
+
+      config <- list()
+      if (n_distinct(out$plot_df$value) == 1 &&
+          out$plot_df$value[1] == 0) {
+        config <- list(minValue = 0, maxValue = 1)
+      }
+      config <- c(config, out$title)
+
+      choro_map(
+        out$plot_df,
+        global$plot_data$geojson[[geo]],
+        geo = geo,
+        config = config
+      )
     })
     
   })

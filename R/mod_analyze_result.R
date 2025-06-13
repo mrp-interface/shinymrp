@@ -142,22 +142,19 @@ mod_analyze_result_server <- function(id, global){
     output$est_overall <- renderPlot({
       req(selected_model())
       if(global$metadata$is_timevar) {
-        plot_prev(
-          selected_model()$mrp$input,
-          selected_model()$plot_data$dates,
-          selected_model()$est$overall,
+        plot_outcome_timevar(
+          raw = selected_model()$mrp$input,
+          yrep_est = selected_model()$est$overall,
+          dates = selected_model()$plot_data$dates,
+          metadata = selected_model()$metadata,
           show_caption = TRUE
         )
       } else {
-        selected_model()$est$overall %>%
-          mutate(
-            data = "Estimate",
-            lower = .data$est - .data$std,
-            median = .data$est,
-            upper = .data$est + .data$std
-          ) %>%
-          select(.data$data, .data$lower, .data$median, .data$upper) %>%
-          plot_support(selected_model()$mrp$input)
+        plot_outcome_static(
+          raw = selected_model()$mrp$input,
+          yrep_est = selected_model()$est$overall,
+          metadata = selected_model()$metadata
+        )
       }
     }, height = function() GLOBAL$ui$plot_height)
     
@@ -218,9 +215,9 @@ mod_analyze_result_server <- function(id, global){
 
       # Update the subgroup select options.
       choices <- GLOBAL$ui$plot_selection$subgroup
-      if(!is.null(selected_model()$metadata$special_case) &&
+      if(is.null(selected_model()$metadata$special_case) ||
          selected_model()$metadata$special_case != "poll") {
-        choices <- choices[!choices =="edu"]
+        choices <- choices[!choices == "edu"]
       }
       if(is.null(selected_model()$link_data$link_geo)) {
         choices <- choices[!choices == "geo"]

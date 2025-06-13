@@ -450,12 +450,7 @@ mod_analyze_model_server <- function(id, global){
         tagList(
           bslib::card(
             bslib::card_header(tags$b("Note")),
-            if(!is.null(global$metadata$special_case) &&
-               global$metadata$special_case == "covid") {
-              bslib::card_body(tags$p("The plots show the weekly postive response rates computed from the observed data and 10 sets of replicated data."))
-            } else {
-              bslib::card_body(tags$p("The plots show the proportion of positive responses computed from the observed data and 10 sets of replicated data."))
-            }
+            bslib::card_body(tags$p("The plots show the positive response rates or the outcome averages computed from the observed data and 10 sets of replicated data."))
           ),
           purrr::map(seq_along(model_names), ~ list(
             HTML(paste0("<h4 class='formula'><u>", model_names[.x], "</u>", ": ", model_formulas[.x], "</h4>")),
@@ -488,15 +483,17 @@ mod_analyze_model_server <- function(id, global){
             if(global$metadata$is_timevar) {
               req(global$models)
 
-              plot_ppc_covid_subset(
-                yreps[[i]],
-                inputs[[i]],
-                global$plot_data$dates
+              plot_ppc_timevar_subset(
+                yrep = yreps[[i]],
+                raw = inputs[[i]],
+                dates = global$plot_data$dates,
+                metadata = global$metadata
               )
             } else {
-              plot_ppc_poll(
-                yreps[[i]],
-                inputs[[i]],
+              plot_ppc_static(
+                yrep = yreps[[i]],
+                raw = inputs[[i]],
+                metadata = global$metadata
               )
             }
           })
@@ -852,7 +849,7 @@ mod_analyze_model_server <- function(id, global){
         model$yrep <- extract_yrep(
           model$fit$ppc,
           model$mrp$input,
-          model$metadata$is_timevar
+          model$metadata
         )
       }
       
@@ -928,15 +925,17 @@ mod_analyze_model_server <- function(id, global){
         req(model$yrep)
         
         if(global$metadata$is_timevar) {
-          plot_ppc_covid_subset(
-            model$yrep,
-            model$mrp$input,
-            global$plot_data$dates
+          plot_ppc_timevar_subset(
+            yrep = model$yrep,
+            raw = model$mrp$input,
+            dates = global$plot_data$dates,
+            metadata = global$metadata
           )
         } else {
-          plot_ppc_poll(
-            model$yrep,
-            model$mrp$input
+          plot_ppc_static(
+            yrep = model$yrep,
+            raw = model$mrp$input,
+            metadata = global$metadata
           )
         }
       })
