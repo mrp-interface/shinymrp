@@ -98,20 +98,19 @@ get_config <- function(value) {
 
 create_example_filename <- function(
   metadata,
-  suffix = c("individual", "aggregated", "pstrat"),
+  suffix = c("raw", "prep", "fit"),
   ext = ".csv",
+  sep = "_",
   valid_families = GLOBAL$family
 ) {
+  # Validate inputs
   suffix <- match.arg(suffix)
   if (!metadata$family %in% valid_families) {
     stop("Invalid family specified in metadata")
   }
 
   use_case <- if (!is.null(metadata$special_case)) {
-    switch(metadata$special_case,
-      poll = "poll",
-      covid = "covid"
-    )
+    metadata$special_case
   } else {
     if (metadata$is_timevar) {
       "timevarying"
@@ -119,6 +118,11 @@ create_example_filename <- function(
       "crosssectional"
     }
   }
-  
-  paste0(use_case, '_', metadata$family, '_', suffix, ext)
+
+  # Construct file name
+  family <- paste0(sep, metadata$family)
+  suffix <- paste0(sep, suffix)
+  file_name <- paste0(use_case, family, suffix, ext)
+
+  return(file_name)
 }

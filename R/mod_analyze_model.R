@@ -784,20 +784,15 @@ mod_analyze_model_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      path <- if (!is.null(global$metadata$special_case)) {
-        switch(global$metadata$special_case,
-          covid = "extdata/example/fit/fit_timevarying_covid.RDS",
-          poll = "extdata/example/fit/fit_crosssectional_poll.RDS"
-        )
-      } else {
-        if (global$metadata$is_timevar) {
-          "extdata/example/fit/fit_timevarying_other.RDS"
-        } else {
-          "extdata/example/fit/fit_crosssectional_other.RDS"
-        }
-      }
+      file_name <- create_example_filename(
+        global$metadata,
+        suffix = "fit",
+        ext = ".RDS"
+      )
 
-      model_buffer(qs::qread(app_sys(path)))
+      qs::qread(
+        app_sys(paste0(GLOBAL$path$example_fit, file_name))
+      ) %>% model_buffer()
     })
     
     # create new model tab
@@ -816,11 +811,12 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # extract posterior summary of coefficients
-      if (is.null(model$params$fixed) || is.null(model$params$varying)) {
+      if (is.null(model$params$fixed) && is.null(model$params$varying)) {
         model$params <- extract_parameters(
-          model$fit$mcmc,
-          model$effects,
-          model$mrp$input
+          fit = model$fit$mcmc,
+          effects = model$effects,
+          input_data = model$mrp$input,
+          metadata = model$metadata
         )
       }
       
@@ -859,6 +855,7 @@ mod_analyze_model_server <- function(id, global){
         main = model_id,
         fixed_tbl = paste0("fixed_tbl_", model_id),
         varying_tbl = paste0("varying_tbl_", model_id),
+        other_tbl = paste0("other_tbl_", model_id),
         ppc_plot = paste0("ppc_plot_", model_id),
         tab = paste0("tab_", model_id),
         title = paste0("title_", model_id),
@@ -919,6 +916,7 @@ mod_analyze_model_server <- function(id, global){
       # render fixed and varying effect tables
       output[[model$IDs$fixed_tbl]] <- renderTable(model$params$fixed, rownames = TRUE, na = "")
       output[[model$IDs$varying_tbl]] <- renderTable(model$params$varying, rownames = TRUE, na = "")
+      output[[model$IDs$other_tbl]] <- renderTable(model$params$other, rownames = TRUE, na = "")
       
       # render ppc plot
       output[[model$IDs$ppc_plot]] <- renderPlot({
@@ -972,7 +970,9 @@ mod_analyze_model_server <- function(id, global){
         
         # download fit result after postprocessing
         output[[model$IDs$save_fit_btn]] <- downloadHandler(
-          filename = function() { "model_fit_w_postprocess.RDS" },
+          filename = function() { 
+            paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".RDS")
+          },
           content = function(file) {
             waiter::waiter_show(
               html = waiter_ui("wait"),

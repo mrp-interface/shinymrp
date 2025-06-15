@@ -809,7 +809,6 @@ gq_pstrat <- function(effects, metadata) {
   scode <- ""
   
   # sample from posterior for parameters of new levels
-  print(names(int_varit))
   for(s in gsub(':', '', names(int_varit))) {
     scode <- paste0(scode, str_interp("
   vector[N_${s}_pop] a_${s}_pop;
@@ -1294,9 +1293,53 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
   return(df_fixed)
 }
 
+get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
+  fit$summary(
+    variables = variables,
+    posterior::default_summary_measures()[1:4],
+    quantiles = ~ posterior::quantile2(., probs = probs),
+    posterior::default_convergence_measures()
+  )
+}
+
+format_params_summary <- function(
+    df,
+    row_names = NULL,
+    probs = c(0.025, 0.975)
+) {
+  # select relevant columns
+  col_names <- c(
+    "mean", "sd",
+    paste0("q", probs * 100),
+    "rhat", "ess_bulk", "ess_tail"
+  )
+  df <- df %>%
+    select(all_of(col_names)) %>%
+    as.data.frame()
+
+  # rename columns
+  p <- (probs[2] - probs[1]) * 100
+  names(df) <- c(
+    "Estimate", "Est.Error",
+    sprintf("l-%d%% CI", p), sprintf("u-%s%% CI", p),
+    "R-hat", "Bulk_ESS", "Tail_ESS"
+  )
+
+  if (!is.null(row_names)) {
+    row.names(df) <- row_names
+  }
+
+  return(df)
+}
+
 #' @importFrom dplyr select
 #' @importFrom rlang .data
-extract_parameters <- function(fit, effects, input_data) {
+extract_parameters <- function(
+  fit,
+  effects,
+  input_data,
+  metadata
+) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -1305,17 +1348,12 @@ extract_parameters <- function(fit, effects, input_data) {
   df_fixed <- data.frame()
   if(length(fixed) > 0) {
     # extract summary table
-    df_fixed <- fit$summary(
-      variables = c("Intercept", "beta"),
-      posterior::default_summary_measures()[1:4],
-      quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-      posterior::default_convergence_measures()
-    ) %>%
-      select(.data$mean, .data$sd, .data$`q2.5`, .data$`q97.5`, .data$rhat, .data$ess_bulk, .data$ess_tail) %>%
-      as.data.frame()
+    df_fixed <- get_params_summary(fit, variables = c("Intercept", "beta"))
 
-    # rename columns and rows
-    names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
+    # format the summary table
+    df_fixed <- format_params_summary(df_fixed)
+
+    # add reference levels
     df_fixed <- add_ref_lvl(df_fixed, effects, input_data)
   }
 
@@ -1323,15 +1361,10 @@ extract_parameters <- function(fit, effects, input_data) {
   df_varying <- data.frame()
   row_names <- c()
 
-  if(length(effects$m_var)) {
+  if(length(effects$m_var) > 0) {
     df_varying <- rbind(
       df_varying,
-      fit$summary(
-        variables = paste0("scaled_lambda_", names(effects$m_var)),
-        posterior::default_summary_measures()[1:4],
-        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-        posterior::default_convergence_measures()
-      )
+      get_params_summary(fit, variables = paste0("scaled_lambda_", names(effects$m_var)))
     )
     row_names <- c(row_names, paste0(names(effects$m_var), " (intercept)"))
   }
@@ -1339,12 +1372,7 @@ extract_parameters <- function(fit, effects, input_data) {
   if(length(int_varit) > 0) {
     df_varying <- rbind(
       df_varying, 
-      fit$summary(
-        variables = paste0("lambda_", gsub(':', '', names(int_varit))),
-        posterior::default_summary_measures()[1:4],
-        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-        posterior::default_convergence_measures()
-      )
+      get_params_summary(fit, variables = paste0("lambda_", gsub(':', '', names(int_varit))))
     )
     row_names <- c(row_names, paste0(names(int_varit), " (intercept)"))
   }
@@ -1352,28 +1380,36 @@ extract_parameters <- function(fit, effects, input_data) {
   if(length(int_varsl) > 0) {
     df_varying <- rbind(
       df_varying, 
-      fit$summary(
-        variables = paste0("lambda2_", purrr::map_chr(names(int_varsl), function(s) gsub(':', '', s))),
-        posterior::default_summary_measures()[1:4],
-        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-        posterior::default_convergence_measures()
-      )
+      get_params_summary(fit, variables = paste0("lambda2_", gsub(':', '', names(int_varsl))))
     )
     row_names <- c(row_names, paste0(names(int_varsl), " (slope)"))
   }
 
   if(nrow(df_varying) > 0) {
-    df_varying <- df_varying %>%
-      select(.data$mean, .data$sd, .data$`q2.5`, .data$`q97.5`, .data$rhat, .data$ess_bulk, .data$ess_tail) %>%
-      as.data.frame()
+    df_varying <- format_params_summary(df_varying, row_names = row_names)
+  }
 
-    names(df_varying) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
-    row.names(df_varying) <- row_names
+
+  ### other parameters
+  df_other <- data.frame()
+  row_names <- c()
+
+  if (metadata$family == "normal") {
+    df_other <- rbind(
+      df_other,
+      get_params_summary(fit, variables = "sigma")
+    )
+    row_names <- c(row_names, "Residual SD")
+  }
+
+  if (nrow(df_other) > 0) {
+    df_other <- format_params_summary(df_other, row_names = row_names)
   }
 
   return(list(
-    fixed = df_fixed,
-    varying = df_varying
+    fixed   = df_fixed,
+    varying = df_varying,
+    other   = df_other
   ))
 }
 

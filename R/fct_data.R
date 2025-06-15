@@ -163,6 +163,16 @@ clean_data <- function(
   return(df)
 }
 
+preprocess_example <- function(df, fips_county_state) {
+  df <- df %>% clean_data() 
+  
+  if ("state" %in% names(df)) {
+    df$state <- to_fips(df$state, fips_county_state, "state")
+  }
+
+  return(df)
+}
+
 #' Rename columns based on expected variable names
 #'
 #' @description Renames columns in the data frame to match expected variable
@@ -178,15 +188,19 @@ clean_data <- function(
 #'
 #' @noRd
 #'
-rename_columns <- function(df, const, covid_indiv = FALSE) {
+rename_columns <- function(
+    df,
+    covid_indiv = FALSE,
+    vars = GLOBAL$vars
+) {
   if (covid_indiv) {
     return(rename_columns_covid(df))
   }
 
   target_names <- c(
-    const$vars$indiv,
-    const$vars$geo,
-    const$vars$ignore
+    vars$indiv,
+    vars$geo,
+    vars$ignore
   )
 
   current_names <- names(df)
@@ -519,15 +533,15 @@ get_geo_predictors <- function(df, geo_col) {
 #'
 #' @noRd
 #'
-get_smallest_geo <- function(col_names, geo_col) {
+get_smallest_geo <- function(col_names, geo_all = GLOBAL$vars$geo) {
   # Find the smallest geographic index
-  idx <- match(col_names, GLOBAL$vars$geo) %>% stats::na.omit()
+  idx <- match(col_names, geo_all) %>% stats::na.omit()
   if (length(idx) == 0) {
     return(NULL)
   }
 
   smallest_geo_index <- min(idx)
-  smallest_geo <- GLOBAL$vars$geo[smallest_geo_index]
+  smallest_geo <- geo_all[smallest_geo_index]
 
   return(list(
     geo = smallest_geo,
@@ -551,8 +565,12 @@ get_smallest_geo <- function(col_names, geo_col) {
 #'
 #' @importFrom dplyr select rename mutate distinct
 #' @importFrom rlang .data
-append_geo <- function(input_data, zip_county_state, geo_all) {
-  smallest <- get_smallest_geo(names(input_data), geo_all)
+append_geo <- function(
+    input_data,
+    zip_county_state,
+    geo_all = GLOBAL$vars$geo
+) {
+  smallest <- get_smallest_geo(names(input_data))
   if (is.null(smallest)) {
     return(input_data)
   }
@@ -753,7 +771,7 @@ create_expected_types <- function(
   if (is_sample) {
     if (metadata$family == "binomial") {
       types$positive <- "ignore"
-    } else if (metadata$family == "multinomial") {
+    } else if (metadata$family == "normal") {
       types$outcome <- "ignore"
     }
     if (is_aggregated) {
@@ -865,24 +883,23 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
 #'
 #' @param df Data frame containing poststratification data.
 #' @param df_ref Data frame containing reference sample data.
-#' @param expected_types Named list of expected data types for validation.
+#' @param expected_levels Named list of expected data types for validation.
 #'
 #' @return No return value. Throws errors if validation fails.
 #'
 #' @noRd
-check_pstrat <- function(df, df_ref, expected_types, ignore_cols = GLOBAL$vars$ignore) {
+check_pstrat <- function(df, df_ref, expected_levels) {
   if (is.null(df_ref)) {
     stop("Sample data is not provided.")
   }
   
   # ensure columns exist
-  cols <- names(expected_types)
+  cols <- names(expected_levels)
   missing_df  <- setdiff(cols, names(df))
   missing_ref <- setdiff(cols, names(df_ref))
   if (length(missing_df))  stop("Missing in sample data:  ", paste(missing_df, collapse = ", "))
   if (length(missing_ref)) stop("Missing in postratification data: ", paste(missing_ref, collapse = ", "))
   
-  cols <- intersect(names(df), names(df_ref)) %>% setdiff(ignore_cols)
   
   # compare unique values
   cond <- vapply(cols, function(col) {
@@ -920,7 +937,6 @@ preprocess <- function(
   data,
   metadata,
   zip_county_state,
-  const,
   is_sample = TRUE,
   is_aggregated = TRUE
 ) {
@@ -937,7 +953,7 @@ preprocess <- function(
   data <- clean_data(data)
 
   # Find and rename columns
-  data <- rename_columns(data, const, is_covid && !is_aggregated)
+  data <- rename_columns(data, is_covid && !is_aggregated)
 
   # Check for common dataframe issues
   types <- create_expected_types(
@@ -966,7 +982,7 @@ preprocess <- function(
 
     if (metadata$family != "normal") {
       # aggregate test records based on combinations of factors
-      smallest <- get_smallest_geo(names(data), const$vars$geo)
+      smallest <- get_smallest_geo(names(data))
       smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
       group_vars <- c(indiv_vars, smallest_geo)
       geo_covars <- if(!is.null(smallest_geo)) names(get_geo_predictors(data, smallest_geo)) else NULL
@@ -984,7 +1000,7 @@ preprocess <- function(
   }
 
   # append geographic areas at larger scales if missing
-  data <- append_geo(data, zip_county_state, const$vars$geo)
+  data <- append_geo(data, zip_county_state)
 
   return(data)
 }
@@ -1079,7 +1095,7 @@ create_variable_list <- function(input_data, covariates, vars_global) {
 combine_tracts <- function(
     tract_data,
     zip_tract,
-    link_geo = c("", "zip", "county", "state")
+    link_geo = c('', GLOBAL$vars$geo)
 ) {
 
   link_geo <- match.arg(link_geo)
@@ -1126,89 +1142,6 @@ combine_tracts <- function(
   return(pstrat_data)
 }
 
-#' Prepare MRP data using custom poststratification table
-#'
-#' @description Prepares data for MRP analysis using a custom poststratification
-#' table. Filters data to common geographic units, creates factor levels,
-#' appends geographic predictors, and duplicates data for time indices.
-#'
-#' @param input_data Data frame containing sample data.
-#' @param new_data Data frame containing custom poststratification data.
-#' @param fips_county_state Data frame containing FIPS code mappings.
-#' @param metadata List containing metadata.
-#' @param vars_global List containing global variable definitions.
-#' @param link_geo Character string specifying geographic linking variable.
-#'   Default is NULL.
-#'
-#' @return Named list containing:
-#'   \item{input}{Filtered input data}
-#'   \item{new}{Prepared poststratification data}
-#'   \item{levels}{Complete list of factor levels}
-#'   \item{vars}{Variable lists for model specification}
-#'
-#' @noRd
-#'
-#' @importFrom dplyr filter mutate
-#' @importFrom rlang sym
-prepare_mrp_custom <- function(
-  input_data,
-  new_data,
-  fips_county_state,
-  metadata,
-  vars_global = GLOBAL$vars,
-  link_geo = NULL
-) {
-
-  # filter based on common GEOIDs
-  shared_geocodes <- c()
-  if(!is.null(link_geo)) {
-    shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(new_data[[link_geo]]))
-    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
-    new_data <- new_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
-  }
-
-  # create lists of all factor levels
-  n_time_indices <- 1
-  levels <- create_expected_levels(metadata)
-  if(metadata$is_timevar) {
-    levels$time <- unique(input_data$time) %>% sort()
-    n_time_indices <- length(levels$time)
-  }
-  if(!is.null(link_geo)) {
-    levels[[link_geo]] <- shared_geocodes
-  }
-
-  # append geographic predictors
-  covariates <- NULL
-  if(!is.null(link_geo)) {
-    # find geographic covariates
-    covariates <- get_geo_predictors(input_data, link_geo)
-    if(ncol(covariates) > 1) {
-      new_data <- clean_left_join(new_data, covariates, by = link_geo)
-    }
-  }
-
-  # append levels for other geographic predictors
-  for(v in intersect(names(new_data), vars_global$geo)) {
-    levels[[v]] <- unique(new_data[[v]]) %>% sort()
-  }
-
-  # duplicate rows for each time index
-  new_data <- purrr::map_dfr(
-    seq_len(n_time_indices),
-    ~ new_data %>% mutate(time = .x)
-  )
-
-  vars <- create_variable_list(input_data, covariates, vars_global)
-
-  return(list(
-    input = input_data,
-    new = new_data,
-    levels = levels,
-    vars = vars
-  ))
-}
-
 #' Prepare MRP data using ACS-based poststratification
 #'
 #' @description Prepares data for MRP analysis using American Community Survey
@@ -1221,9 +1154,8 @@ prepare_mrp_custom <- function(
 #' @param zip_tract Data frame containing tract-to-zip crosswalk.
 #' @param zip_county_state Data frame containing geographic crosswalk information.
 #' @param metadata List containing metadata.
-#' @param vars_global List containing global variable definitions.
 #' @param link_geo Character string specifying geographic linking variable.
-#'   Default is NULL.
+#' @param vars_global List containing global variable definitions.
 #'
 #' @return Named list containing:
 #'   \item{input}{Filtered input data}
@@ -1240,11 +1172,11 @@ prepare_mrp_acs <- function(
     tract_data,
     zip_tract,
     metadata,
-    vars_global = GLOBAL$vars,
-    link_geo = NULL
+    link_geo = NULL,
+    vars_global = GLOBAL$vars
 ) {
 
-  # create poststratification table
+  # compute cell counts based on given geographic scale
   pstrat_data <- combine_tracts(tract_data, zip_tract, link_geo)
 
   # filter based on common GEOIDs
@@ -1292,13 +1224,13 @@ prepare_mrp_acs <- function(
     levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
-  # create variable lists for model specification
-  vars <- create_variable_list(input_data, covariates, vars_global)
-
   # add 'total' column to interface with plotting functions
   if (metadata$family == "normal") {
     input_data <- input_data %>% mutate(total = 1)
   }
+
+  # create variable lists for model specification
+  vars <- create_variable_list(input_data, covariates, vars_global)
 
   return(list(
     input = input_data,
@@ -1308,6 +1240,92 @@ prepare_mrp_acs <- function(
   ))
 }
 
+#' Prepare MRP data using custom poststratification table
+#'
+#' @description Prepares data for MRP analysis using a custom poststratification
+#' table. Filters data to common geographic units, creates factor levels,
+#' appends geographic predictors, and duplicates data for time indices.
+#'
+#' @param input_data Data frame containing sample data.
+#' @param new_data Data frame containing custom poststratification data.
+#' @param fips_county_state Data frame containing FIPS code mappings.
+#' @param metadata List containing metadata.
+#' @param link_geo Character string specifying geographic linking variable.
+#' @param vars_global List containing global variable definitions.
+#'
+#' @return Named list containing:
+#'   \item{input}{Filtered input data}
+#'   \item{new}{Prepared poststratification data}
+#'   \item{levels}{Complete list of factor levels}
+#'   \item{vars}{Variable lists for model specification}
+#'
+#' @noRd
+#'
+#' @importFrom dplyr filter mutate
+#' @importFrom rlang sym
+prepare_mrp_custom <- function(
+    input_data,
+    new_data,
+    fips_county_state,
+    metadata,
+    link_geo = NULL,
+    vars_global = GLOBAL$vars
+) {
+
+  # filter based on common GEOIDs
+  shared_geocodes <- c()
+  if(!is.null(link_geo)) {
+    shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(new_data[[link_geo]]))
+    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+    new_data <- new_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+  }
+
+  # create lists of all factor levels
+  n_time_indices <- 1
+  levels <- create_expected_levels(metadata)
+  if(metadata$is_timevar) {
+    levels$time <- unique(input_data$time) %>% sort()
+    n_time_indices <- length(levels$time)
+  }
+  if(!is.null(link_geo)) {
+    levels[[link_geo]] <- shared_geocodes
+  }
+
+  # append geographic predictors
+  covariates <- NULL
+  if(!is.null(link_geo)) {
+    # find geographic covariates
+    covariates <- get_geo_predictors(input_data, link_geo)
+    if(ncol(covariates) > 1) {
+      new_data <- clean_left_join(new_data, covariates, by = link_geo)
+    }
+  }
+
+  # append levels for other geographic predictors
+  for(v in intersect(names(new_data), vars_global$geo)) {
+    levels[[v]] <- unique(new_data[[v]]) %>% sort()
+  }
+
+  # duplicate rows for each time index
+  new_data <- purrr::map_dfr(
+    seq_len(n_time_indices),
+    ~ new_data %>% mutate(time = .x)
+  )
+
+  # add 'total' column to interface with plotting functions
+  if (metadata$family == "normal") {
+    input_data <- input_data %>% mutate(total = 1)
+  }
+
+  vars <- create_variable_list(input_data, covariates, vars_global)
+
+  return(list(
+    input = input_data,
+    new = new_data,
+    levels = levels,
+    vars = vars
+  ))
+}
 
 #' Create zip-to-county-state crosswalk
 #'
