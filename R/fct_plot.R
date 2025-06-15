@@ -528,7 +528,6 @@ plot_outcome_timevar <- function(
 
     if (metadata$family == "binomial") {
       # ensure bounds are non-negative for binomial family
-      plot_df$bound_upper[plot_df$bound_upper < 0] <- 0
       plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
     }
   }
@@ -971,8 +970,20 @@ plot_est_temporal <- function(
     bound_lower = .data$est - .data$std,
     bound_upper = .data$est + .data$std
   )
-  plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
-  limits <- c(0, max(plot_df$bound_upper, na.rm = TRUE))
+
+  if(metadata$family == "binomial") {
+    # ensure bounds are non-negative for binomial family
+    plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
+  }
+  config <- list(
+    limits = c(min(plot_df$bound_lower), max(plot_df$bound_upper)),
+    expand = switch(metadata$family,
+      "binomial" = c(5e-3, 0.1),
+      c(0.1, 0.1)
+    )
+  )
+  
+
 
   plot_list <- list()
   i = 1
@@ -1038,8 +1049,8 @@ plot_est_temporal <- function(
         expand = c(0, 0.1)
       ) +
       scale_y_continuous(
-        limits = limits,
-        expand = expansion(mult = c(5e-3, 0.1))
+        limits = config$limits,
+        expand = expansion(mult = config$expand)
       ) +
       theme(
         legend.title = element_blank(),

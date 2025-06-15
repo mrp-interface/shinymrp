@@ -24,6 +24,10 @@ module_ids <- list(
 )
 
 GLOBAL <- list(
+  path = list(
+    example_data = "extdata/example/data/",
+    example_fit = "extdata/example/fit/"
+  ),
   family = c("binomial", "normal"),
   vars = list(
     pstrat = c("sex", "race", "age", "edu", "county", "state"),

@@ -269,8 +269,10 @@ mod_analyze_upload_server <- function(id, global){
       shinyjs::reset("pstrat_upload")
       shinyjs::reset("toggle_sample")
       shinyjs::reset("toggle_pstrat")
+      shinyjs::reset("toggle_table")
       shinyjs::reset("link_geo")
       shinyjs::reset("acs_year")
+      
 
       raw_sample(NULL)
       raw_pstrat(NULL)
@@ -359,7 +361,7 @@ mod_analyze_upload_server <- function(id, global){
         df <- df %>%
           DT::formatRound(
             columns = c("outcome"),
-            digits = 2
+            digits = 4
           )
       } else {
         df <- df %>%
@@ -402,7 +404,6 @@ mod_analyze_upload_server <- function(id, global){
           data = raw_sample(),
           metadata = global$metadata,
           zip_county_state = global$extdata$zip_county_state,
-          const = GLOBAL,
           is_sample = TRUE,
           is_aggregated = global$metadata$family != "normal" &&
             input$toggle_sample == "agg"
@@ -410,11 +411,11 @@ mod_analyze_upload_server <- function(id, global){
 
         sample_errors(character(0))
       
-      # }, error = function(e) {
-      #   # show error message
-      #   error_message <- paste("Error processing data:\n", e$message)
-      #   sample_errors(error_message)
-      #   message(error_message)
+      }, error = function(e) {
+        # show error message
+        error_message <- paste("Error processing data:\n", e$message)
+        sample_errors(error_message)
+        message(error_message)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
@@ -428,23 +429,19 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      file_name <- create_example_filename(global$metadata, suffix = "individual")
+      file_name <- create_example_filename(global$metadata, suffix = "raw")
       readr::read_csv(
-        app_sys(paste0("extdata/example/data/", file_name)),
+        app_sys(paste0(GLOBAL$path$example_data, file_name)),
         show_col_types = FALSE
       ) %>%
         raw_sample()
 
-      file_name <- create_example_filename(
-        global$metadata,
-        suffix = switch(global$metadata$family,
-          "binomial" = "aggregated",
-          "normal" = "individual"
-        )
-      )
-      global$data <- readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) %>%
-        clean_data() %>%
-        mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
+      file_name <- create_example_filename(global$metadata, suffix = "prep")
+      global$data <- readr::read_csv(
+        app_sys(paste0(GLOBAL$path$example_data, file_name)),
+        show_col_types = FALSE
+      ) %>%
+        preprocess_example(global$extdata$fips$county)
       
       waiter::waiter_hide()
     })
@@ -456,12 +453,9 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      file_name <- create_example_filename(global$metadata, suffix = "aggregated")
-
-      readr::read_csv(app_sys(paste0("extdata/example/data/", file_name)), show_col_types = FALSE) %>% raw_sample()
-      global$data <- raw_sample() %>%
-        clean_data() %>%
-        mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
+      file_name <- create_example_filename(global$metadata, suffix = "prep")
+      readr::read_csv(app_sys(paste0(GLOBAL$path$example_data, file_name)), show_col_types = FALSE) %>% raw_sample()
+      global$data <- preprocess_example(raw_sample(), global$extdata$fips$county)
 
       waiter::waiter_hide()
     })
@@ -598,7 +592,7 @@ mod_analyze_upload_server <- function(id, global){
 
             global$plot_data <- nullify(plot_data)
           }
-          
+
           # set success to TRUE if no errors occurred
           success <- TRUE
 
@@ -654,7 +648,6 @@ mod_analyze_upload_server <- function(id, global){
           data = raw_pstrat(),
           metadata = global$metadata,
           zip_county_state = global$extdata$zip_county_state,
-          const = GLOBAL,
           is_sample = FALSE,
           is_aggregated = input$toggle_pstrat == "agg"
         )
@@ -665,7 +658,7 @@ mod_analyze_upload_server <- function(id, global){
         # Find the smallest common geography
         link_geo <- NULL
         common <- intersect(names(global$data), names(new_data))
-        smallest <- get_smallest_geo(common, GLOBAL$vars$geo)
+        smallest <- get_smallest_geo(common)
         if (!is.null(smallest)) {
           link_geo <- smallest$geo
         }
@@ -757,17 +750,14 @@ mod_analyze_upload_server <- function(id, global){
     # Example poststratification data download handler
     output$save_pstrat_example <- downloadHandler(
       filename = function() {
-        # Name based on data format
-        prefix <- create_example_filename(global$metadata, suffix = "pstrat", ext = NULL)
-        paste0(prefix, "_example_", format(Sys.Date(), "%Y%m%d"), ".csv")
+        paste0("pstrat_example_", format(Sys.Date(), "%Y%m%d"), ".csv")
       },
       content = function(file) {
-        # Determine which example file to use based on data format
-        file_name <- create_example_filename(global$metadata, suffix = "pstrat")
+        file_name <- "pstrat.csv"
         
         # Read the example file and write it to the download location
         readr::read_csv(
-          app_sys(paste0("extdata/example/data/", file_name)),
+          app_sys(paste0(GLOBAL$path$example_data, file_name)),
           show_col_types = FALSE
         ) %>% 
           readr::write_csv(file)

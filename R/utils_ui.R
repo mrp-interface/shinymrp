@@ -97,35 +97,37 @@ check_fit_object <- function(model, expected_metadata) {
 #'
 #' @noRd
 waiter_ui <- function(type = "") {
+  text_style <- "color: black; margin-top: 10px;"
+
   if(type == "fit") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Fitting model...", style = "color: black")
+      tags$h4("Fitting model...", style = text_style)
     )
   } else if(type == "pstrat") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Running post-stratification...", style = "color: black")
+      tags$h4("Running post-stratification...", style = text_style)
     )
   } else if(type == "loo") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Running diagnostics...", style = "color: black")
+      tags$h4("Running diagnostics...", style = text_style)
     )
   } else if (type == "setup") {
     tagList(
       waiter::spin_loaders(15, color = "black"),
-      tags$h4("Installing CmdStan...", style = "color: black")
+      tags$h4("Installing CmdStan...", style = text_style)
     )
   } else if (type == "wait") {
     tagList(
       waiter::spin_loaders(15, color = "black"),
-      tags$h4("Please wait...", style = "color: black")
+      tags$h4("Please wait...", style = text_style)
     )
   } else if (type == "init") {
     tagList(
       waiter::spin_loaders(15, color = "black"),
-      tags$h4("Initializing...", style = "color: black")
+      tags$h4("Initializing...", style = text_style)
     )
   
   } else {
@@ -574,6 +576,13 @@ create_model_tab <- function(ns, model, last_tab_id) {
               tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
               tags$hr(class = "break_line"),
               tableOutput(ns(model$IDs$varying_tbl))  
+            )
+          },
+          if(nrow(model$params$other) > 0) {
+            tags$div(
+              tags$h4("Other Parameters", class = "break_title"),
+              tags$hr(class = "break_line"),
+              tableOutput(ns(model$IDs$other_tbl))  
             )
           },
           tags$div(

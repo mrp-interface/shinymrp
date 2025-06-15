@@ -47,9 +47,9 @@ mod_analyze_visualize_ui <- function(id){
         bslib::card(
           selectizeInput(
             inputId = ns("summary_slt"),
-            label = "Select quantity",
-            choices = c("Highest Weekly Rate" = "max",
-                        "Lowest Weekly Rate" = "min"),
+            label = "Select summary statistic",
+            choices = c("Highest" = "max",
+                        "Lowest" = "min"),
             options = list(dropdownParent = "body")
           )
         )
@@ -87,23 +87,23 @@ mod_analyze_visualize_server <- function(id, global){
 
     # Update the plot category selectInput based on the linking geography.
     observeEvent(global$link_data, {
+      # Reset the select inputs
+      shinyjs::reset("summary_slt")
+
       choices <- GLOBAL$ui$plot_selection$vis_main
       if (is.null(global$link_data$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
 
       # Update the plot category selectInput with the new choices.
+      updateSelectInput(session, "plot_category", choices = c("foo")) # Placeholder to trigger update
       updateSelectInput(session, "plot_category", choices = choices)
-      
-      # Reset extreme select input
-      shinyjs::reset("summary_slt")
     })
 
 
     # Update the subcategory selectInput based on the main category selection.
     observeEvent(input$plot_category, {
       # Define the subcategory choices for each category.
-
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
