@@ -705,7 +705,8 @@ mod_analyze_model_server <- function(id, global){
         for(i in 1:(length(prior_buffer()) + 1)) {
           dist <- input[[paste0("prior_dist_", i)]] %>% clean_prior_syntax()
           eff <- input[[paste0("prior_eff_", i)]]
-          if(is.null(nullify(dist))) {
+
+          if(!is.null(nullify(dist))) {
             for(s in eff) {
               ss <- strsplit(s, split = "_")[[1]]
               all_priors[[ss[1]]][[ss[2]]] <- dist
