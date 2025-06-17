@@ -17,9 +17,8 @@ app_server <- function(input, output, session) {
     session = session,
     extdata = list(
       zip_tract = readr::read_csv(app_sys("extdata/zip_tract.csv"), show_col_types = FALSE, col_types = readr::cols(.default = "c")),
-      pstrat_covid = readr::read_csv(app_sys("extdata/pstrat_covid.csv"), show_col_types = FALSE) %>% format_geocode(),
-      covar_covid = readr::read_csv(app_sys("extdata/covar_covid.csv"), show_col_types = FALSE) %>% format_geocode(),
-      pstrat_poll = readr::read_csv(app_sys("extdata/pstrat_poll.csv"), show_col_types = FALSE),
+      acs_covid = readr::read_csv(app_sys("extdata/acs/acs_covid_2017-2021.csv"), show_col_types = FALSE),
+      acs_poll = readr::read_csv(app_sys("extdata/pstrat_poll.csv"), show_col_types = FALSE),
       zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) %>% clean_chr(),
       fips = list(
         county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE) %>% clean_chr(),

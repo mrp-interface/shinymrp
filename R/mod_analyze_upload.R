@@ -533,25 +533,30 @@ mod_analyze_upload_server <- function(id, global){
 
           if(!is.null(global$metadata$special_case) &&
              global$metadata$special_case == "covid") {
+
+            out <- combine_tracts_covid(
+              tract_data = global$extdata$acs_covid,
+              zip_tract = global$extdata$zip_tract
+            )
+            
             # prepare data for MRP
             global$mrp <- prepare_mrp_covid(
               input_data = global$data,
-              pstrat_data = global$extdata$pstrat_covid,
-              covariates = global$extdata$covar_covid,
-              demo_levels = create_expected_levels(global$metadata),
-              vars_global = GLOBAL$vars
+              covariates = out$covar,
+              pstrat_data  = out$pstrat,
+              metadata   = global$metadata
             )
 
             # prepare data for plotting
             global$plot_data <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
               geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
-              raw_covariates = global$extdata$covar_covid %>% filter(.data$zip %in% unique(global$mrp$input$zip))
+              raw_covariates = out$covar %>% filter(.data$zip %in% unique(global$mrp$input$zip))
             )
 
           } else if (!is.null(global$metadata$special_case) &&
                      global$metadata$special_case == "poll") {
-            new_data <- global$extdata$pstrat_poll %>%
+            new_data <- global$extdata$acs_poll %>%
               mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
 
             global$mrp <- prepare_mrp_custom(
@@ -569,7 +574,10 @@ mod_analyze_upload_server <- function(id, global){
 
           } else {
             # retrieve ACS data based on user's selection
-            tract_data <- readr::read_csv(app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")), show_col_types = FALSE)
+            tract_data <- readr::read_csv(
+              app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")),
+              show_col_types = FALSE
+            )
 
             # prepare data for MRP
             global$mrp <- prepare_mrp_acs(
@@ -596,8 +604,8 @@ mod_analyze_upload_server <- function(id, global){
           # set success to TRUE if no errors occurred
           success <- TRUE
 
-        }, error = function(e) {
-          message(paste("Error linking data:\n", e$message))
+        # }, error = function(e) {
+        #   message(paste("Error linking data:\n", e$message))
         }, finally = {
           stop_busy(
             session = session,

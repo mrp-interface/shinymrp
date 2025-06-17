@@ -1,6 +1,9 @@
 source("R/utils_global.R")
 source("R/fct_data.R")
 
+library(dplyr)
+library(magrittr)
+
 create_pstrat <- function(
     tract_data,
     zip_tract,
@@ -48,6 +51,5 @@ pstrat <- create_pstrat(
   link_geo = "county"
 )
 
-print(nrow(pstrat))
 View(pstrat)
 readr::write_csv(pstrat, "inst/extdata/example/data/pstrat.csv")
