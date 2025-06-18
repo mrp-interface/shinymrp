@@ -223,6 +223,52 @@ get_zip_tract <- function(key) {
   return(zip_tract)
 }
 
+combine_tracts_covid <- function(
+    tract_data,
+    zip_tract
+) {
+  
+  # join tract-level data with zip-tract conversion table
+  # then group by zip
+  by_zip <- zip_tract %>%
+    select(.data$geoid, .data$zip) %>%
+    rename("GEOID" = "geoid") %>%
+    inner_join(
+      tract_data,
+      by = "GEOID"
+    ) %>%
+    mutate(county = substr(.data$GEOID, 1, 5)) %>%
+    group_by(.data$zip)
+  
+  # compute zip-level population size by aggregating across overlapping tracts
+  all_colnames <- names(tract_data)
+  pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
+  pstrat_data <- by_zip %>%
+    summarise(
+      county = first(county),
+      across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
+    )
+  
+  # omit zips with only NA then compute zip-level quantities
+  covar_colnames <- setdiff(all_colnames, pstrat_colnames)
+  covariates <- by_zip %>%
+    filter(if_all(all_of(covar_colnames), ~ !all(is.na(.)))) %>%
+    summarize(
+      county = first(county),
+      urbanicity  = 1 - sum((pop_size / sum(pop_size, na.rm = TRUE)) * (urbanicity == "N"), na.rm = TRUE),
+      college     = sum(above_college, na.rm = TRUE) / (sum(below_college, na.rm = TRUE) + sum(above_college, na.rm = TRUE)),
+      employment  = sum(employed, na.rm = TRUE) / (sum(employed, na.rm = TRUE) + sum(unemployed, na.rm = TRUE) + sum(other, na.rm = TRUE)),
+      poverty     = sum(`0-0.99`, na.rm = TRUE) / (sum(`0-0.99`, na.rm = TRUE) + sum(`1-1.99`, na.rm = TRUE) + sum(`2+`, na.rm = TRUE)),
+      income      = sum((pop_size / sum(pop_size, na.rm = TRUE)) * household_income, na.rm = TRUE),
+      ADI         = sum((pop_size / sum(pop_size, na.rm = TRUE)) * adi, na.rm = TRUE)
+    )
+  
+  return(list(
+    pstrat = pstrat_data,
+    covar = covariates
+  ))
+}
+
 library(magrittr)
 library(dplyr)
 

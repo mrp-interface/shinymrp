@@ -534,29 +534,28 @@ mod_analyze_upload_server <- function(id, global){
           if(!is.null(global$metadata$special_case) &&
              global$metadata$special_case == "covid") {
 
-            out <- combine_tracts_covid(
-              tract_data = global$extdata$acs_covid,
-              zip_tract = global$extdata$zip_tract
-            )
-            
             # prepare data for MRP
             global$mrp <- prepare_mrp_covid(
               input_data = global$data,
-              covariates = out$covar,
-              pstrat_data  = out$pstrat,
+              covariates = global$extdata$acs$covar_covid,
+              pstrat_data  = global$extdata$acs$pstrat_covid,
               metadata   = global$metadata
             )
 
             # prepare data for plotting
             global$plot_data <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-              geojson = list(county = filter_geojson(global$extdata$geojson$county, global$mrp$levels$county)),
-              raw_covariates = out$covar %>% filter(.data$zip %in% unique(global$mrp$input$zip))
+              geojson = list(county = filter_geojson(
+                global$extdata$geojson$county,
+                global$mrp$levels$county
+              )),
+              raw_covariates = global$extdata$acs$covar_covid %>%
+                filter(.data$zip %in% unique(global$mrp$input$zip))
             )
 
           } else if (!is.null(global$metadata$special_case) &&
                      global$metadata$special_case == "poll") {
-            new_data <- global$extdata$acs_poll %>%
+            new_data <- global$extdata$acs$pstrat_poll %>%
               mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
 
             global$mrp <- prepare_mrp_custom(
@@ -569,7 +568,10 @@ mod_analyze_upload_server <- function(id, global){
 
             # prepare data for plotting
             global$plot_data <- list(
-              geojson = list(state = filter_geojson(global$extdata$geojson$state, global$mrp$levels$state))
+              geojson = list(state = filter_geojson(
+                global$extdata$geojson$state,
+                global$mrp$levels$state
+              ))
             )
 
           } else {
@@ -604,8 +606,8 @@ mod_analyze_upload_server <- function(id, global){
           # set success to TRUE if no errors occurred
           success <- TRUE
 
-        # }, error = function(e) {
-        #   message(paste("Error linking data:\n", e$message))
+        }, error = function(e) {
+          message(paste("Error linking data:\n", e$message))
         }, finally = {
           stop_busy(
             session = session,
