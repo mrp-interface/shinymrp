@@ -222,7 +222,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       value = "upload",
       tags$p("The MRP interface needs two major data components:"),
       tags$ul(
-        tags$li(tags$b("Sample data:"), " The analysis sample that includes the outcome of interest and predictors, such as the COVID test records and survey sample results."),
+        tags$li(tags$b("Sample data:"), " The analysis sample that includes the outcome of interest (either ", tags$b("binary"), " or ", tags$b("continuous"), ") and predictors, such as the COVID test records and survey sample results."),
         tags$li(tags$b("Poststratification data:"), " The table containing sizes of groups in the target population defined by the demographic and geographic factors.")
       ),
       tags$p("Providing poststratification data is optional since the application can utilize geographic identifiers to link the American Community Survey (ACS) and obtain the population counts residing in the catchment areas. Data linking is available across all application modules, and users can upload custom poststratification data in the time-varying and cross-sectional general cases."),
@@ -232,7 +232,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li(tags$b("Individual-level:"), " Each row contains information for on individual."),
         tags$li(tags$b("Aggregated:"), " Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.")
       )),
-      tags$p("Aggregated data are preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),
+      tags$p("Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),
       tags$h5("Required Columns and Categories", class = "mt-4"),
       tags$p("The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):"),
       tags$ul(
@@ -245,17 +245,20 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li("State\\(^1\\)"),
         tags$li(withMathJax("Week indices (time)\\(^2\\)")),
         tags$li("Date"),
-        tags$li(withMathJax("Positive response indicator or number of positive responses (positive)\\(^3\\)")),
-        tags$li(withMathJax("Cross-tabulation cell counts (total)\\(^3\\)")),
-        tags$li(withMathJax("Survey weights (weight)\\(^4\\)"))
+        tags$li(withMathJax("Continuous outcome measure (outcome)\\(^3\\)")),
+        tags$li(withMathJax("Positive response indicator or number of positive responses (positive)\\(^4\\)")),
+        tags$li(withMathJax("Cross-tabulation cell counts (total)\\(^4\\)")),
+        tags$li(withMathJax("Survey weights (weight)\\(^5\\)"))
       ),
       tags$p("1. For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.",
         class = "fst-italic small mb-1"),
       tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.",
         class = "fst-italic small mb-1"),
-      tags$p("3. In the individual-level data, the binary outcome column must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.",
+      tags$p("3. For data with continuous outcome measures, the outcome column must be named 'outcome'.",
         class = "fst-italic small mb-1"),
-      tags$p("4. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
+      tags$p("4. For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.",
+        class = "fst-italic small mb-1"),
+      tags$p("5. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
         class = "fst-italic small"),
       tags$h5("Data Preprocessing", class = "mt-4"),
       tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to week index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
