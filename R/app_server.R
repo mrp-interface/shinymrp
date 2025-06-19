@@ -17,7 +17,6 @@ app_server <- function(input, output, session) {
     session = session,
     extdata = list(
       zip_tract = readr::read_csv(app_sys("extdata/zip_tract.csv"), show_col_types = FALSE, col_types = readr::cols(.default = "c")),
-      acs_covid = readr::read_csv(app_sys("extdata/acs/acs_covid_2017-2021.csv"), show_col_types = FALSE),
       zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) %>% clean_chr(),
       acs = list(
         pstrat_poll = readr::read_csv(app_sys("extdata/acs/pstrat_poll.csv"), show_col_types = FALSE),
