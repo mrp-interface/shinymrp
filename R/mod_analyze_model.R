@@ -450,7 +450,7 @@ mod_analyze_model_server <- function(id, global){
         tagList(
           bslib::card(
             bslib::card_header(tags$b("Note")),
-            bslib::card_body(tags$p("The plots show the positive response rates or the outcome averages computed from the observed data and 10 sets of replicated data."))
+            bslib::card_body(tags$p("The plots show outcome averages computed from the observed data and 10 sets of replicated data."))
           ),
           purrr::map(seq_along(model_names), ~ list(
             HTML(paste0("<h4 class='formula'><u>", model_names[.x], "</u>", ": ", model_formulas[.x], "</h4>")),

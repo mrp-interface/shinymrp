@@ -3,7 +3,7 @@
 #' @description Creates the user interface for data visualization and exploratory
 #' analysis in the MRP application. Provides a sidebar layout with dynamic
 #' selection controls for different plot categories including individual-level
-#' characteristics, geographic patterns, and positive response rates. Supports
+#' characteristics, geographic patterns, and outcome averages. Supports
 #' both time-varying and cross-sectional data visualization with interactive maps
 #' and plots.
 #'
@@ -64,7 +64,7 @@ mod_analyze_visualize_ui <- function(id){
 #' @description Server logic for the data visualization module. Manages dynamic
 #' UI updates based on data format and linking geography, renders various types
 #' of plots including individual-level characteristics, geographic patterns,
-#' and positive response rates. Handles both time-varying and cross-sectional data
+#' and outcome averages. Handles both time-varying and cross-sectional data
 #' with appropriate visualization methods including interactive maps and charts.
 #'
 #' @param id Character string. The module's namespace identifier.
@@ -118,9 +118,9 @@ mod_analyze_visualize_server <- function(id, global){
             global$metadata$special_case == "covid") {
           choices <- c(choices, GLOBAL$ui$plot_selection$geo_covar)
         }
-      } else if (input$plot_category == "pos_rate") {
+      } else if (input$plot_category == "outcome") {
         label <- "2. Select plot type"
-        choices <- GLOBAL$ui$plot_selection$pos_rate
+        choices <- GLOBAL$ui$plot_selection$outcome
 
         if (!global$metadata$is_timevar) {
           choices <- choices[!choices == "overall"]
@@ -166,7 +166,7 @@ mod_analyze_visualize_server <- function(id, global){
           "urban" = mod_geo_plot_ui(ns("geo_urban")),
           "adi" = mod_geo_plot_ui(ns("geo_adi"))
         )
-      } else if (category == "pos_rate") {
+      } else if (category == "outcome") {
         switch(subcategory,
           "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot_height),
           "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$map_height)
@@ -253,7 +253,7 @@ mod_analyze_visualize_server <- function(id, global){
 
 
     # --------------------------------------------------------------------------
-    # Plot for Positive Response Rate/Outcome Variable
+    # Plot for Outcome Measure over Time
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
       req(input$plot_subcategory == "overall")
@@ -266,7 +266,7 @@ mod_analyze_visualize_server <- function(id, global){
     })
 
     # --------------------------------------------------------------------------
-    # Map for Positive Response Rate/Outcome Variable
+    # Map for Outcome Measure
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
       req(global$link_data$link_geo)

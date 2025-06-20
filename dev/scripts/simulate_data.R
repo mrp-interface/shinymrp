@@ -185,6 +185,7 @@ simulate_data <- function(
     effects,
     params,
     family,
+    sigma = 5,
     seed = NULL,
     extra = NULL
 ) {
@@ -228,7 +229,7 @@ simulate_data <- function(
   } else if (family == "normal") {
     data <- base_data %>% mutate(
       mu = !!rlang::parse_expr(formula_terms),
-      outcome = rnorm(n(), mu, 1)
+      outcome = rnorm(n(), mu, sigma)
     )
   }
   
@@ -394,10 +395,11 @@ run_simulation <- function(
     covar_geo = NULL,
     n_time = 12,
     n_geo = 10,
-    n_samples = 5000,
+    n_samples = 1000,
     include_date = FALSE,
     seed = sample(1:10000, 1),
     save_path = NULL,
+    file_name = "data"
     extra = NULL
 ) {
 
@@ -468,9 +470,9 @@ run_simulation <- function(
   )
 
   if(!is.null(save_path)) {
-    readr::write_csv(out$indiv, file.path(save_path, "data_raw.csv"))
+    readr::write_csv(out$indiv, file.path(save_path, paste0(file_name, "_raw.csv")))
     if (!is.null(out$agg)) {
-      readr::write_csv(out$agg, file.path(save_path, "data_prep.csv"))
+      readr::write_csv(out$agg, file.path(save_path, paste0(file_name, "_prep.csv")))
     }
   }
 
@@ -544,9 +546,12 @@ check_simulation_result <- function(
   print(hist_plot)
 }
 
-path <- "dev/data/covid_binomial_sim.RDS"
+path <- "dev/data/simulation/timevarying_normal_sim.RDS"
 
 sim_inputs <- qs::qread(path)
+
+
+
 
 sim <- run_simulation(
   effects = sim_inputs$effects,
@@ -555,7 +560,7 @@ sim <- run_simulation(
   covar_geo = sim_inputs$covar_geo,
   n_geo = sim_inputs$n_geo,
   include_date = sim_inputs$include_date,
-  save_path = "/Users/tntoan/Downloads",
+  save_path = "inst/extdata/example/data/",
   extra = sim_inputs$extra
 )
 

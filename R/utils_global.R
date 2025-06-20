@@ -69,11 +69,16 @@ GLOBAL <- list(
       yrep_color = "darkorange",
       mrp_color = "darkorange"  
     ),
+    plot = list(
+      point_size = 4,
+      errorbar_size = 1.0,
+      errorbar_width = 0
+    ),
     plot_selection = list(
       vis_main = c(
         "Individual Characteristics" = "indiv",
         "Geographic Characteristics" = "geo",
-        "Positive Response Rate" = "pos_rate"
+        "Outcome Average" = "outcome"
       ),
       indiv = c(
         "Sex" = "sex",
@@ -92,7 +97,7 @@ GLOBAL <- list(
         "Urbanicity" = "urban",
         "ADI" = "adi"
       ),
-      pos_rate = c(
+      outcome = c(
         "Overall" = "overall",
         "By Geography" = "by_geo"
       ),
