@@ -552,7 +552,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
           tags$p(paste0("A binomial model with a logit function of the positive response rate. ",
                         "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small")
         } else {
-          tags$p(paste0("A linear model of the outcome variable. ",
+          tags$p(paste0("A linear model of the outcome measure. ",
                         "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small")
         },
         actionButton(
@@ -583,7 +583,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
           },
           if(nrow(model$params$other) > 0) {
             tags$div(
-              tags$h4("Other Parameters", class = "break_title"),
+              tags$h4("Standard Deviation of Residuals", class = "break_title"),
               tags$hr(class = "break_line"),
               tableOutput(ns(model$IDs$other_tbl))  
             )
@@ -593,7 +593,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
             tags$hr(class = "break_line"),
             bslib::card(
               bslib::card_header(tags$b("Note")),
-              bslib::card_body(tags$p("The plot shows the positive response rates or outcome averages computed from the observed data and 10 sets of replicated data.")) 
+              bslib::card_body(tags$p("The plot shows the outcome averages computed from the observed data and 10 sets of replicated data.")) 
             ),
             plotOutput(outputId = ns(model$IDs$ppc_plot))
           )

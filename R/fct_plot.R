@@ -195,32 +195,18 @@ prep_raw <- function(
 
   # map titles
   title <- list()
-  title$main_title <- switch(metadata$family,
-    "binomial" = "Positive Response Rate by Geography",
-    "normal" = "Outcome Average by Geography"
-  )
+  title$main_title <- "Outcome Average by Geography"
   if (metadata$is_timevar) {
     title$main_title <- paste0("Weekly ", title$main_title)
   }
 
   title$hover_title <- if (metadata$is_timevar) {
-    switch(metadata$family,
-      "binomial" = switch(
-        summary_type,
-        "max" = "Highest Weekly Rate",
-        "min" = "Lowest Weekly Rate"
-      ),
-      "normal" = switch(
-        summary_type,
-        "max" = "Highest Weekly Average",
-        "min" = "Lowest Weekly Average"
-      )
+    switch(summary_type,
+      "max" = "Highest Weekly Average",
+      "min" = "Lowest Weekly Average"
     )
   } else {
-    switch(metadata$family,
-      "binomial" = "Positive Response Rate",
-      "normal" = "Outcome Average"
-    )
+    "Outcome Average"
   }
 
   return(list(
@@ -572,10 +558,7 @@ plot_outcome_timevar <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = switch(metadata$family,
-        "binomial" = "Positive\nResponse Rate",
-        "normal" = "Outcome"
-      ),
+      y = "Outcome average",
       caption = if(show_caption) {
         "*The shaded areas represent \u00B11 SD of uncertainty"
       } else {
@@ -652,18 +635,18 @@ plot_outcome_static <- function(
 
   p <- ggplot(data = plot_df) +
     geom_point(
-      aes(x = .data$data, y = .data$median)
+      aes(x = .data$data, y = .data$median),
+      size = GLOBAL$ui$plot$point_size
     ) +
     geom_errorbar(
       aes(x = .data$data, ymin = .data$lower, ymax = .data$upper),
-      width = 0
+      size = GLOBAL$ui$plot$errorbar_size,
+      width = GLOBAL$ui$plot$errorbar_width
     ) +
     labs(
       x = "",
-      y = switch(metadata$family,
-        "binomial" = "Positive\nResponse Rate",
-        "normal" = "Outcome"
-      )
+      y = "Outcome average",
+      caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
     theme(
       plot.title = element_text(hjust = 0.5),
@@ -744,10 +727,7 @@ plot_ppc_timevar_subset <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = switch(metadata$family,
-        "binomial" = "Positivity",
-        "normal" = "Outcome"
-      )
+      y = "Outcome average"
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -846,10 +826,7 @@ plot_ppc_timevar_all <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = switch(metadata$family,
-        "binomial" = "Positivity",
-        "normal" = "Outcome"
-      )
+      y = "Outcome average"
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -915,14 +892,11 @@ plot_ppc_static <- function(
         color = .data$name,
         shape = .data$name
       ),
-      size = 3
+      size = GLOBAL$ui$plot$point_size
     ) +
     labs(
       x = "",
-      y = switch(metadata$family,
-        "binomial" = "Positive\nResponse Rate",
-        "normal" = "Outcome"
-      )
+      y = "Outcome average"
     ) +
     theme(
       legend.title = element_blank(),
@@ -1038,10 +1012,7 @@ plot_est_temporal <- function(
       labs(
         title = "",
         x = if(is.null(dates)) "Week index" else "",
-        y = switch(metadata$family,
-          "binomial" = "Positive\nResponse Rate",
-          "normal" = "Outcome"
-        )
+        y = "Outcome average"
       ) +
       scale_x_continuous(
         breaks = xticks,
@@ -1094,7 +1065,8 @@ plot_est_static <- function(plot_df, metadata = NULL) {
       aes(
         x = .data$factor,
         y = .data$est
-      )
+      ),
+      size = GLOBAL$ui$plot$point_size
     ) +
     geom_errorbar(
       aes(
@@ -1102,18 +1074,16 @@ plot_est_static <- function(plot_df, metadata = NULL) {
         ymin = .data$est - .data$std,
         ymax = .data$est + .data$std
       ),
-      alpha = 0.8,
-      width = 0
+      size = GLOBAL$ui$plot$errorbar_size,
+      width = GLOBAL$ui$plot$errorbar_width
     ) +
     scale_x_discrete(
       labels = tools::toTitleCase
     ) +
     labs(
       x = "",
-      y = switch(metadata$family,
-        "binomial" = "Positive\nResponse Rate",
-        "normal" = "Outcome"
-      )
+      y = "Outcome average",
+      caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
     theme(
       plot.title = element_text(hjust = 0.5),
