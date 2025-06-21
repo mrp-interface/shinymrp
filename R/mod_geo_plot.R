@@ -16,7 +16,7 @@ mod_geo_plot_ui <- function(id) {
       open = TRUE,
       DT::dataTableOutput(outputId = ns("table"))
     ),
-    plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot_height)
+    plotOutput(outputId = ns("plot"), height = GLOBAL$ui$plot$plot_height)
   )
 }
     

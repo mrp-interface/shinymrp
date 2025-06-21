@@ -1208,8 +1208,7 @@ run_mcmc <- function(
     cpp_options = list(stan_threads = TRUE)
   )
 
-  fit <- list()
-  fit$mcmc <- mod_mcmc$sample(
+  fit <- mod_mcmc$sample(
     data = stan_data,
     iter_warmup = n_iter/2,
     iter_sampling = n_iter/2,

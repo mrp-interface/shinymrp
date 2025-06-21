@@ -140,7 +140,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -173,7 +173,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -206,7 +206,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -239,7 +239,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -278,7 +278,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -317,7 +317,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -356,7 +356,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -395,7 +395,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -436,7 +436,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -478,7 +478,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -522,7 +522,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -564,7 +564,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -608,7 +608,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -647,7 +647,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -691,7 +691,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -735,7 +735,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE

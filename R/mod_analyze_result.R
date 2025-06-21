@@ -156,7 +156,7 @@ mod_analyze_result_server <- function(id, global){
           metadata = selected_model()$metadata
         )
       }
-    }, height = function() GLOBAL$ui$plot_height)
+    }, height = function() GLOBAL$ui$plot$plot_height)
     
     # --------------------------------------------------------------------------
     # Render UI dynamically based on the user's selection.
@@ -168,7 +168,7 @@ mod_analyze_result_server <- function(id, global){
       subgroup_select <- isolate(input$subgroup_select)
 
       if (result_category == "overall") {
-        plotOutput(ns("est_overall"), height = GLOBAL$ui$plot_height)
+        plotOutput(ns("est_overall"), height = GLOBAL$ui$plot$plot_height)
       } else if (result_category == "subgroup") {
         switch(subgroup_select,
           "sex" = mod_est_plot_ui(ns("est_sex")),
@@ -187,7 +187,7 @@ mod_analyze_result_server <- function(id, global){
       if(global$input$navbar_analyze == "nav_analyze_result") {        
         if (!is.null(global$mrp)) {
           # Omit pre-poststratification models.
-          models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
+          models <- purrr::keep(global$models, ~ !is.null(.x$est))
           global$poststratified_models <- models
           
           if(length(models) == 0) {

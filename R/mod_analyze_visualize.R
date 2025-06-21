@@ -168,8 +168,8 @@ mod_analyze_visualize_server <- function(id, global){
         )
       } else if (category == "outcome") {
         switch(subcategory,
-          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot_height),
-          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$map_height)
+          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot$plot_height),
+          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$plot$map_height)
         )
       }
     })

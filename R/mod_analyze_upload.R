@@ -54,7 +54,7 @@ mod_analyze_upload_ui <- function(id) {
           fileInput(
             inputId = ns("sample_upload"),
             label = NULL,
-            accept = GLOBAL$ui$data_accept
+            accept = GLOBAL$ui$format$data
           ),
           uiOutput(ns("sample_feedback")),
           p(class = "mt-0 small",
@@ -161,7 +161,7 @@ mod_analyze_upload_ui <- function(id) {
                     fileInput(
                       inputId = ns("pstrat_upload"),
                       label = NULL,
-                      accept = GLOBAL$ui$data_accept
+                      accept = GLOBAL$ui$format$data
                     ),
                     uiOutput(ns("pstrat_feedback")),
                     tags$p(class = "mt-0", tags$u("Example data")),

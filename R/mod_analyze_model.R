@@ -512,13 +512,8 @@ mod_analyze_model_server <- function(id, global){
             # Extract log-likelihood from each model
             loo_list <- purrr::map(selected_models, function(m) {
               utils::capture.output({
-                loo_output <- loo::loo(
-                  m$fit$loo$draws("log_lik"),
-                  cores = m$metadata$n_chains
-                )
+                loo_output <- loo::loo(m$log_lik, cores = m$metadata$n_chains)
               }, type = "message")
-
-              
 
               return(loo_output)
             })
@@ -628,7 +623,7 @@ mod_analyze_model_server <- function(id, global){
     # Add model
     #-----------------------------------------------------------------------
     observeEvent(input$add_model, {
-      # 1. Check if CmdStan is installed
+      # Check if CmdStan is installed
       if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
         if(get_config("demo")) {
           show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
@@ -638,14 +633,14 @@ mod_analyze_model_server <- function(id, global){
         return()
       }
       
-      # 2. Validate iteration and chain parameters
+      # Validate iteration and chain parameters
       n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
       n_chains <- input$chain_select
       seed <- input$seed_select
       
       check <- check_iter_chain(
-        n_iter, GLOBAL$ui$iter_range,
-        n_chains, GLOBAL$ui$chain_range,
+        n_iter, GLOBAL$ui$model$iter_range,
+        n_chains, GLOBAL$ui$model$chain_range,
         seed
       )
       
@@ -661,19 +656,19 @@ mod_analyze_model_server <- function(id, global){
         return()
       }
       
-      # 3. Check if maximum number of models is reached
-      if(length(global$models) > GLOBAL$ui$max_model) {
+      # Check if maximum number of models is reached
+      if(length(global$models) + 1 > GLOBAL$ui$model$max_models) {
         show_alert("Maximum number of models reached. Please remove existing models to add more.", global$session)
         return()
       }
       
-      # 4. Check if the user selected any predictors
+      # Check if the user selected any predictors
       if(length(c(input$fixed, input$varying, input$interaction)) == 0) {
         show_alert("No predictor has been selected. Please include at least one.", global$session)
         return()
       }
       
-      # 5. Check if prior syntax is correct
+      # Check if prior syntax is correct
       valid_priors <- purrr::map(1:(length(prior_buffer()) + 1), function(i) {
         input[[paste0("prior_dist_", i)]] %>%
           clean_prior_syntax() %>%
@@ -804,7 +799,7 @@ mod_analyze_model_server <- function(id, global){
       show_warnings <- FALSE
       if (is.null(model$diagnostics$mcmc)) {
         out <- extract_diagnostics(
-          fit = model$fit$mcmc,
+          fit = model$fit,
           total_transitions = model$metadata$n_iter / 2 * model$metadata$n_chains
         )
         model$diagnostics$mcmc <- out$summary
@@ -812,9 +807,9 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # extract posterior summary of coefficients
-      if (is.null(model$params$fixed) && is.null(model$params$varying)) {
+      if (is.null(model$params)) {
         model$params <- extract_parameters(
-          fit = model$fit$mcmc,
+          fit = model$fit,
           effects = model$effects,
           input_data = model$mrp$input,
           metadata = model$metadata
@@ -822,29 +817,30 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # run standalone generated quantities for LOO
-      if (is.null(model$fit$loo)) {
-        model$fit$loo <- run_gq(
-          fit_mcmc = model$fit$mcmc,
+      if (is.null(model$log_lik)) {
+        fit_loo <- run_gq(
+          fit_mcmc = model$fit,
           stan_code = model$stan_code$loo,
           stan_data = model$stan_data,
           n_chains = model$metadata$n_chains
         )
-      }
-      
-      # run standalone generated quantities for PPC)
-      if (is.null(model$fit$ppc)) {
-        model$fit$ppc <- run_gq(
-          fit_mcmc = model$fit$mcmc,
-          stan_code = model$stan_code$ppc,
-          stan_data = model$stan_data,
-          n_chains = model$metadata$n_chains
-        )
+
+        model$log_lik <- fit_loo$draws("log_lik")
       }
       
       # data for PPC plots
       if (is.null(model$yrep)) {
+        # run standalone generated quantities for PPC
+        fit_ppc <- run_gq(
+          fit_mcmc = model$fit,
+          stan_code = model$stan_code$ppc,
+          stan_data = model$stan_data,
+          n_chains = model$metadata$n_chains
+        )
+
+        # extract draws and format PPC draws
         model$yrep <- extract_yrep(
-          model$fit$ppc,
+          fit_ppc,
           model$mrp$input,
           model$metadata
         )
@@ -942,7 +938,7 @@ mod_analyze_model_server <- function(id, global){
       # postprocessing
       observeEvent(input[[model$IDs$postprocess_btn]], {
 
-        if(is.null(global$models[[model_id]]$fit$pstrat)) {
+        if(is.null(global$models[[model_id]]$est)) {
           waiter::waiter_show(
             html = waiter_ui("pstrat"),
             color = waiter::transparent(0.9)
@@ -950,15 +946,15 @@ mod_analyze_model_server <- function(id, global){
           
           model <- global$models[[model_id]]
           
-          model$fit$pstrat <- run_gq(
-            fit_mcmc = model$fit$mcmc,
+          fit_pstrat <- run_gq(
+            fit_mcmc = model$fit,
             stan_code = model$stan_code$pstrat,
             stan_data = model$stan_data,
             n_chains = model$metadata$n_chains
           )
           
           model$est <- extract_est(
-            model$fit$pstrat,
+            fit_pstrat,
             model$mrp$new,
             model$metadata
           )
@@ -979,11 +975,6 @@ mod_analyze_model_server <- function(id, global){
               html = waiter_ui("wait"),
               color = waiter::transparent(0.9)
             )
-
-            # save draws in the fit object
-            # model$fit$ppc$draws() already called in extract_yrep
-            model$fit$mcmc$draws()
-            model$fit$loo$draws()
 
             qs::qsave(model, file)
             
@@ -1007,10 +998,6 @@ mod_analyze_model_server <- function(id, global){
             color = waiter::transparent(0.9)
           )
           
-          # save draws in the fit object
-          # model$fit$ppc$draws() already called in extract_yrep
-          model$fit$mcmc$draws()
-          model$fit$loo$draws()
           qs::qsave(model, file)
           
           waiter::waiter_hide()
@@ -1031,7 +1018,7 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # if object contains poststratificaiton results
-      if(!is.null(model$fit$pstrat)) {
+      if(!is.null(model$est)) {
         shinyjs::delay(100, shinyjs::click(model$IDs$postprocess_btn))
       }
       

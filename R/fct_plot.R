@@ -480,7 +480,7 @@ plot_outcome_timevar <- function(
   dates = NULL,
   metadata = NULL,
   show_caption = FALSE,
-  config = GLOBAL$ui$color
+  config = GLOBAL$ui$plot
 ) {
 
   if(is.null(raw)) {
@@ -679,7 +679,7 @@ plot_ppc_timevar_subset <- function(
     raw,
     dates,
     metadata,
-    config = GLOBAL$ui$color
+    config = GLOBAL$ui$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -771,7 +771,7 @@ plot_ppc_timevar_all <- function(
     raw,
     dates,
     metadata,
-    config = GLOBAL$ui$color
+    config = GLOBAL$ui$plot
 ) {
 
   if(is.null(yrep) || is.null(raw)) {
@@ -864,7 +864,7 @@ plot_ppc_static <- function(
     yrep,
     raw,
     metadata = NULL,
-    config = GLOBAL$ui$color
+    config = GLOBAL$ui$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
