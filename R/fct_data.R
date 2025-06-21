@@ -376,7 +376,7 @@ get_dates <- function(df) {
     unique() %>%
     as.Date() %>%
     sort() %>%
-    format(GLOBAL$ui$date_format) %>%
+    format(GLOBAL$ui$format$date) %>%
     as.character()
 }
 

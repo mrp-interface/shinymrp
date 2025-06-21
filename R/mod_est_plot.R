@@ -44,9 +44,9 @@ mod_est_plot_server <- function(id, model, var) {
       req(model())
       
       if(model()$metadata$is_timevar) {
-        GLOBAL$ui$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
+        GLOBAL$ui$plot$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
       } else {
-        GLOBAL$ui$plot_height
+        GLOBAL$ui$plot$plot_height
       }
     })
   })

@@ -32,7 +32,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         "map" = tagList(
           highcharter::highchartOutput(
             outputId = ns("map"),
-            height = GLOBAL$ui$map_height
+            height = GLOBAL$ui$plot$map_height
           ),
           # Only show slider if we have time-varying data
           if (!is.null(time_indices)) {
@@ -42,10 +42,10 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
                 sliderInput(
                 inputId = ns("map_slider"),
                   label = NULL,
-                  min = as.Date(dates[1], format = GLOBAL$ui$date_format),
-                  max = as.Date(dates[length(dates)], format = GLOBAL$ui$date_format),
+                  min = as.Date(dates[1], format = GLOBAL$ui$format$date),
+                  max = as.Date(dates[length(dates)], format = GLOBAL$ui$format$date),
                   step = 7,
-                  value = as.Date(dates[1], format = GLOBAL$ui$date_format),
+                  value = as.Date(dates[1], format = GLOBAL$ui$format$date),
                   width = "100%",
                   animate = GLOBAL$ui$animation
                 )
@@ -80,7 +80,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       dates <- model()$plot_data$dates
       
       time_index <- if (!is.null(time_indices) && !is.null(dates)) {
-        which(as.character(format(input$map_slider, GLOBAL$ui$date_format)) == model()$plot_data$dates)
+        which(as.character(format(input$map_slider, GLOBAL$ui$format$date)) == model()$plot_data$dates)
       } else if (!is.null(time_indices)) {
         input$map_slider
       } else {
@@ -136,9 +136,9 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model())
 
       if(model()$metadata$is_timevar) {
-        GLOBAL$ui$subplot_height * (length(geo_subset()) + 1)
+        GLOBAL$ui$plot$subplot_height * (length(geo_subset()) + 1)
       } else {
-        GLOBAL$ui$plot_height
+        GLOBAL$ui$plot$plot_height
       }
     })
     

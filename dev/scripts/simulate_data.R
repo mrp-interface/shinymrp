@@ -535,7 +535,7 @@ check_simulation_result <- function(
   )
 
   # Get draws and true values
-  draws <- mod$fit$mcmc$draws(variables = variables_draws, format = "draws_matrix")
+  draws <- mod$fit$draws(variables = variables_draws, format = "draws_matrix")
   true <- do.call(c, true_coefs[variables_true])
 
   # Create and print recovery plots
