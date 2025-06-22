@@ -62,7 +62,7 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
 #'   \item{valid}{Logical indicating if the format is valid}
 #'   \item{message}{Warning message if invalid, or NULL if valid}
 #' @noRd
-check_fit_object <- function(model, expected_format) {
+check_fit_object <- function(model, expected_metadata) {
   example_model <- qs::qread(app_sys("extdata/example/fit/fit_crosssectional_other.RDS"))
   
   # Check if the model object has all the required fields
@@ -71,10 +71,11 @@ check_fit_object <- function(model, expected_format) {
   }
 
   # Check if the model object has the expected data format
-  if(model$data_format != expected_format) {
-      return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
-                     data_format_label(model$data_format),
-                     data_format_label(expected_format)))
+  if(model$metadata$special_case != expected_metadata$special_case ||
+     model$metadata$is_timevar != expected_metadata$is_timevar) {
+    return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
+                    use_case_label(model$metadata),
+                    use_case_label(expected_metadata)))
   }
 
   return("")
@@ -96,31 +97,39 @@ check_fit_object <- function(model, expected_format) {
 #'
 #' @noRd
 waiter_ui <- function(type = "") {
+  text_style <- "color: black; margin-top: 10px;"
+
   if(type == "fit") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Fitting model...", style = "color: black")
+      tags$h4("Fitting model...", style = text_style)
     )
   } else if(type == "pstrat") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Running poststratification...", style = "color: black")
+      tags$h4("Running post-stratification...", style = text_style)
     )
   } else if(type == "loo") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Running diagnostics...", style = "color: black")
+      tags$h4("Running diagnostics...", style = text_style)
     )
   } else if (type == "setup") {
     tagList(
       waiter::spin_loaders(15, color = "black"),
-      tags$h4("Installing CmdStan...", style = "color: black")
+      tags$h4("Installing CmdStan...", style = text_style)
     )
   } else if (type == "wait") {
     tagList(
       waiter::spin_loaders(15, color = "black"),
-      tags$h4("Please wait...", style = "color: black")
+      tags$h4("Please wait...", style = text_style)
     )
+  } else if (type == "init") {
+    tagList(
+      waiter::spin_loaders(15, color = "black"),
+      tags$h4("Initializing...", style = text_style)
+    )
+  
   } else {
     NULL
   }
@@ -213,7 +222,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       value = "upload",
       tags$p("The MRP interface needs two major data components:"),
       tags$ul(
-        tags$li(tags$b("Sample data:"), " The analysis sample that includes the outcome of interest and predictors, such as the COVID test records and survey sample results."),
+        tags$li(tags$b("Sample data:"), " The analysis sample that includes the outcome of interest (either ", tags$b("binary"), " or ", tags$b("continuous"), ") and predictors, such as the COVID test records and survey sample results."),
         tags$li(tags$b("Poststratification data:"), " The table containing sizes of groups in the target population defined by the demographic and geographic factors.")
       ),
       tags$p("Providing poststratification data is optional since the application can utilize geographic identifiers to link the American Community Survey (ACS) and obtain the population counts residing in the catchment areas. Data linking is available across all application modules, and users can upload custom poststratification data in the time-varying and cross-sectional general cases."),
@@ -223,7 +232,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li(tags$b("Individual-level:"), " Each row contains information for on individual."),
         tags$li(tags$b("Aggregated:"), " Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.")
       )),
-      tags$p("Aggregated data are preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),
+      tags$p("Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),
       tags$h5("Required Columns and Categories", class = "mt-4"),
       tags$p("The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):"),
       tags$ul(
@@ -236,17 +245,20 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li("State\\(^1\\)"),
         tags$li(withMathJax("Week indices (time)\\(^2\\)")),
         tags$li("Date"),
-        tags$li(withMathJax("Positive response indicator or number of positive responses (positive)\\(^3\\)")),
-        tags$li(withMathJax("Cross-tabulation cell counts (total)\\(^3\\)")),
-        tags$li(withMathJax("Survey weights (weight)\\(^4\\)"))
+        tags$li(withMathJax("Continuous outcome measure (outcome)\\(^3\\)")),
+        tags$li(withMathJax("Positive response indicator or number of positive responses (positive)\\(^4\\)")),
+        tags$li(withMathJax("Cross-tabulation cell counts (total)\\(^4\\)")),
+        tags$li(withMathJax("Survey weights (weight)\\(^5\\)"))
       ),
       tags$p("1. For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.",
         class = "fst-italic small mb-1"),
       tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.",
         class = "fst-italic small mb-1"),
-      tags$p("3. In the individual-level data, the binary outcome column must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.",
+      tags$p("3. For data with continuous outcome measures, the outcome column must be named 'outcome'.",
         class = "fst-italic small mb-1"),
-      tags$p("4. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
+      tags$p("4. For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.",
+        class = "fst-italic small mb-1"),
+      tags$p("5. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
         class = "fst-italic small"),
       tags$h5("Data Preprocessing", class = "mt-4"),
       tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to week index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
@@ -536,11 +548,16 @@ create_model_tab <- function(ns, model, last_tab_id) {
             )
           )
         ),
-        tags$p(paste0("A binomial model with a logit function of the positive response rate. ",
-                       "Samples are generated using ", model$sampling$n_chains, " chains with ", model$sampling$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small"),
+        if (model$metadata$family == "binomial") {
+          tags$p(paste0("A binomial model with a logit function of the positive response rate. ",
+                        "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small")
+        } else {
+          tags$p(paste0("A linear model of the outcome measure. ",
+                        "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small")
+        },
         actionButton(
           inputId = ns(model$IDs$postprocess_btn),
-          label = "Run poststratification"
+          label = "Run post-stratification"
         ),
         tags$div(style = "margin-top: 30px",
           bslib::card(
@@ -564,12 +581,19 @@ create_model_tab <- function(ns, model, last_tab_id) {
               tableOutput(ns(model$IDs$varying_tbl))  
             )
           },
+          if(nrow(model$params$other) > 0) {
+            tags$div(
+              tags$h4("Standard Deviation of Residuals", class = "break_title"),
+              tags$hr(class = "break_line"),
+              tableOutput(ns(model$IDs$other_tbl))  
+            )
+          },
           tags$div(
             tags$h4("Posterior Predictive Check", class = "break_title"),
             tags$hr(class = "break_line"),
             bslib::card(
               bslib::card_header(tags$b("Note")),
-              bslib::card_body(tags$p("The plot shows the positive response rate/proportion computed from the observed data and 10 sets of replicated data.")) 
+              bslib::card_body(tags$p("The plot shows the outcome averages computed from the observed data and 10 sets of replicated data.")) 
             ),
             plotOutput(outputId = ns(model$IDs$ppc_plot))
           )
@@ -681,4 +705,18 @@ stop_busy <- function(session, id, label, success) {
 
   shinyjs::enable(id)
   waiter::waiter_hide()
+}
+
+to_analyze <- function(session) {
+  bslib::nav_select(
+    id = "navbar",
+    selected = "nav_analyze",
+    session = session
+  )
+
+  bslib::nav_select(
+    id = "navbar_analyze",
+    selected = "nav_analyze_upload",
+    session = session
+  )
 }

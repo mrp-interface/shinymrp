@@ -3,7 +3,7 @@
 #' @description Creates the user interface for visualizing MRP estimation results.
 #' Provides a sidebar layout with dynamic selection controls for model choice,
 #' result type (overall vs subgroup), and specific visualization options.
-#' Supports both temporal and cross-sectional data visualization with geographic
+#' Supports both time-varying and cross-sectional data visualization with geographic
 #' mapping and demographic subgroup analysis.
 #'
 #' @param id Character string. The module's namespace identifier.
@@ -86,12 +86,11 @@ mod_analyze_result_ui <- function(id){
 #' @description Server logic for the results visualization module. Manages model
 #' selection, generates dynamic UI based on user choices, and renders various
 #' types of plots including overall estimates, demographic subgroup comparisons,
-#' and geographic visualizations. Handles both temporal and cross-sectional
+#' and geographic visualizations. Handles both time-varying and cross-sectional
 #' data formats with appropriate plot types.
 #'
 #' @param id Character string. The module's namespace identifier.
-#' @param global Reactive values object containing global application state,
-#' including models, poststratified_models, data_format, extdata, and session.
+#' @param global Reactive values object containing global application state
 #'
 #' @return Server function for the results module. Creates reactive values for
 #' model selection, renders dynamic UI components, and generates plots for
@@ -121,12 +120,6 @@ mod_analyze_result_server <- function(id, global){
     model_select_buffer <- reactive(input$model_select)
 
 
-    # Create reactive outputs for dynamic conditionals.
-    output$no_geo <- reactive(is.null(selected_model()$link_data$link_geo))
-    outputOptions(output, "no_geo", suspendWhenHidden = FALSE)
-    output$data_format <- reactive(selected_model()$data_format)
-    outputOptions(output, "data_format", suspendWhenHidden = FALSE)
-
     # --------------------------------------------------------------------------
     # Initialize demographic plot modules (always called so the server is ready)
     # --------------------------------------------------------------------------
@@ -148,25 +141,22 @@ mod_analyze_result_server <- function(id, global){
     # --------------------------------------------------------------------------
     output$est_overall <- renderPlot({
       req(selected_model())
-      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
-        plot_prev(
-          selected_model()$mrp$input,
-          selected_model()$plot_data$dates,
-          selected_model()$est$overall,
+      if(global$metadata$is_timevar) {
+        plot_outcome_timevar(
+          raw = selected_model()$mrp$input,
+          yrep_est = selected_model()$est$overall,
+          dates = selected_model()$plot_data$dates,
+          metadata = selected_model()$metadata,
           show_caption = TRUE
         )
       } else {
-        selected_model()$est$overall %>%
-          mutate(
-            data = "Estimate",
-            lower = .data$est - .data$std,
-            median = .data$est,
-            upper = .data$est + .data$std
-          ) %>%
-          select(.data$data, .data$lower, .data$median, .data$upper) %>%
-          plot_support(selected_model()$mrp$input)
+        plot_outcome_static(
+          raw = selected_model()$mrp$input,
+          yrep_est = selected_model()$est$overall,
+          metadata = selected_model()$metadata
+        )
       }
-    }, height = function() GLOBAL$ui$plot_height)
+    }, height = function() GLOBAL$ui$plot$plot_height)
     
     # --------------------------------------------------------------------------
     # Render UI dynamically based on the user's selection.
@@ -178,7 +168,7 @@ mod_analyze_result_server <- function(id, global){
       subgroup_select <- isolate(input$subgroup_select)
 
       if (result_category == "overall") {
-        plotOutput(ns("est_overall"), height = GLOBAL$ui$plot_height)
+        plotOutput(ns("est_overall"), height = GLOBAL$ui$plot$plot_height)
       } else if (result_category == "subgroup") {
         switch(subgroup_select,
           "sex" = mod_est_plot_ui(ns("est_sex")),
@@ -197,7 +187,7 @@ mod_analyze_result_server <- function(id, global){
       if(global$input$navbar_analyze == "nav_analyze_result") {        
         if (!is.null(global$mrp)) {
           # Omit pre-poststratification models.
-          models <- purrr::keep(global$models, ~ !is.null(.x$fit$pstrat))
+          models <- purrr::keep(global$models, ~ !is.null(.x$est))
           global$poststratified_models <- models
           
           if(length(models) == 0) {
@@ -225,11 +215,12 @@ mod_analyze_result_server <- function(id, global){
 
       # Update the subgroup select options.
       choices <- GLOBAL$ui$plot_selection$subgroup
-      if(selected_model()$data_format != "static_poll") {
-        choices <- choices[!choices %in% "edu"]
+      if(is.null(selected_model()$metadata$special_case) ||
+         selected_model()$metadata$special_case != "poll") {
+        choices <- choices[!choices == "edu"]
       }
       if(is.null(selected_model()$link_data$link_geo)) {
-        choices <- choices[!choices %in% "geo"]
+        choices <- choices[!choices == "geo"]
       }
       updateSelectInput(session, inputId = "subgroup_select", choices = choices)
 
@@ -269,7 +260,7 @@ mod_analyze_result_server <- function(id, global){
     observeEvent(
       eventExpr = list(
         global$data,
-        global$data_format,
+        global$metadata,
         global$link_data
       ),
       handlerExpr = {

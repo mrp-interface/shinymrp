@@ -456,20 +456,28 @@ ungroup_effects <- function(effects) {
   return(out)
 }
 
-
-
 # Stan code and data generation functions
-data_ <- function(effects, gq_data = NULL) {
+data_ <- function(effects, metadata) {
   scode <- "
   int<lower=1> N;
-  array[N] int y;
-  array[N] int n_sample;
   int<lower=0> K;
   matrix[N, K] X;
   int<lower=1> N_pop;
   int<lower=0> K_pop;
   matrix[N_pop, K_pop] X_pop;
   "
+
+  # outcome variable
+  if (metadata$family == "binomial") {
+    scode <- paste0(scode, "
+  array[N] int y;
+  array[N] int n_sample;
+  ")
+  } else if (metadata$family == "normal") {
+    scode <- paste0(scode, "
+  array[N] real y;
+  ")
+  }
   
   # varying effects & fixed effects of categorical variables
   m_fix_c_names <- purrr::map_chr(
@@ -499,28 +507,25 @@ data_ <- function(effects, gq_data = NULL) {
   }
   
   # for poststratification
-    if(!is.null(gq_data)) {
-      scode <- paste0(scode, "
+  scode <- paste0(scode, "
   vector<lower=0, upper=1>[N_pop] P_overall_pstrat;
   ")
   
-    for(s in gq_data$subgroups) {
-      scode <- paste0(scode, str_interp("
+  for(s in metadata$pstrat_vars) {
+    scode <- paste0(scode, str_interp("
   int<lower=1> N_${s}_pstrat;
   array[N_pop] int<lower=1, upper=N_${s}_pstrat> J_${s}_pstrat;
   vector<lower=0, upper=1>[N_pop] P_${s}_pstrat;
   ")) 
-    }
+  }
   
-    if(gq_data$temporal) {
-      scode <- paste0(scode, "
+  if(metadata$is_timevar) {
+    scode <- paste0(scode, "
   int<lower=1> N_time_pstrat;
   array[N_pop] int<lower=1, upper=N_time_pstrat> J_time_pstrat;
   ")
-    }
   }
 
-  
   # sensitivity and specificity
   scode <- paste0(scode, "
   real<lower=0> sens;
@@ -529,7 +534,8 @@ data_ <- function(effects, gq_data = NULL) {
   return(scode)
 }
 
-parameters_ <- function(effects) {
+
+parameters_ <- function(effects, metadata) {
   scode <- "
   real Intercept;"
   
@@ -575,6 +581,12 @@ parameters_ <- function(effects) {
     scode <- paste0(scode, str_interp("
   vector[N_${ss[1]}] z2_${s};"))
   }
+
+  # include residual SD for normally distributed outcome
+  if(metadata$family == "normal") {
+    scode <- paste0(scode, "
+  real<lower=0> sigma;")
+  }
   
   # include the parameters below if structured prior is used
   int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
@@ -587,7 +599,7 @@ parameters_ <- function(effects) {
   return(scode)
 }
 
-transformed_parameters_ <- function(effects) {
+transformed_parameters_ <- function(effects, metadata) {
   scode <- ""
   
   struct_effects <- c(
@@ -659,31 +671,48 @@ transformed_parameters_ <- function(effects) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
-  
-  scode <- paste0(scode, sprintf("
+  s_formula <- if (metadata$family == "binomial") {
+    "
   vector<lower=0, upper=1>[N] p = inv_logit(Intercept%s%s%s%s);
-  vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);",
-                                if(length(fixed) > 0) " + X * beta" else "",
-                                paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
-                                paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = ""),
-                                paste(map(names(int_varsl), function(s) {
-                                  ss <- strsplit(s, split = ':')[[1]]
-                                  s <- paste0(ss[1], ss[2])
-                                  return(str_interp(" + b_${s}[J_${ss[1]}] .* X[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
-                                }), collapse = "")))
+  vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);"
+  } else if (metadata$family == "normal") {
+    "
+  vector[N] mu = Intercept%s%s%s%s;"
+  }
+  s_fixed <- if(length(fixed) > 0) " + X * beta" else ""
+  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
+  s_int_varit <- paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
+  s_int_varsl <- paste(map(names(int_varsl), function(s) {
+    ss <- strsplit(s, split = ':')[[1]]
+    s <- paste0(ss[1], ss[2])
+    return(str_interp(" + b_${s}[J_${ss[1]}] .* X[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
+  }), collapse = "")
+  
+  scode <- paste0(scode, sprintf(s_formula, s_fixed, s_mvar, s_int_varit, s_int_varsl))
   
   return(scode)
 }
 
-model_ <- function(effects) {
+model_ <- function(effects, metadata) {
+  # group effects
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
   int_varsl_wo_struct <- effects$i_varsl
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varit_wo_struct <- c(effects$i_varit, effects$i_varits)
+
+  # outcome distribution
+  scode <- if (metadata$family == "binomial") {
+    "
+  y ~ binomial(n_sample, p_sample);"
+  } else if (metadata$family == "normal") {
+    "
+  sigma ~ exponential(1/sd(y));
+  y ~ normal(mu, sigma);"
+  }
   
-  scode <- paste0("
-  y ~ binomial(n_sample, p_sample);",
+  scode <- paste0(
+    scode, 
     str_interp("\n  Intercept ~ ${effects$Intercept$Intercept};"),
     if(length(fixed) > 0) paste(map(1:length(fixed), ~ str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
     paste(map(names(effects$m_var), ~ str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
@@ -705,22 +734,30 @@ model_ <- function(effects) {
   return(scode)
 }
 
-
 #' Generate Stan Code for Leave-One-Out Cross-Validation
 #'
 #' @description Creates generated quantities block code for computing log-likelihood
 #' values needed for leave-one-out cross-validation (LOO-CV) model comparison.
-#'
+#' 
+#' @param metadata List containing model specifications, including outcome distribution family
+#' 
 #' @return Character string containing Stan generated quantities code that computes
 #'   log_lik vector with binomial log probability mass function values for each observation
 #'
 #' @noRd
-gq_loo <- function() {
-  return("
+gq_loo <- function(metadata) {
+  lpf <- switch(metadata$family,
+    binomial = "binomial_lpmf(y[n] | n_sample[n], p_sample[n])",
+    normal = "normal_lpdf(y[n] | mu[n], sigma)"
+  )
+
+  scode <- stringr::str_interp("
   vector[N] log_lik;
   for (n in 1:N) {
-    log_lik[n] = binomial_lpmf(y[n] | n_sample[n], p_sample[n]);
+    log_lik[n] = ${lpf};
   }")
+
+  return(scode)
 }
 
 #' Generate Stan Code for Posterior Predictive Checks
@@ -732,9 +769,13 @@ gq_loo <- function() {
 #'   y_rep array with binomial random draws using fitted probabilities
 #'
 #' @noRd
-gq_ppc <- function() {
-  return("
-  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);")
+gq_ppc <- function(metadata) {
+  scode <- switch(metadata$family,
+    binomial = "\n  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);",
+    normal = "\n  array[N] real y_rep = normal_rng(mu, sigma);"
+  )
+
+  return(scode)
 }
 
 #' Generate Stan Code for Poststratification
@@ -744,10 +785,10 @@ gq_ppc <- function() {
 #' aggregates them using poststratification weights.
 #'
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param gq_data List containing poststratification specifications:
+#' @param metadata List containing poststratification specifications:
 #'   \itemize{
-#'     \item subgroups: Character vector of demographic subgroups
-#'     \item temporal: Logical indicating temporal aggregation
+#'     \item pstrat_vars: Character vector of demographic subgroups
+#'     \item is_timevar: Logical indicating whether data contains time information
 #'   }
 #'
 #' @return Character string containing Stan generated quantities code for:
@@ -761,11 +802,7 @@ gq_ppc <- function() {
 #' @noRd
 #'
 #' @importFrom stringr str_interp
-gq_pstrat <- function(effects, gq_data=NULL) {
-  if(is.null(gq_data)) {
-    return("")
-  }
-
+gq_pstrat <- function(effects, metadata) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -783,59 +820,69 @@ gq_pstrat <- function(effects, gq_data=NULL) {
   }"))
   }
   
-  # poststratification
-  if(gq_data$temporal) {
-    init_overall <- "vector<lower=0, upper=1>[N_time_pstrat] p_overall_pop = rep_vector(0, N_time_pstrat);"
-    init_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
-  matrix<lower=0, upper=1>[N_${.x}_pstrat, N_time_pstrat] p_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
+  ### poststratification
+  # initialize vectors
+  if(metadata$is_timevar) {
+    init_overall <- "vector[N_time_pstrat] theta_overall_pop = rep_vector(0, N_time_pstrat);"
+    init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+  matrix[N_${.x}_pstrat, N_time_pstrat] theta_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
   } else {
-    init_overall <- "real<lower=0, upper=1> p_overall_pop;"
-    init_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
-  vector<lower=0, upper=1>[N_${.x}_pstrat] p_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
+    init_overall <- "real theta_overall_pop;"
+    init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+  vector[N_${.x}_pstrat] theta_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
   }
   
-  p_pop <- sprintf("
-    vector[N_pop] p_pop;
-    vector[N_pop] p_pop_scaled;
-    p_pop = inv_logit(Intercept%s%s%s%s);",
-                  if(length(fixed) > 0) " + X_pop * beta" else "",
-                  paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = ""),
-                  paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = ""),
-                  paste(map(names(int_varsl), function(s) {
-                    ss <- strsplit(s, split = ':')[[1]]
-                    s <- paste0(ss[1], ss[2])
-                    return(str_interp(" + b_${s}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
-                  }), collapse = "")
-  )
+  # propulation estimates
+  est_cell <- "
+    vector[N_pop] theta_pop_scaled;"
+
+  if (metadata$family == "binomial") {
+    est_cell <- paste0(est_cell, "
+    vector[N_pop] theta_pop = inv_logit(Intercept%s%s%s%s);")
+  } else if (metadata$family == "normal") {
+    est_cell <- paste0(est_cell, "
+    vector[N_pop] theta_pop = Intercept%s%s%s%s;")
+  }
+
+  s_fixed <- if(length(fixed) > 0) " + X_pop * beta" else ""
+  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = "")
+  s_int_varit <- paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
+  s_int_varsl <- paste(map(names(int_varsl), function(s) {
+    ss <- strsplit(s, split = ':')[[1]]
+    s <- paste0(ss[1], ss[2])
+    return(str_interp(" + b_${s}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
+  }), collapse = "")
+
+  est_cell <- sprintf(est_cell, s_fixed, s_mvar, s_int_varit, s_int_varsl)
   
-  if(gq_data$temporal) {
+  if(metadata$is_timevar) {
     est_overall <- "
-    p_pop_scaled = p_pop .* P_overall_pstrat;
+    theta_pop_scaled = theta_pop .* P_overall_pstrat;
     for (i in 1:N_pop) {
-      p_overall_pop[J_time_pstrat[i]] += p_pop_scaled[i];
+      theta_overall_pop[J_time_pstrat[i]] += theta_pop_scaled[i];
     }"
     
-    est_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
-    p_pop_scaled = p_pop .* P_${.x}_pstrat;
+    est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+    theta_pop_scaled = theta_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
-      p_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += p_pop_scaled[i];
+      theta_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += theta_pop_scaled[i];
     }")), collapse = "")
   } else {
     est_overall <- str_interp("
-    p_pop_scaled = p_pop .* P_overall_pstrat;
-    p_overall_pop = sum(p_pop_scaled);")
+    theta_pop_scaled = theta_pop .* P_overall_pstrat;
+    theta_overall_pop = sum(theta_pop_scaled);")
     
-    est_marginal <- paste(map(gq_data$subgroups, ~ str_interp("
-    p_pop_scaled = p_pop .* P_${.x}_pstrat;
+    est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+    theta_pop_scaled = theta_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
-      p_${.x}_pop[J_${.x}_pstrat[i]] += p_pop_scaled[i];
+      theta_${.x}_pop[J_${.x}_pstrat[i]] += theta_pop_scaled[i];
     }")), collapse = "") 
   }
   
   scode <- paste0(scode, str_interp("
   ${init_overall}
   ${init_marginal}
-  {  ${p_pop}
+  {  ${est_cell}
      ${est_overall}
      ${est_marginal}
   }                
@@ -853,7 +900,7 @@ gq_pstrat <- function(effects, gq_data=NULL) {
 #' function for generating Stan code for model fitting.
 #'
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param gq_data Optional list containing generated quantities specifications for
+#' @param metadata Optional list containing generated quantities specifications for
 #'   poststratification. If provided, includes additional data declarations.
 #'
 #' @return Character string containing complete Stan program with data, parameters,
@@ -862,19 +909,19 @@ gq_pstrat <- function(effects, gq_data=NULL) {
 #' @noRd
 #'
 #' @importFrom stringr str_interp
-make_stancode_mcmc <- function(effects, gq_data=NULL) {
+make_stancode_mcmc <- function(effects, metadata=NULL) {
   
   scode <- str_interp("
-data { ${data_(effects, gq_data)}
+data { ${data_(effects, metadata)}
 }
 
-parameters { ${parameters_(effects)}
+parameters { ${parameters_(effects, metadata)}
 }
 
-transformed parameters { ${transformed_parameters_(effects)}
+transformed parameters { ${transformed_parameters_(effects, metadata)}
 }
 
-model { ${model_(effects)}
+model { ${model_(effects, metadata)}
 }
   ")
   
@@ -894,7 +941,7 @@ model { ${model_(effects)}
 #'     \item "ppc": Posterior predictive check replications
 #'     \item "pstrat": Poststratification estimates
 #'   }
-#' @param gq_data List containing specifications for poststratification (required if gq_type="pstrat")
+#' @param metadata List containing specifications for poststratification (required if gq_type="pstrat")
 #'
 #' @return Character string containing complete Stan program with data, parameters,
 #'   transformed parameters, and generated quantities blocks
@@ -902,31 +949,35 @@ model { ${model_(effects)}
 #' @noRd
 #'
 #' @importFrom stringr str_interp
-make_stancode_gq <- function(effects, gq_type = c("loo", "ppc", "pstrat"), gq_data = NULL) {
+make_stancode_gq <- function(
+  effects,
+  metadata,
+  gq_type = c("loo", "ppc", "pstrat")
+) {
   gq_type <- match.arg(gq_type)
-  if(gq_type == "loo") {
-    gq <- gq_loo()
-  } else if (gq_type == "ppc") {
-    gq <- gq_ppc()
-  } else if (gq_type == "pstrat")
-    gq <- gq_pstrat(effects, gq_data)
+  gq_code <- switch(gq_type,
+    "loo" = gq_loo(metadata),
+    "ppc" = gq_ppc(metadata),
+    "pstrat" = gq_pstrat(effects, metadata)
+  )
   
   scode <- str_interp("
-data { ${data_(effects, gq_data)}
+data { ${data_(effects, metadata)}
 }
 
-parameters { ${parameters_(effects)}
+parameters { ${parameters_(effects, metadata)}
 }
 
-transformed parameters { ${transformed_parameters_(effects)}
+transformed parameters { ${transformed_parameters_(effects, metadata)}
 }
 
-generated quantities { ${gq}
+generated quantities { ${gq_code}
 }
   ")
   
   return(scode)
 }
+
 
 #' Convert Data Frame Variables to Stan-Compatible Format
 #'
@@ -935,7 +986,7 @@ generated quantities { ${gq}
 #' continuous variables are standardized, and original values are preserved with "_raw" suffix.
 #'
 #' @param df Data frame to transform
-#' @param ignore_columns Character vector of column names to exclude from transformation
+#' @param ignore_cols Character vector of column names to exclude from transformation
 #'
 #' @return Data frame with transformed variables and original values preserved:
 #'   \itemize{
@@ -947,9 +998,9 @@ generated quantities { ${gq}
 #'
 #' @noRd
 #' @importFrom dplyr mutate select rename_with bind_cols across all_of
-stan_factor <- function(df, ignore_columns = NULL) {
+stan_factor <- function(df, ignore_cols = GLOBAL$vars$ignore) {
   # find the columns to mutate
-  col_names <- setdiff(names(df), ignore_columns)
+  col_names <- setdiff(names(df), ignore_cols)
   
   # save the “raw” columns
   df_raw <- df %>%
@@ -1003,20 +1054,11 @@ stan_factor <- function(df, ignore_columns = NULL) {
 #'   }
 #' @param new_data Data frame containing population data for prediction/poststratification
 #' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param gq_data Optional list for poststratification with subgroups and temporal specifications
-#' @param sens Numeric value for sensitivity parameter (default 1)
-#' @param spec Numeric value for specificity parameter (default 1)
+#' @param metadata List for model specifications
+#' @param extra Sensitivity and specificity parameters for covid models
 #'
-#' @return Named list containing all data elements required by Stan:
-#'   \itemize{
-#'     \item N, y, n_sample: Observation counts and sample sizes
-#'     \item K, X: Fixed effects design matrix dimensions and values
-#'     \item N_pop, K_pop, X_pop: Population data for prediction
-#'     \item Grouping variables (N_*, J_*) for varying effects
-#'     \item Poststratification weights and indices (if gq_data provided)
-#'     \item sens, spec: Sensitivity and specificity parameters
-#'   }
-#'
+#' @return Named list containing all data elements required by Stan
+#' 
 #' @noRd
 #'
 #' @importFrom dplyr select mutate group_by n_distinct
@@ -1026,19 +1068,24 @@ make_standata <- function(
     input_data,
     new_data,
     effects,
-    gq_data = NULL,
-    sens = 1,
-    spec = 1
+    metadata,
+    extra = NULL
 ) {
 
   stan_data <- list(
     N = nrow(input_data),
     N_pop = nrow(new_data),
-    y = input_data$positive,
-    n_sample = input_data$total,
-    sens = sens,
-    spec = spec
+    sens = if(!is.null(extra$sens)) extra$sens else 1,
+    spec = if(!is.null(extra$spec)) extra$spec else 1
   )
+
+  # outcome variable
+  if (metadata$family == "binomial") {
+    stan_data$y <- input_data$positive
+    stan_data$n_sample <- input_data$total
+  } else if (metadata$family == "normal") {
+    stan_data$y <- input_data$outcome
+  }
   
   holder <- list(
     input = input_data,
@@ -1102,14 +1149,14 @@ make_standata <- function(
   }
 
   # poststratification
-  if (!is.null(gq_data)) {
+  if (!is.null(metadata)) {
     pstrat_data <- new_data %>%
       mutate(
         across(everything(), ~ if(n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
         overall = 1
       )
-    for(s in c("overall", gq_data$subgroups)) {
-      group_cols <- if(gq_data$temporal) c("time", s) else c(s)
+    for(s in c("overall", metadata$pstrat_vars)) {
+      group_cols <- if(metadata$is_timevar) c("time", s) else c(s)
       
       pop_prop <- pstrat_data %>%
         group_by(!!!syms(group_cols)) %>%
@@ -1122,7 +1169,7 @@ make_standata <- function(
       stan_data[[str_interp("P_${s}_pstrat")]] <- pop_prop$prop
     }
     
-    if(gq_data$temporal) {
+    if(metadata$is_timevar) {
       stan_data$N_time_pstrat <- n_distinct(new_data$time)
       stan_data$J_time_pstrat <- new_data$time
     }
@@ -1135,23 +1182,22 @@ run_mcmc <- function(
     input_data,
     new_data,
     effects,
-    gq_data = NULL,
+    metadata,
     n_iter = 1000,
     n_chains = 4,
+    extra = NULL,
     seed = NULL,
-    sens = 1,
-    spec = 1,
     code_fout = NULL,
     silent = FALSE
 ) {
 
   stan_code <- list()
-  stan_code$mcmc <- make_stancode_mcmc(effects, gq_data)
-  stan_code$ppc <- make_stancode_gq(effects, "ppc")
-  stan_code$loo <- make_stancode_gq(effects, "loo")
-  stan_code$pstrat <- make_stancode_gq(effects, "pstrat", gq_data)
-  
-  stan_data <- make_standata(input_data, new_data, effects, gq_data, sens, spec)
+  stan_code$mcmc <- make_stancode_mcmc(effects, metadata)
+  stan_code$ppc <- make_stancode_gq(effects, metadata, "ppc")
+  stan_code$loo <- make_stancode_gq(effects, metadata, "loo")
+  stan_code$pstrat <- make_stancode_gq(effects, metadata, "pstrat")
+
+  stan_data <- make_standata(input_data, new_data, effects, metadata, extra)
 
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)
@@ -1162,8 +1208,7 @@ run_mcmc <- function(
     cpp_options = list(stan_threads = TRUE)
   )
 
-  fit <- list()
-  fit$mcmc <- mod_mcmc$sample(
+  fit <- mod_mcmc$sample(
     data = stan_data,
     iter_warmup = n_iter/2,
     iter_sampling = n_iter/2,
@@ -1191,14 +1236,12 @@ run_gq <- function(
     n_chains
   ) {
   
-
   utils::capture.output({
     mod_gq <- cmdstanr::cmdstan_model(
       stan_file = cmdstanr::write_stan_file(stan_code),
       cpp_options = list(stan_threads = TRUE)
     )
   }, type = "message")
-
   
   utils::capture.output({
     fit_gq <- mod_gq$generate_quantities(
@@ -1249,9 +1292,53 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
   return(df_fixed)
 }
 
+get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
+  fit$summary(
+    variables = variables,
+    posterior::default_summary_measures()[1:4],
+    quantiles = ~ posterior::quantile2(., probs = probs),
+    posterior::default_convergence_measures()
+  )
+}
+
+format_params_summary <- function(
+    df,
+    row_names = NULL,
+    probs = c(0.025, 0.975)
+) {
+  # select relevant columns
+  col_names <- c(
+    "mean", "sd",
+    paste0("q", probs * 100),
+    "rhat", "ess_bulk", "ess_tail"
+  )
+  df <- df %>%
+    select(all_of(col_names)) %>%
+    as.data.frame()
+
+  # rename columns
+  p <- (probs[2] - probs[1]) * 100
+  names(df) <- c(
+    "Estimate", "Est.Error",
+    sprintf("l-%d%% CI", p), sprintf("u-%s%% CI", p),
+    "R-hat", "Bulk_ESS", "Tail_ESS"
+  )
+
+  if (!is.null(row_names)) {
+    row.names(df) <- row_names
+  }
+
+  return(df)
+}
+
 #' @importFrom dplyr select
 #' @importFrom rlang .data
-extract_parameters <- function(fit, effects, input_data) {
+extract_parameters <- function(
+  fit,
+  effects,
+  input_data,
+  metadata
+) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -1260,17 +1347,12 @@ extract_parameters <- function(fit, effects, input_data) {
   df_fixed <- data.frame()
   if(length(fixed) > 0) {
     # extract summary table
-    df_fixed <- fit$summary(
-      variables = c("Intercept", "beta"),
-      posterior::default_summary_measures()[1:4],
-      quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-      posterior::default_convergence_measures()
-    ) %>%
-      select(.data$mean, .data$sd, .data$`q2.5`, .data$`q97.5`, .data$rhat, .data$ess_bulk, .data$ess_tail) %>%
-      as.data.frame()
+    df_fixed <- get_params_summary(fit, variables = c("Intercept", "beta"))
 
-    # rename columns and rows
-    names(df_fixed) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
+    # format the summary table
+    df_fixed <- format_params_summary(df_fixed)
+
+    # add reference levels
     df_fixed <- add_ref_lvl(df_fixed, effects, input_data)
   }
 
@@ -1278,15 +1360,10 @@ extract_parameters <- function(fit, effects, input_data) {
   df_varying <- data.frame()
   row_names <- c()
 
-  if(length(effects$m_var)) {
+  if(length(effects$m_var) > 0) {
     df_varying <- rbind(
       df_varying,
-      fit$summary(
-        variables = paste0("scaled_lambda_", names(effects$m_var)),
-        posterior::default_summary_measures()[1:4],
-        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-        posterior::default_convergence_measures()
-      )
+      get_params_summary(fit, variables = paste0("scaled_lambda_", names(effects$m_var)))
     )
     row_names <- c(row_names, paste0(names(effects$m_var), " (intercept)"))
   }
@@ -1294,12 +1371,7 @@ extract_parameters <- function(fit, effects, input_data) {
   if(length(int_varit) > 0) {
     df_varying <- rbind(
       df_varying, 
-      fit$summary(
-        variables = paste0("lambda_", gsub(':', '', names(int_varit))),
-        posterior::default_summary_measures()[1:4],
-        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-        posterior::default_convergence_measures()
-      )
+      get_params_summary(fit, variables = paste0("lambda_", gsub(':', '', names(int_varit))))
     )
     row_names <- c(row_names, paste0(names(int_varit), " (intercept)"))
   }
@@ -1307,28 +1379,36 @@ extract_parameters <- function(fit, effects, input_data) {
   if(length(int_varsl) > 0) {
     df_varying <- rbind(
       df_varying, 
-      fit$summary(
-        variables = paste0("lambda2_", purrr::map_chr(names(int_varsl), function(s) gsub(':', '', s))),
-        posterior::default_summary_measures()[1:4],
-        quantiles = ~ posterior::quantile2(., probs = c(0.025, 0.975)),
-        posterior::default_convergence_measures()
-      )
+      get_params_summary(fit, variables = paste0("lambda2_", gsub(':', '', names(int_varsl))))
     )
     row_names <- c(row_names, paste0(names(int_varsl), " (slope)"))
   }
 
   if(nrow(df_varying) > 0) {
-    df_varying <- df_varying %>%
-      select(.data$mean, .data$sd, .data$`q2.5`, .data$`q97.5`, .data$rhat, .data$ess_bulk, .data$ess_tail) %>%
-      as.data.frame()
+    df_varying <- format_params_summary(df_varying, row_names = row_names)
+  }
 
-    names(df_varying) <- c("Estimate", "Est.Error", "l-95% CI", "u-95% CI", "R-hat", "Bulk_ESS", "Tail_ESS")
-    row.names(df_varying) <- row_names
+
+  ### other parameters
+  df_other <- data.frame()
+  row_names <- c()
+
+  if (metadata$family == "normal") {
+    df_other <- rbind(
+      df_other,
+      get_params_summary(fit, variables = "sigma")
+    )
+    row_names <- c(row_names, "Residual SD")
+  }
+
+  if (nrow(df_other) > 0) {
+    df_other <- format_params_summary(df_other, row_names = row_names)
   }
 
   return(list(
-    fixed = df_fixed,
-    varying = df_varying
+    fixed   = df_fixed,
+    varying = df_varying,
+    other   = df_other
   ))
 }
 
@@ -1372,12 +1452,11 @@ extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 extract_est <- function(
   fit,
   new_data,
-  gq_data
+  metadata
 ) {
   
-
   # convert new data to numeric factors
-  col_names <- if(gq_data$temporal) c(gq_data$subgroups, "time") else gq_data$subgroups
+  col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
   new_data <- new_data %>%
     select(all_of(col_names)) %>%
     mutate(overall = "overall") %>%  # add placeholder column for overall estimates
@@ -1385,16 +1464,16 @@ extract_est <- function(
 
   est <- list()
 
-  for(s in c("overall", gq_data$subgroups)) {
+  for(s in c("overall", metadata$pstrat_vars)) {
     # get posterior draws for each subgroup
     pred_mat <- fit$draws(
-      variables = str_interp("p_${s}_pop"),
+      variables = str_interp("theta_${s}_pop"),
       format = "draws_matrix"
     ) %>% t()
 
-    col_names <- if(gq_data$temporal) c("time", s) else c(s)
+    col_names <- if(metadata$is_timevar) c("time", s) else c(s)
     raw_col_names <- paste0(col_names, "_raw")
-    new_col_names <- if(gq_data$temporal) c("time", "factor") else c("factor")
+    new_col_names <- if(metadata$is_timevar) c("time", "factor") else c("factor")
 
     # Order raw levels based on numeric levels to match order of posterior draws matrix
     est[[s]] <- new_data %>%
@@ -1418,17 +1497,17 @@ extract_est <- function(
 #'
 #' @param fit CmdStanR generated quantities fit object from posterior predictive checks
 #' @param input_data Original input data frame used for model fitting
-#' @param gq_data List containing model specifications (temporal indicator)
+#' @param boolean indicator for whether data contains time information
 #' @param N Integer number of posterior draws to extract (default 10)
 #' @param summarize Logical whether to return summary statistics (default FALSE)
 #' @param pred_interval Numeric prediction interval coverage (default 0.95)
 #'
 #' @return Posterior predictive replications:
 #'   \itemize{
-#'     \item If temporal=FALSE & summarize=FALSE: Numeric vector of proportion estimates
-#'     \item If temporal=FALSE & summarize=TRUE: Data frame with quantiles (upper, lower, median)
-#'     \item If temporal=TRUE & summarize=FALSE: Data frame with time and proportion columns
-#'     \item If temporal=TRUE & summarize=TRUE: Data frame with time and quantile summaries
+#'     \item If is_timevar=FALSE & summarize=FALSE: Numeric vector of proportion estimates
+#'     \item If is_timevar=FALSE & summarize=TRUE: Data frame with quantiles (upper, lower, median)
+#'     \item If is_timevar=TRUE & summarize=FALSE: Data frame with time and proportion columns
+#'     \item If is_timevar=TRUE & summarize=TRUE: Data frame with time and quantile summaries
 #'   }
 #'
 #' @noRd
@@ -1438,11 +1517,13 @@ extract_est <- function(
 extract_yrep <- function(
   fit,
   input_data,
-  gq_data,
+  metadata,
   N = 10,
-  summarize = FALSE,
   pred_interval = 0.95
 ) {
+
+  qlower <- (1 - pred_interval) / 2
+  qupper <- 1 - qlower
 
   # get draws from cmdstanr fit
   yrep_mat <- fit$draws(
@@ -1450,13 +1531,11 @@ extract_yrep <- function(
     format = "draws_matrix"
   )%>% t()
   
-  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), N)]   # subset draws
-  
-  qlower <- (1 - pred_interval) / 2
-  qupper <- 1 - qlower
+  # subset draws
+  yrep_mat <- yrep_mat[, sample(ncol(yrep_mat), N)]
 
-  if(gq_data$temporal) {
-    agg_df <- yrep_mat %>%
+  yrep <- if (metadata$is_timevar) {
+    yrep_mat %>%
       as.data.frame() %>%
       mutate(
         time = input_data$time,
@@ -1464,38 +1543,17 @@ extract_yrep <- function(
       ) %>%
       group_by(.data$time) %>%
       summarise_all(sum) %>%
-      ungroup()
-
-    agg_tests <- agg_df$total
-    time <- agg_df$time
-
-    est <- agg_df %>%
-      select(-c("time", "total")) %>%
-      mutate_all(function(c) c / agg_tests)
-
-    if(summarize) {
-      est <- data.frame(
-        time = time,
-        upper = est %>% apply(1, stats::quantile, qlower),
-        lower = est %>% apply(1, stats::quantile, qupper),
-        median = est %>% apply(1, stats::quantile, 0.5)
-      )
-    } else {
-      est <- est %>% mutate(time = time)
-    }
-
+      ungroup() %>%
+      mutate(
+        across(
+          -c(.data$time, .data$total),
+          ~ .x / .data$total
+        )
+      ) %>%
+      select(-.data$total)
   } else {
-    est <- colSums(yrep_mat) / sum(input_data$total)
-
-    if(summarize) {
-      est <- data.frame(
-        upper  = stats::quantile(est, qlower),
-        lower  = stats::quantile(est, qupper),
-        median = stats::quantile(est, 0.5)
-      )
-    }
-
+    colSums(yrep_mat) / sum(input_data$total)
   }
 
-  return(est)
+  return(yrep)
 }

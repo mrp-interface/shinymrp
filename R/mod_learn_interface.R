@@ -248,8 +248,7 @@ mod_learn_interface_ui <- function(id){
 #' formatting and file downloads.
 #'
 #' @param id Character string. The module's namespace identifier.
-#' @param global Reactive values object containing global application state,
-#' including session information for navigation updates.
+#' @param global Reactive values object containing global application state
 #'
 #' @return Server function for the user guide module. Creates download handlers
 #' for example data and preprocessing code, renders data tables, and manages

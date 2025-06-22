@@ -61,8 +61,8 @@ recode_covid <- function(df, expected_levels) {
   ) %>%
     as.numeric()
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
-  is_pos <- grepl("positive|detected", df$positive, ignore.case = TRUE)
-  is_neg <- grepl("not|negative|undetected", df$positive, ignore.case = TRUE)
+  is_pos <- grepl("positive|detected|1", df$positive, ignore.case = TRUE)
+  is_neg <- grepl("not|negative|undetected|0", df$positive, ignore.case = TRUE)
 
   df <- df %>% mutate(
     sex = if_else(str_detect(.data$sex, regex("female", ignore_case = TRUE)), "female", "male"),
@@ -183,10 +183,10 @@ filter_state_zip <- function(
 #' @noRd
 prepare_mrp_covid <- function(
     input_data,
-    pstrat_data,
     covariates,
-    demo_levels,
-    vars_global
+    pstrat_data,
+    metadata,
+    vars_global = GLOBAL$vars
 ) {
 
   # filter out state and zip codes with small sample sizes
@@ -203,7 +203,7 @@ prepare_mrp_covid <- function(
     left_join(covariates, by = "zip")
 
   # create lists of all factor levels
-  levels <- demo_levels
+  levels <- create_expected_levels(metadata)
   levels$time <- unique(input_data$time) %>% sort()
   levels$zip <- pstrat_data$zip
 
