@@ -59,7 +59,6 @@ mod_persist_ui <- function(id) {
 #'
 #' @param id Character string. The module's namespace identifier.
 #' @param global Reactive values object containing global application state
-#' (not actively used in this module but maintained for consistency).
 #'
 #' @return Server function for the persistent UI module. Handles scroll-based
 #' visibility, help guide display, and UI animations for persistent elements.

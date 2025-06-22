@@ -12,16 +12,17 @@ app_server <- function(input, output, session) {
   ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 20))
 
   global <- reactiveValues(
-    data_format = NULL,
     input = input,
     output = output,
     session = session,
     extdata = list(
       zip_tract = readr::read_csv(app_sys("extdata/zip_tract.csv"), show_col_types = FALSE, col_types = readr::cols(.default = "c")),
-      pstrat_covid = readr::read_csv(app_sys("extdata/pstrat_covid.csv"), show_col_types = FALSE) %>% format_geocode(),
-      covar_covid = readr::read_csv(app_sys("extdata/covar_covid.csv"), show_col_types = FALSE) %>% format_geocode(),
-      pstrat_poll = readr::read_csv(app_sys("extdata/pstrat_poll.csv"), show_col_types = FALSE),
       zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) %>% clean_chr(),
+      acs = list(
+        pstrat_poll = readr::read_csv(app_sys("extdata/acs/pstrat_poll.csv"), show_col_types = FALSE),
+        pstrat_covid = readr::read_csv(app_sys("extdata/acs/pstrat_covid.csv"), show_col_types = FALSE),
+        covar_covid = readr::read_csv(app_sys("extdata/acs/covar_covid.csv"), show_col_types = FALSE)
+      ),
       fips = list(
         county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE) %>% clean_chr(),
         state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE) %>% clean_chr()
@@ -31,6 +32,8 @@ app_server <- function(input, output, session) {
         state = qs::qread(app_sys("extdata/geojson_state.RDS"))
       )
     ),
+    is_timevar = NULL,
+    special_case = NULL,
     link_data = NULL,
     plot_data = NULL,
     uploaded_model = NULL,
@@ -39,13 +42,18 @@ app_server <- function(input, output, session) {
   )
 
   
-  # make interface selection flag available for conditionalPanel
-  output$data_format <- reactive(global$data_format)
-  outputOptions(output, "data_format", suspendWhenHidden = FALSE)
+  ### flags for conditionalPanel
+  # whether data has time information
+  output$is_timevar <- reactive(global$metadata$is_timevar)
+  outputOptions(output, "is_timevar", suspendWhenHidden = FALSE)
 
-  # make link data flag available for conditionalPanel
-  output$no_geo <- reactive(is.null(global$link_data$link_geo))
-  outputOptions(output, "no_geo", suspendWhenHidden = FALSE)
+  # special use case
+  output$special_case <- reactive(global$metadata$special_case)
+  outputOptions(output, "special_case", suspendWhenHidden = FALSE)
+
+  # distribution family
+  output$family <- reactive(global$metadata$family)
+  outputOptions(output, "family", suspendWhenHidden = FALSE)
 
   # initialize modules
   mod_home_server(module_ids$home, global)
@@ -63,7 +71,7 @@ app_server <- function(input, output, session) {
   # Check if a version of the interface is selected
   observeEvent(input$navbar, {
     if(input$navbar == "nav_analyze") {
-      if(is.null(global$data_format)) {
+      if(is.null(global$metadata)) {
         showModal(
           modalDialog(
             title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
@@ -121,5 +129,9 @@ app_server <- function(input, output, session) {
   observeEvent(input$show_guide, {
     show_guide()
   })
+
+  # close loading spinner
+  Sys.sleep(1) # prevent flashing
+  waiter::waiter_hide()
 }
 

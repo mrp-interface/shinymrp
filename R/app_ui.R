@@ -9,6 +9,10 @@ app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
+    waiter::waiterShowOnLoad(
+      html = waiter_ui("init"),
+      color = waiter::transparent(1)
+    ),
     bslib::page_navbar(
       title = "MRP",
       id = "navbar",
@@ -52,20 +56,20 @@ app_ui <- function(request) {
                 class = "me-2",
                 style = "font-size: 1.05rem;",
                 conditionalPanel(
-                  condition = "output.data_format == 'temporal_covid'",
-                  "Time-varying: COVID"
+                  condition = "output.special_case == 'covid'",
+                  GLOBAL$ui$use_case_labels$covid
                 ),
                 conditionalPanel(
-                  condition = "output.data_format == 'temporal_other'",
-                  "Time-varying: General"
+                  condition = "output.special_case == 'poll'",
+                  GLOBAL$ui$use_case_labels$poll
                 ),
                 conditionalPanel(
-                  condition = "output.data_format == 'static_poll'",
-                  "Cross-sectional: Poll"
+                  condition = "output.special_case === null && output.is_timevar",
+                  GLOBAL$ui$use_case_labels$timevar_general
                 ),
                 conditionalPanel(
-                  condition = "output.data_format == 'static_other'",
-                  "Cross-sectional: General"
+                  condition = "output.special_case === null && !output.is_timevar",
+                  GLOBAL$ui$use_case_labels$static_general
                 )
               ),
               actionLink(

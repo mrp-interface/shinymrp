@@ -40,7 +40,12 @@ fips_upper <- function(fips) {
 #'
 #' @noRd
 #' @importFrom dplyr mutate group_by summarize left_join select arrange desc
-prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"), for_map = TRUE) {
+prep_sample_size <- function(
+  input_data,
+  fips_codes,
+  geo = c("county", "state"),
+  for_map = TRUE
+) {
   geo <- match.arg(geo)
 
   if(is.null(input_data)) {
@@ -88,85 +93,55 @@ prep_sample_size <- function(input_data, fips_codes, geo = c("county", "state"),
   return(plot_df)
 }
 
-#' Prepare raw support data for visualization
+#' Prepare Raw Data for Plotting
 #'
-#' @description Calculates support rates (positive responses / total responses) by
-#' geographic unit and prepares data for map visualization with hover text.
+#' This function processes input data for geographic visualization by computing 
+#' summary statistics, joining with FIPS codes, and generating appropriate 
+#' titles and hover text based on the data characteristics.
 #'
-#' @param input_data A data frame containing survey data with columns for positive
-#'   responses, total responses, and geographic identifiers
-#' @param fips_codes A data frame containing FIPS codes and geographic names
-#' @param geo Character string specifying geographic level, either "county" or "state"
+#' @param input_data A data frame containing the raw data to be processed. 
+#'   Should contain geographic identifiers and outcome variables.
+#' @param fips_codes A data frame containing FIPS codes and geographic names 
+#'   for joining with input data.
+#' @param geo Character string specifying geographic level. One of "county" or "state".
+#' @param summary_type Character string specifying summary statistic for time series data. 
+#'   One of "max" or "min".
+#' @param metadata A list containing metadata about the data structure with elements:
+#'   \itemize{
+#'     \item \code{is_timevar}: Logical indicating if data has time dimension
+#'     \item \code{family}: Character specifying data family ("binomial" or "normal")
+#'   }
 #'
-#' @return A data frame with support rates, sample sizes, and formatted hover text
-#'   for map visualization
+#' @return A list containing:
+#'   \itemize{
+#'     \item \code{plot_df}: Processed data frame ready for plotting with columns for 
+#'       fips, value, geographic names, and hover text
+#'     \item \code{title}: List containing main_title and hover_title for the plot
+#'   }
+#'   Returns NULL if input_data is NULL.
 #'
-#' @noRd
-#' @importFrom dplyr mutate group_by summarize left_join
-prep_raw_support <- function(
-    input_data,
-    fips_codes,
-    geo = c("county", "state")
+#' @details
+#' For binomial family data, the function computes rates as positive/total.
+#' For normal family data, it computes means of the outcome variable.
+#' When time dimension is present, it can summarize to maximum or minimum values
+#' across time periods. Hover text is formatted differently for state vs county level data.
+#'
+#' @examples
+#' \dontrun{
+#' metadata <- list(is_timevar = TRUE, family = "binomial")
+#' result <- prep_raw(my_data, fips_df, geo = "county", 
+#'                    summary_type = "max", metadata = metadata)
+#' }
+prep_raw <- function(
+  input_data,
+  fips_codes,
+  geo = c("county", "state"),
+  summary_type = c("max", "min"),
+  metadata = NULL
 ) {
+
   geo <- match.arg(geo)
-
-  if(is.null(input_data)) {
-    return(NULL)
-  }
-
-  input_data <- input_data %>% mutate(fips = input_data[[geo]])
-  fips_codes <- fips_codes %>% fips_upper()
-
-  plot_df <- input_data %>%
-    group_by(.data$fips) %>%
-    summarize(
-      num = sum(.data$positive),
-      denom = sum(.data$total),
-      support = sum(.data$positive) / sum(.data$total)
-    ) %>%
-    left_join(fips_codes, by = "fips")
-
-  if(geo == "state") {
-    plot_df <- plot_df %>% mutate(
-      value = .data$support,
-      hover = paste0(.data$state, ": ", round(.data$support, 4), " (", .data$num, "/", .data$denom, ")")
-    )
-  } else {
-    plot_df <- plot_df %>% mutate(
-      value = .data$support,
-      hover = paste0(.data$county, " (", .data$state, "): ", round(.data$support, 4), " (", .data$num, "/", .data$denom, ")")
-    )
-  }
-
-  return(plot_df)
-}
-
-#' Prepare raw prevalence data for visualization
-#'
-#' @description Calculates extreme (minimum or maximum) prevalence values over time
-#' by geographic unit and prepares data for map visualization. Useful for showing
-#' peak or lowest prevalence periods.
-#'
-#' @param input_data A data frame containing time series survey data with columns
-#'   for positive responses, total responses, time, and geographic identifiers
-#' @param fips_codes A data frame containing FIPS codes and geographic names
-#' @param geo Character string specifying geographic level, either "county" or "state"
-#' @param extreme_type Character string specifying whether to find "max" or "min"
-#'   prevalence values over time
-#'
-#' @return A data frame with extreme prevalence values, sample sizes, and formatted
-#'   hover text for map visualization
-#'
-#' @noRd
-#' @importFrom dplyr mutate group_by summarize left_join filter
-prep_raw_prev <- function(
-    input_data,
-    fips_codes,
-    geo = c("county", "state"),
-    extreme_type = c("max", "min")
-) {
-  geo <- match.arg(geo)
-  extreme_type <- match.arg(extreme_type)
+  summary_type <- match.arg(summary_type)
   
   if(is.null(input_data)) {
     return(NULL)
@@ -175,68 +150,84 @@ prep_raw_prev <- function(
   input_data <- input_data %>% mutate(fips = input_data[[geo]])
   fips_codes <- fips_codes %>% fips_upper()
 
-  # calculate weekly positive response rate and test counts for each county/state
+  # compute weekly average
+  group_cols <- if(metadata$is_timevar) c("fips", "time") else c("fips")
   plot_df <- input_data %>%
-    group_by(.data$fips, .data$time) %>%
+    group_by(across(all_of(group_cols))) %>%
     summarize(
-      prev = sum(.data$positive) / sum(.data$total),
-      tests = sum(.data$total)
+      value = switch(metadata$family,
+        "binomial" = sum(.data$positive) / sum(.data$total),
+        "normal"   = mean(.data$outcome)
+      )
     )
 
-  # compute only the requested extreme value (min or max)
-  if(extreme_type == "max") {
-    extreme_fn <- max
-    label <- "Highest"
-    which_fn <- which.max
-  } else {
-    extreme_fn <- min
-    label <- "Lowest"
-    which_fn <- which.min
+  if (metadata$is_timevar) {
+    if(summary_type == "max") {
+      summary_fn <- max
+      label <- "Highest"
+      which_fn <- which.max
+    } else if (summary_type == "min") {
+      summary_fn <- min
+      label <- "Lowest"
+      which_fn <- which.min
+    }
+
+    plot_df <- plot_df %>%
+      group_by(.data$fips) %>%
+      summarize(
+        value = summary_fn(.data$value)
+      )
   }
   
-  # compute the extreme prevalence value
+  # construct hover text based on geographic level
   plot_df <- plot_df %>%
-    group_by(.data$fips) %>%
-    summarize(
-      prev_value = extreme_fn(.data$prev),
-      prev_sample = .data$tests[which_fn(.data$prev)]
-    ) %>%
-    left_join(fips_codes, by = "fips")
+    left_join(fips_codes, by = "fips") %>%
+    mutate(
+      hover = switch(geo,
+        "state" = paste0(.data$state, ": "),
+        "county" = paste0(.data$county, " (", .data$state, "): ")
+      )
+    ) %>% 
+    mutate(
+      hover = paste0(.data$hover, round(.data$value, 4))
+    )
 
-  # Create hover text
-  if(geo == "state") {
-    plot_df <- plot_df %>% mutate(
-      value = .data$prev_value,
-      hover = paste0(
-        .data$state, ": ", round(.data$prev_value, 4),
-        " (", round(.data$prev_sample * .data$prev_value), '/', .data$prev_sample, ")"
-      )
-    )
-  } else {
-    plot_df <- plot_df %>% mutate(
-      value = .data$prev_value,
-      hover = paste0(
-        .data$county, " (", .data$state, "): ", round(.data$prev_value, 4),
-        " (", round(.data$prev_sample * .data$prev_value), '/', .data$prev_sample, ")"
-      )
-    )
+
+  # map titles
+  title <- list()
+  title$main_title <- "Outcome Average by Geography"
+  if (metadata$is_timevar) {
+    title$main_title <- paste0("Weekly ", title$main_title)
   }
 
-  return(plot_df)
+  title$hover_title <- if (metadata$is_timevar) {
+    switch(summary_type,
+      "max" = "Highest Weekly Average",
+      "min" = "Lowest Weekly Average"
+    )
+  } else {
+    "Outcome Average"
+  }
+
+  return(list(
+    plot_df = plot_df,
+    title = title
+  ))
 }
+
 
 #' Prepare model estimates for visualization
 #'
 #' @description Prepares model estimates for map visualization by joining with
 #' geographic data and formatting hover text. Can filter to specific time points
-#' for temporal data.
+#' for time-varying data.
 #'
 #' @param est_df A data frame containing model estimates with columns for factor
 #'   (geographic identifier), est (estimate), std (standard error), and optionally time
 #' @param fips_codes A data frame containing FIPS codes and geographic names
 #' @param geo Character string specifying geographic level, either "county" or "state"
 #' @param time_index Optional integer specifying which time point to filter to
-#'   for temporal estimates
+#'   for time-varying estimates
 #'
 #' @return A data frame with estimates, geographic information, and formatted hover
 #'   text for map visualization
@@ -475,45 +466,56 @@ plot_geographic <- function(
 #'
 #' @param raw A data frame containing raw survey data with time, positive, and total columns
 #' @param dates Optional character vector of date labels for x-axis
-#' @param estimate Optional data frame containing model estimates with time, est, and std columns
+#' @param yrep Optional data frame containing model estimates with time, est, and std columns
 #' @param show_caption Logical indicating whether to show uncertainty caption
-#' @param raw_color Character string specifying color for raw data line
-#' @param mrp_color Character string specifying color for MRP estimate line and ribbon
 #'
 #' @return A ggplot object showing prevalence time series with optional estimates
 #'
 #' @noRd
 #' @importFrom ggplot2 ggplot aes geom_line geom_ribbon labs scale_x_continuous scale_y_continuous scale_color_manual theme element_blank element_text margin expansion
 #' @importFrom dplyr group_by summarize right_join left_join mutate
-plot_prev <- function(
+plot_outcome_timevar <- function(
   raw,
-  dates,
-  estimate = NULL,
+  yrep_est = NULL,
+  dates = NULL,
+  metadata = NULL,
   show_caption = FALSE,
-  raw_color = "darkblue",
-  mrp_color = "darkorange"
+  config = GLOBAL$ui$plot
 ) {
 
   if(is.null(raw)) {
     return(NULL)
   }
 
+  # compute weekly rates/averages
   plot_df <- raw %>%
     group_by(.data$time) %>%
-    summarize(prev = sum(.data$positive) / sum(.data$total)) %>%
+    summarize(
+      raw = switch(metadata$family,
+        "binomial" = sum(.data$positive) / sum(.data$total),
+        "normal" = mean(.data$outcome)
+      )
+    )
+
+  # ensure missing time points are included
+  plot_df <- plot_df %>%
     right_join(
       data.frame(time = 1:max(raw$time, na.rm = TRUE)),
       by = "time"
     )
 
-  if(!is.null(estimate)) {
+  if(!is.null(yrep_est)) {
     plot_df <- plot_df %>%
-      left_join(estimate, by = "time") %>%
+      left_join(yrep_est, by = "time") %>%
       mutate(
         bound_upper = .data$est + .data$std,
         bound_lower = .data$est - .data$std
       )
-    plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
+
+    if (metadata$family == "binomial") {
+      # ensure bounds are non-negative for binomial family
+      plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
+    }
   }
 
   p <- ggplot(
@@ -522,13 +524,13 @@ plot_prev <- function(
   ) +
     geom_line(
       aes(
-        y = .data$prev,
+        y = .data$raw,
         color = "Raw"
       ),
       linewidth = 1.5
     )
 
-  if(!is.null(estimate)) {
+  if(!is.null(yrep_est)) {
     p <- p +
       geom_line(
         aes(
@@ -543,7 +545,7 @@ plot_prev <- function(
           ymin = .data$bound_lower,
           ymax = .data$bound_upper
         ),
-        fill = mrp_color,
+        fill = config$mrp_color,
         alpha = 0.5
       )
   }
@@ -556,8 +558,12 @@ plot_prev <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Positive\nResponse Rate",
-      caption = if(show_caption) "*The shaded areas represent \u00B11 SD of uncertainty" else NULL
+      y = "Outcome average",
+      caption = if(show_caption) {
+        "*The shaded areas represent \u00B11 SD of uncertainty"
+      } else {
+        NULL
+      }
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -568,11 +574,11 @@ plot_prev <- function(
       expand = expansion(mult = c(5e-3, 0.1))
     ) +
     scale_color_manual(
-      values = c("Raw" = raw_color, "MRP" = mrp_color)
+      values = c("Raw" = config$raw_color, "MRP" = config$mrp_color)
     ) +
     theme(
       legend.title = element_blank(),
-      legend.position = if(is.null(estimate)) "none" else "bottom",
+      legend.position = if(is.null(yrep_est)) "none" else "bottom",
       plot.caption = element_text(hjust = 0.5),
       plot.margin = margin(1, 1, 1, 1, "cm")
     )
@@ -594,40 +600,54 @@ plot_prev <- function(
 #'
 #' @noRd
 #' @importFrom ggplot2 ggplot geom_point geom_errorbar scale_y_continuous labs theme element_text margin
-#' @importFrom scales percent
 #' @importFrom dplyr mutate
-plot_support <- function(
+plot_outcome_static <- function(
+    raw,
     yrep_est,
-    raw
+    metadata = NULL
 ) {
   if(is.null(yrep_est) || is.null(raw)) {
     return(NULL)
   }
 
-  raw_mean <- sum(raw$positive) / sum(raw$total)
-  plot_df <- rbind(
-    data.frame(
-      data = "Raw",
-      lower = raw_mean,
-      median = raw_mean,
-      upper = raw_mean
-    ),
-    yrep_est
-  ) %>%
+  raw_mean <- switch(metadata$family,
+    "binomial" = sum(raw$positive) / sum(raw$total),
+    "normal" = mean(raw$outcome)
+  )
+  raw <- data.frame(
+    data = "Raw",
+    lower = raw_mean,
+    median = raw_mean,
+    upper = raw_mean
+  )
+
+  yrep_est <- yrep_est %>%
+    mutate(
+      data = "Estimate",
+      lower = .data$est - .data$std,
+      median = .data$est,
+      upper = .data$est + .data$std
+    ) %>%
+    select(.data$data, .data$lower, .data$median, .data$upper) 
+
+  plot_df <- rbind(raw, yrep_est) %>%
     mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
 
   p <- ggplot(data = plot_df) +
     geom_point(
-      aes(x = .data$data, y = .data$median)
+      aes(x = .data$data, y = .data$median),
+      size = GLOBAL$ui$plot$point_size
     ) +
     geom_errorbar(
       aes(x = .data$data, ymin = .data$lower, ymax = .data$upper),
-      width = 0
+      size = GLOBAL$ui$plot$errorbar_size,
+      width = GLOBAL$ui$plot$errorbar_width
     ) +
-    scale_y_continuous(
-      labels = scales::percent
+    labs(
+      x = "",
+      y = "Outcome average",
+      caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
-    labs(x = "", y = "Positive\nResponse Rate") +
     theme(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
@@ -647,8 +667,6 @@ plot_support <- function(
 #'   time column and multiple replication columns
 #' @param raw A data frame containing raw survey data with time, positive, and total columns
 #' @param dates Optional character vector of date labels for x-axis
-#' @param yrep_color Character string specifying color for replication lines
-#' @param raw_color Character string specifying color for raw data line
 #'
 #' @return A ggplot object showing posterior predictive check with multiple replications
 #'
@@ -656,12 +674,12 @@ plot_support <- function(
 #' @importFrom ggplot2 ggplot geom_line aes labs scale_x_continuous scale_y_continuous scale_color_manual theme element_blank margin expansion
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr group_by summarize
-plot_ppc_covid_subset <- function(
+plot_ppc_timevar_subset <- function(
     yrep,
     raw,
     dates,
-    yrep_color = "darkorange",
-    raw_color = "darkblue"
+    metadata,
+    config = GLOBAL$ui$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -670,7 +688,10 @@ plot_ppc_covid_subset <- function(
   raw <- raw %>%
     group_by(.data$time) %>%
     summarize(
-      prev = sum(.data$positive) / sum(.data$total)
+      prev = switch(metadata$family,
+        "binomial" = sum(.data$positive) / sum(.data$total),
+        "normal" = mean(.data$outcome)
+      )
     )
 
   yrep <- yrep %>% tidyr::pivot_longer(
@@ -706,7 +727,7 @@ plot_ppc_covid_subset <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Positivity"
+      y = "Outcome average"
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -717,7 +738,10 @@ plot_ppc_covid_subset <- function(
       expand = expansion(mult = c(5e-3, 0.1))
     ) +
     scale_color_manual(
-      values = c("Raw" = raw_color, "Replicated" = yrep_color)
+      values = c(
+        "Raw" = config$raw_color,
+        "Replicated" = config$yrep_color
+      )
     ) +
     theme(
       legend.title = element_blank(),
@@ -736,20 +760,18 @@ plot_ppc_covid_subset <- function(
 #'   with time, median, lower, and upper columns
 #' @param raw A data frame containing raw survey data with time, positive, and total columns
 #' @param dates Optional character vector of date labels for x-axis
-#' @param yrep_color Character string specifying color for replication line and ribbon
-#' @param raw_color Character string specifying color for raw data line
 #'
 #' @return A ggplot object showing posterior predictive check with summary statistics
 #'
 #' @noRd
 #' @importFrom ggplot2 ggplot geom_line geom_ribbon aes labs scale_x_continuous scale_y_continuous scale_color_manual theme element_blank margin expansion
 #' @importFrom dplyr group_by summarise right_join left_join
-plot_ppc_covid_all <- function(
+plot_ppc_timevar_all <- function(
     yrep,
     raw,
     dates,
-    yrep_color = "darkorange",
-    raw_color = "darkblue"
+    metadata,
+    config = GLOBAL$ui$plot
 ) {
 
   if(is.null(yrep) || is.null(raw)) {
@@ -798,13 +820,13 @@ plot_ppc_covid_all <- function(
         ymin = .data$lower,
         ymax = .data$upper
       ),
-      fill = yrep_color,
+      fill = config$yrep_color,
       alpha = 0.5
     ) +
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Positivity"
+      y = "Outcome average"
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -815,7 +837,7 @@ plot_ppc_covid_all <- function(
       expand = expansion(mult = c(5e-3, 0.1))
     ) +
     scale_color_manual(
-      values = c("Raw" = raw_color, "Replicated" = yrep_color)
+      values = c("Raw" = config$raw_color, "Replicated" = config$yrep_color)
     ) +
     theme(
       legend.title = element_blank(),
@@ -832,19 +854,17 @@ plot_ppc_covid_all <- function(
 #'
 #' @param yrep Numeric vector containing posterior predictive replication values
 #' @param raw A data frame containing raw survey data with positive and total columns
-#' @param yrep_color Character string specifying color for replication points
-#' @param raw_color Character string specifying color for raw data points
 #'
 #' @return A ggplot object showing posterior predictive check for polling data
 #'
 #' @noRd
 #' @importFrom ggplot2 ggplot geom_point aes scale_y_continuous labs theme element_blank element_text margin
 #' @importFrom scales percent
-plot_ppc_poll <- function(
+plot_ppc_static <- function(
     yrep,
     raw,
-    yrep_color = "darkorange",
-    raw_color = "darkblue"
+    metadata = NULL,
+    config = GLOBAL$ui$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -857,7 +877,10 @@ plot_ppc_poll <- function(
     ),
     data.frame(
       name = "Raw",
-      value = sum(raw$positive) / sum(raw$total)
+      value = switch(metadata$family,
+        "binomial" = sum(raw$positive) / sum(raw$total),
+        "normal" = mean(raw$outcome)
+      )
     )
   )
 
@@ -869,12 +892,12 @@ plot_ppc_poll <- function(
         color = .data$name,
         shape = .data$name
       ),
-      size = 3
+      size = GLOBAL$ui$plot$point_size
     ) +
-    scale_y_continuous(
-      labels = scales::percent
+    labs(
+      x = "",
+      y = "Outcome average"
     ) +
-    labs(x = "", y = "Positive\nResponse Rate") +
     theme(
       legend.title = element_blank(),
       plot.title = element_text(hjust = 0.5),
@@ -883,16 +906,16 @@ plot_ppc_poll <- function(
     )
 }
 
-#' Create temporal estimate plots
+#' Create time-varying estimate plots
 #'
 #' @description Creates multi-panel line plots showing model estimates over time
 #' for different factor levels. Includes an overview plot and individual plots
 #' with uncertainty bands for each factor level.
 #'
-#' @param df A data frame containing temporal estimates with factor, time, est, and std columns
+#' @param df A data frame containing time-varying estimates with factor, time, est, and std columns
 #' @param dates Optional character vector of date labels for x-axis
 #'
-#' @return A patchwork object containing multiple ggplot panels showing temporal estimates
+#' @return A patchwork object containing multiple ggplot panels showing time-varying estimates
 #'
 #' @noRd
 #' @importFrom ggplot2 ggplot geom_line geom_ribbon aes labs scale_x_continuous scale_y_continuous scale_color_manual scale_fill_manual theme element_blank margin expansion
@@ -900,31 +923,47 @@ plot_ppc_poll <- function(
 #' @importFrom patchwork wrap_plots plot_annotation
 #' @importFrom tools toTitleCase
 #' @importFrom dplyr mutate filter
-plot_est_temporal <- function(df, dates) {
-  if(is.null(nullify(df))) {
+plot_est_temporal <- function(
+    plot_df,
+    dates,
+    metadata = NULL
+) {
+  if(is.null(nullify(plot_df))) {
     return(NULL)
   }
 
-  levels <- unique(df$factor) %>% sort()
+  levels <- unique(plot_df$factor) %>% sort()
   labels <- levels %>% as.character() %>% tools::toTitleCase()
 
   colors <- RColorBrewer::brewer.pal(8, "Set1")[1:length(levels)]
-  step <- max(1, floor(max(df$time, na.rm = TRUE) / 15))
-  xticks <- seq(1, max(df$time, na.rm = TRUE), step)
+  step <- max(1, floor(max(plot_df$time, na.rm = TRUE) / 15))
+  xticks <- seq(1, max(plot_df$time, na.rm = TRUE), step)
   xticklabels <- if(!is.null(dates)) dates[xticks] else xticks
 
-  df <- df %>% mutate(
+  plot_df <- plot_df %>% mutate(
     bound_lower = .data$est - .data$std,
     bound_upper = .data$est + .data$std
   )
-  df$bound_lower[df$bound_lower < 0] <- 0
-  limits <- c(0, max(df$bound_upper, na.rm = TRUE))
+
+  if(metadata$family == "binomial") {
+    # ensure bounds are non-negative for binomial family
+    plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
+  }
+  config <- list(
+    limits = c(min(plot_df$bound_lower), max(plot_df$bound_upper)),
+    expand = switch(metadata$family,
+      "binomial" = c(5e-3, 0.1),
+      c(0.1, 0.1)
+    )
+  )
+  
+
 
   plot_list <- list()
   i = 1
 
   plot_list[[i]] <- ggplot(
-    data = df,
+    data = plot_df,
     aes(
       x = .data$time,
       y = .data$est,
@@ -944,7 +983,7 @@ plot_est_temporal <- function(df, dates) {
   for(level in levels) {
     i <- i + 1
     plot_list[[i]] <- ggplot(
-      data = df %>% filter(.data$factor == level),
+      data = plot_df %>% filter(.data$factor == level),
       aes(
         x = .data$time,
         y = .data$est,
@@ -970,17 +1009,19 @@ plot_est_temporal <- function(df, dates) {
 
   for(i in 1:length(plot_list)) {
     plot_list[[i]] <- plot_list[[i]] +
-      labs(title = "",
-           x = if(is.null(dates)) "Week index" else "",
-           y = "Positive\nResponse Rate") +
+      labs(
+        title = "",
+        x = if(is.null(dates)) "Week index" else "",
+        y = "Outcome average"
+      ) +
       scale_x_continuous(
         breaks = xticks,
         labels = xticklabels,
         expand = c(0, 0.1)
       ) +
       scale_y_continuous(
-        limits = limits,
-        expand = expansion(mult = c(5e-3, 0.1))
+        limits = config$limits,
+        expand = expansion(mult = config$expand)
       ) +
       theme(
         legend.title = element_blank(),
@@ -1014,7 +1055,7 @@ plot_est_temporal <- function(df, dates) {
 #' @importFrom scales percent
 #' @importFrom tools toTitleCase
 #' @importFrom dplyr n_distinct
-plot_est_static <- function(plot_df) {
+plot_est_static <- function(plot_df, metadata = NULL) {
   if(is.null(nullify(plot_df))) {
     return(NULL)
   }
@@ -1024,7 +1065,8 @@ plot_est_static <- function(plot_df) {
       aes(
         x = .data$factor,
         y = .data$est
-      )
+      ),
+      size = GLOBAL$ui$plot$point_size
     ) +
     geom_errorbar(
       aes(
@@ -1032,16 +1074,17 @@ plot_est_static <- function(plot_df) {
         ymin = .data$est - .data$std,
         ymax = .data$est + .data$std
       ),
-      alpha = 0.8,
-      width = 0
+      size = GLOBAL$ui$plot$errorbar_size,
+      width = GLOBAL$ui$plot$errorbar_width
     ) +
     scale_x_discrete(
       labels = tools::toTitleCase
     ) +
-    scale_y_continuous(
-      labels = scales::percent
+    labs(
+      x = "",
+      y = "Outcome average",
+      caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
-    labs(x = "", y = "Positive\nResponse Rate") +
     theme(
       plot.title = element_text(hjust = 0.5),
       plot.caption = element_text(hjust = 0.5),
@@ -1059,8 +1102,6 @@ plot_est_static <- function(plot_df) {
 #'
 #' @param plot_df A data frame containing geographic data with fips, value, and hover columns
 #' @param geojson A geojson object containing geographic boundaries
-#' @param main_title Character string for the map title
-#' @param sub_title Character string for the legend/series title
 #' @param geo Character string specifying geographic level (used for context)
 #' @param config Optional list containing minValue and maxValue for color scale limits
 #'
@@ -1070,10 +1111,8 @@ plot_est_static <- function(plot_df) {
 choro_map <- function(
     plot_df,
     geojson,
-    main_title,
-    sub_title,
     geo,
-    config = NULL
+    config 
 ) {
   if(is.null(plot_df) || is.null(geojson)) {
     return(NULL)
@@ -1086,7 +1125,7 @@ choro_map <- function(
       df         = plot_df,
       joinBy     = c("fips", "fips"),
       value      = "value",
-      name       = sub_title,
+      name       = config$hover_title,
       dataLabels = list(enabled = FALSE, format = "{point.name}"),
       tooltip    = list(
         pointFormat = "{point.hover}"
@@ -1094,7 +1133,7 @@ choro_map <- function(
       borderWidth= 0.1
     ) %>%
     highcharter::hc_title(
-      text = main_title,
+      text = config$main_title,
       align = "center",
       style = list(fontSize = "20px")
     ) %>%

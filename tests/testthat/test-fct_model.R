@@ -6,7 +6,7 @@ create_test_data <- function(
       bin  = list(n = 3),
       cat  = list(categories = 1:3, n = 3)
     ),
-    family = c("binomial", "gaussian")
+    family = c("binomial", "normal")
 ) {
   family <- match.arg(family)
   set.seed(seed)
@@ -54,7 +54,7 @@ create_test_data <- function(
       positive = sample(1:5, N, replace = TRUE),
       total = sample(6:10, N, replace = TRUE)
     )
-  } else if (family == "gaussian") {
+  } else if (family == "normal") {
     df %>% mutate(
       value = runif(N, 0, 10)
     )
@@ -93,7 +93,7 @@ make_hashed_filename <- function(
 
 get_test_data <- function(fit) {
   variables <- setdiff(fit$metadata()$variables, "lp__")
-  fit$summary(variables = variables) |> select(mean, sd)
+  fit$summary(variables = variables) %>% select(mean, sd)
 }
 
 
@@ -105,7 +105,13 @@ test_that("estimated parameters match saved values", {
   struct_prior <- "structured"
 
   data <- create_test_data(seed = seed) %>%
-    stan_factor(ignore_columns = c("positive", "total"))
+    stan_factor(ignore_cols = c("positive", "total"))
+
+  metadata <- list(
+    special_case = NULL,
+    family = "binomial",
+    is_timevar = FALSE
+  )
 
   # fixed effect of continuous variables only
   effects <- list(
@@ -123,6 +129,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -133,7 +140,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -155,6 +162,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -165,7 +173,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -187,6 +195,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -197,7 +206,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -219,6 +228,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -229,7 +239,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -257,6 +267,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -267,7 +278,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -295,6 +306,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -305,7 +317,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -333,6 +345,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -343,7 +356,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -371,6 +384,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -381,7 +395,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -411,6 +425,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -421,7 +436,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -452,6 +467,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -462,7 +478,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -495,6 +511,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -505,7 +522,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -536,6 +553,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -546,7 +564,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -579,6 +597,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -589,7 +608,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -617,6 +636,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -627,7 +647,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -660,6 +680,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -670,7 +691,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE
@@ -703,6 +724,7 @@ test_that("estimated parameters match saved values", {
     input_data = data,
     new_data = data,
     effects = effects,
+    metadata = metadata,
     seed = seed,
     n_iter = 2000,
     silent = TRUE
@@ -713,7 +735,7 @@ test_that("estimated parameters match saved values", {
     readr::read_csv(show_col_types = FALSE)
 
   expect_equal(
-    get_test_data(result$fit$mcmc),
+    get_test_data(result$fit),
     ref,
     tolerance = 0.1,
     ignore_attr = TRUE

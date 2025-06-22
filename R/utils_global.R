@@ -24,17 +24,9 @@ module_ids <- list(
 )
 
 GLOBAL <- list(
-  bounds = list(
-    covid = list(
-      poverty = c(0, 1, 2)
-    )
-  ),
-  vars = list(
-    subgroups = c("sex", "race", "age", "edu", "county", "state"),
-    indiv = c("sex", "race", "age", "edu", "time"),
-    geo = c("zip", "county", "state"),
-    time = c("time", "date"),
-    ignore = c("date", "total", "positive")
+  path = list(
+    example_data = "extdata/example/data/",
+    example_fit = "extdata/example/fit/"
   ),
   ui = list(
     style = list(
@@ -52,23 +44,35 @@ GLOBAL <- list(
         }"
     ),
     preview_size = 100,
-    max_model = 5,
-    iter_range = c(100, 5000),
-    chain_range = c(1, 8),
-    plot_height = 550,
-    subplot_height = 300,
-    map_height = 700,
-    date_format = "%b%d\n%Y",
+    format = list(
+      date = "%b%d\n%Y",
+      data = c(".csv", ".xlsx", ".sas7bdat")
+    ),
+    model = list(
+      max_models = 5,
+      iter_range = c(100, 5000),
+      chain_range = c(1, 8)
+    ),
+    plot = list(
+      plot_height = 550,
+      subplot_height = 300,
+      map_height = 700,
+      point_size = 3.5,
+      errorbar_size = 0.8,
+      errorbar_width = 0,
+      raw_color = "darkblue",
+      yrep_color = "darkorange",
+      mrp_color = "darkorange"
+    ),
     animation = list(
       duration = 1000,
       delay = 100
     ),
-    data_accept = c(".csv", ".xlsx", ".sas7bdat"),
     plot_selection = list(
       vis_main = c(
         "Individual Characteristics" = "indiv",
         "Geographic Characteristics" = "geo",
-        "Positive Response Rate" = "pos_rate"
+        "Outcome Average" = "outcome"
       ),
       indiv = c(
         "Sex" = "sex",
@@ -87,7 +91,7 @@ GLOBAL <- list(
         "Urbanicity" = "urban",
         "ADI" = "adi"
       ),
-      pos_rate = c(
+      outcome = c(
         "Overall" = "overall",
         "By Geography" = "by_geo"
       ),
@@ -98,7 +102,21 @@ GLOBAL <- list(
         "Education" = "edu",
         "Geography" = "geo"
       )
+    ),
+    use_case_labels = list(
+      covid = "Time-varying: COVID",
+      poll = "Cross-sectional: Poll",
+      timevar_general = "Time-varying: General",
+      static_general = "Cross-sectional: General"
     )
+  ),
+  family = c("binomial", "normal"),
+  vars = list(
+    pstrat = c("sex", "race", "age", "edu", "county", "state"),
+    indiv  = c("sex", "race", "age", "edu", "time"),
+    geo    = c("zip", "county", "state"),
+    time   = c("time", "date"),
+    ignore = c("date", "total", "positive", "outcome")
   ),
   default_priors = list(
     Intercept = "normal(0, 5)",

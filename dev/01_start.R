@@ -21,7 +21,7 @@
 golem::fill_desc(
   pkg_name = "shinymrp", # The Name of the package containing the App
   pkg_title = "Point-and-click interface for MRP", # The Title of the package containing the App
-  pkg_description = "A GUI designed for intuitive applications of Multilevel Regression and Poststratification to cross-sectional and spatio-temporal datasets.", # The Description of the package containing the App
+  pkg_description = "A GUI designed for intuitive applications of Multilevel Regression and Poststratification.", # The Description of the package containing the App
   author_first_name = "Toan", # Your First Name
   author_last_name = "Tran", # Your Last Name
   author_email = "tntoan@umich.edu", # Your Email

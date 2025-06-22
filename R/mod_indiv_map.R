@@ -21,7 +21,7 @@ mod_indiv_map_ui <- function(id) {
     ),
     highcharter::highchartOutput(
       outputId = ns("sample_size_map"), 
-      height = GLOBAL$ui$map_height,
+      height = GLOBAL$ui$plot$map_height,
       width = "100%"
     )
   )
@@ -51,9 +51,11 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
         mutate(value = .data$count) %>%
         choro_map(
           geojson()[[geo]],
-          main_title = sprintf("Sample Size Map"),
-          sub_title = "Sample Size",
-          geo = geo
+          geo = geo,
+          config = list(
+            main_title = sprintf("Sample Size Map"),
+            hover_title = "Sample Size"
+          )
         )
     })
 

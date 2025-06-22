@@ -3,8 +3,8 @@
 #' @description Creates the user interface for data visualization and exploratory
 #' analysis in the MRP application. Provides a sidebar layout with dynamic
 #' selection controls for different plot categories including individual-level
-#' characteristics, geographic patterns, and positive response rates. Supports
-#' both temporal and cross-sectional data visualization with interactive maps
+#' characteristics, geographic patterns, and outcome averages. Supports
+#' both time-varying and cross-sectional data visualization with interactive maps
 #' and plots.
 #'
 #' @param id Character string. The module's namespace identifier.
@@ -12,7 +12,7 @@
 #' @return A \code{bslib::layout_sidebar} containing the visualization interface with:
 #' \itemize{
 #'   \item Sidebar with dynamic plot category and subcategory selection
-#'   \item Conditional panels for temporal data options
+#'   \item Conditional panels for time-varying data options
 #'   \item Main panel with dynamic plot output based on selections
 #' }
 #'
@@ -42,14 +42,14 @@ mod_analyze_visualize_ui <- function(id){
         width = "100%"
       ),
       conditionalPanel(
-        condition = sprintf("(output.data_format == 'temporal_covid' || output.data_format == 'temporal_other') && input['%s'] == 'by_geo'", 
+        condition = sprintf("output.is_timevar && input['%s'] == 'by_geo'", 
                             ns("plot_subcategory")),
         bslib::card(
           selectizeInput(
-            inputId = ns("extreme_select"),
-            label = "Select quantity",
-            choices = c("Highest Weekly Rate" = "max",
-                        "Lowest Weekly Rate" = "min"),
+            inputId = ns("summary_slt"),
+            label = "Select summary statistic",
+            choices = c("Highest" = "max",
+                        "Lowest" = "min"),
             options = list(dropdownParent = "body")
           )
         )
@@ -64,12 +64,11 @@ mod_analyze_visualize_ui <- function(id){
 #' @description Server logic for the data visualization module. Manages dynamic
 #' UI updates based on data format and linking geography, renders various types
 #' of plots including individual-level characteristics, geographic patterns,
-#' and positive response rates. Handles both temporal and cross-sectional data
+#' and outcome averages. Handles both time-varying and cross-sectional data
 #' with appropriate visualization methods including interactive maps and charts.
 #'
 #' @param id Character string. The module's namespace identifier.
-#' @param global Reactive values object containing global application state,
-#' including mrp data, link_data, plot_data, data_format, and extdata.
+#' @param global Reactive values object containing global application state
 #'
 #' @return Server function for the visualization module. Creates reactive
 #' updates for plot selection, renders dynamic UI components, and generates
@@ -88,43 +87,42 @@ mod_analyze_visualize_server <- function(id, global){
 
     # Update the plot category selectInput based on the linking geography.
     observeEvent(global$link_data, {
+      # Reset the select inputs
+      shinyjs::reset("summary_slt")
+
       choices <- GLOBAL$ui$plot_selection$vis_main
       if (is.null(global$link_data$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
 
       # Update the plot category selectInput with the new choices.
+      updateSelectInput(session, "plot_category", choices = c("foo")) # Placeholder to trigger update
       updateSelectInput(session, "plot_category", choices = choices)
-      
-      # Reset extreme select input
-      shinyjs::reset("extreme_select")
     })
 
 
     # Update the subcategory selectInput based on the main category selection.
     observeEvent(input$plot_category, {
       # Define the subcategory choices for each category.
-
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
-        if(global$data_format != "static_poll") {
+        if(is.null(global$metadata$special_case) ||
+           global$metadata$special_case != "poll") {
           choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {
         label <- "2. Select characteristic"
-        choices <- switch(global$data_format,
-          "temporal_covid" = c(GLOBAL$ui$plot_selection$geo,
-                               GLOBAL$ui$plot_selection$geo_covar),
-          "temporal_other" = GLOBAL$ui$plot_selection$geo,
-          "static_poll"    = GLOBAL$ui$plot_selection$geo,
-          "static_other"   = GLOBAL$ui$plot_selection$geo
-        )
-      } else if (input$plot_category == "pos_rate") {
+        choices <- GLOBAL$ui$plot_selection$geo
+        if (!is.null(global$metadata$special_case) &&
+            global$metadata$special_case == "covid") {
+          choices <- c(choices, GLOBAL$ui$plot_selection$geo_covar)
+        }
+      } else if (input$plot_category == "outcome") {
         label <- "2. Select plot type"
-        choices <- GLOBAL$ui$plot_selection$pos_rate
+        choices <- GLOBAL$ui$plot_selection$outcome
 
-        if (global$data_format %in% c("static_poll", "static_other")) {
+        if (!global$metadata$is_timevar) {
           choices <- choices[!choices == "overall"]
         }
 
@@ -168,10 +166,10 @@ mod_analyze_visualize_server <- function(id, global){
           "urban" = mod_geo_plot_ui(ns("geo_urban")),
           "adi" = mod_geo_plot_ui(ns("geo_adi"))
         )
-      } else if (category == "pos_rate") {
+      } else if (category == "outcome") {
         switch(subcategory,
-          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot_height),
-          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$map_height)
+          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot$plot_height),
+          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$plot$map_height)
         )
       }
     })
@@ -255,54 +253,50 @@ mod_analyze_visualize_server <- function(id, global){
 
 
     # --------------------------------------------------------------------------
-    # Plot for Positive Response Rate
+    # Plot for Outcome Measure over Time
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
       req(input$plot_subcategory == "overall")
-      plot_prev(global$mrp$input, global$plot_data$dates)
+
+      plot_outcome_timevar(
+        raw = global$mrp$input,
+        dates = global$plot_data$dates,
+        metadata = global$metadata
+      )
     })
 
     # --------------------------------------------------------------------------
-    # Map for Positive Response Rate
+    # Map for Outcome Measure
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
       req(global$link_data$link_geo)
 
-      geo <- if(global$link_data$link_geo == "zip") "county" else global$link_data$link_geo
-
-      if(global$data_format %in% c("temporal_covid", "temporal_other")) {
-        plot_df <- global$mrp$input %>%
-          prep_raw_prev(
-            fips_codes = global$extdata$fips[[geo]],
-            geo = geo,
-            extreme_type = input$extreme_select
-          )
-
-        choro_map(
-          plot_df,
-          global$plot_data$geojson[[geo]],
-          main_title = "Weekly Positive Response Rate By Geography",
-          sub_title = switch(input$extreme_select,
-            "max" = "Highest Weekly Rate",
-            "min" = "Lowest Weekly Rate"
-          ),
-          geo = geo,
-          config = if (max(plot_df$value) == 0) list(minValue = 0, maxValue = 1) else NULL
-        )
-      } else {
-        global$mrp$input %>%
-          prep_raw_support(
-            fips_codes = global$extdata$fips[[geo]],
-            geo = geo
-          ) %>%
-          mutate(value = .data$support) %>%
-          choro_map(
-            global$plot_data$geojson[[geo]],
-            main_title = "Positive Response Rate By Geography",
-            sub_title = "Positive Response Rate",
-            geo = geo
-          )
+      geo <- global$link_data$link_geo
+      if (geo == "zip") {
+        geo <- "county"  # Plot county-level map for ZIP codes
       }
+
+      out <- prep_raw(
+        global$mrp$input,
+        global$extdata$fips[[geo]],
+        geo = geo,
+        summary_type = input$summary_slt,
+        metadata = global$metadata
+      )
+
+      config <- list()
+      if (n_distinct(out$plot_df$value) == 1 &&
+          out$plot_df$value[1] == 0) {
+        config <- list(minValue = 0, maxValue = 1)
+      }
+      config <- c(config, out$title)
+
+      choro_map(
+        out$plot_df,
+        global$plot_data$geojson[[geo]],
+        geo = geo,
+        config = config
+      )
     })
     
   })
