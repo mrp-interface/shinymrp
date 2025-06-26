@@ -9,7 +9,6 @@
 #' @return A data frame containing the data from the specified file.
 #'
 #' @noRd
-#'
 read_data <- function(file_path) {
   if(stringr::str_ends(file_path, "csv")) {
     readr::read_csv(file_path, show_col_types = FALSE)
