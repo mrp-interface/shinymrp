@@ -927,11 +927,11 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 #'
 #' @return Preprocessed data frame ready for analysis.
 #'
-#' @noRd
-#'
 #' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
 #' @importFrom tidyr drop_na
 #' @importFrom rlang syms .data
+#' 
+#' @export
 preprocess <- function(
   data,
   metadata,
@@ -1162,10 +1162,10 @@ combine_tracts <- function(
 #'   \item{levels}{Complete list of factor levels}
 #'   \item{vars}{Variable lists for model specification}
 #'
-#' @noRd
-#'
 #' @importFrom dplyr filter select mutate arrange across left_join
 #' @importFrom rlang sym .data
+#' 
+#' @export
 prepare_mrp_acs <- function(
     input_data,
     tract_data,
@@ -1258,10 +1258,10 @@ prepare_mrp_acs <- function(
 #'   \item{levels}{Complete list of factor levels}
 #'   \item{vars}{Variable lists for model specification}
 #'
-#' @noRd
-#'
 #' @importFrom dplyr filter mutate
 #' @importFrom rlang sym
+#' 
+#' @export
 prepare_mrp_custom <- function(
     input_data,
     new_data,
