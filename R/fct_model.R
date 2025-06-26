@@ -1178,6 +1178,141 @@ make_standata <- function(
   return(stan_data)
 }
 
+#' Run MCMC Sampling for Multilevel Regression and Poststratification
+#'
+#' @description Performs Bayesian MCMC sampling for multilevel regression and
+#' poststratification (MRP) models using Stan. This is the core function for
+#' model fitting, generating Stan code, compiling models, and running MCMC
+#' chains with comprehensive diagnostics.
+#'
+#' @param input_data Data frame containing observations for model fitting with required columns:
+#'   \itemize{
+#'     \item For binomial family: `positive` (number of successes), `total` (number of trials)
+#'     \item For normal family: `outcome` (continuous response variable)
+#'     \item Additional predictor variables as specified in effects structure
+#'   }
+#' @param new_data Data frame containing population data for poststratification with:
+#'   \itemize{
+#'     \item Same predictor variables as input_data
+#'     \item `total` column for population weights
+#'     \item Optional `time` column for time-varying models
+#'   }
+#' @param effects Ungrouped effects structure from [`ungroup_effects()`](R/fct_model.R:440) containing:
+#'   \itemize{
+#'     \item `Intercept`: Global intercept prior specification
+#'     \item `m_fix_bc`: Binary/continuous fixed main effects
+#'     \item `m_fix_c`: Categorical fixed main effects
+#'     \item `m_var`: Varying main effects
+#'     \item `i_fixsl`: Fixed-slope interactions
+#'     \item `i_varsl`: Varying-slope interactions
+#'     \item `i_varit`: Varying-intercept interactions
+#'     \item `i_varits`: Special varying-intercept interactions
+#'     \item `s_varsl`: Structured varying-slope interactions
+#'     \item `s_varit`: Structured varying-intercept interactions
+#'     \item `s_varits`: Special structured varying-intercept interactions
+#'   }
+#' @param metadata List containing model specifications:
+#'   \itemize{
+#'     \item `family`: Distribution family ("binomial" or "normal")
+#'     \item `pstrat_vars`: Character vector of poststratification variables
+#'     \item `is_timevar`: Logical indicating time-varying data
+#'   }
+#' @param n_iter Integer total number of MCMC iterations per chain (default 1000).
+#'   Half used for warmup, half for sampling
+#' @param n_chains Integer number of MCMC chains to run (default 4)
+#' @param extra Optional list containing sensitivity/specificity parameters:
+#'   \itemize{
+#'     \item `sens`: Sensitivity parameter for measurement error models
+#'     \item `spec`: Specificity parameter for measurement error models
+#'   }
+#' @param seed Integer random seed for reproducible results (default NULL)
+#' @param code_fout Optional file path to save generated Stan code for inspection
+#' @param silent Logical whether to suppress Stan compilation and sampling messages (default FALSE)
+#'
+#' @return List containing MCMC results and model artifacts:
+#'   \itemize{
+#'     \item `fit`: CmdStanR fit object with posterior draws and diagnostics
+#'     \item `stan_data`: Named list of data passed to Stan model
+#'     \item `stan_code`: Named list of generated Stan programs:
+#'       \itemize{
+#'         \item `mcmc`: Main model for parameter estimation
+#'         \item `ppc`: Posterior predictive checks
+#'         \item `loo`: Leave-one-out cross-validation
+#'         \item `pstrat`: Poststratification estimates
+#'       }
+#'   }
+#'
+#' @details
+#' This function orchestrates the complete MRP modeling workflow:
+#'
+#' **Stan Code Generation**: Creates specialized Stan programs for:
+#' - Main MCMC sampling with hierarchical priors
+#' - Posterior predictive checking for model validation
+#' - Leave-one-out cross-validation for model comparison
+#' - Poststratification for population-level inference
+#'
+#' **Data Preparation**: Transforms input data to Stan-compatible format including:
+#' - Design matrices for fixed and varying effects
+#' - Grouping indices for hierarchical structure
+#' - Poststratification weights and population structure
+#'
+#' **MCMC Sampling**: Uses CmdStan with optimized settings:
+#' - Parallel chain execution for efficiency
+#' - Threading support for large models
+#' - Comprehensive convergence diagnostics
+#' - Automatic warmup and sampling phases
+#'
+#' **Model Families**: Supports both binomial and normal outcome distributions
+#' with appropriate likelihood functions and default priors.
+#'
+#' **Structured Priors**: Implements hierarchical shrinkage priors for
+#' interaction terms when specified, enabling principled regularization
+#' of complex interaction structures.
+#'
+#' @examples
+#' \dontrun{
+#' # Prepare effects structure
+#' effects <- list(
+#'   Intercept = "normal(0, 1)",
+#'   m_fix_bc = list(age = "normal(0, 0.5)"),
+#'   m_var = list(state = "exponential(1)")
+#' )
+#'
+#' # Model metadata
+#' metadata <- list(
+#'   family = "binomial",
+#'   pstrat_vars = c("age_group", "gender"),
+#'   is_timevar = FALSE
+#' )
+#'
+#' # Run MCMC sampling
+#' results <- run_mcmc(
+#'   input_data = survey_data,
+#'   new_data = population_data,
+#'   effects = effects,
+#'   metadata = metadata,
+#'   n_iter = 2000,
+#'   n_chains = 4,
+#'   seed = 12345
+#' )
+#'
+#' # Access results
+#' fit <- results$fit
+#' diagnostics <- fit$diagnostic_summary()
+#' posterior_draws <- fit$draws()
+#' }
+#'
+#' @seealso
+#' \itemize{
+#'   \item [`make_stancode_mcmc()`](R/fct_model.R:912) for Stan code generation
+#'   \item [`make_standata()`](R/fct_model.R:1067) for data preparation
+#'   \item [`run_gq()`](R/fct_model.R:1232) for generated quantities
+#'   \item [`extract_parameters()`](R/fct_model.R:1336) for parameter extraction
+#' }
+#'
+#' @noRd
+#'
+#' @importFrom cmdstanr cmdstan_model write_stan_file
 run_mcmc <- function(
     input_data,
     new_data,

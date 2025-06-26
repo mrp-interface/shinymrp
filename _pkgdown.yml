@@ -43,13 +43,14 @@ navbar:
       aria-label: GitHub
 
 reference:
-- title: "Main Functions"
-  desc: "Core functions for running the application"
+- title: "Data Preparation"
+  desc: "Funcctions for preparing data for MRP"
   contents:
-  - run_app
+  - preprocess
+  - prepare_mrp_acs
+  - prepare_mrp_custom
   
-- title: "Utilities"
-  desc: "Helper functions and utilities"
+- title: "Model Fitting"
   contents:
   - pipe
 
