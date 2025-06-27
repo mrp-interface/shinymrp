@@ -53,3 +53,4 @@ rsconnect/
 inst/.DS_Store
 inst/extdata/.DS_Store
 .vscode/
+docs

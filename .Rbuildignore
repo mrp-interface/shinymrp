@@ -8,3 +8,6 @@
 ^dev$
 ^rsconnect$
 ^codecov\.yml$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
