@@ -31,7 +31,17 @@ jobs:
             libfontconfig1-dev \
             libfreetype6-dev \
             libharfbuzz-dev \
-            libfribidi-dev
+            libfribidi-dev \
+            libcairo2-dev \
+            libxt-dev \
+            libpng-dev \
+            libjpeg-dev \
+            libtiff5-dev \
+            zlib1g-dev \
+            libbz2-dev \
+            liblzma-dev \
+            libpcre3-dev \
+            build-essential
 
       - name: Install R dependencies
         run: |
