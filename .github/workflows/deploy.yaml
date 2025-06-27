@@ -27,17 +27,20 @@ jobs:
 
       - name: Authenticate with shinyapps.io
         run: |
-          Rscript -e "rsconnect::setAccountInfo(
+          unlink("renv.lock")
+          rsconnect::setAccountInfo(
             name   = Sys.getenv('SHINYAPPS_ACCOUNT'),
             token  = Sys.getenv('SHINYAPPS_TOKEN'),
             secret = Sys.getenv('SHINYAPPS_SECRET')
-          )"
+          )
+        shell: Rscript {0}
 
       - name: Deploy app
         run: |
-          Rscript -e "rsconnect::deployApp(
+          rsconnect::deployApp(
             appDir  = '.',
             appName = 'shinymrp',
             server  = 'shinyapps.io',
             forceUpdate = TRUE
-          )"
+          )
+        shell: Rscript {0}
