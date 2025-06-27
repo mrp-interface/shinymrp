@@ -44,17 +44,7 @@ jobs:
             libpcre3-dev \
             build-essential
 
-      - name: Set up renv
-        run: |
-          install.packages("renv")
-          renv::restore(prompt = FALSE)
-          renv::snapshot(prompt = FALSE)
-        shell: Rscript {0}
-
-      - name: Remove local renv library
-        run: |
-          unlink("renv", recursive = TRUE)
-        shell: Rscript {0}
+      - uses: r-lib/actions/setup-renv@v2
 
       - name: Install rsconnect
         run: install.packages("rsconnect")
