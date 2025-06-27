@@ -7,7 +7,7 @@ Authors@R: c(
     person("Yajuan", "Si", email = "yajuan@umich.edu", role = "aut"),
     person("Mitzi", "Morris", email = "mitzi212@gmail.com", role = "aut")
   )
-Author:     Toan Tran [cre, aut], Jonah Gabry [aut], Yajuan Si [aut], Mitzi Morris [aut]
+Author: Toan Tran [cre, aut], Jonah Gabry [aut], Yajuan Si [aut], Mitzi Morris [aut]
 Maintainer: Toan Tran <tranntoan97@gmail.com>
 Description: A GUI designed for intuitive applications of Multilevel
     Regression and Poststratification.
@@ -31,6 +31,7 @@ Imports:
     loo,
     magrittr,
     patchwork,
+    pkgload,
     posterior,
     purrr,
     qs,
