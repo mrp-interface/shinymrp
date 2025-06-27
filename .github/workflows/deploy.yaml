@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Publish to shinyapps.io
@@ -21,6 +25,14 @@ jobs:
         with:
           r-version: '4.5.0'
 
+      - name: Cache R library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-R-${{ hashFiles('renv.lock', 'DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-R-
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rsconnect, local::.
@@ -34,12 +46,13 @@ jobs:
           )
         shell: Rscript {0}
 
-      - name: Deploy app
+      - name: Deploy app (ignore renv.lock)
         run: |
+          options(rsconnect.packrat = TRUE)
           rsconnect::deployApp(
-            appDir  = '.',
-            appName = 'shinymrp',
-            server  = 'shinyapps.io',
+            appDir      = '.',
+            appName     = 'shinymrp',
+            server      = 'shinyapps.io',
             forceUpdate = TRUE
           )
         shell: Rscript {0}
