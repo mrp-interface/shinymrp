@@ -30,9 +30,11 @@ jobs:
           install.packages("devtools")
           devtools::install_deps(dependencies = TRUE)
           install.packages("pkgdown")
+        shell: Rscript {0}
 
       - name: Build pkgdown site
         run: pkgdown::build_site()
+        shell: Rscript {0}
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
