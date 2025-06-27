@@ -29,7 +29,9 @@ jobs:
             libssl-dev \
             libxml2-dev \
             libfontconfig1-dev \
-            libfreetype6-dev
+            libfreetype6-dev \
+            libharfbuzz-dev \
+            libfribidi-dev
 
       - name: Install R dependencies
         run: |
