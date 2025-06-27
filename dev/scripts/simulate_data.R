@@ -399,7 +399,7 @@ run_simulation <- function(
     include_date = FALSE,
     seed = sample(1:10000, 1),
     save_path = NULL,
-    file_name = "data"
+    file_name = "data",
     extra = NULL
 ) {
 
