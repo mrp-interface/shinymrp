@@ -2999,6 +2999,12 @@
       "NeedsCompilation": "no",
       "Repository": "CRAN"
     },
+    "pkgload": {
+      "Package": "pkgload",
+      "Version": "1.4.0",
+      "Source": "Repository",
+      "Repository": "CRAN"
+    },
     "posterior": {
       "Package": "posterior",
       "Version": "1.6.1",
