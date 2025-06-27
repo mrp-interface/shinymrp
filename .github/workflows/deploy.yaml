@@ -15,7 +15,7 @@ jobs:
       SHINYAPPS_SECRET:  ${{ secrets.SHINYAPPS_SECRET }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -44,13 +44,15 @@ jobs:
             libpcre3-dev \
             build-essential
 
-
       - name: Set up renv
         run: |
           install.packages("renv")
           renv::restore(prompt = FALSE)
-          renv::install("rsconnect")
           renv::snapshot(prompt = FALSE)
+        shell: Rscript {0}
+        
+      - name: Install rsconnect
+        run: install.packages("rsconnect")
         shell: Rscript {0}
 
       - name: Authenticate with shinyapps.io
