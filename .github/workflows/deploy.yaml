@@ -50,7 +50,12 @@ jobs:
           renv::restore(prompt = FALSE)
           renv::snapshot(prompt = FALSE)
         shell: Rscript {0}
-        
+
+      - name: Remove local renv library
+        run: |
+          unlink("renv", recursive = TRUE)
+        shell: Rscript {0}
+
       - name: Install rsconnect
         run: install.packages("rsconnect")
         shell: Rscript {0}
