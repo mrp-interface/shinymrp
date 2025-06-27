@@ -52,4 +52,5 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
-          Rscript -e 'covr::codecov(token = Sys.getenv("CODECOV_TOKEN"))'
+          covr::codecov(token = Sys.getenv("CODECOV_TOKEN"))
+        shell: Rscript {0}
