@@ -262,7 +262,7 @@ prepare_mrp_covid <- function(
   levels$county <- pstrat_data$county %>% unique()
 
   # list of variables for model specification
-  vars <- create_variable_list(input_data, covariates, vars_global)
+  vars <- create_variable_list(input_data, covariates)
 
   return(list(
     input = input_data,
