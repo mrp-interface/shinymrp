@@ -1,4 +1,29 @@
 url: ~
+
 template:
   bootstrap: 5
 
+navbar:
+
+
+toc:
+  depth: 4
+
+reference:
+  - title: "Running the Shiny app"
+    contents:
+      - run_app
+  - title: "Preparing data for MRP"
+    contents:
+      - preprocess
+      - prepare_mrp_acs
+      - prepare_mrp_custom
+  
+
+
+articles:
+
+
+news:
+  file: NEWS.md
+  title: "Release"
