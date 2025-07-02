@@ -68,10 +68,17 @@ GLOBAL <- list(
       delay = 100
     ),
     plot_selection = list(
-      vis_main = c(
-        "Individual Characteristics" = "indiv",
-        "Geographic Characteristics" = "geo",
-        "Outcome Average" = "outcome"
+      vis_main = list(
+        binomial = c(
+          "Individual Characteristics" = "indiv",
+          "Geographic Characteristics" = "geo",
+          "Positive Response Rate" = "outcome"
+        ),
+        normal = c(
+          "Individual Characteristics" = "indiv",
+          "Geographic Characteristics" = "geo",
+          "Outcome Average" = "outcome"
+        )
       ),
       indiv = c(
         "Sex" = "sex",
