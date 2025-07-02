@@ -196,18 +196,28 @@ prep_raw <- function(
 
   # map titles
   title <- list()
-  title$main_title <- "Outcome Average by Geography"
-  if (metadata$is_timevar) {
-    title$main_title <- paste0("Weekly ", title$main_title)
-  }
+  main <- switch(metadata$family,
+    "binomial" = "Positive Response Rate",
+    "normal" = "Outcome Average"
+  )
+  prefix <- if (metadata$is_timevar) "Weekly " else ""
+  suffix <- " by Geography"
+  title$main_title <- paste0(prefix, main, suffix)
 
   title$hover_title <- if (metadata$is_timevar) {
+    s <- switch(metadata$family,
+      "binomial" = "Rate",
+      "normal" = "Average"
+    )
     switch(summary_type,
-      "max" = "Highest Weekly Average",
-      "min" = "Lowest Weekly Average"
+      "max" = stringr::str_interp("Highest Weekly ${s}"),
+      "min" = stringr::str_interp("Lowest Weekly ${s}")
     )
   } else {
-    "Outcome Average"
+    switch(metadata$family,
+      "binomial" = "Positive Response Rate",
+      "normal" = "Outcome Average"
+    )
   }
 
   return(list(
@@ -559,7 +569,17 @@ plot_outcome_timevar <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Outcome average",
+      y = if(is.null(yrep_est)) {
+        switch(metadata$family,
+          "binomial" = "Positive response rate",
+          "normal" = "Outcome average"
+        )
+      } else {
+        switch(metadata$family,
+          "binomial" = "Proportion estimates",
+          "normal" = "Mean estimates"
+        )
+      },
       caption = if(show_caption) {
         "*The shaded areas represent \u00B11 SD of uncertainty"
       } else {
@@ -646,7 +666,10 @@ plot_outcome_static <- function(
     ) +
     labs(
       x = "",
-      y = "Outcome average",
+      y = switch(metadata$family,
+        "binomial" = "Proportion estimates",
+        "normal" = "Mean estimates"
+      ),
       caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
     theme(
@@ -728,7 +751,10 @@ plot_ppc_timevar_subset <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Outcome average"
+      y = switch(metadata$family,
+        "binomial" = "Positive response rate",
+        "normal" = "Outcome average"
+      )
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -827,7 +853,10 @@ plot_ppc_timevar_all <- function(
     labs(
       title = "",
       x = if(is.null(dates)) "Week index" else "",
-      y = "Outcome average"
+      y = switch(metadata$family,
+        "binomial" = "Positive response rate",
+        "normal" = "Outcome average"
+      )
     ) +
     scale_x_continuous(
       breaks = xticks,
@@ -897,7 +926,10 @@ plot_ppc_static <- function(
     ) +
     labs(
       x = "",
-      y = "Outcome average"
+      y = switch(metadata$family,
+        "binomial" = "Positive response rate",
+        "normal" = "Outcome average"
+      )
     ) +
     theme(
       legend.title = element_blank(),
@@ -1013,7 +1045,10 @@ plot_est_temporal <- function(
       labs(
         title = "",
         x = if(is.null(dates)) "Week index" else "",
-        y = "Outcome average"
+        y = switch(metadata$family,
+          "binomial" = "Proportion estimates",
+          "normal" = "Mean estimates"
+        )
       ) +
       scale_x_continuous(
         breaks = xticks,
@@ -1083,7 +1118,10 @@ plot_est_static <- function(plot_df, metadata = NULL) {
     ) +
     labs(
       x = "",
-      y = "Outcome average",
+      y = switch(metadata$family,
+        "binomial" = "Proportion estimates",
+        "normal" = "Mean estimates"
+      ),
       caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
     theme(

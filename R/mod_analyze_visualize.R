@@ -90,7 +90,9 @@ mod_analyze_visualize_server <- function(id, global){
       # Reset the select inputs
       shinyjs::reset("summary_slt")
 
-      choices <- GLOBAL$ui$plot_selection$vis_main
+      choices <- GLOBAL$ui$plot_selection$vis_main[[global$metadata$family]]
+      global$metadata$family
+
       if (is.null(global$link_data$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
