@@ -798,7 +798,7 @@ mod_analyze_model_server <- function(id, global){
       # extract sampler diagnostics
       show_warnings <- FALSE
       if (is.null(model$diagnostics$mcmc)) {
-        out <- extract_diagnostics(
+        out <- get_diagnostics(
           fit = model$fit,
           total_transitions = model$metadata$n_iter / 2 * model$metadata$n_chains
         )
@@ -808,7 +808,7 @@ mod_analyze_model_server <- function(id, global){
       
       # extract posterior summary of coefficients
       if (is.null(model$params)) {
-        model$params <- extract_parameters(
+        model$params <- get_parameters(
           fit = model$fit,
           effects = model$effects,
           input_data = model$mrp$input,
@@ -839,7 +839,7 @@ mod_analyze_model_server <- function(id, global){
         )
 
         # extract draws and format PPC draws
-        model$yrep <- extract_yrep(
+        model$yrep <- get_replicates(
           fit_ppc,
           model$mrp$input,
           model$metadata
@@ -953,7 +953,7 @@ mod_analyze_model_server <- function(id, global){
             n_chains = model$metadata$n_chains
           )
           
-          model$est <- extract_est(
+          model$est <- get_estimates(
             fit_pstrat,
             model$mrp$new,
             model$metadata

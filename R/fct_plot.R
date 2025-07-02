@@ -132,6 +132,7 @@ prep_sample_size <- function(
 #' result <- prep_raw(my_data, fips_df, geo = "county", 
 #'                    summary_type = "max", metadata = metadata)
 #' }
+#' @noRd
 prep_raw <- function(
   input_data,
   fips_codes,

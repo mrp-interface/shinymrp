@@ -48,7 +48,6 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
           geo = geo,
           for_map = TRUE
         ) %>%
-        mutate(value = .data$count) %>%
         choro_map(
           geojson()[[geo]],
           geo = geo,

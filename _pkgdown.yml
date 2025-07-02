@@ -1,13 +1,24 @@
-url: ~
+title: "shinymrp"
+url: https://mrp-interface.github.io/shinymrp/
 
 template:
   bootstrap: 5
+  bootswatch: cosmo
 
 navbar:
-
+  logo:
+    text: "shinymrp"
+    href: index.html
+  left:
+    - text: "Vignettes"
+      href: articles/index.html
+    - text: "Functions"
+      href: reference/index.html
+    - text: "News"
+      href: news/index.html
 
 toc:
-  depth: 4
+  depth: 3
 
 reference:
   - title: "Running the Shiny app"
@@ -18,12 +29,26 @@ reference:
       - preprocess
       - prepare_mrp_acs
       - prepare_mrp_custom
-  
-
+  - title: "Model fitting and postprocessing"
+    contents:
+      - run_mcmc
+      - run_gq
+      - get_parameters
+      - get_diagnostics
+      - get_estimates
+      - get_replicates
 
 articles:
-
-
-news:
-  file: NEWS.md
-  title: "Release"
+  - title: "Getting started"
+    desc: >
+      An overview of the package, its structure, statistical underpinnings, and intallation instructions.
+    contents:
+      - getting-started
+  - title: "Workflow"
+    desc: >
+      A step-by-step guide to using the package, from data preparation to model fitting and visualization.
+    contents:
+      - prep-data
+      - plot-data
+      - fit-model
+      - plot-result
