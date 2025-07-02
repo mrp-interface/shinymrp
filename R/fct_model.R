@@ -50,11 +50,14 @@ create_formula <- function(effects) {
 #' Clean Prior Distribution Syntax
 #'
 #' @description Standardizes prior distribution syntax by removing whitespace
-#' and converting to lowercase for consistent parsing and validation.
+#' and converting to lowercase for consistent parsing and validation. Used
+#' internally to normalize user input before validation.
 #'
 #' @param s A character string representing a prior distribution specification
+#'   (e.g., "Normal(0, 1)" or "student_t(3, 0, 1)").
 #'
-#' @return A cleaned character string with whitespace removed and converted to lowercase
+#' @return A cleaned character string with whitespace removed and converted to
+#'   lowercase (e.g., "normal(0,1)" or "student_t(3,0,1)").
 #'
 #' @noRd
 clean_prior_syntax <- function(s) {
@@ -71,17 +74,26 @@ clean_prior_syntax <- function(s) {
 #'
 #' @description Validates that a prior distribution string follows the expected
 #' syntax patterns for normal, student_t, or structured priors. Returns TRUE
-#' for valid syntax or NULL inputs.
+#' for valid syntax or NULL inputs. Used to ensure user-specified priors are
+#' properly formatted before Stan code generation.
 #'
 #' @param s A character string representing a prior distribution specification.
 #'   Expected formats:
 #'   \itemize{
-#'     \item normal(mean, sd): e.g., "normal(0,1)"
-#'     \item student_t(df, location, scale): e.g., "student_t(3,0,1)"
-#'     \item structured: "structured"
+#'     \item normal(mean, sd): e.g., "normal(0,1)" - mean can be 0, sd must be positive
+#'     \item student_t(df, location, scale): e.g., "student_t(3,0,1)" - df must be positive
+#'     \item structured: "structured" - for hierarchical structured priors
 #'   }
 #'
-#' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE)
+#' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE).
+#'   Returns TRUE for NULL inputs (no prior specified).
+#'
+#' @details The function uses regex patterns to validate:
+#' \itemize{
+#'   \item Parameter count and format
+#'   \item Positive constraints on scale/variance parameters
+#'   \item Proper parentheses and comma placement
+#' }
 #'
 #' @noRd
 check_prior_syntax <- function(s) {
@@ -897,14 +909,23 @@ gq_pstrat <- function(effects, metadata) {
 #'
 #' @description Creates a complete Stan program for MCMC sampling by combining
 #' data, parameters, transformed parameters, and model blocks. This is the main
-#' function for generating Stan code for model fitting.
+#' function for generating Stan code for model fitting, assembling all components
+#' into a compilable Stan program.
 #'
-#' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param metadata Optional list containing generated quantities specifications for
-#'   poststratification. If provided, includes additional data declarations.
+#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#'   all model specifications (fixed, varying, interactions).
+#' @param metadata List containing model specifications including family type,
+#'   poststratification variables, and time-varying flags. Used for data block
+#'   generation and outcome distribution specification.
 #'
-#' @return Character string containing complete Stan program with data, parameters,
-#'   transformed parameters, and model blocks ready for compilation and sampling
+#' @return Character string containing complete Stan program with:
+#'   \itemize{
+#'     \item data block: Variable declarations and constraints
+#'     \item parameters block: Model parameters to be estimated
+#'     \item transformed parameters block: Derived quantities and model predictions
+#'     \item model block: Likelihood and prior specifications
+#'   }
+#'   Ready for compilation and MCMC sampling.
 #'
 #' @noRd
 #'
@@ -932,19 +953,28 @@ model { ${model_(effects, metadata)}
 #'
 #' @description Creates Stan programs for generated quantities including
 #' leave-one-out cross-validation, posterior predictive checks, and poststratification.
-#' Uses fitted parameters from MCMC to generate additional quantities of interest.
+#' Uses fitted parameters from MCMC to generate additional quantities of interest
+#' without re-estimating parameters.
 #'
-#' @param effects Ungrouped effects structure from ungroup_effects()
+#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#'   model specifications needed for generated quantities.
+#' @param metadata List containing model specifications including family type
+#'   and poststratification variables.
 #' @param gq_type Character string specifying type of generated quantities:
 #'   \itemize{
-#'     \item "loo": Leave-one-out cross-validation log-likelihood
-#'     \item "ppc": Posterior predictive check replications
-#'     \item "pstrat": Poststratification estimates
+#'     \item "loo": Leave-one-out cross-validation log-likelihood values
+#'     \item "ppc": Posterior predictive check replicated datasets
+#'     \item "pstrat": Poststratification population-level estimates
 #'   }
-#' @param metadata List containing specifications for poststratification (required if gq_type="pstrat")
 #'
-#' @return Character string containing complete Stan program with data, parameters,
-#'   transformed parameters, and generated quantities blocks
+#' @return Character string containing complete Stan program with:
+#'   \itemize{
+#'     \item data block: Same as MCMC program
+#'     \item parameters block: Same as MCMC program
+#'     \item transformed parameters block: Same as MCMC program
+#'     \item generated quantities block: Specific to gq_type
+#'   }
+#'   Ready for use with generate_quantities() method.
 #'
 #' @noRd
 #'
@@ -984,23 +1014,33 @@ generated quantities { ${gq_code}
 #' @description Transforms variables in a data frame to formats suitable for Stan
 #' modeling. Binary and categorical variables are converted to integer factors,
 #' continuous variables are standardized, and original values are preserved with "_raw" suffix.
+#' Uses GLOBAL$vars$ignore to determine which columns to exclude from transformation.
 #'
-#' @param df Data frame to transform
-#' @param ignore_cols Character vector of column names to exclude from transformation
+#' @param df Data frame to transform with variables of different types.
 #'
 #' @return Data frame with transformed variables and original values preserved:
 #'   \itemize{
-#'     \item Binary variables: Converted to 0/1 integers
+#'     \item Binary variables: Converted to 0/1 integers (first level = 0, second = 1)
 #'     \item Categorical variables: Converted to 1-based integer factors
-#'     \item Continuous variables: Standardized (mean=0, sd=1)
-#'     \item Original values: Saved with "_raw" suffix
+#'     \item Continuous variables: Standardized using scale() (mean=0, sd=1)
+#'     \item Original values: Saved with "_raw" suffix for reference
+#'     \item Ignored columns: Left unchanged (outcome variables, totals, etc.)
 #'   }
+#'
+#' @details The transformation process:
+#' \enumerate{
+#'   \item Identifies columns to transform (excluding GLOBAL$vars$ignore)
+#'   \item Determines data type for each column using data_type()
+#'   \item Applies appropriate transformation based on type
+#'   \item Preserves original values with "_raw" suffix
+#'   \item Combines transformed and raw columns
+#' }
 #'
 #' @noRd
 #' @importFrom dplyr mutate select rename_with bind_cols across all_of
-stan_factor <- function(df, ignore_cols = GLOBAL$vars$ignore) {
+stan_factor <- function(df) {
   # find the columns to mutate
-  col_names <- setdiff(names(df), ignore_cols)
+  col_names <- setdiff(names(df), GLOBAL$vars$ignore)
   
   # save the “raw” columns
   df_raw <- df %>%
@@ -1042,23 +1082,48 @@ stan_factor <- function(df, ignore_cols = GLOBAL$vars$ignore) {
 
 #' Create Stan Data List for Model Fitting
 #'
-#' @description Constructs the data list required for Stan model fitting, including
-#' observation data, design matrices, grouping variables, and optional poststratification
-#' data. Handles both input data for fitting and new data for prediction.
+#' @description Constructs the comprehensive data list required for Stan model fitting,
+#' including observation data, design matrices, grouping variables, interaction indices,
+#' and poststratification data. Handles both input data for fitting and new data for
+#' prediction with proper indexing and formatting.
 #'
 #' @param input_data Data frame containing observations for model fitting with columns:
 #'   \itemize{
-#'     \item positive: Number of positive outcomes
-#'     \item total: Total number of trials
-#'     \item Additional variables specified in effects
+#'     \item positive: Number of positive outcomes (binomial family)
+#'     \item outcome: Continuous outcome values (normal family)
+#'     \item total: Total number of trials/observations
+#'     \item Predictor variables as specified in effects structure
 #'   }
 #' @param new_data Data frame containing population data for prediction/poststratification
-#' @param effects Ungrouped effects structure from ungroup_effects()
-#' @param metadata List for model specifications
-#' @param extra Sensitivity and specificity parameters for covid models
+#'   with same predictor variables and population counts (total column).
+#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#'   all model components (fixed, varying, interactions).
+#' @param metadata List containing model specifications including family, pstrat_vars,
+#'   and is_timevar flags.
+#' @param extra Optional list containing sensitivity and specificity parameters
+#'   for COVID models (sens, spec). Defaults to perfect sensitivity/specificity.
 #'
-#' @return Named list containing all data elements required by Stan
-#' 
+#' @return Named list containing all data elements required by Stan:
+#'   \itemize{
+#'     \item N, N_pop: Sample sizes for input and population data
+#'     \item y, n_sample: Outcome variables (family-dependent)
+#'     \item X, X_pop: Design matrices for fixed effects
+#'     \item K, K_pop: Number of fixed effect columns
+#'     \item J_*, N_*: Grouping variables and group sizes for varying effects
+#'     \item Poststratification weights and indices
+#'     \item sens, spec: Sensitivity and specificity parameters
+#'   }
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Creates outcome variables based on family type
+#'   \item Constructs design matrices for fixed effects and interactions
+#'   \item Sets up grouping variables for varying effects
+#'   \item Computes interaction level indices
+#'   \item Prepares poststratification weights and groupings
+#'   \item Handles time-varying data structure
+#' }
+#'
 #' @noRd
 #'
 #' @importFrom dplyr select mutate group_by n_distinct
@@ -1178,6 +1243,62 @@ make_standata <- function(
   return(stan_data)
 }
 
+#' Run MCMC Sampling for Multilevel Regression Model
+#'
+#' @description Fits a multilevel regression model using MCMC sampling via Stan.
+#' This is the main function for model fitting in the shinymrp package. Generates
+#' Stan code, compiles the model, and runs MCMC sampling with the specified
+#' parameters.
+#'
+#' @param input_data Data frame containing preprocessed sample data with columns:
+#'   positive (number of successes), total (number of trials), and predictor variables.
+#' @param new_data Data frame containing poststratification data with population
+#'   counts and the same predictor variables as input_data.
+#' @param effects Ungrouped effects structure from ungroup_effects() specifying
+#'   model formula components (fixed effects, varying effects, interactions).
+#' @param metadata List containing model specifications including:
+#'   \itemize{
+#'     \item family: "binomial" or "normal"
+#'     \item pstrat_vars: Variables for poststratification
+#'     \item is_timevar: Whether data includes time variation
+#'   }
+#' @param n_iter Integer. Total number of MCMC iterations per chain (default: 1000).
+#'   Half are used for warmup, half for sampling.
+#' @param n_chains Integer. Number of MCMC chains to run (default: 4).
+#' @param extra Optional list containing sensitivity and specificity parameters
+#'   for COVID models (sens, spec).
+#' @param seed Integer. Random seed for reproducible results (default: NULL).
+#' @param code_fout Character. File path to save generated Stan code (default: NULL).
+#' @param silent Logical. Whether to suppress Stan output messages (default: FALSE).
+#'
+#' @return List containing:
+#'   \item{fit}{CmdStanR fit object with MCMC samples}
+#'   \item{stan_data}{List of data passed to Stan}
+#'   \item{stan_code}{List of generated Stan code for mcmc, ppc, loo, and pstrat}
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Generates Stan code for MCMC sampling and generated quantities
+#'   \item Prepares data in Stan-compatible format
+#'   \item Compiles the Stan model with threading support
+#'   \item Runs MCMC sampling with specified parameters
+#'   \item Returns fit object and associated data/code for further analysis
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Fit a basic multilevel model
+#' result <- run_mcmc(
+#'   input_data = processed_data,
+#'   new_data = pstrat_data,
+#'   effects = model_effects,
+#'   metadata = model_metadata,
+#'   n_iter = 2000,
+#'   n_chains = 4
+#' )
+#' }
 run_mcmc <- function(
     input_data,
     new_data,
@@ -1229,6 +1350,51 @@ run_mcmc <- function(
   ))
 }
 
+#' Run Generated Quantities for Additional Model Outputs
+#'
+#' @description Runs generated quantities using fitted MCMC parameters to compute
+#' additional model outputs such as posterior predictive checks, leave-one-out
+#' cross-validation, or poststratification estimates. Uses the generate_quantities
+#' method from CmdStanR.
+#'
+#' @param fit_mcmc CmdStanR fit object from run_mcmc() containing MCMC samples.
+#' @param stan_code Character string containing Stan code for generated quantities
+#'   (from stan_code$ppc, stan_code$loo, or stan_code$pstrat).
+#' @param stan_data List of data in Stan format (from run_mcmc() output).
+#' @param n_chains Integer. Number of chains to use for generated quantities
+#'   (should match the number used in MCMC fitting).
+#'
+#' @return CmdStanR generated quantities fit object containing the requested
+#'   generated quantities (e.g., y_rep for PPC, log_lik for LOO, theta_pop for MRP).
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Compiles the generated quantities Stan code
+#'   \item Uses fitted parameters from MCMC to generate additional quantities
+#'   \item Runs in parallel across chains with threading support
+#'   \item Suppresses compilation and sampling messages for cleaner output
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Run posterior predictive checks
+#' ppc_fit <- run_gq(
+#'   fit_mcmc = mcmc_result$fit,
+#'   stan_code = mcmc_result$stan_code$ppc,
+#'   stan_data = mcmc_result$stan_data,
+#'   n_chains = 4
+#' )
+#'
+#' # Run poststratification
+#' pstrat_fit <- run_gq(
+#'   fit_mcmc = mcmc_result$fit,
+#'   stan_code = mcmc_result$stan_code$pstrat,
+#'   stan_data = mcmc_result$stan_data,
+#'   n_chains = 4
+#' )
+#' }
 run_gq <- function(
     fit_mcmc,
     stan_code,
@@ -1331,9 +1497,71 @@ format_params_summary <- function(
   return(df)
 }
 
+#' Extract Parameter Estimates from MCMC Fit
+#'
+#' @description Extracts and formats parameter estimates from MCMC fit object,
+#' organizing them into fixed effects, varying effects, and other parameters.
+#' Includes reference levels for categorical variables and proper labeling.
+#'
+#' @param fit CmdStanR fit object from run_mcmc() containing MCMC samples.
+#' @param effects Ungrouped effects structure from ungroup_effects() used in model fitting.
+#' @param input_data Original input data frame used for model fitting, needed
+#'   for determining reference levels and variable types.
+#' @param metadata List containing model specifications including family type.
+#'
+#' @return List containing formatted parameter summary tables:
+#'   \item{fixed}{Data frame with fixed effects estimates including:
+#'     \itemize{
+#'       \item Intercept and main effects
+#'       \item Reference levels for categorical variables
+#'       \item Fixed-slope interactions
+#'       \item Columns: Estimate, Est.Error, credible intervals, R-hat, ESS
+#'     }
+#'   }
+#'   \item{varying}{Data frame with varying effects standard deviations:
+#'     \itemize{
+#'       \item Varying intercepts (lambda parameters)
+#'       \item Varying slopes (lambda2 parameters)
+#'       \item Interaction effects
+#'     }
+#'   }
+#'   \item{other}{Data frame with additional parameters:
+#'     \itemize{
+#'       \item Residual standard deviation (for normal family)
+#'       \item Other model-specific parameters
+#'     }
+#'   }
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Extracts parameter summaries with convergence diagnostics
+#'   \item Formats column names and adds reference levels
+#'   \item Organizes parameters by type (fixed, varying, other)
+#'   \item Provides proper labeling for categorical variables
+#' }
+#'
+#' @export
+#'
 #' @importFrom dplyr select
 #' @importFrom rlang .data
-extract_parameters <- function(
+#'
+#' @examples
+#' \dontrun{
+#' # Extract parameter estimates
+#' params <- get_parameters(
+#'   fit = mcmc_result$fit,
+#'   effects = model_effects,
+#'   input_data = processed_data,
+#'   metadata = model_metadata
+#' )
+#'
+#' # View fixed effects
+#' print(params$fixed)
+#'
+#' # View varying effects
+#' print(params$varying)
+#' }
+get_parameters <- function(
   fit,
   effects,
   input_data,
@@ -1412,7 +1640,54 @@ extract_parameters <- function(
   ))
 }
 
-extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
+#' Extract MCMC Diagnostics from Fit Object
+#'
+#' @description Extracts and summarizes MCMC diagnostics including divergent
+#' transitions, maximum tree depth hits, and energy Bayesian fraction of missing
+#' information (E-BFMI). Provides formatted diagnostic messages for model assessment.
+#'
+#' @param fit CmdStanR fit object from run_mcmc() containing MCMC samples.
+#' @param total_transitions Integer. Total number of MCMC transitions across
+#'   all chains (typically n_iter/2 * n_chains for post-warmup samples).
+#' @param max_depth Integer. Maximum tree depth limit used in sampling (default: 10).
+#'
+#' @return List containing:
+#'   \item{summary}{Data frame with diagnostic metrics and formatted messages:
+#'     \itemize{
+#'       \item Divergence: Number and percentage of divergent transitions
+#'       \item Maximum tree depth: Number of transitions hitting depth limit
+#'       \item E-BFMI: Number of chains with low energy fraction
+#'     }
+#'   }
+#'   \item{show_warnings}{Logical indicating whether any diagnostic issues were found}
+#'
+#' @details Diagnostic interpretation:
+#' \itemize{
+#'   \item Divergent transitions: Should be 0; indicates sampling problems
+#'   \item Max tree depth: Should be low; indicates inefficient sampling
+#'   \item E-BFMI < 0.3: Indicates potential energy problems in sampling
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Extract diagnostics
+#' diagnostics <- get_diagnostics(
+#'   fit = mcmc_result$fit,
+#'   total_transitions = 2000,  # 500 samples * 4 chains
+#'   max_depth = 10
+#' )
+#'
+#' # View diagnostic summary
+#' print(diagnostics$summary)
+#'
+#' # Check if warnings should be shown
+#' if (diagnostics$show_warnings) {
+#'   warning("MCMC diagnostics indicate potential sampling issues")
+#' }
+#' }
+get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
   # Get diagnostic summary
   diag_summary <- fit$diagnostic_summary(quiet = TRUE)
   
@@ -1448,8 +1723,62 @@ extract_diagnostics <- function(fit, total_transitions, max_depth = 10) {
   ))
 }
 
+#' Extract Poststratification Estimates from Generated Quantities
+#'
+#' @description Extracts population-level estimates from poststratification
+#' generated quantities, organizing them by demographic subgroups and time
+#' periods. Provides point estimates and standard errors for each subgroup.
+#'
+#' @param fit CmdStanR generated quantities fit object from poststratification
+#'   (output of run_gq with pstrat code).
+#' @param new_data Data frame containing poststratification data with demographic
+#'   variables and population counts.
+#' @param metadata List containing model specifications including:
+#'   \itemize{
+#'     \item pstrat_vars: Character vector of demographic variables for subgroup analysis
+#'     \item is_timevar: Logical indicating whether estimates vary over time
+#'   }
+#'
+#' @return Named list of data frames, one for each demographic subgroup plus overall:
+#'   \item{overall}{Overall population estimates}
+#'   \item{[pstrat_var]}{Estimates by demographic subgroup}
+#'
+#'   Each data frame contains:
+#'   \itemize{
+#'     \item factor: Demographic category levels
+#'     \item time: Time periods (if is_timevar=TRUE)
+#'     \item est: Posterior mean estimate
+#'     \item std: Posterior standard deviation
+#'   }
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Extracts posterior draws for each demographic subgroup
+#'   \item Computes posterior means and standard deviations
+#'   \item Organizes results by subgroup and time period
+#'   \item Matches factor levels to original data labels
+#' }
+#'
+#' @export
+#'
 #' @importFrom dplyr select mutate arrange distinct across all_of
-extract_est <- function(
+#'
+#' @examples
+#' \dontrun{
+#' # Extract poststratification estimates
+#' estimates <- get_estimates(
+#'   fit = pstrat_fit,
+#'   new_data = pstrat_data,
+#'   metadata = model_metadata
+#' )
+#'
+#' # View overall estimates
+#' print(estimates$overall)
+#'
+#' # View estimates by age group
+#' print(estimates$age)
+#' }
+get_estimates <- function(
   fit,
   new_data,
   metadata
@@ -1492,29 +1821,63 @@ extract_est <- function(
 #' Extract Posterior Predictive Replications
 #'
 #' @description Extracts posterior predictive replications (y_rep) from generated
-#' quantities for posterior predictive checking. Can aggregate temporally and
-#' provide summary statistics or full posterior draws.
+#' quantities for posterior predictive checking. Aggregates data temporally if
+#' time-varying and provides replicated datasets for model validation.
 #'
-#' @param fit CmdStanR generated quantities fit object from posterior predictive checks
-#' @param input_data Original input data frame used for model fitting
-#' @param boolean indicator for whether data contains time information
-#' @param N Integer number of posterior draws to extract (default 10)
-#' @param summarize Logical whether to return summary statistics (default FALSE)
-#' @param pred_interval Numeric prediction interval coverage (default 0.95)
+#' @param fit CmdStanR generated quantities fit object from posterior predictive
+#'   checks (output of run_gq with ppc code).
+#' @param input_data Original input data frame used for model fitting with
+#'   columns: positive, total, and time (if time-varying).
+#' @param metadata List containing model specifications including:
+#'   \itemize{
+#'     \item is_timevar: Logical indicating whether data varies over time
+#'     \item family: Distribution family ("binomial" or "normal")
+#'   }
+#' @param N Integer. Number of posterior draws to extract for replication (default: 10).
+#' @param pred_interval Numeric. Prediction interval coverage for summary statistics (default: 0.95).
 #'
 #' @return Posterior predictive replications:
 #'   \itemize{
-#'     \item If is_timevar=FALSE & summarize=FALSE: Numeric vector of proportion estimates
-#'     \item If is_timevar=FALSE & summarize=TRUE: Data frame with quantiles (upper, lower, median)
-#'     \item If is_timevar=TRUE & summarize=FALSE: Data frame with time and proportion columns
-#'     \item If is_timevar=TRUE & summarize=TRUE: Data frame with time and quantile summaries
+#'     \item If is_timevar=FALSE: Numeric vector of overall proportion estimates across N draws
+#'     \item If is_timevar=TRUE: Data frame with columns:
+#'       \itemize{
+#'         \item time: Time periods
+#'         \item V1, V2, ..., VN: Proportion estimates for each posterior draw
+#'       }
 #'   }
 #'
-#' @noRd
+#' @details The function:
+#' \enumerate{
+#'   \item Extracts y_rep draws from generated quantities
+#'   \item Randomly samples N posterior draws
+#'   \item Aggregates by time period if time-varying
+#'   \item Converts counts to proportions using total sample sizes
+#' }
+#'
+#' @export
 #'
 #' @importFrom rlang .data
 #' @importFrom dplyr select mutate group_by summarise_all ungroup mutate_all
-extract_yrep <- function(
+#'
+#' @examples
+#' \dontrun{
+#' # Extract posterior predictive replications
+#' y_rep <- get_replicates(
+#'   fit = ppc_fit,
+#'   input_data = processed_data,
+#'   metadata = model_metadata,
+#'   N = 20
+#' )
+#'
+#' # For time-varying data, y_rep is a data frame
+#' if (model_metadata$is_timevar) {
+#'   print(head(y_rep))
+#' } else {
+#'   # For non-time-varying, y_rep is a vector
+#'   print(summary(y_rep))
+#' }
+#' }
+get_replicates <- function(
   fit,
   input_data,
   metadata,

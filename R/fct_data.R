@@ -31,6 +31,7 @@ read_data <- function(file_path) {
 #' @return Character vector of cleaned column names.
 #'
 #' @noRd
+#' 
 clean_names <- function(names) {
   names %>% 
     tolower() %>% 
@@ -190,17 +191,16 @@ preprocess_example <- function(df, fips_county_state) {
 #'
 rename_columns <- function(
     df,
-    covid_indiv = FALSE,
-    vars = GLOBAL$vars
+    covid_indiv = FALSE
 ) {
   if (covid_indiv) {
     return(rename_columns_covid(df))
   }
 
   target_names <- c(
-    vars$indiv,
-    vars$geo,
-    vars$ignore
+    GLOBAL$vars$indiv,
+    GLOBAL$vars$geo,
+    GLOBAL$vars$ignore
   )
 
   current_names <- names(df)
@@ -335,8 +335,9 @@ get_week_indices <- function(strings) {
   ))
 }
 
-add_week_indices <- function(df, time_cols = GLOBAL$vars$time) {
-  common <- intersect(names(df), time_cols)
+add_week_indices <- function(df) {
+  common <- intersect(names(df), GLOBAL$vars$time)
+
   if (length(common) == 1 && "date" %in% common) {
     # convert date to week indices
     week <- get_week_indices(df$date)
@@ -533,7 +534,9 @@ get_geo_predictors <- function(df, geo_col) {
 #'
 #' @noRd
 #'
-get_smallest_geo <- function(col_names, geo_all = GLOBAL$vars$geo) {
+get_smallest_geo <- function(col_names) {
+  geo_all <- GLOBAL$vars$geo
+
   # Find the smallest geographic index
   idx <- match(col_names, geo_all) %>% stats::na.omit()
   if (length(idx) == 0) {
@@ -567,9 +570,9 @@ get_smallest_geo <- function(col_names, geo_all = GLOBAL$vars$geo) {
 #' @importFrom rlang .data
 append_geo <- function(
     input_data,
-    zip_county_state,
-    geo_all = GLOBAL$vars$geo
+    zip_county_state
 ) {
+  geo_all <- GLOBAL$vars$geo
   smallest <- get_smallest_geo(names(input_data))
   if (is.null(smallest)) {
     return(input_data)
@@ -789,11 +792,18 @@ create_expected_types <- function(
 #' Create expected levels for categorical variables
 #'
 #' @description Creates a list of expected levels for categorical variables
-#' based on the data format. Different data formats have different expected
-#' demographic categories and age groupings.
+#' based on the data format. Different data formats (COVID vs poll) have
+#' different expected demographic categories and age groupings.
+#'
+#' @param metadata List containing analysis metadata. If metadata$special_case
+#'   is "poll", uses poll-specific levels, otherwise uses COVID/general levels.
 #'
 #' @return Named list where names are variable names and values are character
-#'   vectors of expected levels for each categorical variable.
+#'   vectors of expected levels:
+#' \itemize{
+#'   \item Poll data: Includes education levels, different age ranges
+#'   \item COVID/general data: Standard demographic categories
+#' }
 #'
 #' @noRd
 create_expected_levels <- function(metadata) {
@@ -822,11 +832,17 @@ create_expected_levels <- function(metadata) {
 #'
 #' @param df Data frame to be validated.
 #' @param expected_types Named list of expected data types for each variable.
+#'   Types should be "bin", "cat", "cont", or "ignore".
 #' @param na_threshold Numeric. Maximum allowed proportion of missing values
 #'   per column. Default is 0.5 (50%).
 #'
-#' @return No return value. Throws errors if validation fails, issues warnings
-#'   for date format problems.
+#' @return No return value. Throws errors if validation fails:
+#' \itemize{
+#'   \item Missing required columns
+#'   \item Incorrect data types
+#'   \item Excessive missing values (>na_threshold)
+#' }
+#' Issues warnings for date format problems in time-varying data.
 #'
 #' @noRd
 #'
@@ -883,9 +899,13 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
 #'
 #' @param df Data frame containing poststratification data.
 #' @param df_ref Data frame containing reference sample data.
-#' @param expected_levels Named list of expected data types for validation.
+#' @param expected_levels Named list of expected levels for categorical variables.
 #'
-#' @return No return value. Throws errors if validation fails.
+#' @return No return value. Throws errors if validation fails:
+#' \itemize{
+#'   \item Missing columns in either dataset
+#'   \item Mismatched unique values between datasets
+#' }
 #'
 #' @noRd
 check_pstrat <- function(df, df_ref, expected_levels) {
@@ -913,22 +933,33 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 }
 
 
-# Process uploaded data 
 #' Main preprocessing function for uploaded data
 #'
 #' @description Comprehensive preprocessing pipeline that cleans data, renames
 #' columns, validates structure, handles aggregation, converts dates to time
 #' indices, recodes values, imputes missing data, and appends geographic variables.
+#' This is the main entry point for data preprocessing in the shinymrp package.
 #'
 #' @param data Data frame containing raw uploaded data.
-#' @param zip_county_state Data frame containing geographic crosswalk information.
-#' @param const List containing constants and variable mappings.
+#' @param metadata List containing analysis metadata including family type,
+#'   special cases, and time-varying flags.
+#' @param zip_county_state Data frame containing geographic crosswalk information
+#'   with columns: zip, fips, county, state, state_name.
 #' @param is_sample Logical. Whether the data represents sample data. Default is TRUE.
 #' @param is_aggregated Logical. Whether the data is already aggregated. Default is TRUE.
 #'
-#' @return Preprocessed data frame ready for analysis.
+#' @return Preprocessed data frame ready for MRP analysis with:
+#' \itemize{
+#'   \item Cleaned and standardized column names
+#'   \item Validated data structure and types
+#'   \item Recoded demographic variables to expected levels
+#'   \item Geographic variables appended at appropriate scales
+#'   \item Time indices created for time-varying data
+#'   \item Missing values imputed where appropriate
+#'   \item Data aggregated if needed for modeling
+#' }
 #'
-#' @noRd
+#' @export
 #'
 #' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
 #' @importFrom tidyr drop_na
@@ -1009,20 +1040,27 @@ preprocess <- function(
 #'
 #' @description Creates organized lists of variables for model specification,
 #' categorizing them as fixed effects, varying effects, or variables to omit.
-#' Identifies variables with single levels or nested relationships.
+#' Identifies variables with single levels or nested relationships that should
+#' be excluded from modeling.
 #'
 #' @param input_data Data frame containing input data with individual-level variables.
 #' @param covariates Data frame containing geographic covariates.
-#' @param vars_global List containing global variable definitions and hierarchies.
 #'
 #' @return Named list containing:
-#'   \item{fixed}{List of fixed effect variables by category}
-#'   \item{varying}{List of varying effect variables by category}
-#'   \item{omit}{List of variables to omit due to single levels or nesting}
+#'   \item{fixed}{List of fixed effect variables by category (Individual-level, Geographic)}
+#'   \item{varying}{List of varying effect variables by category (Individual-level, Geographic)}
+#'   \item{omit}{List of variables to omit: one_level (single-level vars), nested (nested pairs)}
+#'
+#' @details Variables are categorized as:
+#' \itemize{
+#'   \item Fixed effects: All variables with >1 level
+#'   \item Varying effects: Categorical variables with >1 level
+#'   \item Omitted: Variables with only 1 level or nested relationships
+#' }
 #'
 #' @noRd
 #'
-create_variable_list <- function(input_data, covariates, vars_global) {
+create_variable_list <- function(input_data, covariates) {
   # list of variables for model specification
   vars <- list(
     fixed = list(
@@ -1056,7 +1094,7 @@ create_variable_list <- function(input_data, covariates, vars_global) {
   }
 
   # Process individual-level predictors
-  indiv_vars <- setdiff(names(input_data), c(vars_global$geo, vars_global$ignore, names(covariates)))
+  indiv_vars <- setdiff(names(input_data), c(GLOBAL$vars$geo, GLOBAL$vars$ignore, names(covariates)))
   vars <- add_variables("Individual-level Predictor", indiv_vars, input_data, vars)
 
   # Process geographic predictors
@@ -1077,16 +1115,22 @@ create_variable_list <- function(input_data, covariates, vars_global) {
 #'
 #' @description Aggregates tract-level demographic data to larger geographic
 #' scales (zip, county, state, or national level) by summing population counts
-#' across relevant geographic units.
+#' across relevant geographic units. Used to create poststratification frames
+#' at different geographic resolutions.
 #'
 #' @param tract_data Data frame containing tract-level demographic data with
-#'   GEOID column and demographic variables.
-#' @param zip_tract Data frame containing tract-to-zip crosswalk information.
+#'   GEOID column (11-digit tract codes) and demographic cross-tabulation columns.
+#' @param zip_tract Data frame containing tract-to-zip crosswalk information
+#'   with columns: geoid (tract), zip.
 #' @param link_geo Character string specifying target geographic scale. Must be
-#'   one of: "", "zip", "county", "state". Default is "".
+#'   one of the values in GLOBAL$vars$geo: "zip", "county", "state", or NULL for national.
 #'
 #' @return Data frame with demographic data aggregated to the specified
-#'   geographic scale, with 'geocode' column containing geographic identifiers.
+#'   geographic scale:
+#' \itemize{
+#'   \item geocode: Geographic identifier at the specified scale
+#'   \item Demographic columns: Population counts summed across tracts
+#' }
 #'
 #' @noRd
 #'
@@ -1095,12 +1139,22 @@ create_variable_list <- function(input_data, covariates, vars_global) {
 combine_tracts <- function(
     tract_data,
     zip_tract,
-    link_geo = c('', GLOBAL$vars$geo)
+    link_geo = NULL
 ) {
 
-  link_geo <- match.arg(link_geo)
+  link_geo <- rlang::arg_match(
+    arg = link_geo,
+    values = GLOBAL$vars$geo,
+    multiple = FALSE
+  )
 
-  if(link_geo == "zip") {
+  if (is.null(link_geo)) {
+    pstrat_data <- tract_data %>%
+      mutate(geocode = "place_holder") %>%
+      select(-.data$GEOID) %>%
+      group_by(.data$geocode) %>%
+      summarize_all(sum)
+  } else if (link_geo == "zip") {
     # join tract-level data with zip-tract conversion table then group by zip
     by_zip <- zip_tract %>%
       select(.data$geoid, .data$zip) %>%
@@ -1131,12 +1185,6 @@ combine_tracts <- function(
       select(-.data$GEOID) %>%
       group_by(.data$geocode) %>%
       summarize_all(sum)
-  } else {
-    pstrat_data <- tract_data %>%
-      mutate(geocode = "place_holder") %>%
-      select(-.data$GEOID) %>%
-      group_by(.data$geocode) %>%
-      summarize_all(sum)
   }
 
   return(pstrat_data)
@@ -1147,23 +1195,36 @@ combine_tracts <- function(
 #' @description Prepares data for MRP analysis using American Community Survey
 #' (ACS) tract-level data for poststratification. Combines tract data to the
 #' appropriate geographic scale, creates complete factor level combinations,
-#' and appends geographic predictors.
+#' and appends geographic predictors. This function creates the poststratification
+#' frame from Census data.
 #'
-#' @param input_data Data frame containing sample data.
-#' @param tract_data Data frame containing ACS tract-level demographic data.
-#' @param zip_tract Data frame containing tract-to-zip crosswalk.
-#' @param zip_county_state Data frame containing geographic crosswalk information.
-#' @param metadata List containing metadata.
-#' @param link_geo Character string specifying geographic linking variable.
-#' @param vars_global List containing global variable definitions.
+#' @param input_data Data frame containing preprocessed sample data.
+#' @param tract_data Data frame containing ACS tract-level demographic data
+#'   with GEOID and demographic cross-tabulation columns.
+#' @param zip_tract Data frame containing tract-to-zip crosswalk with
+#'   columns: geoid, zip.
+#' @param metadata List containing analysis metadata including family type
+#'   and time-varying flags.
+#' @param link_geo Character string specifying geographic linking variable
+#'   (e.g., "zip", "county", "state"). Must match a column in input_data.
 #'
 #' @return Named list containing:
-#'   \item{input}{Filtered input data}
-#'   \item{new}{Complete poststratification data with population weights}
-#'   \item{levels}{Complete list of factor levels}
-#'   \item{vars}{Variable lists for model specification}
+#'   \item{input}{Filtered input data (common geographic areas only)}
+#'   \item{new}{Complete poststratification data with population weights and covariates}
+#'   \item{levels}{Complete list of factor levels for all variables}
+#'   \item{vars}{Variable lists for model specification (fixed, varying, omit)}
 #'
-#' @noRd
+#' @details The function:
+#' \enumerate{
+#'   \item Aggregates tract data to the specified geographic scale
+#'   \item Filters both datasets to common geographic areas
+#'   \item Creates complete demographic combinations using expand.grid()
+#'   \item Adds population weights from Census data
+#'   \item Appends geographic predictors from input data
+#'   \item Generates variable lists for modeling
+#' }
+#'
+#' @export
 #'
 #' @importFrom dplyr filter select mutate arrange across left_join
 #' @importFrom rlang sym .data
@@ -1172,8 +1233,7 @@ prepare_mrp_acs <- function(
     tract_data,
     zip_tract,
     metadata,
-    link_geo = NULL,
-    vars_global = GLOBAL$vars
+    link_geo = NULL
 ) {
 
   # compute cell counts based on given geographic scale
@@ -1220,7 +1280,7 @@ prepare_mrp_acs <- function(
   # append levels for other geographic predictors
   # NOTE: this must be done after new_data is created
   # as these levels are not used in the poststratification table
-  for(v in intersect(names(new_data), vars_global$geo)) {
+  for(v in intersect(names(new_data), GLOBAL$vars$geo)) {
     levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
@@ -1230,7 +1290,7 @@ prepare_mrp_acs <- function(
   }
 
   # create variable lists for model specification
-  vars <- create_variable_list(input_data, covariates, vars_global)
+  vars <- create_variable_list(input_data, covariates)
 
   return(list(
     input = input_data,
@@ -1243,23 +1303,36 @@ prepare_mrp_acs <- function(
 #' Prepare MRP data using custom poststratification table
 #'
 #' @description Prepares data for MRP analysis using a custom poststratification
-#' table. Filters data to common geographic units, creates factor levels,
-#' appends geographic predictors, and duplicates data for time indices.
+#' table provided by the user. Filters data to common geographic units, creates
+#' factor levels, appends geographic predictors, and handles time-varying data
+#' by duplicating rows for each time period.
 #'
-#' @param input_data Data frame containing sample data.
-#' @param new_data Data frame containing custom poststratification data.
-#' @param fips_county_state Data frame containing FIPS code mappings.
-#' @param metadata List containing metadata.
-#' @param link_geo Character string specifying geographic linking variable.
-#' @param vars_global List containing global variable definitions.
+#' @param input_data Data frame containing preprocessed sample data.
+#' @param new_data Data frame containing custom poststratification data with
+#'   demographic columns and population counts (total column).
+#' @param fips_county_state Data frame containing FIPS code mappings for
+#'   geographic name conversion.
+#' @param metadata List containing analysis metadata including family type
+#'   and time-varying flags.
+#' @param link_geo Character string specifying geographic linking variable
+#'   (e.g., "zip", "county", "state"). Must exist in both datasets.
 #'
 #' @return Named list containing:
-#'   \item{input}{Filtered input data}
-#'   \item{new}{Prepared poststratification data}
-#'   \item{levels}{Complete list of factor levels}
-#'   \item{vars}{Variable lists for model specification}
+#'   \item{input}{Filtered input data (common geographic areas only)}
+#'   \item{new}{Prepared poststratification data with covariates and time indices}
+#'   \item{levels}{Complete list of factor levels for all variables}
+#'   \item{vars}{Variable lists for model specification (fixed, varying, omit)}
 #'
-#' @noRd
+#' @details The function:
+#' \enumerate{
+#'   \item Filters both datasets to common geographic areas
+#'   \item Creates factor levels from the filtered data
+#'   \item Appends geographic predictors from input data
+#'   \item Duplicates poststratification rows for each time period
+#'   \item Generates variable lists for modeling
+#' }
+#'
+#' @export
 #'
 #' @importFrom dplyr filter mutate
 #' @importFrom rlang sym
@@ -1268,8 +1341,7 @@ prepare_mrp_custom <- function(
     new_data,
     fips_county_state,
     metadata,
-    link_geo = NULL,
-    vars_global = GLOBAL$vars
+    link_geo = NULL
 ) {
 
   # filter based on common GEOIDs
@@ -1302,7 +1374,7 @@ prepare_mrp_custom <- function(
   }
 
   # append levels for other geographic predictors
-  for(v in intersect(names(new_data), vars_global$geo)) {
+  for(v in intersect(names(new_data), GLOBAL$vars$geo)) {
     levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
@@ -1317,7 +1389,7 @@ prepare_mrp_custom <- function(
     input_data <- input_data %>% mutate(total = 1)
   }
 
-  vars <- create_variable_list(input_data, covariates, vars_global)
+  vars <- create_variable_list(input_data, covariates)
 
   return(list(
     input = input_data,
@@ -1331,13 +1403,20 @@ prepare_mrp_custom <- function(
 #'
 #' @description Creates a crosswalk table linking ZIP codes to counties and
 #' states by finding the most common county for each ZIP code and joining
-#' with FIPS county-state information.
+#' with FIPS county-state information. Handles ZIP codes that span multiple
+#' counties by selecting the most frequent county.
 #'
-#' @param zip_tract Data frame containing ZIP-to-tract crosswalk with 'zip'
-#'   and 'geoid' columns.
-#' @param fips_county_state Data frame containing FIPS county-state mappings.
+#' @param zip_tract Data frame containing ZIP-to-tract crosswalk with columns:
+#'   zip, geoid (11-digit tract codes).
+#' @param fips_county_state Data frame containing FIPS county-state mappings
+#'   with columns: fips, county, state, state_name.
 #'
-#' @return Data frame with ZIP codes linked to their most common county and state.
+#' @return Data frame with ZIP codes linked to their most common county and state:
+#' \itemize{
+#'   \item zip: ZIP code
+#'   \item fips: 5-digit county FIPS code
+#'   \item county, state, state_name: Geographic names
+#' }
 #'
 #' @noRd
 #'
@@ -1363,13 +1442,15 @@ create_zip_county_state <- function(zip_tract, fips_county_state) {
 #'
 #' @description Creates a lookup table of unique FIPS codes with corresponding
 #' county and state information. Optionally formats names for plotting with
-#' proper capitalization.
+#' proper capitalization using tools::toTitleCase().
 #'
-#' @param zip_county_state Data frame containing ZIP-county-state crosswalk.
+#' @param zip_county_state Data frame containing ZIP-county-state crosswalk
+#'   with columns: fips, county, state, state_name.
 #' @param for_plotting Logical. If TRUE, formats names with proper capitalization
-#'   for plotting. Default is FALSE.
+#'   for plotting (uppercase state abbreviations, title case names). Default is FALSE.
 #'
 #' @return Data frame with unique FIPS codes and corresponding geographic names.
+#'   When for_plotting=TRUE, names are formatted for display purposes.
 #'
 #' @noRd
 #'
@@ -1395,11 +1476,14 @@ create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
 #'
 #' @description Converts county-level FIPS codes to state-level by taking the
 #' first two digits and removing county information while keeping unique
-#' state-level records.
+#' state-level records. Used to create state-level lookup tables from
+#' county-level data.
 #'
-#' @param df Data frame containing FIPS codes and geographic information.
+#' @param df Data frame containing FIPS codes and geographic information
+#'   with columns: fips (5-digit county codes), county, state, state_name.
 #'
-#' @return Data frame with state-level FIPS codes and corresponding information.
+#' @return Data frame with state-level FIPS codes (2-digit) and corresponding
+#'   state information. County column is removed and duplicates eliminated.
 #'
 #' @noRd
 #'

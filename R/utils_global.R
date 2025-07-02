@@ -1,11 +1,6 @@
-#' global
-#'
-#' @description A utils function
-#'
-#' @return The return value, if any, from executing the utility.
-#'
+#' @title Global list of shiny module IDs
 #' @noRd
-
+#' @keywords internal
 module_ids <- list(
   home = "home",
   analyze = list(
@@ -23,6 +18,10 @@ module_ids <- list(
   persist = "persist"
 )
 
+#' @title Global Constants
+#' @description A global list containing paths, UI styles, and other constants used throughout the application.
+#' @noRd
+#' @keywords internal
 GLOBAL <- list(
   path = list(
     example_data = "extdata/example/data/",
