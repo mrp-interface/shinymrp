@@ -31,7 +31,6 @@ Imports:
     loo,
     magrittr,
     patchwork,
-    pkgload,
     posterior,
     purrr,
     qs,
