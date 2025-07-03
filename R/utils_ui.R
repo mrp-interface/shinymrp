@@ -700,7 +700,7 @@ stop_busy <- function(session, id, label, success) {
     session = session,
     inputId = id,
     label = label,
-    icon = if(success) icon("check") else icon("exclamation-triangle"),
+    icon = if(success) icon("check") else icon("exclamation-triangle")
   )
 
   shinyjs::enable(id)
