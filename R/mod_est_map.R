@@ -89,7 +89,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
 
       plot_df <- model()$est[[geo]] %>% 
         prep_est(
-          fips_codes = global$extdata$fips[[geo]],
+          fips_codes = fips_[[geo]],
           geo = geo,
           time_index = time_index
         ) %>%
@@ -112,7 +112,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model(), geo_scale())
       
       geo <- isolate(geo_scale())
-      fips_df <- global$extdata$fips[[geo]] %>% fips_upper()
+      fips_df <- fips_[[geo]] %>% fips_upper()
 
       plot_df <- model()$est[[geo]] %>%
         rename("fips" = "factor") %>%

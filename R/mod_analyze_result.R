@@ -238,7 +238,7 @@ mod_analyze_result_server <- function(id, global){
       req(input$geo_scale_select, input$geo_view_select)
       
       geo <- isolate(input$geo_scale_select)
-      fips_df <- global$extdata$fips[[geo]] %>%
+      fips_df <- fips_[[geo]] %>%
         filter(.data$fips %in% selected_model()$mrp$levels[[geo]]) %>%
         fips_upper()
       choices <- sort(fips_df[[geo]])

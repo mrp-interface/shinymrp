@@ -4,22 +4,13 @@
 \alias{prepare_mrp_custom}
 \title{Prepare MRP data using custom poststratification table}
 \usage{
-prepare_mrp_custom(
-  input_data,
-  new_data,
-  fips_county_state,
-  metadata,
-  link_geo = NULL
-)
+prepare_mrp_custom(input_data, new_data, metadata, link_geo = NULL)
 }
 \arguments{
 \item{input_data}{Data frame containing preprocessed sample data.}
 
 \item{new_data}{Data frame containing custom poststratification data with
 demographic columns and population counts (total column).}
-
-\item{fips_county_state}{Data frame containing FIPS code mappings for
-geographic name conversion.}
 
 \item{metadata}{List containing analysis metadata including family type
 and time-varying flags.}

@@ -4,16 +4,13 @@
 \alias{prepare_mrp_acs}
 \title{Prepare MRP data using ACS-based poststratification}
 \usage{
-prepare_mrp_acs(input_data, tract_data, zip_tract, metadata, link_geo = NULL)
+prepare_mrp_acs(input_data, tract_data, metadata, link_geo = NULL)
 }
 \arguments{
 \item{input_data}{Data frame containing preprocessed sample data.}
 
 \item{tract_data}{Data frame containing ACS tract-level demographic data
 with GEOID and demographic cross-tabulation columns.}
-
-\item{zip_tract}{Data frame containing tract-to-zip crosswalk with
-columns: geoid, zip.}
 
 \item{metadata}{List containing analysis metadata including family type
 and time-varying flags.}

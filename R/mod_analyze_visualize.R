@@ -193,7 +193,7 @@ mod_analyze_visualize_server <- function(id, global){
       reactive(global$mrp$input),
       reactive(global$link_data$link_geo),
       reactive(global$plot_data$geojson),
-      global$extdata$fips
+      fips_
     )
 
     # --------------------------------------------------------------------------
@@ -280,7 +280,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       out <- prep_raw(
         global$mrp$input,
-        global$extdata$fips[[geo]],
+        fips_[[geo]],
         geo = geo,
         summary_type = input$summary_slt,
         metadata = global$metadata

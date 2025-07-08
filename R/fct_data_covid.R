@@ -197,10 +197,9 @@ filter_state_zip <- function(
 #' for poststratification.
 #'
 #' @param input_data A data frame containing individual-level COVID test data
-#' @param covariates A data frame containing geographic covariates and predictors
 #' @param pstrat_data A data frame containing poststratification population counts
-#'   by demographic groups and geographic areas. Should have zip and county columns
-#'   followed by demographic cross-tabulation columns.
+#'   by demographic groups and geographic areas.
+#' @param covariates A data frame containing geographic covariates
 #' @param metadata A list containing metadata about expected demographic levels
 #'   and variable specifications for the analysis. Used by create_expected_levels()
 #'   to generate factor levels.
@@ -228,8 +227,8 @@ filter_state_zip <- function(
 #' @noRd
 prepare_mrp_covid <- function(
     input_data,
-    covariates,
     pstrat_data,
+    covariates,
     metadata
 ) {
 
@@ -271,4 +270,3 @@ prepare_mrp_covid <- function(
     vars = vars
   ))
 }
-

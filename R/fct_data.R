@@ -164,11 +164,11 @@ clean_data <- function(
   return(df)
 }
 
-preprocess_example <- function(df, fips_county_state) {
+preprocess_example <- function(df) {
   df <- df %>% clean_data() 
   
   if ("state" %in% names(df)) {
-    df$state <- to_fips(df$state, fips_county_state, "state")
+    df$state <- to_fips(df$state, "state")
   }
 
   return(df)
@@ -461,17 +461,20 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 #' Otherwise, matches against lookup table to find corresponding FIPS codes.
 #'
 #' @param vec Vector of geographic identifiers to be converted.
-#' @param fips_county_state Data frame containing FIPS code lookup information.
 #' @param link_geo Character string specifying geographic level. Must be either
 #'   "county" or "state". Default is "county".
 #'
 #' @return Character vector of FIPS codes with proper formatting.
 #'
 #' @noRd
-to_fips <- function(vec, fips_county_state, link_geo = c("county", "state")) {
+to_fips <- function(vec, link_geo = c("county", "state")) {
   link_geo <- match.arg(link_geo)
 
-  lookup_df <- if(link_geo == "state") aggregate_fips(fips_county_state) else fips_county_state
+  lookup_df <- switch(
+    link_geo,
+    county = fips_$county,
+    state = fips_$state
+  )
   fmt <- if(link_geo == "state") "%02d" else "%05d"
 
   if(is.numeric(vec)) {
@@ -559,7 +562,6 @@ get_smallest_geo <- function(col_names) {
 #' geographic names to FIPS codes and joins with geographic crosswalk data.
 #'
 #' @param input_data Data frame containing input data with geographic variables.
-#' @param zip_county_state Data frame containing geographic crosswalk information.
 #' @param geo_all Character vector of all possible geographic scales in hierarchy.
 #'
 #' @return Data frame with additional geographic variables at larger scales.
@@ -568,23 +570,18 @@ get_smallest_geo <- function(col_names) {
 #'
 #' @importFrom dplyr select rename mutate distinct
 #' @importFrom rlang .data
-append_geo <- function(
-    input_data,
-    zip_county_state
-) {
+append_geo <- function(input_data) {
   geo_all <- GLOBAL$vars$geo
   smallest <- get_smallest_geo(names(input_data))
   if (is.null(smallest)) {
     return(input_data)
   }
 
-  fips_county_state <- create_fips_county_state(zip_county_state)
-
   # Get geographic variables at current and larger scales
   geo_vars <- geo_all[smallest$idx:length(geo_all)]
 
   # Prepare geographic crosswalk
-  zip_county_state <- zip_county_state %>%
+  zip_county_state <- zip_$county_state %>%
     select(.data$zip, .data$fips) %>%
     rename(county = .data$fips) %>%
     mutate(state = substr(.data$county, 1, 2)) %>%
@@ -595,7 +592,6 @@ append_geo <- function(
   if (smallest$geo != "zip") { 
     input_data[[smallest$geo]] <- to_fips(
       input_data[[smallest$geo]], 
-      fips_county_state, 
       smallest$geo
     )
   }
@@ -608,7 +604,6 @@ append_geo <- function(
     if (geo != "zip") {
       input_data[[geo]] <- to_fips(
         input_data[[geo]], 
-        fips_county_state, 
         geo
       )
     }
@@ -943,8 +938,6 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 #' @param data Data frame containing raw uploaded data.
 #' @param metadata List containing analysis metadata including family type,
 #'   special cases, and time-varying flags.
-#' @param zip_county_state Data frame containing geographic crosswalk information
-#'   with columns: zip, fips, county, state, state_name.
 #' @param is_sample Logical. Whether the data represents sample data. Default is TRUE.
 #' @param is_aggregated Logical. Whether the data is already aggregated. Default is TRUE.
 #'
@@ -959,15 +952,12 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 #'   \item Data aggregated if needed for modeling
 #' }
 #'
-#' @export
-#'
 #' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
 #' @importFrom tidyr drop_na
 #' @importFrom rlang syms .data
 preprocess <- function(
   data,
   metadata,
-  zip_county_state,
   is_sample = TRUE,
   is_aggregated = TRUE
 ) {
@@ -1031,7 +1021,7 @@ preprocess <- function(
   }
 
   # append geographic areas at larger scales if missing
-  data <- append_geo(data, zip_county_state)
+  data <- append_geo(data)
 
   return(data)
 }
@@ -1120,8 +1110,6 @@ create_variable_list <- function(input_data, covariates) {
 #'
 #' @param tract_data Data frame containing tract-level demographic data with
 #'   GEOID column (11-digit tract codes) and demographic cross-tabulation columns.
-#' @param zip_tract Data frame containing tract-to-zip crosswalk information
-#'   with columns: geoid (tract), zip.
 #' @param link_geo Character string specifying target geographic scale. Must be
 #'   one of the values in GLOBAL$vars$geo: "zip", "county", "state", or NULL for national.
 #'
@@ -1138,7 +1126,6 @@ create_variable_list <- function(input_data, covariates) {
 #' @importFrom rlang .data
 combine_tracts <- function(
     tract_data,
-    zip_tract,
     link_geo = NULL
 ) {
 
@@ -1149,14 +1136,17 @@ combine_tracts <- function(
   )
 
   if (is.null(link_geo)) {
+
     pstrat_data <- tract_data %>%
       mutate(geocode = "place_holder") %>%
       select(-.data$GEOID) %>%
       group_by(.data$geocode) %>%
       summarize_all(sum)
+
   } else if (link_geo == "zip") {
+
     # join tract-level data with zip-tract conversion table then group by zip
-    by_zip <- zip_tract %>%
+    by_zip <- zip_$tract %>%
       select(.data$geoid, .data$zip) %>%
       rename("GEOID" = "geoid") %>%
       inner_join(
@@ -1173,18 +1163,23 @@ combine_tracts <- function(
         across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
       ) %>%
       rename("geocode" = "zip")
+
   } else if (link_geo == "county") {
+
     pstrat_data <- tract_data %>%
       mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
       select(-.data$GEOID) %>%
       group_by(.data$geocode) %>%
       summarize_all(sum)
+
   } else if (link_geo == "state") {
+
     pstrat_data <- tract_data %>%
       mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
       select(-.data$GEOID) %>%
       group_by(.data$geocode) %>%
       summarize_all(sum)
+
   }
 
   return(pstrat_data)
@@ -1201,8 +1196,6 @@ combine_tracts <- function(
 #' @param input_data Data frame containing preprocessed sample data.
 #' @param tract_data Data frame containing ACS tract-level demographic data
 #'   with GEOID and demographic cross-tabulation columns.
-#' @param zip_tract Data frame containing tract-to-zip crosswalk with
-#'   columns: geoid, zip.
 #' @param metadata List containing analysis metadata including family type
 #'   and time-varying flags.
 #' @param link_geo Character string specifying geographic linking variable
@@ -1224,20 +1217,17 @@ combine_tracts <- function(
 #'   \item Generates variable lists for modeling
 #' }
 #'
-#' @export
-#'
 #' @importFrom dplyr filter select mutate arrange across left_join
 #' @importFrom rlang sym .data
 prepare_mrp_acs <- function(
     input_data,
     tract_data,
-    zip_tract,
     metadata,
     link_geo = NULL
 ) {
 
   # compute cell counts based on given geographic scale
-  pstrat_data <- combine_tracts(tract_data, zip_tract, link_geo)
+  pstrat_data <- combine_tracts(tract_data, link_geo)
 
   # filter based on common GEOIDs
   shared_geocodes <- c()
@@ -1310,8 +1300,6 @@ prepare_mrp_acs <- function(
 #' @param input_data Data frame containing preprocessed sample data.
 #' @param new_data Data frame containing custom poststratification data with
 #'   demographic columns and population counts (total column).
-#' @param fips_county_state Data frame containing FIPS code mappings for
-#'   geographic name conversion.
 #' @param metadata List containing analysis metadata including family type
 #'   and time-varying flags.
 #' @param link_geo Character string specifying geographic linking variable
@@ -1332,14 +1320,11 @@ prepare_mrp_acs <- function(
 #'   \item Generates variable lists for modeling
 #' }
 #'
-#' @export
-#'
 #' @importFrom dplyr filter mutate
 #' @importFrom rlang sym
 prepare_mrp_custom <- function(
     input_data,
     new_data,
-    fips_county_state,
     metadata,
     link_geo = NULL
 ) {
@@ -1397,79 +1382,6 @@ prepare_mrp_custom <- function(
     levels = levels,
     vars = vars
   ))
-}
-
-#' Create zip-to-county-state crosswalk
-#'
-#' @description Creates a crosswalk table linking ZIP codes to counties and
-#' states by finding the most common county for each ZIP code and joining
-#' with FIPS county-state information. Handles ZIP codes that span multiple
-#' counties by selecting the most frequent county.
-#'
-#' @param zip_tract Data frame containing ZIP-to-tract crosswalk with columns:
-#'   zip, geoid (11-digit tract codes).
-#' @param fips_county_state Data frame containing FIPS county-state mappings
-#'   with columns: fips, county, state, state_name.
-#'
-#' @return Data frame with ZIP codes linked to their most common county and state:
-#' \itemize{
-#'   \item zip: ZIP code
-#'   \item fips: 5-digit county FIPS code
-#'   \item county, state, state_name: Geographic names
-#' }
-#'
-#' @noRd
-#'
-#' @importFrom dplyr mutate group_by summarise left_join
-#' @importFrom rlang .data
-create_zip_county_state <- function(zip_tract, fips_county_state) {
-  # find the most common county for each zip code
-  zip_county_state <- zip_tract %>%
-    mutate(county_fips = substr(.data$geoid, 1, 5)) %>%
-    group_by(.data$zip) %>%
-    summarise(
-      fips = names(which.max(table(.data$county_fips)))
-    ) %>%
-    left_join(
-      fips_county_state,
-      by = "fips"
-    )
-
-  return(zip_county_state)
-}
-
-#' Create FIPS county-state lookup table
-#'
-#' @description Creates a lookup table of unique FIPS codes with corresponding
-#' county and state information. Optionally formats names for plotting with
-#' proper capitalization using tools::toTitleCase().
-#'
-#' @param zip_county_state Data frame containing ZIP-county-state crosswalk
-#'   with columns: fips, county, state, state_name.
-#' @param for_plotting Logical. If TRUE, formats names with proper capitalization
-#'   for plotting (uppercase state abbreviations, title case names). Default is FALSE.
-#'
-#' @return Data frame with unique FIPS codes and corresponding geographic names.
-#'   When for_plotting=TRUE, names are formatted for display purposes.
-#'
-#' @noRd
-#'
-#' @importFrom dplyr select distinct mutate
-#' @importFrom rlang .data
-create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
-  fips_county_state <- zip_county_state %>%
-    select(.data$fips, .data$county, .data$state, .data$state_name) %>%
-    distinct()
-
-  if(for_plotting) {
-    fips_county_state <- fips_county_state %>% mutate(
-      state = toupper(.data$state),
-      state_name = tools::toTitleCase(.data$state_name),
-      county = tools::toTitleCase(.data$county)
-    )
-  }
-
-  return(fips_county_state)
 }
 
 #' Aggregate FIPS codes to state level
