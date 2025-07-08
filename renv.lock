@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.5.0",
+    "Version": "4.5.1",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -2975,12 +2975,6 @@
       "Maintainer": "Kirill Müller <kirill@cynkra.com>",
       "Repository": "CRAN"
     },
-    "pkgbuild": {
-      "Package": "pkgbuild",
-      "Version": "1.4.8",
-      "Source": "Repository",
-      "Repository": "CRAN"
-    },
     "pkgconfig": {
       "Package": "pkgconfig",
       "Version": "2.0.3",
@@ -3003,12 +2997,6 @@
       "BugReports": "https://github.com/r-lib/pkgconfig/issues",
       "Encoding": "UTF-8",
       "NeedsCompilation": "no",
-      "Repository": "CRAN"
-    },
-    "pkgload": {
-      "Package": "pkgload",
-      "Version": "1.4.0",
-      "Source": "Repository",
       "Repository": "CRAN"
     },
     "posterior": {

@@ -4,22 +4,13 @@
 \alias{preprocess}
 \title{Main preprocessing function for uploaded data}
 \usage{
-preprocess(
-  data,
-  metadata,
-  zip_county_state,
-  is_sample = TRUE,
-  is_aggregated = TRUE
-)
+preprocess(data, metadata, is_sample = TRUE, is_aggregated = TRUE)
 }
 \arguments{
 \item{data}{Data frame containing raw uploaded data.}
 
 \item{metadata}{List containing analysis metadata including family type,
 special cases, and time-varying flags.}
-
-\item{zip_county_state}{Data frame containing geographic crosswalk information
-with columns: zip, fips, county, state, state_name.}
 
 \item{is_sample}{Logical. Whether the data represents sample data. Default is TRUE.}
 

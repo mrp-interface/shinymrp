@@ -1285,8 +1285,6 @@ make_standata <- function(
 #'   \item Returns fit object and associated data/code for further analysis
 #' }
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Fit a basic multilevel model
@@ -1374,8 +1372,6 @@ run_mcmc <- function(
 #'   \item Runs in parallel across chains with threading support
 #'   \item Suppresses compilation and sampling messages for cleaner output
 #' }
-#'
-#' @export
 #'
 #' @examples
 #' \dontrun{
@@ -1540,8 +1536,6 @@ format_params_summary <- function(
 #'   \item Provides proper labeling for categorical variables
 #' }
 #'
-#' @export
-#'
 #' @importFrom dplyr select
 #' @importFrom rlang .data
 #'
@@ -1668,8 +1662,6 @@ get_parameters <- function(
 #'   \item E-BFMI < 0.3: Indicates potential energy problems in sampling
 #' }
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Extract diagnostics
@@ -1758,8 +1750,6 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #'   \item Organizes results by subgroup and time period
 #'   \item Matches factor levels to original data labels
 #' }
-#'
-#' @export
 #'
 #' @importFrom dplyr select mutate arrange distinct across all_of
 #'
@@ -1853,8 +1843,6 @@ get_estimates <- function(
 #'   \item Aggregates by time period if time-varying
 #'   \item Converts counts to proportions using total sample sizes
 #' }
-#'
-#' @export
 #'
 #' @importFrom rlang .data
 #' @importFrom dplyr select mutate group_by summarise_all ungroup mutate_all
