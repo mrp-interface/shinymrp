@@ -475,14 +475,10 @@ mod_analyze_upload_server <- function(id, global){
         link_geos <- c("state")
         acs_years <- 2018
       } else {
-        # find the smallest geography in the data
-        idx <- match(names(global$data), GLOBAL$vars$geo) %>% stats::na.omit()
-        link_geos <- if (length(idx) > 0) {
-          c(GLOBAL$vars$geo[min(idx):length(GLOBAL$vars$geo)], "Do not include geography")
-        } else {
+        link_geos <- c(
+          get_possible_geos(names(global$data)),
           "Do not include geography"
-        }
-
+        )
         acs_years <- 2019:2023
       }
 

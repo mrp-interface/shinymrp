@@ -19,6 +19,7 @@ Depends:
 Imports: 
     bsicons,
     bslib,
+    checkmate,
     cmdstanr,
     config (>= 0.3.2),
     dplyr,
@@ -34,6 +35,7 @@ Imports:
     posterior,
     purrr,
     qs,
+    R6,
     RColorBrewer,
     readr,
     readxl,

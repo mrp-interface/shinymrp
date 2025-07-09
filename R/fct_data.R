@@ -555,6 +555,16 @@ get_smallest_geo <- function(col_names) {
   ))
 }
 
+get_possible_geos <- function(col_names) {
+  smallest <- get_smallest_geo(col_names)
+  if (is.null(smallest)) {
+    return(NULL)
+  }
+
+  # Return all geographic variables from the smallest to the largest scale
+  return(GLOBAL$vars$geo[smallest$idx:length(GLOBAL$vars$geo)])
+}
+
 #' Append geographic variables at larger scales
 #'
 #' @description Adds geographic variables at larger scales (county, state)
@@ -571,14 +581,15 @@ get_smallest_geo <- function(col_names) {
 #' @importFrom dplyr select rename mutate distinct
 #' @importFrom rlang .data
 append_geo <- function(input_data) {
-  geo_all <- GLOBAL$vars$geo
+  # get the smallest geographic scale in the data
   smallest <- get_smallest_geo(names(input_data))
-  if (is.null(smallest)) {
-    return(input_data)
-  }
 
   # Get geographic variables at current and larger scales
-  geo_vars <- geo_all[smallest$idx:length(geo_all)]
+  geo_vars <- get_possible_geos(names(input_data))
+
+  if (is.null(geo_vars)) {
+    return(input_data)
+  }
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_$county_state %>%
@@ -1129,10 +1140,10 @@ combine_tracts <- function(
     link_geo = NULL
 ) {
 
-  link_geo <- rlang::arg_match(
-    arg = link_geo,
-    values = GLOBAL$vars$geo,
-    multiple = FALSE
+  checkmate::assert_choice(
+    link_geo,
+    choices = GLOBAL$vars$geo,
+    null.ok = TRUE
   )
 
   if (is.null(link_geo)) {

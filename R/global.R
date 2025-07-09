@@ -116,6 +116,7 @@ GLOBAL <- list(
       static_general = "Cross-sectional: General"
     )
   ),
+  acs_years = 2019:2023,
   family = c("binomial", "normal"),
   vars = list(
     pstrat = c("sex", "race", "age", "edu", "county", "state"),
