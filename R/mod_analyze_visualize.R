@@ -199,7 +199,7 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_edu", reactive(global$plot_data$raw_covariates), "college", list(
+    mod_geo_plot_server("geo_edu", reactive(global$plot_data$raw_covariates), "edu", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -217,7 +217,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Poverty measure"
     ))
     
-    mod_geo_plot_server("geo_employ", reactive(global$plot_data$raw_covariates), "employment", list(
+    mod_geo_plot_server("geo_employ", reactive(global$plot_data$raw_covariates), "employ", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -235,7 +235,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Average of median household income"
     ))
     
-    mod_geo_plot_server("geo_urban", reactive(global$plot_data$raw_covariates), "urbanicity", list(
+    mod_geo_plot_server("geo_urban", reactive(global$plot_data$raw_covariates), "urban", list(
       threshold   = 0.95,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -244,7 +244,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Urbanicity"
     ))
     
-    mod_geo_plot_server("geo_adi", reactive(global$plot_data$raw_covariates), "ADI", list(
+    mod_geo_plot_server("geo_adi", reactive(global$plot_data$raw_covariates), "adi", list(
       threshold   = 80,
       operation   = ">",
       breaks      = seq(0, 100, 5),

@@ -467,8 +467,12 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 #' @return Character vector of FIPS codes with proper formatting.
 #'
 #' @noRd
-to_fips <- function(vec, link_geo = c("county", "state")) {
-  link_geo <- match.arg(link_geo)
+to_fips <- function(vec, link_geo) {
+  checkmate::assert_choice(
+    link_geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
 
   lookup_df <- switch(
     link_geo,

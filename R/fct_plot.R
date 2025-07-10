@@ -43,10 +43,15 @@ fips_upper <- function(fips) {
 prep_sample_size <- function(
   input_data,
   fips_codes,
-  geo = c("county", "state"),
+  geo,
   for_map = TRUE
 ) {
-  geo <- match.arg(geo)
+  
+  checkmate::assert_choice(
+    geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
 
   if(is.null(input_data)) {
     return(NULL)
@@ -136,12 +141,17 @@ prep_sample_size <- function(
 prep_raw <- function(
   input_data,
   fips_codes,
-  geo = c("county", "state"),
+  geo,
   summary_type = c("max", "min"),
   metadata = NULL
 ) {
 
-  geo <- match.arg(geo)
+  checkmate::assert_choice(
+    geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
+  
   summary_type <- match.arg(summary_type)
   
   if(is.null(input_data)) {
@@ -248,10 +258,15 @@ prep_raw <- function(
 prep_est <- function(
     est_df,
     fips_codes,
-    geo = c("county", "state"),
+    geo,
     time_index = NULL
 ) {
-  geo <- match.arg(geo)
+  
+  checkmate::assert_choice(
+    geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
 
   if(is.null(est_df)) {
     return(NULL)
@@ -624,10 +639,11 @@ plot_outcome_timevar <- function(
 #' @importFrom dplyr mutate
 plot_outcome_static <- function(
     raw,
-    yrep_est,
-    metadata = NULL
+    yrep_est = NULL,
+    metadata = NULL,
+    show_caption = FALSE
 ) {
-  if(is.null(yrep_est) || is.null(raw)) {
+  if(is.null(raw)) {
     return(NULL)
   }
 
@@ -635,6 +651,7 @@ plot_outcome_static <- function(
     "binomial" = sum(raw$positive) / sum(raw$total),
     "normal" = mean(raw$outcome)
   )
+
   raw <- data.frame(
     data = "Raw",
     lower = raw_mean,
@@ -642,17 +659,20 @@ plot_outcome_static <- function(
     upper = raw_mean
   )
 
-  yrep_est <- yrep_est %>%
-    mutate(
-      data = "Estimate",
-      lower = .data$est - .data$std,
-      median = .data$est,
-      upper = .data$est + .data$std
-    ) %>%
-    select(.data$data, .data$lower, .data$median, .data$upper) 
+  plot_df <- raw
+  if (!is.null(yrep_est)) {
+    yrep_est <- yrep_est %>%
+      mutate(
+        data = "Estimate",
+        lower = .data$est - .data$std,
+        median = .data$est,
+        upper = .data$est + .data$std
+      ) %>%
+      select(.data$data, .data$lower, .data$median, .data$upper) 
 
-  plot_df <- rbind(raw, yrep_est) %>%
-    mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
+    plot_df <- rbind(raw, yrep_est) %>%
+      mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
+  }
 
   p <- ggplot(data = plot_df) +
     geom_point(
@@ -670,7 +690,11 @@ plot_outcome_static <- function(
         "binomial" = "Proportion estimates",
         "normal" = "Mean estimates"
       ),
-      caption = "*The error bars represent \u00B11 SD of uncertainty"
+      caption = if(show_caption) {
+        "*The error bars represent \u00B11 SD of uncertainty"
+      } else {
+        NULL
+      }
     ) +
     theme(
       plot.title = element_text(hjust = 0.5),

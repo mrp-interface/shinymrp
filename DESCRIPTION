@@ -28,6 +28,7 @@ Imports:
     golem (>= 0.4.1),
     haven,
     highcharter,
+    htmlwidgets,
     ISOweek,
     loo,
     magrittr,

@@ -153,7 +153,8 @@ mod_analyze_result_server <- function(id, global){
         plot_outcome_static(
           raw = selected_model()$mrp$input,
           yrep_est = selected_model()$est$overall,
-          metadata = selected_model()$metadata
+          metadata = selected_model()$metadata,
+          show_caption = TRUE
         )
       }
     }, height = function() GLOBAL$ui$plot$plot_height)
