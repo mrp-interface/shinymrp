@@ -52,7 +52,7 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
           geojson()[[geo]],
           geo = geo,
           config = list(
-            main_title = sprintf("Sample Size Map"),
+            main_title = "Sample Size Map",
             hover_title = "Sample Size"
           )
         )

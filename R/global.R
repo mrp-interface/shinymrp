@@ -121,7 +121,10 @@ GLOBAL <- list(
   vars = list(
     pstrat = c("sex", "race", "age", "edu", "county", "state"),
     indiv  = c("sex", "race", "age", "edu", "time"),
+    demo   = c("sex", "race", "age", "edu"),
+    covar  = c("edu", "poverty", "employ", "income", "urban", "adi"),
     geo    = c("zip", "county", "state"),
+    geo2   = c("county", "state"),
     time   = c("time", "date"),
     ignore = c("date", "total", "positive", "outcome")
   ),
