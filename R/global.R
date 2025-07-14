@@ -27,6 +27,25 @@ GLOBAL <- list(
     example_data = "extdata/example/data/",
     example_fit = "extdata/example/fit/"
   ),
+  plot = list(
+    point_size = 3.5,
+    errorbar_size = 0.8,
+    errorbar_width = 0,
+    raw_color = "darkblue",
+    yrep_color = "darkorange",
+    mrp_color = "darkorange",
+    ui = list(
+      plot_height = 550,
+      subplot_height = 300,
+      map_height = 700
+    ),
+    save = list (
+      width = 18,
+      height = 8,
+      dpi = 300,
+      unit = "in"
+    )
+  ),
   ui = list(
     style = list(
       global = "
@@ -51,17 +70,6 @@ GLOBAL <- list(
       max_models = 5,
       iter_range = c(100, 5000),
       chain_range = c(1, 8)
-    ),
-    plot = list(
-      plot_height = 550,
-      subplot_height = 300,
-      map_height = 700,
-      point_size = 3.5,
-      errorbar_size = 0.8,
-      errorbar_width = 0,
-      raw_color = "darkblue",
-      yrep_color = "darkorange",
-      mrp_color = "darkorange"
     ),
     animation = list(
       duration = 1000,
@@ -90,16 +98,20 @@ GLOBAL <- list(
         "Sample Size" = "sample"
       ),
       geo_covar = c(
-        "Education" = "edu",
+        "Education" = "college",
         "Poverty" = "poverty",
-        "Employment" = "employ", 
+        "Employment" = "employment", 
         "Income" = "income",
-        "Urbanicity" = "urban",
+        "Urbanicity" = "urbanicity",
         "ADI" = "adi"
       ),
       outcome = c(
         "Overall" = "overall",
         "By Geography" = "by_geo"
+      ),
+      summary = c(
+        "Highest" = "max",
+        "Lowest" = "min"
       ),
       subgroup = c(
         "Sex" = "sex",
@@ -116,13 +128,17 @@ GLOBAL <- list(
       static_general = "Cross-sectional: General"
     )
   ),
-  acs_years = 2019:2023,
-  family = c("binomial", "normal"),
+  args = list(
+    acs_years = 2019:2023,
+    effect_types = c("fixed", "varying", "interaction"),
+    family = c("binomial", "normal"),
+    summary_types = c("max", "min")
+  ),
   vars = list(
     pstrat = c("sex", "race", "age", "edu", "county", "state"),
     indiv  = c("sex", "race", "age", "edu", "time"),
     demo   = c("sex", "race", "age", "edu"),
-    covar  = c("edu", "poverty", "employ", "income", "urban", "adi"),
+    covar  = c("college", "poverty", "employment", "income", "urbanicity", "adi"),
     geo    = c("zip", "county", "state"),
     geo2   = c("county", "state"),
     time   = c("time", "date"),

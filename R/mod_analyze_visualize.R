@@ -48,8 +48,7 @@ mod_analyze_visualize_ui <- function(id){
           selectizeInput(
             inputId = ns("summary_slt"),
             label = "Select summary statistic",
-            choices = c("Highest" = "max",
-                        "Lowest" = "min"),
+            choices = GLOBAL$ui$plot_selection$summary,
             options = list(dropdownParent = "body")
           )
         )
@@ -161,17 +160,17 @@ mod_analyze_visualize_server <- function(id, global){
       } else if (category == "geo") {
         switch(subcategory,
           "sample" = mod_indiv_map_ui(ns("geo_sample")),
-          "edu" = mod_geo_plot_ui(ns("geo_edu")),
+          "college" = mod_geo_plot_ui(ns("geo_college")),
           "poverty" = mod_geo_plot_ui(ns("geo_poverty")),
-          "employ" = mod_geo_plot_ui(ns("geo_employ")),
+          "employment" = mod_geo_plot_ui(ns("geo_employment")),
           "income" = mod_geo_plot_ui(ns("geo_income")),
-          "urban" = mod_geo_plot_ui(ns("geo_urban")),
+          "urbanicity" = mod_geo_plot_ui(ns("geo_urbanicity")),
           "adi" = mod_geo_plot_ui(ns("geo_adi"))
         )
       } else if (category == "outcome") {
         switch(subcategory,
-          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$ui$plot$plot_height),
-          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$ui$plot$map_height)
+          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$plot$ui$plot_height),
+          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$plot$ui$map_height)
         )
       }
     })
@@ -199,7 +198,7 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_edu", reactive(global$plot_data$raw_covariates), "edu", list(
+    mod_geo_plot_server("geo_college", reactive(global$plot_data$raw_covariates), "college", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -216,8 +215,8 @@ mod_analyze_visualize_server <- function(id, global){
       definition  = "Poverty measure of a zip code is defined as the percentage of the residing population\nwhose ratio of income to poverty level in the past 12 months is below 100%%.",
       name        = "Poverty measure"
     ))
-    
-    mod_geo_plot_server("geo_employ", reactive(global$plot_data$raw_covariates), "employ", list(
+
+    mod_geo_plot_server("geo_employment", reactive(global$plot_data$raw_covariates), "employment", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -234,8 +233,8 @@ mod_analyze_visualize_server <- function(id, global){
       definition  = "Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months\nweighted by tract population counts.",
       name        = "Average of median household income"
     ))
-    
-    mod_geo_plot_server("geo_urban", reactive(global$plot_data$raw_covariates), "urban", list(
+
+    mod_geo_plot_server("geo_urbanicity", reactive(global$plot_data$raw_covariates), "urbanicity", list(
       threshold   = 0.95,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),

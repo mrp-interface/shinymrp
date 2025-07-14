@@ -32,7 +32,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         "map" = tagList(
           highcharter::highchartOutput(
             outputId = ns("map"),
-            height = GLOBAL$ui$plot$map_height
+            height = GLOBAL$plot$ui$map_height
           ),
           # Only show slider if we have time-varying data
           if (!is.null(time_indices)) {
@@ -87,7 +87,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         NULL
       }
 
-      plot_df <- model()$est[[geo]] %>% 
+      model()$est[[geo]] %>% 
         prep_est(
           fips_codes = fips_[[geo]],
           geo = geo,
@@ -121,7 +121,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         filter(factor %in% geo_subset())
 
       if(model()$metadata$is_timevar) {
-        plot_est_temporal(
+        plot_est_timevar(
           plot_df = plot_df,
           dates = model()$plot_data$dates,
           metadata = model()$metadata
@@ -136,9 +136,9 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model())
 
       if(model()$metadata$is_timevar) {
-        GLOBAL$ui$plot$subplot_height * (length(geo_subset()) + 1)
+        GLOBAL$plot$ui$subplot_height * (length(geo_subset()) + 1)
       } else {
-        GLOBAL$ui$plot$plot_height
+        GLOBAL$plot$ui$plot_height
       }
     })
     

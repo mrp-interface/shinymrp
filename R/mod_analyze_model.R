@@ -689,10 +689,10 @@ mod_analyze_model_server <- function(id, global){
       # Try to fit the model
       tryCatch({
         # assign default priors to all selected effects
-        all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
-        for(type in c("fixed", "varying", "interaction")) {
+        effects <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
+        for(type in GLOBAL$args$effect_types) {
           for(v in input[[type]]) {
-            all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
+            effects[[type]][[v]] <- GLOBAL$default_priors[[type]]
           }
         }
     
@@ -704,20 +704,17 @@ mod_analyze_model_server <- function(id, global){
           if(!is.null(nullify(dist))) {
             for(s in eff) {
               ss <- strsplit(s, split = "_")[[1]]
-              all_priors[[ss[1]]][[ss[2]]] <- dist
+              effects[[ss[1]]][[ss[2]]] <- dist
             }
           }
         }
         
-        # classify effects
-        all_priors <- all_priors %>%
-          group_effects(global$mrp$input) %>%
-          ungroup_effects()
-        
         # Create model object
         model <- list()
-        model$effects <- all_priors
-        model$formula <- create_formula(all_priors)
+        model$effects <- effects %>%
+          group_effects(global$mrp$input) %>%
+          ungroup_effects()
+        model$formula <- create_formula(effects)
         model$mrp <- global$mrp
         model$plot_data <- global$plot_data
         model$link_data <- global$link_data
