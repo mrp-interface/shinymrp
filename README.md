@@ -1,4 +1,4 @@
-# shinymrp
+# shinymrp <a href="https://mrp-interface.github.io/shinymrp/"><img src="man/figures/logo.svg" align="right" height="139" alt="shinymrp website" /></a>
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/mrp-interface/shinymrp/actions/workflows/ci.yaml/badge.svg)](https://github.com/mrp-interface/shinymrp/actions/workflows/ci.yaml)
