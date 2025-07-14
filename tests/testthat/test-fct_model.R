@@ -132,7 +132,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -165,7 +167,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -198,7 +202,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -231,7 +237,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -270,7 +278,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -309,7 +319,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -348,7 +360,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -387,7 +401,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -428,7 +444,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -470,7 +488,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -514,7 +534,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -556,7 +578,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -600,7 +624,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -639,7 +665,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -683,7 +711,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%
@@ -727,7 +757,9 @@ test_that("estimated parameters match saved values", {
     metadata = metadata,
     seed = seed,
     n_iter = 2000,
-    silent = TRUE
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
   )
 
   ref <- paste0("testdata/", make_hashed_filename(effects, prefix = "params")) %>%

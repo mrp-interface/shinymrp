@@ -157,7 +157,7 @@ mod_analyze_result_server <- function(id, global){
           show_caption = TRUE
         )
       }
-    }, height = function() GLOBAL$ui$plot$plot_height)
+    }, height = function() GLOBAL$plot$ui$plot_height)
     
     # --------------------------------------------------------------------------
     # Render UI dynamically based on the user's selection.
@@ -169,7 +169,7 @@ mod_analyze_result_server <- function(id, global){
       subgroup_select <- isolate(input$subgroup_select)
 
       if (result_category == "overall") {
-        plotOutput(ns("est_overall"), height = GLOBAL$ui$plot$plot_height)
+        plotOutput(ns("est_overall"), height = GLOBAL$plot$ui$plot_height)
       } else if (result_category == "subgroup") {
         switch(subgroup_select,
           "sex" = mod_est_plot_ui(ns("est_sex")),

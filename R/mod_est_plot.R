@@ -28,9 +28,9 @@ mod_est_plot_server <- function(id, model, var) {
         mutate(factor = factor(.data$factor, levels = model()$mrp$levels[[var]]))
 
       if (model()$metadata$is_timevar) {
-        plot_est_temporal(
+        plot_est_timevar(
           plot_df = est_df,
-          dates = model()$plotdata$dates,
+          dates = model()$plot_data$dates,
           metadata = model()$metadata
         )
       } else {
@@ -44,9 +44,9 @@ mod_est_plot_server <- function(id, model, var) {
       req(model())
       
       if(model()$metadata$is_timevar) {
-        GLOBAL$ui$plot$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
+        GLOBAL$plot$ui$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
       } else {
-        GLOBAL$ui$plot$plot_height
+        GLOBAL$plot$ui$plot_height
       }
     })
   })

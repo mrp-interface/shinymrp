@@ -142,8 +142,8 @@ prep_raw <- function(
   input_data,
   fips_codes,
   geo,
-  summary_type = c("max", "min"),
-  metadata = NULL
+  summary_type,
+  metadata
 ) {
 
   checkmate::assert_choice(
@@ -152,7 +152,11 @@ prep_raw <- function(
     null.ok = FALSE
   )
   
-  summary_type <- match.arg(summary_type)
+  checkmate::assert_choice(
+    summary_type,
+    choices = GLOBAL$args$summary_types,
+    null.ok = TRUE
+  )
   
   if(is.null(input_data)) {
     return(NULL)
@@ -173,15 +177,12 @@ prep_raw <- function(
     )
 
   if (metadata$is_timevar) {
-    if(summary_type == "max") {
-      summary_fn <- max
-      label <- "Highest"
-      which_fn <- which.max
-    } else if (summary_type == "min") {
-      summary_fn <- min
-      label <- "Lowest"
-      which_fn <- which.min
-    }
+    summary_type <- replace_null(summary_type, "max")
+
+    summary_fn <- switch(summary_type,
+      "max" = max,
+      "min" = min
+    )
 
     plot_df <- plot_df %>%
       group_by(.data$fips) %>%
@@ -506,7 +507,7 @@ plot_outcome_timevar <- function(
   dates = NULL,
   metadata = NULL,
   show_caption = FALSE,
-  config = GLOBAL$ui$plot
+  config = GLOBAL$plot
 ) {
 
   if(is.null(raw)) {
@@ -677,12 +678,12 @@ plot_outcome_static <- function(
   p <- ggplot(data = plot_df) +
     geom_point(
       aes(x = .data$data, y = .data$median),
-      size = GLOBAL$ui$plot$point_size
+      size = GLOBAL$plot$point_size
     ) +
     geom_errorbar(
       aes(x = .data$data, ymin = .data$lower, ymax = .data$upper),
-      size = GLOBAL$ui$plot$errorbar_size,
-      width = GLOBAL$ui$plot$errorbar_width
+      size = GLOBAL$plot$errorbar_size,
+      width = GLOBAL$plot$errorbar_width
     ) +
     labs(
       x = "",
@@ -727,7 +728,7 @@ plot_ppc_timevar_subset <- function(
     raw,
     dates,
     metadata,
-    config = GLOBAL$ui$plot
+    config = GLOBAL$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -822,7 +823,7 @@ plot_ppc_timevar_all <- function(
     raw,
     dates,
     metadata,
-    config = GLOBAL$ui$plot
+    config = GLOBAL$plot
 ) {
 
   if(is.null(yrep) || is.null(raw)) {
@@ -918,7 +919,7 @@ plot_ppc_static <- function(
     yrep,
     raw,
     metadata = NULL,
-    config = GLOBAL$ui$plot
+    config = GLOBAL$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -946,7 +947,7 @@ plot_ppc_static <- function(
         color = .data$name,
         shape = .data$name
       ),
-      size = GLOBAL$ui$plot$point_size
+      size = GLOBAL$plot$point_size
     ) +
     labs(
       x = "",
@@ -980,7 +981,7 @@ plot_ppc_static <- function(
 #' @importFrom patchwork wrap_plots plot_annotation
 #' @importFrom tools toTitleCase
 #' @importFrom dplyr mutate filter
-plot_est_temporal <- function(
+plot_est_timevar <- function(
     plot_df,
     dates,
     metadata = NULL
@@ -1126,7 +1127,7 @@ plot_est_static <- function(plot_df, metadata = NULL) {
         x = .data$factor,
         y = .data$est
       ),
-      size = GLOBAL$ui$plot$point_size
+      size = GLOBAL$plot$point_size
     ) +
     geom_errorbar(
       aes(
@@ -1134,8 +1135,8 @@ plot_est_static <- function(plot_df, metadata = NULL) {
         ymin = .data$est - .data$std,
         ymax = .data$est + .data$std
       ),
-      size = GLOBAL$ui$plot$errorbar_size,
-      width = GLOBAL$ui$plot$errorbar_width
+      size = GLOBAL$plot$errorbar_size,
+      width = GLOBAL$plot$errorbar_width
     ) +
     scale_x_discrete(
       labels = tools::toTitleCase

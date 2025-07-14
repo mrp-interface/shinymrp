@@ -27,6 +27,14 @@ nullify <- function(x) {
   return(x)
 }
 
+replace_null <- function(x, replacement) {
+  if (is.null(x)) {
+    return(replacement)
+  } else {
+    return(x)
+  }
+}
+
 #' Create human-readable data format labels
 #'
 #' @description Converts internal data format codes to human-readable labels
@@ -101,7 +109,7 @@ create_example_filename <- function(
   suffix = c("raw", "prep", "fit"),
   ext = ".csv",
   sep = "_",
-  valid_families = GLOBAL$family
+  valid_families = GLOBAL$args$family
 ) {
   # Validate inputs
   suffix <- match.arg(suffix)

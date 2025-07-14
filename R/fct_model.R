@@ -116,6 +116,28 @@ check_prior_syntax <- function(s) {
   }
 }
 
+set_default_priors <- function(effects) {
+  for (type in c("Intercept", GLOBAL$args$effect_types)) {
+    effects[[type]] <- purrr::map(effects[[type]], ~ replace_null(.x, GLOBAL$default_priors[[type]]))
+  }
+
+  return(effects)
+}
+
+# helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
+norm_pair <- function(p, sep = ":") {
+  parts <- strsplit(p, sep, fixed = TRUE)[[1]]
+  paste(sort(parts), collapse = sep)
+}
+
+pair_intersect <- function(pairs1, pairs2, sep = ":") {
+  # normalize pairs
+  norms1 <- vapply(pairs1, norm_pair, FUN.VALUE = character(1), sep = sep)
+  norms2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1), sep = sep)
+
+  return(intersect(norms1, norms2))
+}
+
 #' Set Difference for Interaction Pairs
 #'
 #' @description Computes set difference between two sets of interaction pairs,
@@ -131,17 +153,12 @@ check_prior_syntax <- function(s) {
 #'
 #' @noRd
 pair_setdiff <- function(pairs1, pairs2, sep = ":") {
-  # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
-  norm_pair <- function(p) {
-    parts <- strsplit(p, sep, fixed = TRUE)[[1]]
-    paste(sort(parts), collapse = sep)
-  }
-
-  # precompute the normalized set of pairs2
-  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1))
+  # precompute the normalized sets of pairs
+  norm1 <- vapply(pairs1, norm_pair, FUN.VALUE = character(1), sep = sep)
+  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1), sep = sep)
 
   # keep those in pairs1 whose normalized form is NOT in norm2
-  keep <- !vapply(pairs1, norm_pair, FUN.VALUE = character(1)) %in% norm2
+  keep <- !norm1 %in% norm2
 
   return(pairs1[keep])
 }
@@ -163,13 +180,12 @@ pair_setdiff <- function(pairs1, pairs2, sep = ":") {
 #'
 #' @noRd
 #'
-#' @importFrom purrr map_lgl
-filter_interactions <- function(interactions, fixed_effects, dat) {
-  bool <- map_lgl(interactions, function(s) {
+filter_interactions <- function(interactions, fixed_effects, data) {
+  bool <- purrr::map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    type1 <- data_type(dat[[ss[1]]])
-    type2 <- data_type(dat[[ss[2]]])
-    
+    type1 <- data_type(data[[ss[1]]])
+    type2 <- data_type(data[[ss[2]]])
+
     return((type1 == "cat" && !ss[1] %in% fixed_effects) ||
            (type2 == "cat" && !ss[2] %in% fixed_effects))
   })
@@ -193,9 +209,8 @@ filter_interactions <- function(interactions, fixed_effects, dat) {
 #'
 #' @noRd
 #'
-#' @importFrom purrr map_chr
 sort_interactions <- function(interactions, dat) {
-  interactions <- map_chr(interactions, function(s) {
+  interactions <- purrr::map_chr(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     type1 <- data_type(dat[[ss[1]]], num = TRUE)
     type2 <- data_type(dat[[ss[2]]], num = TRUE)
@@ -225,12 +240,11 @@ sort_interactions <- function(interactions, dat) {
 #'
 #' @noRd
 #'
-#' @importFrom dplyr filter n_distinct
 #' @importFrom rlang .data
 create_interactions <- function(fixed_effects, varying_effects, dat) {
   main_effects <- c(fixed_effects, varying_effects)
   
-  if(n_distinct(main_effects) <= 1) {
+  if(dplyr::n_distinct(main_effects) <= 1) {
     return(list())
   }
   
@@ -240,8 +254,8 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
     eff2 = main_effects,
     stringsAsFactors = FALSE
   ) %>%
-    filter(.data$eff1 != .data$eff2)
-  
+    dplyr::filter(.data$eff1 != .data$eff2)
+
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
   int <- paste0(df$eff1, ":", df$eff2)
   
@@ -264,9 +278,9 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
 #' @noRd
 #'
 interaction_levels <- function(levels1, levels2) {
-  numcat1 <- n_distinct(levels1)
-  numcat2 <- n_distinct(levels2)
-  
+  numcat1 <- dplyr::n_distinct(levels1)
+  numcat2 <- dplyr::n_distinct(levels2)
+
   if(numcat1 == 2 | numcat2 == 2) {
     levels_interaction <- levels1 * levels2
     levels_interaction[levels_interaction == 0] <- 1
@@ -1269,7 +1283,6 @@ make_standata <- function(
 #'   for COVID models (sens, spec).
 #' @param seed Integer. Random seed for reproducible results (default: NULL).
 #' @param code_fout Character. File path to save generated Stan code (default: NULL).
-#' @param silent Logical. Whether to suppress Stan output messages (default: FALSE).
 #'
 #' @return List containing:
 #'   \item{fit}{CmdStanR fit object with MCMC samples}
@@ -1307,7 +1320,7 @@ run_mcmc <- function(
     extra = NULL,
     seed = NULL,
     code_fout = NULL,
-    silent = FALSE
+    ...
 ) {
 
   stan_code <- list()
@@ -1335,10 +1348,8 @@ run_mcmc <- function(
     parallel_chains = n_chains,
     threads_per_chain = 1,
     refresh = n_iter / 10,
-    diagnostics = NULL,
-    show_messages = !silent,
-    show_exception = !silent,
-    seed = seed
+    seed = seed,
+    ...
   )
 
   return(list(
