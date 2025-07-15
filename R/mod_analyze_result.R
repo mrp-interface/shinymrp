@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the results interface with:
+#' @return A `bslib::layout_sidebar` containing the results interface with:
 #' \itemize{
 #'   \item Sidebar with model selection and result type controls
 #'   \item Conditional panels for subgroup and geographic options
@@ -145,7 +145,7 @@ mod_analyze_result_server <- function(id, global){
         plot_outcome_timevar(
           raw = selected_model()$mrp$input,
           yrep_est = selected_model()$est$overall,
-          dates = selected_model()$plot_data$dates,
+          dates = selected_model()$plotdata$dates,
           metadata = selected_model()$metadata,
           show_caption = TRUE
         )
@@ -220,7 +220,7 @@ mod_analyze_result_server <- function(id, global){
          selected_model()$metadata$special_case != "poll") {
         choices <- choices[!choices == "edu"]
       }
-      if(is.null(selected_model()$link_data$link_geo)) {
+      if(is.null(selected_model()$linkdata$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
       updateSelectInput(session, inputId = "subgroup_select", choices = choices)
@@ -262,7 +262,7 @@ mod_analyze_result_server <- function(id, global){
       eventExpr = list(
         global$data,
         global$metadata,
-        global$link_data
+        global$linkdata
       ),
       handlerExpr = {
         shinyjs::reset("model_select")

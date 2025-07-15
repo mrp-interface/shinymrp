@@ -30,7 +30,7 @@ mod_est_plot_server <- function(id, model, var) {
       if (model()$metadata$is_timevar) {
         plot_est_timevar(
           plot_df = est_df,
-          dates = model()$plot_data$dates,
+          dates = model()$plotdata$dates,
           metadata = model()$metadata
         )
       } else {

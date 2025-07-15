@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_columns} containing the MRP theory guide with:
+#' @return A `bslib::layout_columns` containing the MRP theory guide with:
 #' \itemize{
 #'   \item Mathematical formulations for cross-sectional MRP models
 #'   \item Time-varying MRP models with measurement error correction

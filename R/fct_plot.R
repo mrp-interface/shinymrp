@@ -113,15 +113,15 @@ prep_sample_size <- function(
 #'   One of "max" or "min".
 #' @param metadata A list containing metadata about the data structure with elements:
 #'   \itemize{
-#'     \item \code{is_timevar}: Logical indicating if data has time dimension
-#'     \item \code{family}: Character specifying data family ("binomial" or "normal")
+#'     \item `is_timevar`: Logical indicating if data has time dimension
+#'     \item `family`: Character specifying data family ("binomial" or "normal")
 #'   }
 #'
 #' @return A list containing:
 #'   \itemize{
-#'     \item \code{plot_df}: Processed data frame ready for plotting with columns for 
+#'     \item `plot_df`: Processed data frame ready for plotting with columns for 
 #'       fips, value, geographic names, and hover text
-#'     \item \code{title}: List containing main_title and hover_title for the plot
+#'     \item `title`: List containing main_title and hover_title for the plot
 #'   }
 #'   Returns NULL if input_data is NULL.
 #'
@@ -450,8 +450,8 @@ plot_geographic <- function(
     geom_histogram(breaks = breaks)
     
   # Extract bin data from ggplot object
-  plot_data <- ggplot2::ggplot_build(p)
-  histogram_data <- plot_data$data[[1]]
+  plotdata <- ggplot2::ggplot_build(p)
+  histogram_data <- plotdata$data[[1]]
 
   # Set minimum break width to 1
   if (max(histogram_data$count) < 3) {

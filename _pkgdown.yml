@@ -24,19 +24,13 @@ reference:
   - title: "Running the Shiny app"
     contents:
       - run_app
-  - title: "Preparing data for MRP"
+  - title: "Workflow object and methods"
     contents:
-      - preprocess
-      - prepare_mrp_acs
-      - prepare_mrp_custom
-  - title: "Model fitting and postprocessing"
+      - mrp_workflow
+      - MRPWorkflow
+  - title: "Model object and methods"
     contents:
-      - run_mcmc
-      - run_gq
-      - get_parameters
-      - get_diagnostics
-      - get_estimates
-      - get_replicates
+      - MRPModel
 
 articles:
   - title: "Getting started"
@@ -46,7 +40,7 @@ articles:
       - getting-started
   - title: "Workflow"
     desc: >
-      A step-by-step guide to using the package, from data preparation to model fitting and visualization.
+      A step-by-step guide to executing the MRP workflow, from data preparation, visualization to model fitting.
     contents:
       - prep-data
       - plot-data

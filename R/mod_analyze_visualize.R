@@ -9,7 +9,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the visualization interface with:
+#' @return A `bslib::layout_sidebar` containing the visualization interface with:
 #' \itemize{
 #'   \item Sidebar with dynamic plot category and subcategory selection
 #'   \item Conditional panels for time-varying data options
@@ -85,14 +85,14 @@ mod_analyze_visualize_server <- function(id, global){
     ns <- session$ns
 
     # Update the plot category selectInput based on the linking geography.
-    observeEvent(global$link_data, {
+    observeEvent(global$linkdata, {
       # Reset the select inputs
       shinyjs::reset("summary_slt")
 
       choices <- GLOBAL$ui$plot_selection$vis_main[[global$metadata$family]]
       global$metadata$family
 
-      if (is.null(global$link_data$link_geo)) {
+      if (is.null(global$linkdata$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
 
@@ -127,7 +127,7 @@ mod_analyze_visualize_server <- function(id, global){
           choices <- choices[!choices == "overall"]
         }
 
-        if (is.null(global$link_data$link_geo)) {
+        if (is.null(global$linkdata$link_geo)) {
           choices <- choices[!choices == "by_geo"]
         }
       } else {
@@ -190,15 +190,15 @@ mod_analyze_visualize_server <- function(id, global){
     mod_indiv_map_server(
       "geo_sample",
       reactive(global$mrp$input),
-      reactive(global$link_data$link_geo),
-      reactive(global$plot_data$geojson),
+      reactive(global$linkdata$link_geo),
+      reactive(global$plotdata$geojson),
       fips_
     )
 
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_college", reactive(global$plot_data$raw_covariates), "college", list(
+    mod_geo_plot_server("geo_college", reactive(global$plotdata$raw_covariates), "college", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -207,7 +207,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Higher education measure"
     ))
     
-    mod_geo_plot_server("geo_poverty", reactive(global$plot_data$raw_covariates), "poverty", list(
+    mod_geo_plot_server("geo_poverty", reactive(global$plotdata$raw_covariates), "poverty", list(
       threshold   = 0.2,
       operation   = "<=",
       breaks      = seq(0, 1, 0.05),
@@ -216,7 +216,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Poverty measure"
     ))
 
-    mod_geo_plot_server("geo_employment", reactive(global$plot_data$raw_covariates), "employment", list(
+    mod_geo_plot_server("geo_employment", reactive(global$plotdata$raw_covariates), "employment", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -225,7 +225,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Employment rate"
     ))
     
-    mod_geo_plot_server("geo_income", reactive(global$plot_data$raw_covariates), "income", list(
+    mod_geo_plot_server("geo_income", reactive(global$plotdata$raw_covariates), "income", list(
       threshold   = 70784,
       operation   = ">",
       breaks      = seq(0, 150000, 5000),
@@ -234,7 +234,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Average of median household income"
     ))
 
-    mod_geo_plot_server("geo_urbanicity", reactive(global$plot_data$raw_covariates), "urbanicity", list(
+    mod_geo_plot_server("geo_urbanicity", reactive(global$plotdata$raw_covariates), "urbanicity", list(
       threshold   = 0.95,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -243,7 +243,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Urbanicity"
     ))
     
-    mod_geo_plot_server("geo_adi", reactive(global$plot_data$raw_covariates), "adi", list(
+    mod_geo_plot_server("geo_adi", reactive(global$plotdata$raw_covariates), "adi", list(
       threshold   = 80,
       operation   = ">",
       breaks      = seq(0, 100, 5),
@@ -261,7 +261,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       plot_outcome_timevar(
         raw = global$mrp$input,
-        dates = global$plot_data$dates,
+        dates = global$plotdata$dates,
         metadata = global$metadata
       )
     })
@@ -270,9 +270,9 @@ mod_analyze_visualize_server <- function(id, global){
     # Map for Outcome Measure
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
-      req(global$link_data$link_geo)
+      req(global$linkdata$link_geo)
 
-      geo <- global$link_data$link_geo
+      geo <- global$linkdata$link_geo
       if (geo == "zip") {
         geo <- "county"  # Plot county-level map for ZIP codes
       }
@@ -294,7 +294,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       choro_map(
         out$plot_df,
-        global$plot_data$geojson[[geo]],
+        global$plotdata$geojson[[geo]],
         geo = geo,
         config = config
       )
