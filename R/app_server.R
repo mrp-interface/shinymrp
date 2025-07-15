@@ -16,8 +16,8 @@ app_server <- function(input, output, session) {
     output = output,
     session = session,
     metadata = NULL,
-    link_data = NULL,
-    plot_data = NULL,
+    linkdata = NULL,
+    plotdata = NULL,
     models = NULL,
     poststratified_models = NULL
   )

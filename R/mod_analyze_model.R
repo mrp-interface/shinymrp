@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the model fitting interface with:
+#' @return A `bslib::layout_sidebar` containing the model fitting interface with:
 #' \itemize{
 #'   \item Sidebar with model specification controls and file upload
 #'   \item Virtual select inputs for fixed/varying effects and interactions
@@ -486,7 +486,7 @@ mod_analyze_model_server <- function(id, global){
               plot_ppc_timevar_subset(
                 yrep = yreps[[i]],
                 raw = inputs[[i]],
-                dates = global$plot_data$dates,
+                dates = global$plotdata$dates,
                 metadata = global$metadata
               )
             } else {
@@ -716,8 +716,8 @@ mod_analyze_model_server <- function(id, global){
           ungroup_effects()
         model$formula <- create_formula(effects)
         model$mrp <- global$mrp
-        model$plot_data <- global$plot_data
-        model$link_data <- global$link_data
+        model$plotdata <- global$plotdata
+        model$linkdata <- global$linkdata
         model$metadata <- c(global$metadata, list(
           n_iter = n_iter,
           n_chains = n_chains,
@@ -920,7 +920,7 @@ mod_analyze_model_server <- function(id, global){
           plot_ppc_timevar_subset(
             yrep = model$yrep,
             raw = model$mrp$input,
-            dates = global$plot_data$dates,
+            dates = global$plotdata$dates,
             metadata = global$metadata
           )
         } else {
@@ -1034,7 +1034,7 @@ mod_analyze_model_server <- function(id, global){
       eventExpr = list(
         global$data,
         global$metadata,
-        global$link_data
+        global$linkdata
       ), 
       handlerExpr = {
         # reset input fields

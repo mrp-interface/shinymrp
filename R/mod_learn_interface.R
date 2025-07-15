@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_columns} containing the user guide interface with:
+#' @return A `bslib::layout_columns` containing the user guide interface with:
 #' \itemize{
 #'   \item Comprehensive workflow documentation
 #'   \item Data upload requirements and format specifications

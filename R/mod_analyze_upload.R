@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the upload interface with:
+#' @return A `bslib::layout_sidebar` containing the upload interface with:
 #' \itemize{
 #'   \item Sidebar with accordion panels for sample and poststratification data
 #'   \item File upload inputs with format toggles
@@ -280,8 +280,8 @@ mod_analyze_upload_server <- function(id, global){
       pstrat_errors(NULL)
       global$data <- NULL
       global$mrp <- NULL
-      global$plot_data <- NULL
-      global$link_data <- NULL
+      global$plotdata <- NULL
+      global$linkdata <- NULL
 
       # reset the accordion to show the sample data panel
       bslib::accordion_panel_open(
@@ -395,7 +395,7 @@ mod_analyze_upload_server <- function(id, global){
       # Reset state
       global$data <- NULL
       global$mrp <- NULL
-      global$plot_data <- NULL
+      global$plotdata <- NULL
 
       tryCatch({
         read_data(input$sample_upload$datapath) %>% raw_sample()
@@ -521,7 +521,7 @@ mod_analyze_upload_server <- function(id, global){
 
         tryCatch({
           # store user's selections for data linking
-          global$link_data <- list(
+          global$linkdata <- list(
             link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
             acs_year = input$acs_year
           )
@@ -538,7 +538,7 @@ mod_analyze_upload_server <- function(id, global){
             )
 
             # prepare data for plotting
-            global$plot_data <- list(
+            global$plotdata <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
               geojson = list(county = filter_geojson(
                 geojson_$county,
@@ -561,7 +561,7 @@ mod_analyze_upload_server <- function(id, global){
             )
 
             # prepare data for plotting
-            global$plot_data <- list(
+            global$plotdata <- list(
               geojson = list(state = filter_geojson(
                 geojson_$state,
                 global$mrp$levels$state
@@ -570,27 +570,27 @@ mod_analyze_upload_server <- function(id, global){
 
           } else {
             # retrieve ACS data based on user's selection
-            tract_data <- acs_[[strsplit(global$link_data$acs_year, "-")[[1]][2]]]
+            tract_data <- acs_[[strsplit(global$linkdata$acs_year, "-")[[1]][2]]]
 
             # prepare data for MRP
             global$mrp <- prepare_mrp_acs(
               input_data = global$data,
               tract_data = tract_data,
               metadata = global$metadata,
-              link_geo = global$link_data$link_geo
+              link_geo = global$linkdata$link_geo
             )
 
             # prepare data for plotting
-            plot_data <- list()
-            plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-            plot_data$geojson <- names(geojson_) %>%
+            plotdata <- list()
+            plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+            plotdata$geojson <- names(geojson_) %>%
               stats::setNames(nm = .) %>%
               purrr::map(~filter_geojson(
                 geojson = geojson_[[.x]], 
                 geoids = global$mrp$levels[[.x]]
               ))
 
-            global$plot_data <- nullify(plot_data)
+            global$plotdata <- nullify(plotdata)
           }
 
           # set success to TRUE if no errors occurred
@@ -663,7 +663,7 @@ mod_analyze_upload_server <- function(id, global){
         }
 
         # Store linking geography
-        global$link_data <- list(
+        global$linkdata <- list(
           link_geo = link_geo,
           acs_year = NULL
         )
@@ -678,16 +678,16 @@ mod_analyze_upload_server <- function(id, global){
 
 
         # prepare data for plotting
-        plot_data <- list()
-        plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-        plot_data$geojson <- names(geojson_) %>%
+        plotdata <- list()
+        plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+        plotdata$geojson <- names(geojson_) %>%
           stats::setNames(nm = .) %>%
           purrr::map(~filter_geojson(
             geojson = geojson_[[.x]], 
             geoids = global$mrp$levels[[.x]]
           ))
 
-        global$plot_data <- nullify(plot_data)
+        global$plotdata <- nullify(plotdata)
 
         # Trigger success feedback
         pstrat_errors(character(0))
@@ -699,9 +699,9 @@ mod_analyze_upload_server <- function(id, global){
         message(error_message)
         
         # reset reactives
-        global$link_data <- NULL
+        global$linkdata <- NULL
         global$mrp <- NULL
-        global$plot_data <- NULL
+        global$plotdata <- NULL
         
       }, finally = {
         # Always hide the waiter

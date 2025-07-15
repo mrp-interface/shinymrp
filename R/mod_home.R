@@ -7,7 +7,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{tagList} containing the home page UI elements including title,
+#' @return A `tagList` containing the home page UI elements including title,
 #' data type selection cards, and conditional panels for different workflows.
 #'
 #' @noRd

@@ -1,3 +1,62 @@
+#' MRPModel objects
+#'
+#' @description A `MRPModel` object is an [R6][R6::R6Class] object created by the
+#' [$create_model()][MRPWorkflow-method-create_model] method of a
+#' [`MRPWorkflow`][MRPWorkflow] object. Each `MRPModel` object represents a
+#' multilevel regression model with methods for sampling, diagnostics,
+#' and post-stratification.
+#'
+#' @section Methods: `MRPModel` objects have the following associated
+#'   methods, many of which have their own (linked) documentation pages:
+#'
+#'   ## Data access
+#'
+#'   |**Method**|**Description**|
+#'   |:----------|:---------------|
+#'   [`$effects()`][MRPModel-method-effects] | Return model specification. |
+#'   [`$formula()`][MRPModel-method-formula] | Return model formula. |
+#'   [`$mrp()`][MRPModel-method-mrp] | Return data for MRP. |
+#'   [`$metadata()`][MRPModel-method-metadata] | Return model metadata. |
+#'   [`$plotdata()`][MRPModel-method-plotdata] | Return data used for plotting. |
+#'
+#'   ## Model fitting
+#'   |**Method**|**Description**|
+#'   |:----------|:---------------|
+#'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using [cmdstanr][cmdstanr]. |
+#'   [`$check_fit_exists()`][MRPModel-method-check_fit_exists] | Check if model has been fitted. |
+#'   [`$code()`][MRPModel-method-code] | Return Stan code. |
+#'
+#'   ## Model diagnostics
+#'   |**Method**|**Description**|
+#'   |:----------|:---------------|
+#'   [`$summary()`][MRPModel-method-summary] | Return posterior summary table. |
+#'   [`$diagnostics()`][MRPModel-method-diagnostics] | Return sampling diagnostics. |
+#'   [`$ppc()`][MRPModel-method-ppc] | Run posterior predictive check. |
+#'   [`$loo()`][MRPModel-method-loo] | Create inputs for leave-one-out cross-validation. |
+#'
+#'   ## Post-stratification
+#'   |**Method**|**Description**|
+#'   |:----------|:---------------|
+#'   [`$poststratify()`][MRPModel-method-poststratify] | Run post-stratification to generate population estimates. |
+#'
+#'   ## Other
+#'   |**Method**|**Description**|
+#'   |:----------|:---------------|
+#'   [`$save()`][MRPModel-method-save] | Save model object to file. |
+#'
+#'
+#' @examples
+#'   \dontrun{
+#'   library(shinymrp)
+#'   } 
+#'
+#' @format
+#'   An [R6][R6::R6Class] generator object.
+#' 
+#' @docType class
+#' 
+#' @export 
+#' 
 MRPModel <- R6::R6Class(
   "MRPModel",
   private = list(
@@ -5,8 +64,8 @@ MRPModel <- R6::R6Class(
     formula_ = NULL,
     mrp_ = NULL,
     metadata_ = NULL,
-    link_data_ = NULL,
-    plot_data_ = NULL,
+    linkdata_ = NULL,
+    plotdata_ = NULL,
     fit_ = NULL,
     stan_data_ = NULL,
     stan_code_ = NULL,
@@ -23,12 +82,21 @@ MRPModel <- R6::R6Class(
     }
   ),
   public = list(
+    #' @description Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
+    #'
+    #' @param effects List containing model effects specification including intercept, fixed effects, varying effects, and interactions
+    #' @param mrp List containing the MRP data structure with input sample data and new post-stratification data
+    #' @param metadata List containing metadata about the analysis including family, time variables, and special cases
+    #' @param linkdata List containing information about data linking including geography and ACS year
+    #' @param plotdata List containing data prepared for visualization including dates and geojson objects
+    #'
+    #' @return A new `MRPModel` object initialized with the provided effects, MRP data, metadata, link data, and plot data.
     initialize = function(
       effects,
       mrp,
       metadata,
-      link_data,
-      plot_data
+      linkdata,
+      plotdata
     ) {
 
       private$effects_ <- effects %>%
@@ -37,30 +105,41 @@ MRPModel <- R6::R6Class(
       private$formula_ <- create_formula(effects)
       private$mrp_ <- mrp
       private$metadata_ <- metadata
-      private$link_data_ <- link_data
-      private$plot_data_ <- plot_data
+      private$linkdata_ <- linkdata
+      private$plotdata_ <- plotdata
     },
 
+    #' @description Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
     effects = function() {
       return(private$effects_)
     },
 
+    #' @description Retrieves the model formula constructed from the effects specification.
     formula = function() {
       return(private$formula_)
     },
 
+    #' @description Retrieves the MRP data structure containing input sample data and post-stratification data.
     mrp = function() {
       return(private$mrp_)
     },
 
+    #' @description Retrieves the metadata associated with the model, including information about family, time variables, and fitting parameters.
     metadata = function() {
       return(private$metadata_)
     },
 
-    plot_data = function() {
-      return(private$plot_data_)
+    #' @description Retrieves the data prepared for visualization, including dates and geojson objects.
+    plotdata = function() {
+      return(private$plotdata_)
     },
 
+    #' @description Fits the MRP model using Stan for Bayesian estimation with MCMC sampling.
+    #' 
+    #' @param n_iter Number of MCMC iterations per chain
+    #' @param n_chains Number of MCMC chains to run
+    #' @param seed Random seed for reproducibility
+    #' @param extra Additional parameters for model fitting
     fit = function(
       n_iter = 2000,
       n_chains = 4,
@@ -95,16 +174,19 @@ MRPModel <- R6::R6Class(
       private$stan_code_ <- mcmc$stan_code
     },
 
+    #' @description Checks whether the model has been fitted and results are available.
     check_fit_exists = function() {
       return(!is.null(private$fit_))
     },
 
+    #' @description Retrieves the Stan model code used for MCMC fitting.
     code = function() {
       private$assert_fit_exists()
 
       return(private$stan_code_$mcmc)
     },
 
+    #' @description Retrieves a summary of the fitted model parameters including posterior means, credible intervals, and diagnostics.
     summary = function() {
       private$assert_fit_exists()
 
@@ -120,6 +202,7 @@ MRPModel <- R6::R6Class(
       return(private$params_)
     },
 
+    #' @description Retrieves MCMC diagnostics including convergence statistics and sampling efficiency measures.
     diagnostics = function() {
       private$assert_fit_exists()
 
@@ -134,6 +217,8 @@ MRPModel <- R6::R6Class(
       return(private$diagnostics_$mcmc)
     },
 
+    #' @description Runs posterior predictive checks to assess model fit by generating replicated data from the posterior predictive distribution.
+    #'
     ppc = function() {
       private$assert_fit_exists()
 
@@ -159,6 +244,8 @@ MRPModel <- R6::R6Class(
       return(private$yrep_)
     },
 
+    #' @description Runs leave-one-out cross-validation to assess model predictive performance and enable model comparison.
+    #'
     loo = function() {
       private$assert_fit_exists()
 
@@ -179,6 +266,8 @@ MRPModel <- R6::R6Class(
       return(private$log_lik_)
     },
 
+    #' @description Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
+    #'
     poststratify = function() {
       private$assert_fit_exists()
 
@@ -204,12 +293,10 @@ MRPModel <- R6::R6Class(
       return(private$est_)
     },
 
-    postprocess = function() {
-      self$ppc()
-      self$loo()
-      self$poststratify()
-    },
-
+    #' @description Saves the fitted MRPModel object to a file for later use.
+    #'
+    #' @param file File path where the model object should be saved
+    #'
     save = function(file) {
       qs::qsave(self, file)
     }
