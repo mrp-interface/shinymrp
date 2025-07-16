@@ -9,64 +9,10 @@ An \link[R6:R6Class]{R6} generator object.
 }
 \description{
 A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
-\link[=MRPWorkflow-method-create_model]{$create_model()} method of a
+\verb{$create_model()} method of a
 \code{\link{MRPWorkflow}} object. Each \code{MRPModel} object represents a
 multilevel regression model with methods for sampling, diagnostics,
 and post-stratification.
-}
-\section{Methods}{
- \code{MRPModel} objects have the following associated
-methods, many of which have their own (linked) documentation pages:
-\subsection{Data access}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-effects]{$effects()}} \tab Return model specification. \cr
-   \code{\link[=MRPModel-method-formula]{$formula()}} \tab Return model formula. \cr
-   \code{\link[=MRPModel-method-mrp]{$mrp()}} \tab Return data for MRP. \cr
-   \code{\link[=MRPModel-method-metadata]{$metadata()}} \tab Return model metadata. \cr
-   \code{\link[=MRPModel-method-plotdata]{$plotdata()}} \tab Return data used for plotting. \cr
-}
-
-}
-
-\subsection{Model fitting}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-fit]{$fit()}} \tab Fit multilevel regression model using \link{cmdstanr}. \cr
-   \code{\link[=MRPModel-method-check_fit_exists]{$check_fit_exists()}} \tab Check if model has been fitted. \cr
-   \code{\link[=MRPModel-method-code]{$code()}} \tab Return Stan code. \cr
-}
-
-}
-
-\subsection{Model diagnostics}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-summary]{$summary()}} \tab Return posterior summary table. \cr
-   \code{\link[=MRPModel-method-diagnostics]{$diagnostics()}} \tab Return sampling diagnostics. \cr
-   \code{\link[=MRPModel-method-ppc]{$ppc()}} \tab Run posterior predictive check. \cr
-   \code{\link[=MRPModel-method-loo]{$loo()}} \tab Create inputs for leave-one-out cross-validation. \cr
-}
-
-}
-
-\subsection{Post-stratification}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-poststratify]{$poststratify()}} \tab Run post-stratification to generate population estimates. \cr
-}
-
-}
-
-\subsection{Other}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-save]{$save()}} \tab Save model object to file. \cr
-}
-
-}
-}
-
-\examples{
-  \dontrun{
-  library(shinymrp)
-  } 
-
 }
 \section{Methods}{
 \subsection{Public methods}{

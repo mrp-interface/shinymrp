@@ -13,57 +13,6 @@ the \code{\link[=mrp_workflow]{mrp_workflow()}} function. This class provides me
 in the workflow, from data preparation and visualization to model fitting.
 }
 \section{Methods}{
- \code{MRPWorkflow} objects have the following associated
-methods, many of which have their own (linked) documentation pages:
-\subsection{Data preparation}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-preprocess]{$preprocess()}} \tab Preprocess sample data. \cr
-   \code{\link[=MRPWorkflow-method-link_acs]{$link_acs()}} \tab Link sample data to ACS data. \cr
-   \code{\link[=MRPWorkflow-method-load_pstrat]{$load_pstrat()}} \tab Load custom post-stratification data. \cr
-}
-
-}
-
-\subsection{Model fitting & diagnostics}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-check_effects]{$check_effects()}} \tab Check model specification. \cr
-   \code{\link[=MRPWorkflow-method-create_model]{$create_model()}} \tab Create a \code{\link{MRPModel}} object. \cr
-   \code{\link[=MRPWorkflow-method-load_model]{$load_model()}} \tab Load a previously saved model. \cr
-   \code{\link[=MRPWorkflow-method-check_model]{$check_model()}} \tab Perform posterior predictive check. \cr
-   \code{\link[=MRPWorkflow-method-compare_models]{$compare_models()}} \tab Compare models using LOO-CV. \cr
-}
-
-}
-
-\subsection{Visualization}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-demo_bars]{$demo_bars()}} \tab Create demographic comparison bar plots. \cr
-   \code{\link[=MRPWorkflow-method-covar_hist]{$covar_hist()}} \tab Create geographic covariate distribution histogram. \cr
-   \code{\link[=MRPWorkflow-method-sample_size_map]{$sample_size_map()}} \tab Create sample size map. \cr
-   \code{\link[=MRPWorkflow-method-outcome_plot]{$outcome_plot()}} \tab Create summary plots of the outcome measure. \cr
-   \code{\link[=MRPWorkflow-method-outcome_map]{$outcome_map()}} \tab Visualize raw outcome measure by geography. \cr
-   \code{\link[=MRPWorkflow-method-estimate_plot]{$estimate_plot()}} \tab Visualize estimates for demographic groups. \cr
-   \code{\link[=MRPWorkflow-method-estimate_map]{$estimate_map()}} \tab Visualize estimates for geographic units. \cr
-}
-
-}
-
-\subsection{Other}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-metadata]{$metadata()}} \tab Return metadata information. \cr
-   \code{\link[=MRPWorkflow-method-data]{$data()}} \tab Return preprocessed sample data. \cr
-}
-
-}
-}
-
-\examples{
-  \dontrun{
-  library(shinymrp)
-  }
-
-}
-\section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-MRPWorkflow-new}{\code{MRPWorkflow$new()}}

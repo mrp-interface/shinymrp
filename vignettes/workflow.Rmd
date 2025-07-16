@@ -1,0 +1,31 @@
+---
+title: "Bayesian Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bayesian Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r rawdata, include = FALSE}
+# Load the shinymrp package
+rawdata <- readr::read_csv(
+  system.file("extdata", "example", "data", "timevarying_binomial_raw.csv", package = "shinymrp"),
+  show_col_types = FALSE
+)
+```
+
+```{r setup}
+library(shinymrp)
+```
+
+```{r}
+rawdata
+```

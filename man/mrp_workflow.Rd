@@ -7,7 +7,7 @@
 mrp_workflow()
 }
 \value{
-A \link{'MRPWorkflow'} object.
+A \code{MRPWorkflow} object.
 }
 \description{
 Create a new \code{\link{MRPWorkflow}} object that implements

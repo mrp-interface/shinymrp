@@ -10,10 +10,10 @@ navbar:
     text: "shinymrp"
     href: index.html
   left:
-    - text: "Vignettes"
-      href: articles/index.html
-    - text: "Functions"
+    - text: "Reference"
       href: reference/index.html
+    - text: "Articles"
+      href: articles/index.html
     - text: "News"
       href: news/index.html
 
@@ -40,9 +40,6 @@ articles:
       - getting-started
   - title: "Workflow"
     desc: >
-      A step-by-step guide to executing the MRP workflow, from data preparation, visualization to model fitting.
+      A deeper dive into each stage of the data analysis workflow that the package implements.
     contents:
-      - prep-data
-      - plot-data
-      - fit-model
-      - plot-result
+      - workflow

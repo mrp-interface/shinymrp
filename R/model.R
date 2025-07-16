@@ -1,54 +1,10 @@
 #' MRPModel objects
 #'
 #' @description A `MRPModel` object is an [R6][R6::R6Class] object created by the
-#' [$create_model()][MRPWorkflow-method-create_model] method of a
+#' `$create_model()` method of a
 #' [`MRPWorkflow`][MRPWorkflow] object. Each `MRPModel` object represents a
 #' multilevel regression model with methods for sampling, diagnostics,
 #' and post-stratification.
-#'
-#' @section Methods: `MRPModel` objects have the following associated
-#'   methods, many of which have their own (linked) documentation pages:
-#'
-#'   ## Data access
-#'
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$effects()`][MRPModel-method-effects] | Return model specification. |
-#'   [`$formula()`][MRPModel-method-formula] | Return model formula. |
-#'   [`$mrp()`][MRPModel-method-mrp] | Return data for MRP. |
-#'   [`$metadata()`][MRPModel-method-metadata] | Return model metadata. |
-#'   [`$plotdata()`][MRPModel-method-plotdata] | Return data used for plotting. |
-#'
-#'   ## Model fitting
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using [cmdstanr][cmdstanr]. |
-#'   [`$check_fit_exists()`][MRPModel-method-check_fit_exists] | Check if model has been fitted. |
-#'   [`$code()`][MRPModel-method-code] | Return Stan code. |
-#'
-#'   ## Model diagnostics
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$summary()`][MRPModel-method-summary] | Return posterior summary table. |
-#'   [`$diagnostics()`][MRPModel-method-diagnostics] | Return sampling diagnostics. |
-#'   [`$ppc()`][MRPModel-method-ppc] | Run posterior predictive check. |
-#'   [`$loo()`][MRPModel-method-loo] | Create inputs for leave-one-out cross-validation. |
-#'
-#'   ## Post-stratification
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$poststratify()`][MRPModel-method-poststratify] | Run post-stratification to generate population estimates. |
-#'
-#'   ## Other
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$save()`][MRPModel-method-save] | Save model object to file. |
-#'
-#'
-#' @examples
-#'   \dontrun{
-#'   library(shinymrp)
-#'   } 
 #'
 #' @format
 #'   An [R6][R6::R6Class] generator object.
@@ -57,6 +13,7 @@
 #' 
 #' @export 
 #' 
+#' @importFrom R6 R6Class
 MRPModel <- R6::R6Class(
   "MRPModel",
   private = list(

@@ -4,8 +4,8 @@
 #' the Bayesian data analysis workflow that underpins the application of
 #' Multilevel Regression and Post-stratification (MRP).
 #'
-#' @return A ['MRPWorkflow'] object.
-#' 
+#' @return A `MRPWorkflow` object.
+#'
 #' @export
 mrp_workflow <- function() {
   if (is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
@@ -20,48 +20,6 @@ mrp_workflow <- function() {
 #' @description A `MRPWorkflow` object is an [R6][R6::R6Class] object created by
 #' the [`mrp_workflow()`][mrp_workflow] function. This class provides methods for all steps
 #' in the workflow, from data preparation and visualization to model fitting.
-#'
-#' @section Methods: `MRPWorkflow` objects have the following associated
-#'   methods, many of which have their own (linked) documentation pages:
-#' 
-#'   ## Data preparation
-#' 
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
-#'   [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
-#'   [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
-#'
-#'   ## Model fitting & diagnostics
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$check_effects()`][MRPWorkflow-method-check_effects] | Check model specification. |
-#'   [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
-#'   [`$load_model()`][MRPWorkflow-method-load_model] | Load a previously saved model. |
-#'   [`$check_model()`][MRPWorkflow-method-check_model] | Perform posterior predictive check. |
-#'   [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
-#' 
-#'   ## Visualization
-#'  |**Method**|**Description**|
-#'  |:----------|:---------------|
-#'  [`$demo_bars()`][MRPWorkflow-method-demo_bars] | Create demographic comparison bar plots. |
-#'  [`$covar_hist()`][MRPWorkflow-method-covar_hist] | Create geographic covariate distribution histogram. |
-#'  [`$sample_size_map()`][MRPWorkflow-method-sample_size_map] | Create sample size map. |
-#'  [`$outcome_plot()`][MRPWorkflow-method-outcome_plot] | Create summary plots of the outcome measure. |
-#'  [`$outcome_map()`][MRPWorkflow-method-outcome_map] | Visualize raw outcome measure by geography. |
-#'  [`$estimate_plot()`][MRPWorkflow-method-estimate_plot] | Visualize estimates for demographic groups. |
-#'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic units. |
-#' 
-#'  ## Other
-#'  |**Method**|**Description**|
-#'  |:----------|:---------------|
-#'  [`$metadata()`][MRPWorkflow-method-metadata] | Return metadata information. |
-#'  [`$data()`][MRPWorkflow-method-data] | Return preprocessed sample data. |
-#'
-#' @examples
-#'   \dontrun{
-#'   library(shinymrp)
-#'   }
 #' 
 #' @format
 #'   An [R6][R6::R6Class] generator object.
@@ -70,6 +28,8 @@ mrp_workflow <- function() {
 #' 
 #' @export
 #' 
+#' @importFrom R6 R6Class
+#' @importFrom htmlwidgets saveWidget
 MRPWorkflow <- R6::R6Class(
   "MRPWorkflow",
   private = list(
