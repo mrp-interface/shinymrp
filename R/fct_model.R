@@ -254,9 +254,9 @@ filter_interactions <- function(interactions, fixed_effects, data) {
     ss <- strsplit(s, split = ':')[[1]]
     type1 <- data_type(data[[ss[1]]])
     type2 <- data_type(data[[ss[2]]])
+    is_cat <- c(type1, type2) == "cat"
 
-    return((type1 == "cat" && !ss[1] %in% fixed_effects) ||
-           (type2 == "cat" && !ss[2] %in% fixed_effects))
+    any(is_cat) && all(!ss[is_cat] %in% fixed_effects)
   })
   
   return(interactions[bool])
