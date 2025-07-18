@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the upload interface with:
+#' @return A `bslib::layout_sidebar` containing the upload interface with:
 #' \itemize{
 #'   \item Sidebar with accordion panels for sample and poststratification data
 #'   \item File upload inputs with format toggles
@@ -280,8 +280,8 @@ mod_analyze_upload_server <- function(id, global){
       pstrat_errors(NULL)
       global$data <- NULL
       global$mrp <- NULL
-      global$plot_data <- NULL
-      global$link_data <- NULL
+      global$plotdata <- NULL
+      global$linkdata <- NULL
 
       # reset the accordion to show the sample data panel
       bslib::accordion_panel_open(
@@ -395,7 +395,7 @@ mod_analyze_upload_server <- function(id, global){
       # Reset state
       global$data <- NULL
       global$mrp <- NULL
-      global$plot_data <- NULL
+      global$plotdata <- NULL
 
       tryCatch({
         read_data(input$sample_upload$datapath) %>% raw_sample()
@@ -403,7 +403,6 @@ mod_analyze_upload_server <- function(id, global){
         global$data <- preprocess(
           data = raw_sample(),
           metadata = global$metadata,
-          zip_county_state = global$extdata$zip_county_state,
           is_sample = TRUE,
           is_aggregated = global$metadata$family != "normal" &&
             input$toggle_sample == "agg"
@@ -441,7 +440,7 @@ mod_analyze_upload_server <- function(id, global){
         app_sys(paste0(GLOBAL$path$example_data, file_name)),
         show_col_types = FALSE
       ) %>%
-        preprocess_example(global$extdata$fips$county)
+        preprocess_example()
       
       waiter::waiter_hide()
     })
@@ -455,7 +454,7 @@ mod_analyze_upload_server <- function(id, global){
 
       file_name <- create_example_filename(global$metadata, suffix = "prep")
       readr::read_csv(app_sys(paste0(GLOBAL$path$example_data, file_name)), show_col_types = FALSE) %>% raw_sample()
-      global$data <- preprocess_example(raw_sample(), global$extdata$fips$county)
+      global$data <- preprocess_example(raw_sample())
 
       waiter::waiter_hide()
     })
@@ -476,14 +475,10 @@ mod_analyze_upload_server <- function(id, global){
         link_geos <- c("state")
         acs_years <- 2018
       } else {
-        # find the smallest geography in the data
-        idx <- match(names(global$data), GLOBAL$vars$geo) %>% stats::na.omit()
-        link_geos <- if (length(idx) > 0) {
-          c(GLOBAL$vars$geo[min(idx):length(GLOBAL$vars$geo)], "Do not include geography")
-        } else {
+        link_geos <- c(
+          get_possible_geos(names(global$data)),
           "Do not include geography"
-        }
-
+        )
         acs_years <- 2019:2023
       }
 
@@ -526,7 +521,7 @@ mod_analyze_upload_server <- function(id, global){
 
         tryCatch({
           # store user's selections for data linking
-          global$link_data <- list(
+          global$linkdata <- list(
             link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
             acs_year = input$acs_year
           )
@@ -537,70 +532,65 @@ mod_analyze_upload_server <- function(id, global){
             # prepare data for MRP
             global$mrp <- prepare_mrp_covid(
               input_data = global$data,
-              covariates = global$extdata$acs$covar_covid,
-              pstrat_data  = global$extdata$acs$pstrat_covid,
+              pstrat_data = acs_covid_$pstrat,
+              covariates = acs_covid_$covar,
               metadata   = global$metadata
             )
 
             # prepare data for plotting
-            global$plot_data <- list(
+            global$plotdata <- list(
               dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
               geojson = list(county = filter_geojson(
-                global$extdata$geojson$county,
+                geojson_$county,
                 global$mrp$levels$county
               )),
-              raw_covariates = global$extdata$acs$covar_covid %>%
+              raw_covariates = acs_covid_$covar %>%  
                 filter(.data$zip %in% unique(global$mrp$input$zip))
             )
 
           } else if (!is.null(global$metadata$special_case) &&
                      global$metadata$special_case == "poll") {
-            new_data <- global$extdata$acs$pstrat_poll %>%
-              mutate(state = to_fips(.data$state, global$extdata$fips$county, "state"))
+            new_data <- acs_poll_$pstrat %>%
+              mutate(state = to_fips(.data$state, "state"))
 
             global$mrp <- prepare_mrp_custom(
               input_data = global$data,
               new_data = new_data,
-              fips_county_state = global$extdata$fips$county,
               metadata = global$metadata,
               link_geo = "state"
             )
 
             # prepare data for plotting
-            global$plot_data <- list(
+            global$plotdata <- list(
               geojson = list(state = filter_geojson(
-                global$extdata$geojson$state,
+                geojson_$state,
                 global$mrp$levels$state
               ))
             )
 
           } else {
             # retrieve ACS data based on user's selection
-            tract_data <- readr::read_csv(
-              app_sys(stringr::str_interp("extdata/acs/acs_${global$link_data$acs_year}.csv")),
-              show_col_types = FALSE
-            )
+            tract_data <- acs_[[strsplit(global$linkdata$acs_year, "-")[[1]][2]]]
 
             # prepare data for MRP
             global$mrp <- prepare_mrp_acs(
               input_data = global$data,
               tract_data = tract_data,
-              zip_tract = global$extdata$zip_tract,
               metadata = global$metadata,
-              link_geo = global$link_data$link_geo
+              link_geo = global$linkdata$link_geo
             )
 
             # prepare data for plotting
-            plot_data <- list()
-            plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-            plot_data$geojson <- names(global$extdata$geojson) %>%
+            plotdata <- list()
+            plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+            plotdata$geojson <- names(geojson_) %>%
               stats::setNames(nm = .) %>%
               purrr::map(~filter_geojson(
-                geojson = global$extdata$geojson[[.x]], 
+                geojson = geojson_[[.x]], 
                 geoids = global$mrp$levels[[.x]]
               ))
 
-            global$plot_data <- nullify(plot_data)
+            global$plotdata <- nullify(plotdata)
           }
 
           # set success to TRUE if no errors occurred
@@ -657,7 +647,6 @@ mod_analyze_upload_server <- function(id, global){
         new_data <- preprocess(
           data = raw_pstrat(),
           metadata = global$metadata,
-          zip_county_state = global$extdata$zip_county_state,
           is_sample = FALSE,
           is_aggregated = input$toggle_pstrat == "agg"
         )
@@ -674,7 +663,7 @@ mod_analyze_upload_server <- function(id, global){
         }
 
         # Store linking geography
-        global$link_data <- list(
+        global$linkdata <- list(
           link_geo = link_geo,
           acs_year = NULL
         )
@@ -683,23 +672,22 @@ mod_analyze_upload_server <- function(id, global){
         global$mrp <- prepare_mrp_custom(
           input_data = global$data,
           new_data = new_data,
-          fips_county_state = global$extdata$fips$county,
           metadata = global$metadata,
           link_geo = link_geo
         )
 
 
         # prepare data for plotting
-        plot_data <- list()
-        plot_data$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
-        plot_data$geojson <- names(global$extdata$geojson) %>%
+        plotdata <- list()
+        plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+        plotdata$geojson <- names(geojson_) %>%
           stats::setNames(nm = .) %>%
           purrr::map(~filter_geojson(
-            geojson = global$extdata$geojson[[.x]], 
+            geojson = geojson_[[.x]], 
             geoids = global$mrp$levels[[.x]]
           ))
 
-        global$plot_data <- nullify(plot_data)
+        global$plotdata <- nullify(plotdata)
 
         # Trigger success feedback
         pstrat_errors(character(0))
@@ -711,9 +699,9 @@ mod_analyze_upload_server <- function(id, global){
         message(error_message)
         
         # reset reactives
-        global$link_data <- NULL
+        global$linkdata <- NULL
         global$mrp <- NULL
-        global$plot_data <- NULL
+        global$plotdata <- NULL
         
       }, finally = {
         # Always hide the waiter

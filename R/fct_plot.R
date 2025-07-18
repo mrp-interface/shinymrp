@@ -43,10 +43,15 @@ fips_upper <- function(fips) {
 prep_sample_size <- function(
   input_data,
   fips_codes,
-  geo = c("county", "state"),
+  geo,
   for_map = TRUE
 ) {
-  geo <- match.arg(geo)
+  
+  checkmate::assert_choice(
+    geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
 
   if(is.null(input_data)) {
     return(NULL)
@@ -108,15 +113,15 @@ prep_sample_size <- function(
 #'   One of "max" or "min".
 #' @param metadata A list containing metadata about the data structure with elements:
 #'   \itemize{
-#'     \item \code{is_timevar}: Logical indicating if data has time dimension
-#'     \item \code{family}: Character specifying data family ("binomial" or "normal")
+#'     \item `is_timevar`: Logical indicating if data has time dimension
+#'     \item `family`: Character specifying data family ("binomial" or "normal")
 #'   }
 #'
 #' @return A list containing:
 #'   \itemize{
-#'     \item \code{plot_df}: Processed data frame ready for plotting with columns for 
+#'     \item `plot_df`: Processed data frame ready for plotting with columns for 
 #'       fips, value, geographic names, and hover text
-#'     \item \code{title}: List containing main_title and hover_title for the plot
+#'     \item `title`: List containing main_title and hover_title for the plot
 #'   }
 #'   Returns NULL if input_data is NULL.
 #'
@@ -136,13 +141,22 @@ prep_sample_size <- function(
 prep_raw <- function(
   input_data,
   fips_codes,
-  geo = c("county", "state"),
-  summary_type = c("max", "min"),
-  metadata = NULL
+  geo,
+  summary_type,
+  metadata
 ) {
 
-  geo <- match.arg(geo)
-  summary_type <- match.arg(summary_type)
+  checkmate::assert_choice(
+    geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
+  
+  checkmate::assert_choice(
+    summary_type,
+    choices = GLOBAL$args$summary_types,
+    null.ok = TRUE
+  )
   
   if(is.null(input_data)) {
     return(NULL)
@@ -163,15 +177,12 @@ prep_raw <- function(
     )
 
   if (metadata$is_timevar) {
-    if(summary_type == "max") {
-      summary_fn <- max
-      label <- "Highest"
-      which_fn <- which.max
-    } else if (summary_type == "min") {
-      summary_fn <- min
-      label <- "Lowest"
-      which_fn <- which.min
-    }
+    summary_type <- replace_null(summary_type, "max")
+
+    summary_fn <- switch(summary_type,
+      "max" = max,
+      "min" = min
+    )
 
     plot_df <- plot_df %>%
       group_by(.data$fips) %>%
@@ -248,10 +259,15 @@ prep_raw <- function(
 prep_est <- function(
     est_df,
     fips_codes,
-    geo = c("county", "state"),
+    geo,
     time_index = NULL
 ) {
-  geo <- match.arg(geo)
+  
+  checkmate::assert_choice(
+    geo,
+    choices = GLOBAL$vars$geo2,
+    null.ok = FALSE
+  )
 
   if(is.null(est_df)) {
     return(NULL)
@@ -434,8 +450,8 @@ plot_geographic <- function(
     geom_histogram(breaks = breaks)
     
   # Extract bin data from ggplot object
-  plot_data <- ggplot2::ggplot_build(p)
-  histogram_data <- plot_data$data[[1]]
+  plotdata <- ggplot2::ggplot_build(p)
+  histogram_data <- plotdata$data[[1]]
 
   # Set minimum break width to 1
   if (max(histogram_data$count) < 3) {
@@ -491,7 +507,7 @@ plot_outcome_timevar <- function(
   dates = NULL,
   metadata = NULL,
   show_caption = FALSE,
-  config = GLOBAL$ui$plot
+  config = GLOBAL$plot
 ) {
 
   if(is.null(raw)) {
@@ -624,10 +640,11 @@ plot_outcome_timevar <- function(
 #' @importFrom dplyr mutate
 plot_outcome_static <- function(
     raw,
-    yrep_est,
-    metadata = NULL
+    yrep_est = NULL,
+    metadata = NULL,
+    show_caption = FALSE
 ) {
-  if(is.null(yrep_est) || is.null(raw)) {
+  if(is.null(raw)) {
     return(NULL)
   }
 
@@ -635,6 +652,7 @@ plot_outcome_static <- function(
     "binomial" = sum(raw$positive) / sum(raw$total),
     "normal" = mean(raw$outcome)
   )
+
   raw <- data.frame(
     data = "Raw",
     lower = raw_mean,
@@ -642,27 +660,30 @@ plot_outcome_static <- function(
     upper = raw_mean
   )
 
-  yrep_est <- yrep_est %>%
-    mutate(
-      data = "Estimate",
-      lower = .data$est - .data$std,
-      median = .data$est,
-      upper = .data$est + .data$std
-    ) %>%
-    select(.data$data, .data$lower, .data$median, .data$upper) 
+  plot_df <- raw
+  if (!is.null(yrep_est)) {
+    yrep_est <- yrep_est %>%
+      mutate(
+        data = "Estimate",
+        lower = .data$est - .data$std,
+        median = .data$est,
+        upper = .data$est + .data$std
+      ) %>%
+      select(.data$data, .data$lower, .data$median, .data$upper) 
 
-  plot_df <- rbind(raw, yrep_est) %>%
-    mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
+    plot_df <- rbind(raw, yrep_est) %>%
+      mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
+  }
 
   p <- ggplot(data = plot_df) +
     geom_point(
       aes(x = .data$data, y = .data$median),
-      size = GLOBAL$ui$plot$point_size
+      size = GLOBAL$plot$point_size
     ) +
     geom_errorbar(
       aes(x = .data$data, ymin = .data$lower, ymax = .data$upper),
-      size = GLOBAL$ui$plot$errorbar_size,
-      width = GLOBAL$ui$plot$errorbar_width
+      size = GLOBAL$plot$errorbar_size,
+      width = GLOBAL$plot$errorbar_width
     ) +
     labs(
       x = "",
@@ -670,7 +691,11 @@ plot_outcome_static <- function(
         "binomial" = "Proportion estimates",
         "normal" = "Mean estimates"
       ),
-      caption = "*The error bars represent \u00B11 SD of uncertainty"
+      caption = if(show_caption) {
+        "*The error bars represent \u00B11 SD of uncertainty"
+      } else {
+        NULL
+      }
     ) +
     theme(
       plot.title = element_text(hjust = 0.5),
@@ -703,7 +728,7 @@ plot_ppc_timevar_subset <- function(
     raw,
     dates,
     metadata,
-    config = GLOBAL$ui$plot
+    config = GLOBAL$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -798,7 +823,7 @@ plot_ppc_timevar_all <- function(
     raw,
     dates,
     metadata,
-    config = GLOBAL$ui$plot
+    config = GLOBAL$plot
 ) {
 
   if(is.null(yrep) || is.null(raw)) {
@@ -894,7 +919,7 @@ plot_ppc_static <- function(
     yrep,
     raw,
     metadata = NULL,
-    config = GLOBAL$ui$plot
+    config = GLOBAL$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -922,7 +947,7 @@ plot_ppc_static <- function(
         color = .data$name,
         shape = .data$name
       ),
-      size = GLOBAL$ui$plot$point_size
+      size = GLOBAL$plot$point_size
     ) +
     labs(
       x = "",
@@ -956,7 +981,7 @@ plot_ppc_static <- function(
 #' @importFrom patchwork wrap_plots plot_annotation
 #' @importFrom tools toTitleCase
 #' @importFrom dplyr mutate filter
-plot_est_temporal <- function(
+plot_est_timevar <- function(
     plot_df,
     dates,
     metadata = NULL
@@ -1102,7 +1127,7 @@ plot_est_static <- function(plot_df, metadata = NULL) {
         x = .data$factor,
         y = .data$est
       ),
-      size = GLOBAL$ui$plot$point_size
+      size = GLOBAL$plot$point_size
     ) +
     geom_errorbar(
       aes(
@@ -1110,8 +1135,8 @@ plot_est_static <- function(plot_df, metadata = NULL) {
         ymin = .data$est - .data$std,
         ymax = .data$est + .data$std
       ),
-      size = GLOBAL$ui$plot$errorbar_size,
-      width = GLOBAL$ui$plot$errorbar_width
+      size = GLOBAL$plot$errorbar_size,
+      width = GLOBAL$plot$errorbar_width
     ) +
     scale_x_discrete(
       labels = tools::toTitleCase

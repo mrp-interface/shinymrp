@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the results interface with:
+#' @return A `bslib::layout_sidebar` containing the results interface with:
 #' \itemize{
 #'   \item Sidebar with model selection and result type controls
 #'   \item Conditional panels for subgroup and geographic options
@@ -145,7 +145,7 @@ mod_analyze_result_server <- function(id, global){
         plot_outcome_timevar(
           raw = selected_model()$mrp$input,
           yrep_est = selected_model()$est$overall,
-          dates = selected_model()$plot_data$dates,
+          dates = selected_model()$plotdata$dates,
           metadata = selected_model()$metadata,
           show_caption = TRUE
         )
@@ -153,10 +153,11 @@ mod_analyze_result_server <- function(id, global){
         plot_outcome_static(
           raw = selected_model()$mrp$input,
           yrep_est = selected_model()$est$overall,
-          metadata = selected_model()$metadata
+          metadata = selected_model()$metadata,
+          show_caption = TRUE
         )
       }
-    }, height = function() GLOBAL$ui$plot$plot_height)
+    }, height = function() GLOBAL$plot$ui$plot_height)
     
     # --------------------------------------------------------------------------
     # Render UI dynamically based on the user's selection.
@@ -168,7 +169,7 @@ mod_analyze_result_server <- function(id, global){
       subgroup_select <- isolate(input$subgroup_select)
 
       if (result_category == "overall") {
-        plotOutput(ns("est_overall"), height = GLOBAL$ui$plot$plot_height)
+        plotOutput(ns("est_overall"), height = GLOBAL$plot$ui$plot_height)
       } else if (result_category == "subgroup") {
         switch(subgroup_select,
           "sex" = mod_est_plot_ui(ns("est_sex")),
@@ -219,7 +220,7 @@ mod_analyze_result_server <- function(id, global){
          selected_model()$metadata$special_case != "poll") {
         choices <- choices[!choices == "edu"]
       }
-      if(is.null(selected_model()$link_data$link_geo)) {
+      if(is.null(selected_model()$linkdata$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
       updateSelectInput(session, inputId = "subgroup_select", choices = choices)
@@ -238,7 +239,7 @@ mod_analyze_result_server <- function(id, global){
       req(input$geo_scale_select, input$geo_view_select)
       
       geo <- isolate(input$geo_scale_select)
-      fips_df <- global$extdata$fips[[geo]] %>%
+      fips_df <- fips_[[geo]] %>%
         filter(.data$fips %in% selected_model()$mrp$levels[[geo]]) %>%
         fips_upper()
       choices <- sort(fips_df[[geo]])
@@ -261,7 +262,7 @@ mod_analyze_result_server <- function(id, global){
       eventExpr = list(
         global$data,
         global$metadata,
-        global$link_data
+        global$linkdata
       ),
       handlerExpr = {
         shinyjs::reset("model_select")

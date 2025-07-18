@@ -15,28 +15,9 @@ app_server <- function(input, output, session) {
     input = input,
     output = output,
     session = session,
-    extdata = list(
-      zip_tract = readr::read_csv(app_sys("extdata/zip_tract.csv"), show_col_types = FALSE, col_types = readr::cols(.default = "c")),
-      zip_county_state = readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) %>% clean_chr(),
-      acs = list(
-        pstrat_poll = readr::read_csv(app_sys("extdata/acs/pstrat_poll.csv"), show_col_types = FALSE),
-        pstrat_covid = readr::read_csv(app_sys("extdata/acs/pstrat_covid.csv"), show_col_types = FALSE),
-        covar_covid = readr::read_csv(app_sys("extdata/acs/covar_covid.csv"), show_col_types = FALSE)
-      ),
-      fips = list(
-        county = readr::read_csv(app_sys("extdata/fips_county.csv"), show_col_types = FALSE) %>% clean_chr(),
-        state = readr::read_csv(app_sys("extdata/fips_state.csv"), show_col_types = FALSE) %>% clean_chr()
-      ),
-      geojson = list(
-        county = qs::qread(app_sys("extdata/geojson_county.RDS")),
-        state = qs::qread(app_sys("extdata/geojson_state.RDS"))
-      )
-    ),
-    is_timevar = NULL,
-    special_case = NULL,
-    link_data = NULL,
-    plot_data = NULL,
-    uploaded_model = NULL,
+    metadata = NULL,
+    linkdata = NULL,
+    plotdata = NULL,
     models = NULL,
     poststratified_models = NULL
   )

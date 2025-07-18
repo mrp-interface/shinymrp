@@ -26,13 +26,13 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
 
       geo <- geo_scale()
       time_indices <- model()$est[[geo]][["time"]]
-      dates <- model()$plot_data$dates
+      dates <- model()$plotdata$dates
 
       switch(geo_view(),
         "map" = tagList(
           highcharter::highchartOutput(
             outputId = ns("map"),
-            height = GLOBAL$ui$plot$map_height
+            height = GLOBAL$plot$ui$map_height
           ),
           # Only show slider if we have time-varying data
           if (!is.null(time_indices)) {
@@ -77,24 +77,24 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
 
       geo <- geo_scale()
       time_indices <- model()$est[[geo]][["time"]]
-      dates <- model()$plot_data$dates
+      dates <- model()$plotdata$dates
       
       time_index <- if (!is.null(time_indices) && !is.null(dates)) {
-        which(as.character(format(input$map_slider, GLOBAL$ui$format$date)) == model()$plot_data$dates)
+        which(as.character(format(input$map_slider, GLOBAL$ui$format$date)) == model()$plotdata$dates)
       } else if (!is.null(time_indices)) {
         input$map_slider
       } else {
         NULL
       }
 
-      plot_df <- model()$est[[geo]] %>% 
+      model()$est[[geo]] %>% 
         prep_est(
-          fips_codes = global$extdata$fips[[geo]],
+          fips_codes = fips_[[geo]],
           geo = geo,
           time_index = time_index
         ) %>%
         choro_map(
-          model()$plot_data$geojson[[geo]],
+          model()$plotdata$geojson[[geo]],
           geo = geo,
           config = list(
             minValue = 0,
@@ -112,7 +112,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model(), geo_scale())
       
       geo <- isolate(geo_scale())
-      fips_df <- global$extdata$fips[[geo]] %>% fips_upper()
+      fips_df <- fips_[[geo]] %>% fips_upper()
 
       plot_df <- model()$est[[geo]] %>%
         rename("fips" = "factor") %>%
@@ -121,9 +121,9 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         filter(factor %in% geo_subset())
 
       if(model()$metadata$is_timevar) {
-        plot_est_temporal(
+        plot_est_timevar(
           plot_df = plot_df,
-          dates = model()$plot_data$dates,
+          dates = model()$plotdata$dates,
           metadata = model()$metadata
         )
       } else {
@@ -136,9 +136,9 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model())
 
       if(model()$metadata$is_timevar) {
-        GLOBAL$ui$plot$subplot_height * (length(geo_subset()) + 1)
+        GLOBAL$plot$ui$subplot_height * (length(geo_subset()) + 1)
       } else {
-        GLOBAL$ui$plot$plot_height
+        GLOBAL$plot$ui$plot_height
       }
     })
     

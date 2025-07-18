@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_columns} containing the preprocessing guide with:
+#' @return A `bslib::layout_columns` containing the preprocessing guide with:
 #' \itemize{
 #'   \item Detailed preprocessing workflow documentation
 #'   \item Geographic identifier and covariate information

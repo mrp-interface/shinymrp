@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{tagList} containing the about page interface with:
+#' @return A `tagList` containing the about page interface with:
 #' \itemize{
 #'   \item Development team member information
 #'   \item Funding and acknowledgement details

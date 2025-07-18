@@ -48,10 +48,9 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# Added
+# VSCode workspace files
 .DS_Store
 inst/.DS_Store
 inst/extdata/.DS_Store
 .vscode/
-docs
-inst/doc
+
