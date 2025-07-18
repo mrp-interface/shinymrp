@@ -21,7 +21,7 @@ For experienced users, the programmatic interface (API) offers more flexibility 
 
 An example of the API is shown below. For a more detailed walkthrough, see the [workflow vignette](https://mrp-interface.github.io/shinymrp/articles/workflow.html).
 
-## Installing CmdStan
+## Installation
 
 ### Prerequisites:  C++ Toolchain
 
@@ -76,17 +76,20 @@ For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolc
 
 
 
-## MRP Workflow
-
+## shinymrp Workflow
 ![](./figures/workflow.png)
 
-The
+shinymrp is designed to streamline the data analysis workflow common in applications of Multilevel Regression and Post-stratification. The package handles routine but essential tasks such as data cleaning and generating visualizations of descriptive statistics, allowing users to focus on model building.
+
+We chose an object-oriented design for the programmatic interface rather than the functional programming approach more familiar to R users. This design encapsulates data that needs to be used throughout the entire workflow, eliminating the need for users to manually track multiple objects—similar to how the graphical user interface operates.
+
+Below is an annotated example of the general workflow. For a more details about each step of the process, refer to the [workflow vignette](https://mrp-interface.github.io/shinymrp/articles/workflow.html).
 
 ```{r eval=FALSE}
 library(shinymrp)
 
-# Load sample data
-sample_data <- read.csv("path/to/sample_data.csv")
+# Load example data
+sample_data <- example_sample_data()
 
 # Initialize the MRP workflow
 workflow <- mrp_workflow()
@@ -152,12 +155,15 @@ model$summary()
 model$diagnostics()
 
 # Posterior predictive check
-model$pp_check()
+workflow$pp_check(model)
 
 
 ### VISUALIZE RESULTS
-workflow$estimate_plot(model, subgroup = "sex")
 
+# Overall estimates and estimates for demographic groups
+workflow$estimate_plot(model, group = "sex")
+
+# Geographic estimates
 workflow$estimate_map(model, geo = "county")
 
 ```

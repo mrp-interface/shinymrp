@@ -7,6 +7,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+This vignette provides more details about the individual methods of the MRPWorkflow object, including their purposes, input requirements, and caveats. For a general overview, please refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
+
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -14,38 +16,68 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r load_data, include = FALSE}
-# Load the shinymrp package
-raw_data <- readr::read_csv(
-  system.file("extdata", "example", "data", "timevarying_binomial_raw.csv", package = "shinymrp"),
-  show_col_types = FALSE
-)
-
-pstrat_data <- readr::read_csv(
-  system.file("extdata", "example", "data", "pstrat.csv", package = "shinymrp"),
-  show_col_types = FALSE
-)
-
 ```{r setup}
 library(shinymrp)
 ```
 
 ## Initializing the workflow
 
+The process begins with creating an `MRPWorkflow` object using the `mrp_workflow` function. The object-oriented design allows the object to manage the essential data under the hood and offer a clean interface that does not require the users to input the same piece of information repeatedly.
+
 ```{r}
-# raw_data and pstrat_data are loaded
 workflow <- mrp_workflow()
 ```
 
 ## Data preparation
 
-### Preprocessing sample data
+The goal of this stage is to produce two essential pieces of data:
+
+- **Sample data**: The analysis sample that includes the outcome of interest (either binary or continuous ) and predictors, such as the COVID test records and survey sample results.
+- **Poststratification data**: The table containing sizes of groups in the target population defined by the demographic and geographic factors.
+
+### Use cases
+
+```{r}
+sample_data <- example_sample_data()
+```
+
+### Individual-level vs. Aggregated Data
+
+The interface accepts data in two formats:
+
+- **Individual-level**: Each row contains information for on individual.
+- **Aggregated**: Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.
+
+Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure.
+
+Required Columns and Categories
+The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):
+
+- Sex: male, female
+- Race: Black, White, other
+- Age
+- Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
+- ZIP code [^1]
+- County [^1]
+- State [^1]
+- Week indices (time) [^2]
+- Date
+- Continuous outcome measure (outcome) [^3]
+- Positive response indicator or number of positive responses (positive) [^4]
+- Cross-tabulation cell counts (total) [^4]
+- Survey weights (weight) [^5]
+
+[^1]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
+[^2]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.
+[^3]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
+[^4]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
+[^5]: Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.
 
 ```{r}
 workflow$preprocess(
-  raw_data,
+  sample_data,
   is_timevar = TRUE,
-  is_aggregated = FALSE,
+  is_aggregated = TRUE,
   special_case = NULL,
   family = "binomial"
 )
@@ -58,6 +90,7 @@ workflow$link_acs(link_geo = "zip", acs_year = 2021)
 
 ### Load custom poststratification data
 ```{r}
+pstrat_data <- example_pstrat_data()
 workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
 ```
 
@@ -176,7 +209,7 @@ model1 <- workflow$load_model("model1.RDS")
 ## Visualize estimates
 
 ```{r, estimate_plot}
-workflow$estimate_plot(model1, subgroup = "sex")
+workflow$estimate_plot(model1, group = "sex")
 ```
 
 ```{r, estimate_map}
