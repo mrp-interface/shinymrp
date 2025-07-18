@@ -28,10 +28,8 @@ in the workflow, from data preparation and visualization to model fitting.
 \item \href{#method-MRPWorkflow-outcome_map}{\code{MRPWorkflow$outcome_map()}}
 \item \href{#method-MRPWorkflow-estimate_plot}{\code{MRPWorkflow$estimate_plot()}}
 \item \href{#method-MRPWorkflow-estimate_map}{\code{MRPWorkflow$estimate_map()}}
-\item \href{#method-MRPWorkflow-check_effects}{\code{MRPWorkflow$check_effects()}}
 \item \href{#method-MRPWorkflow-create_model}{\code{MRPWorkflow$create_model()}}
-\item \href{#method-MRPWorkflow-load_model}{\code{MRPWorkflow$load_model()}}
-\item \href{#method-MRPWorkflow-check_model}{\code{MRPWorkflow$check_model()}}
+\item \href{#method-MRPWorkflow-pp_check}{\code{MRPWorkflow$pp_check()}}
 \item \href{#method-MRPWorkflow-compare_models}{\code{MRPWorkflow$compare_models()}}
 \item \href{#method-MRPWorkflow-clone}{\code{MRPWorkflow$clone()}}
 }
@@ -316,38 +314,18 @@ A highcharter map object showing MRP estimates by geography
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MRPWorkflow-check_effects"></a>}}
-\if{latex}{\out{\hypertarget{method-MRPWorkflow-check_effects}{}}}
-\subsection{Method \code{check_effects()}}{
-Validates the effects specification for model fitting, checking prior syntax, variable availability, and interaction validity.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$check_effects(effects)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{effects}}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-TRUE if the effects specification is valid, otherwise throws an error
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MRPWorkflow-create_model"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPWorkflow-create_model}{}}}
 \subsection{Method \code{create_model()}}{
 Creates a new MRPModel object with validated effects specification and prepared data for Bayesian model fitting.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$create_model(effects)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$create_model(model_spec)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{effects}}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
+\item{\code{model_spec}}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
 }
 \if{html}{\out{</div>}}
 }
@@ -356,32 +334,12 @@ A new MRPModel object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MRPWorkflow-load_model"></a>}}
-\if{latex}{\out{\hypertarget{method-MRPWorkflow-load_model}{}}}
-\subsection{Method \code{load_model()}}{
-Loads a previously saved MRPModel object from a file.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$load_model(file)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{file}}{File path to the saved MRPModel object}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A loaded MRPModel object
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MRPWorkflow-check_model"></a>}}
-\if{latex}{\out{\hypertarget{method-MRPWorkflow-check_model}{}}}
-\subsection{Method \code{check_model()}}{
+\if{html}{\out{<a id="method-MRPWorkflow-pp_check"></a>}}
+\if{latex}{\out{\hypertarget{method-MRPWorkflow-pp_check}{}}}
+\subsection{Method \code{pp_check()}}{
 Creates posterior predictive check plots to assess model fit by comparing observed data to replicated data from the posterior predictive distribution.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$check_model(model, file = NULL, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$pp_check(model, file = NULL, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

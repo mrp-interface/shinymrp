@@ -1,8 +1,8 @@
 ---
-title: "Bayesian Workflow"
+title: "Walkthrough of shinymrp workflow"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Bayesian Workflow}
+  %\VignetteIndexEntry{Walkthrough of shinymrp workflow}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,18 +14,171 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r rawdata, include = FALSE}
+```{r load_data, include = FALSE}
 # Load the shinymrp package
-rawdata <- readr::read_csv(
+raw_data <- readr::read_csv(
   system.file("extdata", "example", "data", "timevarying_binomial_raw.csv", package = "shinymrp"),
   show_col_types = FALSE
 )
-```
+
+pstrat_data <- readr::read_csv(
+  system.file("extdata", "example", "data", "pstrat.csv", package = "shinymrp"),
+  show_col_types = FALSE
+)
 
 ```{r setup}
 library(shinymrp)
 ```
 
+## Initializing the workflow
+
 ```{r}
-rawdata
+# raw_data and pstrat_data are loaded
+workflow <- mrp_workflow()
+```
+
+## Data preparation
+
+### Preprocessing sample data
+
+```{r}
+workflow$preprocess(
+  raw_data,
+  is_timevar = TRUE,
+  is_aggregated = FALSE,
+  special_case = NULL,
+  family = "binomial"
+)
+```
+
+### Linking data to the ACS
+```{r}
+workflow$link_acs(link_geo = "zip", acs_year = 2021)
+```
+
+### Load custom poststratification data
+```{r}
+workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
+```
+
+## Visualizing descriptive statistics
+
+```{r}
+workflow$demo_bars(demo = "sex")
+```
+
+```{r}
+workflow$sample_size_map()
+```
+
+```{r}
+workflow$outcome_plot()
+```
+
+```{r}
+workflow$outcome_map()
+```
+
+## Model fitting and diagnostics
+
+
+### Model specification
+
+```{r}
+model1 <- workflow$create_model(
+  model_spec = list(
+    Intercept = list(
+      Intercept = ""
+    ),
+    fixed = list(
+      sex = "",
+      race = ""
+    ),
+    varying = list(
+      age = "",
+      time = ""
+    )
+  )
+)
+```
+
+```{r}
+model2 <- workflow$create_model(
+  model_spec = list(
+    Intercept = list(
+      Intercept = ""
+    ),
+    fixed = list(
+      sex = "",
+      race = ""
+    ),
+    varying = list(
+      age = "",
+      time = ""
+    ),
+    interaction = list(
+      `age:time` = "",
+      `race:time` = "",
+      `sex:time` = ""
+    )
+  )
+)
+```
+
+### Run MCMC
+
+```{r}
+model1$fit(n_iter = 1000, n_chains = 2, seed = 123)
+model2$fit(n_iter = 1000, n_chains = 2, seed = 123)
+```
+
+### Diagnostics
+
+```{r}
+model1$diagnostics()
+```
+
+```{r}
+model1$summary()
+```
+
+```{r}
+workflow$pp_check(model1)
+```
+
+```{r}
+model2$diagnostics()
+```
+
+```{r}
+model2$summary()
+```
+
+```{r}
+workflow$pp_check(model2)
+```
+
+```{r, compare_models}
+workflow$compare_models(model1, model2)
+```
+
+### Saving and loading models
+
+```{r, save_model, eval=FALSE}
+workflow$save_model(model1, file = "model1.RDS")
+```
+
+```{r, load_model, eval=FALSE}
+model1 <- workflow$load_model("model1.RDS")
+```
+
+
+## Visualize estimates
+
+```{r, estimate_plot}
+workflow$estimate_plot(model1, subgroup = "sex")
+```
+
+```{r, estimate_map}
+workflow$estimate_map(model1, geo = "county")
 ```

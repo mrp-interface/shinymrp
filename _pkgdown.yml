@@ -21,6 +21,9 @@ toc:
   depth: 3
 
 reference:
+  - title: "Installing CmdStan"
+    contents:
+      - install_cmdstan
   - title: "Running the Shiny app"
     contents:
       - run_app
@@ -35,10 +38,10 @@ reference:
 articles:
   - title: "Getting started"
     desc: >
-      An overview of the package, its structure, statistical underpinnings, and intallation instructions.
+      An overview of the package, its structure, and installation instructions.
     contents:
       - getting-started
-  - title: "Workflow"
+  - title: "More details"
     desc: >
       A deeper dive into each stage of the data analysis workflow that the package implements.
     contents:

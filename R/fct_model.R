@@ -146,7 +146,7 @@ check_prior_syntax <- function(s) {
 #' @noRd
 set_default_priors <- function(effects) {
   for (type in c("Intercept", GLOBAL$args$effect_types)) {
-    effects[[type]] <- purrr::map(effects[[type]], ~ replace_null(.x, GLOBAL$default_priors[[type]]))
+    effects[[type]] <- purrr::map(effects[[type]], ~ replace_null(nullify(.x), GLOBAL$default_priors[[type]]))
   }
 
   return(effects)

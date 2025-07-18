@@ -91,6 +91,11 @@ MRPModel <- R6::R6Class(
       return(private$plotdata_)
     },
 
+    #' @description Retrieves the data linking information including geography and ACS year.
+    linkdata = function() {
+      return(private$linkdata_)
+    },
+
     #' @description Fits the MRP model using Stan for Bayesian estimation with MCMC sampling.
     #' 
     #' @param n_iter Number of MCMC iterations per chain
@@ -250,12 +255,19 @@ MRPModel <- R6::R6Class(
       return(private$est_)
     },
 
-    #' @description Saves the fitted MRPModel object to a file for later use.
+    #' @description Saves a fitted MRPModel object to a file for later use.
     #'
-    #' @param file File path where the model object should be saved
-    #'
+    #' @param model Fitted MRPModel object to save
+    #' @param file File path where the model should be saved
     save = function(file) {
-      qs::qsave(self, file)
+      checkmate::assert_file_exists(file)
+
+      # load CmdStan output files into the fitted model object
+      if (!is.null(private$fit_)) {
+        private$fit_$draws()
+      }
+
+      qs::qsave(self, file = file)
     }
   )
 )

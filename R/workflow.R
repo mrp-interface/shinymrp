@@ -1,3 +1,13 @@
+#' Install CmdStan
+#' 
+#' @description Installs CmdStan, the command-line interface for Stan, which is required for building statistical models in this package.
+#' 
+#' @export
+install_cmdstan <- function() {
+  cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+  cmdstanr::install_cmdstan(check_toolchain = FALSE)
+}
+
 #' Create a new MRPWorkflow object
 #' 
 #' @description Create a new [`MRPWorkflow`][MRPWorkflow] object that implements
@@ -9,7 +19,7 @@
 #' @export
 mrp_workflow <- function() {
   if (is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-      stop("CmdStan is not installed or not available.")
+      stop("CmdStan is not installed. Please install CmdStan using `shinymrp::install_cmdstan()`.")
   }
 
   MRPWorkflow$new()
@@ -57,6 +67,64 @@ MRPWorkflow <- R6::R6Class(
       }
     },
 
+    assert_model_spec = function(model_spec) {
+      private$assert_mrp_exists()
+
+      # check if model_spec$Intercept is a list with a single element
+      if (!is.list(model_spec$Intercept) || names(model_spec$Intercept) != "Intercept") {
+        stop("model_spec$Intercept must be a list with a single element named 'Intercept'.")
+      }
+
+
+      # check prior syntax for all effects
+      effects_w_priors <- unlist(model_spec)
+      bools <- effects_w_priors %>%
+        purrr::map_lgl(function(s) clean_prior_syntax(s) %>% check_prior_syntax())
+
+      if (!all(bools)) {
+        stop(paste0("The following priors have invalid syntax: ",
+            paste(effects_w_priors[!bools], collapse = ", ")))
+      }
+
+      # check if model_spec have corresponding variables in data
+      main_vars <- c(names(model_spec$fixed), names(model_spec$varying))
+      vars_in_data <- names(private$mrp_$input)
+      invalid_vars <- setdiff(main_vars, vars_in_data)
+
+      if (length(invalid_vars) > 0) {
+        stop(paste0("The following variables are not present in the data: ",
+            paste(invalid_vars, collapse = ", ")))
+      }
+
+      # check if any variables are single-level factors
+      omit_vars <- private$mrp_$vars$omit
+      if (length(intersect(main_vars, omit_vars$one_level)) > 0) {
+        stop(paste0("The following variables have a single level and cannot be used: ",
+            paste(omit_vars$one_level, collapse = ", ")))
+      }
+
+      # check if any interactions with nested main effects
+      if (length(pair_intersect(names(model_spec$interaction), omit_vars$nested)) > 0) {
+        stop(paste0("The following interactions have nested main effects and cannot be used: ",
+            paste(omit_vars$nested, collapse = ", ")))
+      }
+
+      # check if interactions can be assigned structured prior
+      ints_w_struct <- names(model_spec$interaction[model_spec$interaction == "structured"])
+      valid_ints_w_struct <- filter_interactions(
+        interactions = ints_w_struct,
+        fixed_effects = names(model_spec$fixed),
+        data = private$mrp_$input
+      )
+      invalid_ints_w_struct <- setdiff(ints_w_struct, valid_ints_w_struct)
+      if (length(invalid_ints_w_struct) > 0) {
+        stop(paste0("The following interactions cannot be assigned structured prior: ",
+            paste(invalid_ints_w_struct, collapse = ", ")))
+      }
+
+      return(TRUE)
+    },
+
     assert_model = function(model) {
       checkmate::assert_class(
         model,
@@ -72,7 +140,7 @@ MRPWorkflow <- R6::R6Class(
     #' 
     #' @return A new MRPWorkflow object.
     initialize = function() {},
-    
+
     #' @description Retrieves the metadata associated with the current workflow, including information about time variables, family, and special cases.
     #'
     metadata = function() {
@@ -381,7 +449,7 @@ MRPWorkflow <- R6::R6Class(
         do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
       }
 
-      invisible(p)
+      return(p)
     },
     
     #' @description Creates histogram plots showing the distribution of geographic
@@ -485,7 +553,7 @@ MRPWorkflow <- R6::R6Class(
         do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
       }
 
-      invisible(p)
+      return(p)
     },
     
     #' @description Creates interactive choropleth maps showing data distribution
@@ -498,6 +566,11 @@ MRPWorkflow <- R6::R6Class(
       private$assert_mrp_exists()
 
       geo <- private$linkdata_$link_geo
+      if (geo == "zip") {
+        geo <- "county"
+      } else if (is.null(geo)) {
+        stop("Linking geography is not available.")
+      }
       
       hc <- private$mrp_$input %>%
         prep_sample_size(
@@ -506,7 +579,7 @@ MRPWorkflow <- R6::R6Class(
           for_map = TRUE
         ) %>%
         choro_map(
-          geojson_[[geo]],
+          private$plotdata_$geojson[[geo]],
           geo = geo,
           config = list(
             main_title = "Sample Size Map",
@@ -584,6 +657,8 @@ MRPWorkflow <- R6::R6Class(
       geo <- private$linkdata_$link_geo
       if (geo == "zip") {
         geo <- "county"
+      } else if (is.null(geo)) {
+        stop("Linking geography is not available.")
       }
 
       out <- prep_raw(
@@ -689,6 +764,10 @@ MRPWorkflow <- R6::R6Class(
     ) {
       private$assert_mrp_exists()
 
+      if (is.null(model$linkdata()$link_geo)) {
+        stop("Linking geography is not available.")
+      }
+
       choices <- intersect(GLOBAL$vars$geo2, names(model$mrp()$levels))
       checkmate::assert_choice(
         geo,
@@ -708,7 +787,6 @@ MRPWorkflow <- R6::R6Class(
       } else {
         NULL
       }
-
 
       est_df <- model$poststratify()[[geo]]
 
@@ -746,79 +824,16 @@ MRPWorkflow <- R6::R6Class(
       return(hc)
     },
 
-    #' @description Validates the effects specification for model fitting, checking prior syntax, variable availability, and interaction validity.
-    #'
-    #' @param effects List containing model effects specification including intercept, fixed effects, varying effects, and interactions
-    #'
-    #' @return TRUE if the effects specification is valid, otherwise throws an error
-    check_effects = function(effects) {
-      private$assert_mrp_exists()
-
-      # check if effects$Intercept is a list with a single element
-      if (!is.list(effects$Intercept) || names(effects$Intercept) != "Intercept") {
-        stop("effects$Intercept must be a list with a single element named 'Intercept'.")
-      }
-
-
-      # check prior syntax for all effects
-      effects_w_priors <- unlist(effects)
-      bools <- effects_w_priors %>%
-        purrr::map_lgl(function(s) clean_prior_syntax(s) %>% check_prior_syntax())
-
-      if (!all(bools)) {
-        stop(paste0("The following priors have invalid syntax: ",
-            paste(effects_w_priors[!bools], collapse = ", ")))
-      }
-
-      # check if effects have corresponding variables in data
-      main_vars <- c(names(effects$fixed), names(effects$varying))
-      vars_in_data <- names(private$mrp_$input)
-      invalid_vars <- setdiff(main_vars, vars_in_data)
-
-      if (length(invalid_vars) > 0) {
-        stop(paste0("The following variables are not present in the data: ",
-            paste(invalid_vars, collapse = ", ")))
-      }
-
-      # check if any variables are single-level factors
-      omit_vars <- private$mrp_$vars$omit
-      if (length(intersect(main_vars, omit_vars$one_level)) > 0) {
-        stop(paste0("The following variables have a single level and cannot be used: ",
-            paste(omit_vars$one_level, collapse = ", ")))
-      }
-
-      # check if any interactions with nested main effects
-      if (length(pair_intersect(names(effects$interaction), omit_vars$nested)) > 0) {
-        stop(paste0("The following interactions have nested main effects and cannot be used: ",
-            paste(omit_vars$nested, collapse = ", ")))
-      }
-
-      # check if interactions can be assigned structured prior
-      ints_w_struct <- names(effects$interaction[effects$interaction == "structured"])
-      valid_ints_w_struct <- filter_interactions(
-        interactions = ints_w_struct,
-        fixed_effects = names(effects$fixed),
-        data = private$mrp_$input
-      )
-      invalid_ints_w_struct <- setdiff(ints_w_struct, valid_ints_w_struct)
-      if (length(invalid_ints_w_struct) > 0) {
-        stop(paste0("The following interactions cannot be assigned structured prior: ",
-            paste(invalid_ints_w_struct, collapse = ", ")))
-      }
-
-      return(TRUE)
-    },
-
     #' @description Creates a new MRPModel object with validated effects specification and prepared data for Bayesian model fitting.
     #'
-    #' @param effects List containing model effects specification including intercept, fixed effects, varying effects, and interactions
+    #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
     #'
     #' @return A new MRPModel object
-    create_model = function(effects) {
+    create_model = function(model_spec) {
       private$assert_mrp_exists()
-      self$check_effects(effects)
+      private$assert_model_spec(model_spec)
 
-      effects <- set_default_priors(effects)
+      effects <- set_default_priors(model_spec)
 
       MRPModel$new(
         effects   = effects,
@@ -829,23 +844,12 @@ MRPWorkflow <- R6::R6Class(
       )
     },
 
-    #' @description Loads a previously saved MRPModel object from a file.
-    #'
-    #' @param file File path to the saved MRPModel object
-    #'
-    #' @return A loaded MRPModel object
-    load_model = function(file) {
-      checkmate::assert_file_exists(file)
-
-      return(qs::qread(file))
-    },
-
     #' @description Creates posterior predictive check plots to assess model fit by comparing observed data to replicated data from the posterior predictive distribution.
     #'
     #' @param model Fitted MRPModel object
     #' @param file Optional file path to save the plot
     #' @param ... Additional arguments passed to ggsave
-    check_model = function(model, file = NULL, ...) {
+    pp_check = function(model, file = NULL, ...) {
       private$assert_mrp_exists()
 
       p <- if (model$metadata()$is_timevar) {
@@ -886,7 +890,7 @@ MRPWorkflow <- R6::R6Class(
       }
 
       models <- list(...)
-      lapply(models, private$check_model)
+      lapply(models, private$assert_model)
 
       # Extract log-likelihood from each model
       loo_list <- purrr::map(models, function(m) {
