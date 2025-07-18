@@ -878,6 +878,7 @@ add_week_indices <- function(df) {
     df$time <- week$indices
 
     # add the column containing first dates of the weeks
+    df <- df %>% select(-"date")
     df <- df %>%
       full_join(
         data.frame(
@@ -1824,8 +1825,10 @@ preprocess <- function(
         group_by(!!!syms(group_vars)) %>%
         summarize(
           across(any_of(geo_covars), first),
+          date = if("date" %in% names(data)) first(.data$date),
           total = if("weight" %in% names(data)) sum(.data$weight) else n(),
           positive = sum(.data$positive)
+
         ) %>%
         ungroup()
     }
