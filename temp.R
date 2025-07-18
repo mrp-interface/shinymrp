@@ -1,23 +1,26 @@
 devtools::load_all()
+library(shinymrp)
+
 
 # Load the shinymrp package
-raw_data <- readr::read_csv(
-    system.file("extdata", "example", "data", "timevarying_binomial_raw.csv", package = "shinymrp"),
-    show_col_types = FALSE
-)
+# raw_data <- readr::read_csv(
+#     system.file("extdata", "example", "data", "timevarying_binomial_raw.csv", package = "shinymrp"),
+#     show_col_types = FALSE
+# )
 
-pstrat_data <- readr::read_csv(
-    system.file("extdata", "example", "data", "pstrat.csv", package = "shinymrp"),
-    show_col_types = FALSE
-)
 
-library(shinymrp)
+
+sample_data <- shinymrp::example_sample_data()
+
+pstrat_data <- shinymrp::example_pstrat_data()
+
 
 # Load sample data
 sample_data <- raw_data
 
 # Initialize the MRP workflow
 workflow <- mrp_workflow()
+
 
 ### DATA PREPARATION
 
@@ -54,50 +57,41 @@ workflow$outcome_map(file = "/Users/tntoan/Downloads/outcome_map.html")
 
 ### MODEL BUILDING
 
-# Create new model objects
-model <- workflow$create_model(
-  model_spec = list(
-    Intercept = list(
-      Intercept = ""
-    ),
-    fixed = list(
-      sex = "",
-      race = ""
-    ),
-    varying = list(
-      age = "",
-      time = ""
-    )
-  )
-)
-
-# Run MCMC
-model$fit(n_iter = 1000, n_chains = 2, seed = 123)
-
-# p <- plot_ppc_timevar_subset(
-#     yrep = model$ppc(),
-#     raw = model$mrp()$input,
-#     dates = model$plotdata()$dates,
-#     metadata = model$metadata()
+# # Create new model objects
+# model <- workflow$create_model(
+#   model_spec = list(
+#     Intercept = list(
+#       Intercept = ""
+#     ),
+#     fixed = list(
+#       sex = "",
+#       race = ""
+#     ),
+#     varying = list(
+#       age = "",
+#       time = ""
+#     )
+#   )
 # )
 
-workflow$pp_check(model)
+# # Run MCMC
+# model$fit(n_iter = 1000, n_chains = 2, seed = 123)
 
 
-# model$save("/Users/tntoan/Downloads/model.RDS")
+model$save("/Users/tntoan/Downloads/model.RDS")
 
-# model <- qs::qread("/Users/tntoan/Downloads/model.RDS")
+model <- qs::qread("/Users/tntoan/Downloads/model.RDS")
 
-# # Estimates summary and diagnostics
-# model$summary()
+# Estimates summary and diagnostics
+model$summary()
 
-# # Sampling diagnostics
-# model$diagnostics()
+# Sampling diagnostics
+model$diagnostics()
 
-# # Posterior predictive check
-# p <- workflow$pp_check(model) 
+# Posterior predictive check
+p <- workflow$pp_check(model) 
 
 
-# ### VISUALIZE RESULTS
-# workflow$estimate_plot(model, subgroup = "sex")
-# workflow$estimate_map(model, geo = "county")
+### VISUALIZE RESULTS
+workflow$estimate_plot(model,group = "sex")
+workflow$estimate_map(model, geo = "county")

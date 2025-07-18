@@ -259,7 +259,7 @@ A highcharter map object showing outcome measures by geography
 \subsection{Method \code{estimate_plot()}}{
 Creates plots showing MRP estimates for different subgroups, either over time (for time-varying data) or as static estimates (for cross-sectional data).
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$estimate_plot(model, subgroup, file = NULL, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$estimate_plot(model, group, file = NULL, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -267,7 +267,7 @@ Creates plots showing MRP estimates for different subgroups, either over time (f
 \describe{
 \item{\code{model}}{Fitted MRPModel object}
 
-\item{\code{subgroup}}{Character string specifying the subgroup variable for plotting}
+\item{\code{group}}{Character string specifying the demographic group for plotting}
 
 \item{\code{file}}{Optional file path to save the plot}
 
@@ -276,7 +276,7 @@ Creates plots showing MRP estimates for different subgroups, either over time (f
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A ggplot object showing the subgroup estimates
+A ggplot object showing the group estimates
 }
 }
 \if{html}{\out{<hr>}}

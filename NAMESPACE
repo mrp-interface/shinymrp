@@ -2,6 +2,8 @@
 
 export(MRPModel)
 export(MRPWorkflow)
+export(example_pstrat_data)
+export(example_sample_data)
 export(install_cmdstan)
 export(mrp_workflow)
 export(run_app)

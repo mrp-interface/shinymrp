@@ -34,6 +34,10 @@ reference:
   - title: "Model object and methods"
     contents:
       - MRPModel
+  - title: "Other functions"
+    contents:
+      - example_sample_data
+      - example_pstrat_data
 
 articles:
   - title: "Getting started"
@@ -46,3 +50,4 @@ articles:
       A deeper dive into each stage of the data analysis workflow that the package implements.
     contents:
       - workflow
+      - data-prep

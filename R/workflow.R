@@ -25,6 +25,53 @@ mrp_workflow <- function() {
   MRPWorkflow$new()
 }
 
+
+#' Create example data for different use cases
+#' 
+#' @description Generates example data for different use cases based on the input parameters.
+#' 
+#' @param is_timevar Logical indicating whether the data is time-varying
+#' @param is_aggregated Logical indicating whether the data is aggregated
+#' @param special_case Optional character string for special cases (e.g., "covid", "poll")
+#' 
+#' @return A data frame containing example data for the specified use case.
+#' 
+#' @export
+example_sample_data <- function(
+  is_timevar = TRUE,
+  is_aggregated = TRUE,
+  special_case = NULL,
+  family = "binomial"
+) {
+
+  metadata <- list(
+    is_timevar = is_timevar,
+    special_case = special_case,
+    family = family
+  )
+  suffix <- if (is_aggregated) "prep" else "raw"
+  filename <- create_example_filename(metadata, suffix)
+
+  readr::read_csv(
+    system.file("extdata", "example", "data", filename, package = "shinymrp"),
+    show_col_types = FALSE
+  )
+}
+
+
+#' Create example post-stratification data
+#' #' @description Generates example post-stratification data for MRP analysis.
+#' 
+#' @return An example post-stratification table.
+#' 
+#' @export
+example_pstrat_data <- function() {
+  readr::read_csv(
+    system.file("extdata", "example", "data", "pstrat.csv", package = "shinymrp"),
+    show_col_types = FALSE
+  )
+}
+
 #' MRPWorkflow objects
 #'
 #' @description A `MRPWorkflow` object is an [R6][R6::R6Class] object created by
@@ -703,25 +750,25 @@ MRPWorkflow <- R6::R6Class(
     #' @description Creates plots showing MRP estimates for different subgroups, either over time (for time-varying data) or as static estimates (for cross-sectional data).
     #'
     #' @param model Fitted MRPModel object
-    #' @param subgroup Character string specifying the subgroup variable for plotting
+    #' @param group Character string specifying the demographic group for plotting
     #' @param file Optional file path to save the plot
     #' @param ... Additional arguments passed to ggsave
     #'
-    #' @return A ggplot object showing the subgroup estimates
-    estimate_plot = function(model, subgroup, file = NULL, ...) {
+    #' @return A ggplot object showing the group estimates
+    estimate_plot = function(model, group, file = NULL, ...) {
       private$assert_mrp_exists()
       
       checkmate::assert_choice(
-        subgroup,
+        group,
         choices = intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels)),
         null.ok = FALSE
       )
 
       # Convert levels to "factor" type
-      est_df <- model$poststratify()[[subgroup]] %>%
-        rename(!!subgroup := factor) %>%
-        as_factor(model$mrp()$levels[subgroup]) %>%
-        rename(factor := !!sym(subgroup))
+      est_df <- model$poststratify()[[group]] %>%
+        rename(!!group := factor) %>%
+        as_factor(model$mrp()$levels[group]) %>%
+        rename(factor := !!sym(group))
 
       p <- if (model$metadata()$is_timevar) {
         plot_est_timevar(
@@ -739,7 +786,7 @@ MRPWorkflow <- R6::R6Class(
       if (!is.null(file)) {
         # Set default parameters for ggsave
         dots <- modifyList(GLOBAL$plot$save, list(...))
-        dots$height <- 5 * (length(model$mrp()$levels[[subgroup]]) + 1)
+        dots$height <- 5 * (length(model$mrp()$levels[[group]]) + 1)
         do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
       }      
 
