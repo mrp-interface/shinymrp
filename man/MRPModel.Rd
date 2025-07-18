@@ -23,6 +23,7 @@ and post-stratification.
 \item \href{#method-MRPModel-mrp}{\code{MRPModel$mrp()}}
 \item \href{#method-MRPModel-metadata}{\code{MRPModel$metadata()}}
 \item \href{#method-MRPModel-plotdata}{\code{MRPModel$plotdata()}}
+\item \href{#method-MRPModel-linkdata}{\code{MRPModel$linkdata()}}
 \item \href{#method-MRPModel-fit}{\code{MRPModel$fit()}}
 \item \href{#method-MRPModel-check_fit_exists}{\code{MRPModel$check_fit_exists()}}
 \item \href{#method-MRPModel-code}{\code{MRPModel$code()}}
@@ -110,6 +111,16 @@ Retrieves the metadata associated with the model, including information about fa
 Retrieves the data prepared for visualization, including dates and geojson objects.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPModel$plotdata()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MRPModel-linkdata"></a>}}
+\if{latex}{\out{\hypertarget{method-MRPModel-linkdata}{}}}
+\subsection{Method \code{linkdata()}}{
+Retrieves the data linking information including geography and ACS year.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MRPModel$linkdata()}\if{html}{\out{</div>}}
 }
 
 }
@@ -210,7 +221,7 @@ Runs post-stratification using the fitted model to generate population-level est
 \if{html}{\out{<a id="method-MRPModel-save"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPModel-save}{}}}
 \subsection{Method \code{save()}}{
-Saves the fitted MRPModel object to a file for later use.
+Saves a fitted MRPModel object to a file for later use.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPModel$save(file)}\if{html}{\out{</div>}}
 }
@@ -218,7 +229,9 @@ Saves the fitted MRPModel object to a file for later use.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{file}}{File path where the model object should be saved}
+\item{\code{file}}{File path where the model should be saved}
+
+\item{\code{model}}{Fitted MRPModel object to save}
 }
 \if{html}{\out{</div>}}
 }

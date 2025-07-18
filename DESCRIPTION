@@ -1,16 +1,15 @@
 Package: shinymrp
-Title: Point-and-click interface for MRP
+Title: MRP Interface
 Version: 0.8.0
 Authors@R: c(
     person("Toan", "Tran", email = "trannttoan97@gmail.com", role = c("cre", "aut")),
     person("Jonah", "Gabry", email = "jgabry@gmail.com", role = "aut"),
-    person("Yajuan", "Si", email = "yajuan@umich.edu", role = "aut"),
-    person("Mitzi", "Morris", email = "mitzi212@gmail.com", role = "aut")
+    person("Yajuan", "Si", email = "yajuan@umich.edu", role = "aut")
   )
-Author: Toan Tran [cre, aut], Jonah Gabry [aut], Yajuan Si [aut], Mitzi Morris [aut]
+Author: Toan Tran [cre, aut], Jonah Gabry [aut], Yajuan Si [aut]
 Maintainer: Toan Tran <tranntoan97@gmail.com>
-Description: A GUI designed for intuitive applications of Multilevel
-    Regression and Poststratification.
+Description: A graphical and a programmatic interface designed for
+    intuitive applications of Multilevel Regression and Poststratification (MRP).
 License: MIT + file LICENSE
 URL: https://mrp-interface.github.io/shinymrp/
 BugReports: https://github.com/mrp-interface/shinymrp/issues
