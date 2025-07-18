@@ -116,6 +116,97 @@ check_prior_syntax <- function(s) {
   }
 }
 
+#' Set Default Prior Distributions for Model Effects
+#'
+#' @description Replaces NULL prior specifications with default priors from the
+#' global configuration. Ensures all model effects have valid prior distributions
+#' before Stan code generation. Uses GLOBAL$default_priors to provide sensible
+#' defaults for different effect types.
+#'
+#' @param effects List containing model effects with potentially NULL prior specifications:
+#'   \itemize{
+#'     \item Intercept: Global intercept prior
+#'     \item fixed: Fixed effects priors
+#'     \item varying: Varying effects priors
+#'     \item interaction: Interaction effects priors
+#'   }
+#'
+#' @return List with same structure as input but with NULL priors replaced by
+#'   appropriate defaults from GLOBAL$default_priors. Each effect type gets its
+#'   corresponding default prior distribution.
+#'
+#' @details Default priors are applied for:
+#' \itemize{
+#'   \item Intercept: Typically normal(0, 2.5) for weakly informative prior
+#'   \item Fixed effects: Usually normal(0, 1) for standardized predictors
+#'   \item Varying effects: Often exponential(1) for scale parameters
+#'   \item Interactions: Context-dependent defaults based on effect type
+#' }
+#'
+#' @noRd
+set_default_priors <- function(effects) {
+  for (type in c("Intercept", GLOBAL$args$effect_types)) {
+    effects[[type]] <- purrr::map(effects[[type]], ~ replace_null(nullify(.x), GLOBAL$default_priors[[type]]))
+  }
+
+  return(effects)
+}
+
+#' Normalize Interaction Pair Order
+#'
+#' @description Standardizes the order of variables in interaction pairs by
+#' sorting them alphabetically. Ensures "a:b" and "b:a" are treated as equivalent
+#' by converting both to the same canonical form.
+#'
+#' @param p Character string representing an interaction pair (e.g., "age:gender").
+#' @param sep Character separator used in the interaction pair (default ":").
+#'
+#' @return Character string with variables sorted alphabetically within the pair.
+#'   For example, "gender:age" becomes "age:gender".
+#'
+#' @details This normalization is essential for:
+#' \itemize{
+#'   \item Consistent interaction term identification
+#'   \item Set operations on interaction collections
+#'   \item Avoiding duplicate interactions with different variable orders
+#' }
+#'
+#' @noRd
+# helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
+norm_pair <- function(p, sep = ":") {
+  parts <- strsplit(p, sep, fixed = TRUE)[[1]]
+  paste(sort(parts), collapse = sep)
+}
+
+#' Find Intersection of Interaction Pairs
+#'
+#' @description Computes the intersection between two sets of interaction pairs,
+#' treating "a:b" and "b:a" as equivalent by normalizing pair order before comparison.
+#' Useful for finding common interaction terms between different model specifications.
+#'
+#' @param pairs1 Character vector of interaction pairs (e.g., c("age:gender", "income:education")).
+#' @param pairs2 Character vector of interaction pairs to intersect with pairs1.
+#' @param sep Character separator used in interaction pairs (default ":").
+#'
+#' @return Character vector containing normalized interaction pairs that appear
+#'   in both pairs1 and pairs2, accounting for order-invariant matching.
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Normalizes both sets of pairs using norm_pair()
+#'   \item Computes set intersection on normalized forms
+#'   \item Returns pairs in canonical (alphabetically sorted) order
+#' }
+#'
+#' @noRd
+pair_intersect <- function(pairs1, pairs2, sep = ":") {
+  # normalize pairs
+  norms1 <- vapply(pairs1, norm_pair, FUN.VALUE = character(1), sep = sep)
+  norms2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1), sep = sep)
+
+  return(intersect(norms1, norms2))
+}
+
 #' Set Difference for Interaction Pairs
 #'
 #' @description Computes set difference between two sets of interaction pairs,
@@ -131,17 +222,12 @@ check_prior_syntax <- function(s) {
 #'
 #' @noRd
 pair_setdiff <- function(pairs1, pairs2, sep = ":") {
-  # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
-  norm_pair <- function(p) {
-    parts <- strsplit(p, sep, fixed = TRUE)[[1]]
-    paste(sort(parts), collapse = sep)
-  }
-
-  # precompute the normalized set of pairs2
-  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1))
+  # precompute the normalized sets of pairs
+  norm1 <- vapply(pairs1, norm_pair, FUN.VALUE = character(1), sep = sep)
+  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1), sep = sep)
 
   # keep those in pairs1 whose normalized form is NOT in norm2
-  keep <- !vapply(pairs1, norm_pair, FUN.VALUE = character(1)) %in% norm2
+  keep <- !norm1 %in% norm2
 
   return(pairs1[keep])
 }
@@ -163,15 +249,14 @@ pair_setdiff <- function(pairs1, pairs2, sep = ":") {
 #'
 #' @noRd
 #'
-#' @importFrom purrr map_lgl
-filter_interactions <- function(interactions, fixed_effects, dat) {
-  bool <- map_lgl(interactions, function(s) {
+filter_interactions <- function(interactions, fixed_effects, data) {
+  bool <- purrr::map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    type1 <- data_type(dat[[ss[1]]])
-    type2 <- data_type(dat[[ss[2]]])
-    
-    return((type1 == "cat" && !ss[1] %in% fixed_effects) ||
-           (type2 == "cat" && !ss[2] %in% fixed_effects))
+    type1 <- data_type(data[[ss[1]]])
+    type2 <- data_type(data[[ss[2]]])
+    is_cat <- c(type1, type2) == "cat"
+
+    any(is_cat) && all(!ss[is_cat] %in% fixed_effects)
   })
   
   return(interactions[bool])
@@ -193,9 +278,8 @@ filter_interactions <- function(interactions, fixed_effects, dat) {
 #'
 #' @noRd
 #'
-#' @importFrom purrr map_chr
 sort_interactions <- function(interactions, dat) {
-  interactions <- map_chr(interactions, function(s) {
+  interactions <- purrr::map_chr(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     type1 <- data_type(dat[[ss[1]]], num = TRUE)
     type2 <- data_type(dat[[ss[2]]], num = TRUE)
@@ -225,12 +309,11 @@ sort_interactions <- function(interactions, dat) {
 #'
 #' @noRd
 #'
-#' @importFrom dplyr filter n_distinct
 #' @importFrom rlang .data
 create_interactions <- function(fixed_effects, varying_effects, dat) {
   main_effects <- c(fixed_effects, varying_effects)
   
-  if(n_distinct(main_effects) <= 1) {
+  if(dplyr::n_distinct(main_effects) <= 1) {
     return(list())
   }
   
@@ -240,8 +323,8 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
     eff2 = main_effects,
     stringsAsFactors = FALSE
   ) %>%
-    filter(.data$eff1 != .data$eff2)
-  
+    dplyr::filter(.data$eff1 != .data$eff2)
+
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
   int <- paste0(df$eff1, ":", df$eff2)
   
@@ -264,9 +347,9 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
 #' @noRd
 #'
 interaction_levels <- function(levels1, levels2) {
-  numcat1 <- n_distinct(levels1)
-  numcat2 <- n_distinct(levels2)
-  
+  numcat1 <- dplyr::n_distinct(levels1)
+  numcat2 <- dplyr::n_distinct(levels2)
+
   if(numcat1 == 2 | numcat2 == 2) {
     levels_interaction <- levels1 * levels2
     levels_interaction[levels_interaction == 0] <- 1
@@ -705,6 +788,40 @@ transformed_parameters_ <- function(effects, metadata) {
   return(scode)
 }
 
+#' Generate Stan Model Block Code
+#'
+#' @description Creates the model block section of Stan code, specifying the
+#' likelihood function and prior distributions. Combines outcome distribution
+#' with hierarchical priors for all model parameters.
+#'
+#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#'   all model specifications and prior distributions.
+#' @param metadata List containing model specifications including family type
+#'   for determining the likelihood function.
+#'
+#' @return Character string containing Stan model block code with:
+#'   \itemize{
+#'     \item Likelihood: Outcome distribution (binomial or normal)
+#'     \item Intercept prior: Global intercept distribution
+#'     \item Fixed effects priors: Individual coefficient priors
+#'     \item Varying effects priors: Hierarchical structure with scale parameters
+#'     \item Standardized effects: Standard normal priors for z parameters
+#'     \item Structured priors: Global and local scale parameters (if used)
+#'   }
+#'
+#' @details Model block components:
+#' \enumerate{
+#'   \item Outcome likelihood based on family type
+#'   \item Prior specifications for all parameter types
+#'   \item Hierarchical structure for varying effects
+#'   \item Non-centered parameterization for efficiency
+#'   \item Structured prior implementation for interactions
+#' }
+#'
+#' @noRd
+#'
+#' @importFrom stringr str_interp
+#' @importFrom purrr map
 model_ <- function(effects, metadata) {
   # group effects
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
@@ -1269,7 +1386,7 @@ make_standata <- function(
 #'   for COVID models (sens, spec).
 #' @param seed Integer. Random seed for reproducible results (default: NULL).
 #' @param code_fout Character. File path to save generated Stan code (default: NULL).
-#' @param silent Logical. Whether to suppress Stan output messages (default: FALSE).
+#' @param ... Additional arguments passed to the CmdStanR sample() method.
 #'
 #' @return List containing:
 #'   \item{fit}{CmdStanR fit object with MCMC samples}
@@ -1285,8 +1402,6 @@ make_standata <- function(
 #'   \item Returns fit object and associated data/code for further analysis
 #' }
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Fit a basic multilevel model
@@ -1299,6 +1414,7 @@ make_standata <- function(
 #'   n_chains = 4
 #' )
 #' }
+#' @noRd
 run_mcmc <- function(
     input_data,
     new_data,
@@ -1309,7 +1425,7 @@ run_mcmc <- function(
     extra = NULL,
     seed = NULL,
     code_fout = NULL,
-    silent = FALSE
+    ...
 ) {
 
   stan_code <- list()
@@ -1337,10 +1453,8 @@ run_mcmc <- function(
     parallel_chains = n_chains,
     threads_per_chain = 1,
     refresh = n_iter / 10,
-    diagnostics = NULL,
-    show_messages = !silent,
-    show_exception = !silent,
-    seed = seed
+    seed = seed,
+    ...
   )
 
   return(list(
@@ -1375,8 +1489,6 @@ run_mcmc <- function(
 #'   \item Suppresses compilation and sampling messages for cleaner output
 #' }
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Run posterior predictive checks
@@ -1395,6 +1507,8 @@ run_mcmc <- function(
 #'   n_chains = 4
 #' )
 #' }
+#'
+#' @noRd
 run_gq <- function(
     fit_mcmc,
     stan_code,
@@ -1421,6 +1535,38 @@ run_gq <- function(
   return(fit_gq)
 }
 
+#' Add Reference Levels to Fixed Effects Summary
+#'
+#' @description Adds reference level information to fixed effects parameter
+#' summary tables, ensuring all categorical variable levels are represented.
+#' For binary variables, identifies which level corresponds to 1, and for
+#' categorical variables, includes the reference level (first alphabetically)
+#' with NA values.
+#'
+#' @param df_fixed Data frame containing fixed effects parameter summaries
+#'   with row names corresponding to parameter names.
+#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#'   fixed effects specifications.
+#' @param input_data Original input data frame used for model fitting, needed
+#'   to determine variable types and levels.
+#'
+#' @return Data frame with expanded row names and structure:
+#'   \itemize{
+#'     \item Binary variables: Labeled with the level that equals 1
+#'     \item Categorical variables: Reference level added with NA parameter values
+#'     \item Continuous variables: Unchanged
+#'     \item Row names: Updated to include variable.level format
+#'   }
+#'
+#' @details The function:
+#' \enumerate{
+#'   \item Identifies binary variables and their "1" level labels
+#'   \item Determines categorical variable levels and reference levels
+#'   \item Expands the summary table to include all levels
+#'   \item Sets NA values for reference levels (not estimated)
+#' }
+#'
+#' @noRd
 add_ref_lvl <- function(df_fixed, effects, input_data) {
   ### include reference levels for binary variables
   m_fix_bc_names <- names(effects$m_fix_bc) %>%
@@ -1458,6 +1604,34 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
   return(df_fixed)
 }
 
+#' Extract Parameter Summary Statistics from CmdStanR Fit
+#'
+#' @description Extracts comprehensive summary statistics for specified parameters
+#' from a CmdStanR fit object, including posterior means, standard deviations,
+#' quantiles, and convergence diagnostics.
+#'
+#' @param fit CmdStanR fit object containing MCMC samples.
+#' @param variables Character vector of parameter names to summarize.
+#' @param probs Numeric vector of quantile probabilities for credible intervals
+#'   (default: c(0.025, 0.975) for 95% intervals).
+#'
+#' @return Data frame with summary statistics for each parameter:
+#'   \itemize{
+#'     \item mean: Posterior mean
+#'     \item sd: Posterior standard deviation
+#'     \item quantiles: Specified quantile values
+#'     \item rhat: R-hat convergence diagnostic
+#'     \item ess_bulk, ess_tail: Effective sample size measures
+#'   }
+#'
+#' @details Uses posterior package functions for:
+#' \itemize{
+#'   \item Default summary measures (mean, median, sd, mad)
+#'   \item Custom quantiles for credible intervals
+#'   \item Convergence diagnostics (R-hat, ESS)
+#' }
+#'
+#' @noRd
 get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
   fit$summary(
     variables = variables,
@@ -1467,6 +1641,36 @@ get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
   )
 }
 
+#' Format Parameter Summary Table for Display
+#'
+#' @description Formats parameter summary statistics into a clean table with
+#' standardized column names and optional custom row names. Converts technical
+#' column names to user-friendly labels suitable for reporting.
+#'
+#' @param df Data frame containing parameter summary statistics from get_params_summary().
+#' @param row_names Optional character vector of custom row names to replace
+#'   default parameter names (default: NULL uses existing row names).
+#' @param probs Numeric vector of quantile probabilities used for credible
+#'   interval labeling (default: c(0.025, 0.975)).
+#'
+#' @return Data frame with formatted columns and names:
+#'   \itemize{
+#'     \item Estimate: Posterior mean
+#'     \item Est.Error: Posterior standard deviation
+#'     \item l-XX% CI, u-XX% CI: Lower and upper credible interval bounds
+#'     \item R-hat: Convergence diagnostic
+#'     \item Bulk_ESS, Tail_ESS: Effective sample size measures
+#'   }
+#'
+#' @details Column transformations:
+#' \enumerate{
+#'   \item Selects relevant statistical columns
+#'   \item Renames to standard reporting format
+#'   \item Calculates credible interval coverage percentage
+#'   \item Applies custom row names if provided
+#' }
+#'
+#' @noRd
 format_params_summary <- function(
     df,
     row_names = NULL,
@@ -1540,8 +1744,6 @@ format_params_summary <- function(
 #'   \item Provides proper labeling for categorical variables
 #' }
 #'
-#' @export
-#'
 #' @importFrom dplyr select
 #' @importFrom rlang .data
 #'
@@ -1561,6 +1763,8 @@ format_params_summary <- function(
 #' # View varying effects
 #' print(params$varying)
 #' }
+#' 
+#' @noRd
 get_parameters <- function(
   fit,
   effects,
@@ -1668,8 +1872,6 @@ get_parameters <- function(
 #'   \item E-BFMI < 0.3: Indicates potential energy problems in sampling
 #' }
 #'
-#' @export
-#'
 #' @examples
 #' \dontrun{
 #' # Extract diagnostics
@@ -1687,6 +1889,8 @@ get_parameters <- function(
 #'   warning("MCMC diagnostics indicate potential sampling issues")
 #' }
 #' }
+#'
+#' @noRd
 get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
   # Get diagnostic summary
   diag_summary <- fit$diagnostic_summary(quiet = TRUE)
@@ -1759,8 +1963,6 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #'   \item Matches factor levels to original data labels
 #' }
 #'
-#' @export
-#'
 #' @importFrom dplyr select mutate arrange distinct across all_of
 #'
 #' @examples
@@ -1778,6 +1980,8 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #' # View estimates by age group
 #' print(estimates$age)
 #' }
+#' 
+#' @noRd
 get_estimates <- function(
   fit,
   new_data,
@@ -1854,8 +2058,6 @@ get_estimates <- function(
 #'   \item Converts counts to proportions using total sample sizes
 #' }
 #'
-#' @export
-#'
 #' @importFrom rlang .data
 #' @importFrom dplyr select mutate group_by summarise_all ungroup mutate_all
 #'
@@ -1877,6 +2079,8 @@ get_estimates <- function(
 #'   print(summary(y_rep))
 #' }
 #' }
+#'
+#' @noRd
 get_replicates <- function(
   fit,
   input_data,

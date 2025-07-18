@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{tagList} containing persistent UI elements:
+#' @return A `tagList` containing persistent UI elements:
 #' \itemize{
 #'   \item Feedback button linking to external Google Form
 #'   \item Help button for displaying user guides

@@ -1,19 +1,163 @@
 ---
-title: "Getting Started with shinymrp"
+title: "Getting started with shinymrp"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting Started with shinymrp}
+  %\VignetteIndexEntry{Getting started with shinymrp}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+## Overview
+
+shinymrp is a two-in-one package that offers both a graphical and a programmatic interface for applications for Multilevel Regression and Post-stratification (MRP). They parallel each other in their implementation of the data analysis [workflow](https://mrp-interface.github.io/shinymrp/articles/getting-started.html#shinymrp-workflow) that MRP underlies.
+
+We recommend the Shiny app (GUI) for new users. You can launch the Shiny app by running
+
+```{r, eval = FALSE}
+shinymrp::run_app()
 ```
 
-```{r setup}
+For experienced users, the programmatic interface (API) offers more flexibility in exchange for the visual aids that the GUI provides. Users can lay out the workflow and run it from end to end with a single R script execution. Fitting complex statistical models to large datasets can be memory-intensive. The API allows users to utilize computational resources from high-performance computing clusters, which often offer limited support for graphics.
+
+An example of the API is shown below. For a more detailed walkthrough, see the [workflow vignette](https://mrp-interface.github.io/shinymrp/articles/workflow.html).
+
+## Installing CmdStan
+
+### Prerequisites:  C++ Toolchain
+
+shinymrp requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”) for compiling Stan programs. These vary by different operating systems.
+
+
+#### Linux
+
+On most systems, the GNU Make utility is pre-installed and is the default `make` utility.
+There is usually a pre-installed C++ compiler as well, however, it may not be new enough.
+To check your machine, run the commands:
+
+```bash
+g++ --version
+make --version
+```
+
+If these are at least at `g++` version 4.9.3 or later and
+`make` version 3.81 or later, no additional installations are
+necessary. It may still be desirable to update the C++ compiler `g++` because later versions are faster.
+
+A modern C++ compiler and GNU make are bundled into the meta-package `build-essential`,
+and can be installed via the command:
+
+```bash
+sudo apt-get install build-essential
+
+# then rerun checks
+g++ --version
+make --version
+```
+
+#### Mac
+
+On Mac, the C++ compiler and GNU Make are included with Xcode, the Apple toolset for software developers.
+To check if you have the Clang C++ compiler:
+
+```bash
+clang --version
+```
+
+If this command fails, then install Xcode via the following command
+
+```bash
+xcode-select --install
+```
+
+
+#### Windows
+
+For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Install the appropriate version based on the version of R on your machine.
+
+
+
+## MRP Workflow
+
+![](./figures/workflow.png)
+
+The
+
+```{r eval=FALSE}
 library(shinymrp)
+
+# Load sample data
+sample_data <- read.csv("path/to/sample_data.csv")
+
+# Initialize the MRP workflow
+workflow <- mrp_workflow()
+
+
+### DATA PREPARATION
+
+# Preprocess sample data
+workflow$preprocess(
+  sample_data,
+  is_timevar = TRUE,
+  is_aggregated = FALSE,
+  special_case = NULL,
+  family = "binomial"
+)
+
+# Link data to the ACS
+# and obtain post-stratification data
+workflow$link_acs(
+  link_geo = "zip",
+  acs_year = 2021
+)
+
+
+### DESCRIPTIVE STATISTICS
+
+# Visualize demographic distribution of data
+workflow$demo_bars(demo = "sex")
+
+# Visualize geographic distribution of data
+workflow$sample_size_map()
+
+# Visualize outcome measure
+workflow$outcome_plot()
+
+
+### MODEL BUILDING
+
+# Create new model objects
+model <- workflow$create_model(
+  model_spec = list(
+    Intercept = list(
+      Intercept = ""
+    ),
+    fixed = list(
+      sex = "",
+      race = ""
+    ),
+    varying = list(
+      age = "",
+      time = ""
+    )
+  )
+)
+
+# Run MCMC
+model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+
+# Estimates summary and diagnostics
+model$summary()
+
+# Sampling diagnostics
+model$diagnostics()
+
+# Posterior predictive check
+model$pp_check()
+
+
+### VISUALIZE RESULTS
+workflow$estimate_plot(model, subgroup = "sex")
+
+workflow$estimate_map(model, geo = "county")
+
 ```

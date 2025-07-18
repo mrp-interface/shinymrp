@@ -255,12 +255,12 @@ combine_tracts_covid <- function(
     filter(if_all(all_of(covar_colnames), ~ !all(is.na(.)))) %>%
     summarize(
       county = first(county),
-      urbanicity  = 1 - sum((pop_size / sum(pop_size, na.rm = TRUE)) * (urbanicity == "N"), na.rm = TRUE),
-      college     = sum(above_college, na.rm = TRUE) / (sum(below_college, na.rm = TRUE) + sum(above_college, na.rm = TRUE)),
-      employment  = sum(employed, na.rm = TRUE) / (sum(employed, na.rm = TRUE) + sum(unemployed, na.rm = TRUE) + sum(other, na.rm = TRUE)),
-      poverty     = sum(`0-0.99`, na.rm = TRUE) / (sum(`0-0.99`, na.rm = TRUE) + sum(`1-1.99`, na.rm = TRUE) + sum(`2+`, na.rm = TRUE)),
-      income      = sum((pop_size / sum(pop_size, na.rm = TRUE)) * household_income, na.rm = TRUE),
-      ADI         = sum((pop_size / sum(pop_size, na.rm = TRUE)) * adi, na.rm = TRUE)
+      urbanicity = 1 - sum((pop_size / sum(pop_size, na.rm = TRUE)) * (urbanicity == "N"), na.rm = TRUE),
+      college = sum(above_college, na.rm = TRUE) / (sum(below_college, na.rm = TRUE) + sum(above_college, na.rm = TRUE)),
+      employment = sum(employed, na.rm = TRUE) / (sum(employed, na.rm = TRUE) + sum(unemployed, na.rm = TRUE) + sum(other, na.rm = TRUE)),
+      poverty = sum(`0-0.99`, na.rm = TRUE) / (sum(`0-0.99`, na.rm = TRUE) + sum(`1-1.99`, na.rm = TRUE) + sum(`2+`, na.rm = TRUE)),
+      income = sum((pop_size / sum(pop_size, na.rm = TRUE)) * household_income, na.rm = TRUE),
+      adi = sum((pop_size / sum(pop_size, na.rm = TRUE)) * adi, na.rm = TRUE)
     )
   
   return(list(

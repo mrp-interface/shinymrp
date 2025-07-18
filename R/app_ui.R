@@ -14,7 +14,14 @@ app_ui <- function(request) {
       color = waiter::transparent(1)
     ),
     bslib::page_navbar(
-      title = "MRP",
+      title = tagList(
+        tags$img(
+          src = "www/favicon.svg",
+          height = "50px",
+          alt = "MRP"
+        )
+      ),
+      window_title = "shinymrp",
       id = "navbar",
       theme = bslib::bs_theme(version = 5) %>% 
         bslib::bs_add_rules(GLOBAL$ui$style$global),

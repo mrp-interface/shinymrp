@@ -8,7 +8,7 @@
 #'
 #' @param id Character string. The module's namespace identifier.
 #'
-#' @return A \code{bslib::layout_sidebar} containing the model fitting interface with:
+#' @return A `bslib::layout_sidebar` containing the model fitting interface with:
 #' \itemize{
 #'   \item Sidebar with model specification controls and file upload
 #'   \item Virtual select inputs for fixed/varying effects and interactions
@@ -486,7 +486,7 @@ mod_analyze_model_server <- function(id, global){
               plot_ppc_timevar_subset(
                 yrep = yreps[[i]],
                 raw = inputs[[i]],
-                dates = global$plot_data$dates,
+                dates = global$plotdata$dates,
                 metadata = global$metadata
               )
             } else {
@@ -689,10 +689,10 @@ mod_analyze_model_server <- function(id, global){
       # Try to fit the model
       tryCatch({
         # assign default priors to all selected effects
-        all_priors <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
-        for(type in c("fixed", "varying", "interaction")) {
+        effects <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
+        for(type in GLOBAL$args$effect_types) {
           for(v in input[[type]]) {
-            all_priors[[type]][[v]] <- GLOBAL$default_priors[[type]]
+            effects[[type]][[v]] <- GLOBAL$default_priors[[type]]
           }
         }
     
@@ -704,23 +704,20 @@ mod_analyze_model_server <- function(id, global){
           if(!is.null(nullify(dist))) {
             for(s in eff) {
               ss <- strsplit(s, split = "_")[[1]]
-              all_priors[[ss[1]]][[ss[2]]] <- dist
+              effects[[ss[1]]][[ss[2]]] <- dist
             }
           }
         }
         
-        # classify effects
-        all_priors <- all_priors %>%
-          group_effects(global$mrp$input) %>%
-          ungroup_effects()
-        
         # Create model object
         model <- list()
-        model$effects <- all_priors
-        model$formula <- create_formula(all_priors)
+        model$effects <- effects %>%
+          group_effects(global$mrp$input) %>%
+          ungroup_effects()
+        model$formula <- create_formula(effects)
         model$mrp <- global$mrp
-        model$plot_data <- global$plot_data
-        model$link_data <- global$link_data
+        model$plotdata <- global$plotdata
+        model$linkdata <- global$linkdata
         model$metadata <- c(global$metadata, list(
           n_iter = n_iter,
           n_chains = n_chains,
@@ -923,7 +920,7 @@ mod_analyze_model_server <- function(id, global){
           plot_ppc_timevar_subset(
             yrep = model$yrep,
             raw = model$mrp$input,
-            dates = global$plot_data$dates,
+            dates = global$plotdata$dates,
             metadata = global$metadata
           )
         } else {
@@ -1037,7 +1034,7 @@ mod_analyze_model_server <- function(id, global){
       eventExpr = list(
         global$data,
         global$metadata,
-        global$link_data
+        global$linkdata
       ), 
       handlerExpr = {
         # reset input fields

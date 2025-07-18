@@ -15,7 +15,6 @@ source("R/fct_model.R")
 #' @param week_date Data frame with week-index-to-date conversion information
 #'
 #' @return Data frame with date column added
-#' @export
 add_date <- function(data, week_date) {
   if("time" %in% names(data)) {
     data <- data %>%
@@ -40,7 +39,6 @@ add_date <- function(data, week_date) {
 #' @param n_geo Number of consecutive geographic units to sample
 #'
 #' @return Data frame with geographic variables added
-#' @export
 add_geo <- function(
     geo_vars,
     data,
@@ -84,8 +82,6 @@ add_geo <- function(
 #' @param seed Random seed for reproducibility
 #'
 #' @return Data frame with added covariate columns
-#' @export
-#'
 add_covariates <- function(
     data,
     geo_col,
@@ -140,7 +136,6 @@ add_covariates <- function(
 #' @param seed Random seed for reproducibility
 #'
 #' @return Data frame with individual-level variables
-#' @export
 create_base_data <- function(
     indiv_vars,
     n_samples = 10000,
@@ -179,7 +174,6 @@ create_base_data <- function(
 #' @param seed Random seed for reproducibility
 #'
 #' @return List containing simulated data, effects specification, and parameters
-#' @export
 simulate_data <- function(
     base_data,
     effects,
@@ -323,7 +317,6 @@ prepare_indiv_agg <- function(
 #' @param covar_geo Geographic column name to use for covariates
 #'
 #' @return TRUE if all checks pass
-#' @export
 check_simulation_input <- function(effects, params, family, covar_geo, include_date) {
   # Check family argument
   family <- match.arg(family, c("binomial", "normal"))
@@ -387,7 +380,6 @@ check_simulation_input <- function(effects, params, family, covar_geo, include_d
 #' @param save_path Path to save CSV outputs (NULL to skip saving)
 #'
 #' @return List containing individual data, aggregated data, effects, and parameters
-#' @export
 run_simulation <- function(
     effects,
     params,
@@ -496,7 +488,6 @@ run_simulation <- function(
 #' @param return_plots Whether to return plot objects (default: FALSE)
 #'
 #' @return 
-#' @export
 check_simulation_result <- function(
     sim_data,
     effects,
