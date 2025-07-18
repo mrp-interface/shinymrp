@@ -36,6 +36,12 @@ jobs:
         with:
           extra-packages: any::pkgdown
 
+      - name: Install cmdstan
+        run: |
+          cmdstanr::check_cmdstan_toolchain(fix = TRUE)
+          cmdstanr::install_cmdstan(cores = 2)
+        shell: Rscript {0}
+
       - name: Build pkgdown site
         run: pkgdown::build_site()
         shell: Rscript {0}
