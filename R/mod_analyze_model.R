@@ -714,7 +714,7 @@ mod_analyze_model_server <- function(id, global){
         model$effects <- effects %>%
           group_effects(global$mrp$input) %>%
           ungroup_effects()
-        model$formula <- create_formula(effects)
+        model$formula <- create_formula(model$effects)
         model$mrp <- global$mrp
         model$plotdata <- global$plotdata
         model$linkdata <- global$linkdata
