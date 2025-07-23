@@ -260,7 +260,7 @@ MRPModel <- R6::R6Class(
     #' @param model Fitted MRPModel object to save
     #' @param file File path where the model should be saved
     save = function(file) {
-      checkmate::assert_file_exists(file)
+      checkmate::assert_file_exists(file, access = "w")
 
       # load CmdStan output files into the fitted model object
       if (!is.null(private$fit_)) {
