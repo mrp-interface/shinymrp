@@ -59,7 +59,7 @@ MRPModel <- R6::R6Class(
       private$effects_ <- effects %>%
         group_effects(mrp$input) %>%
         ungroup_effects()
-      private$formula_ <- create_formula(effects)
+      private$formula_ <- create_formula(private$effects_)
       private$mrp_ <- mrp
       private$metadata_ <- metadata
       private$linkdata_ <- linkdata

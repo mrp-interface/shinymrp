@@ -586,6 +586,14 @@ rename_columns <- function(
   dplyr::rename(df, !!!rename_spec)
 }
 
+remove_duplicates <- function(data, is_covid = FALSE) {
+  if (is_covid) {
+    data <- remove_duplicates_covid(data)
+  }
+
+  return(data)
+}
+
 #' Impute missing values using frequency-based sampling
 #'
 #' @title Impute missing values using frequency-based sampling
@@ -1781,7 +1789,7 @@ preprocess <- function(
   if (metadata$is_timevar) {
     indiv_vars <- c(indiv_vars, "time")
   }
-  
+
   # Clean data
   data <- clean_data(data)
 
@@ -1806,6 +1814,9 @@ preprocess <- function(
     if (metadata$is_timevar) {
       data <- add_week_indices(data)
     }
+
+    # remove duplicate rows
+    data <- remove_duplicates(data, is_covid)
 
     # recode values to expected levels
     data <- recode_values(data, levels, is_covid)

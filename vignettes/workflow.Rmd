@@ -57,21 +57,21 @@ The application screens input data using a specific naming convention. Here's a 
 - Race: Black, White, other
 - Age
 - Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
-- ZIP code [^1]
-- County [^1]
-- State [^1]
-- Week indices (time) [^2]
+- ZIP code [^geo]
+- County [^geo]
+- State [^geo]
+- Week indices (time) [^time]
 - Date
-- Continuous outcome measure (outcome) [^3]
-- Positive response indicator or number of positive responses (positive) [^4]
-- Cross-tabulation cell counts (total) [^4]
-- Survey weights (weight) [^5]
+- Continuous outcome measure (outcome) [^outcome-cont]
+- Positive response indicator or number of positive responses (positive) [^outcome-bin]
+- Cross-tabulation cell counts (total) [^outcome-bin]
+- Survey weights (weight) [^weight]
 
-[^1]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
-[^2]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.
-[^3]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
-[^4]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
-[^5]: Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.
+[^geo]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
+[^time]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.
+[^outcome-cont]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
+[^outcome-bin]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
+[^weight]: Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.
 
 ```{r}
 workflow$preprocess(
