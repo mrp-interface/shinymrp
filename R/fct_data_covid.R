@@ -81,6 +81,16 @@ rename_columns_covid <- function(df) {
   return(df)
 }
 
+remove_duplicates_covid <- function(df) {
+  # only keep the latest result if a patient have multiple tests in the same week
+  df <- df |>
+    dplyr::group_by(.data$id, .data$time) |>
+    dplyr::slice_max(.data$time, n = 1, with_ties = FALSE) |>
+    dplyr::ungroup()
+
+  return(df)
+}
+
 #' Recode COVID data values to expected levels
 #'
 #' @title Standardize COVID data values for MRP analysis
@@ -529,6 +539,8 @@ prepare_mrp_covid <- function(
 
   # filter out state and zip codes with small sample sizes
   input_data <- filter_state_zip(input_data, covariates)
+  # prep_old <- readRDS("/Users/tntoan/Desktop/MRP/Code/mrp_workflow_paper/preprocessed_old.RDS")
+  # covariates <- prep_old$covar |> rename("adi" = "ADI", "county" = "fips")
   covariates <- covariates %>% filter(.data$zip %in% input_data$zip)
   pstrat_data <- pstrat_data %>% filter(.data$zip %in% input_data$zip)
   cell_counts <- pstrat_data[-c(1, 2)] %>% t() %>% c()

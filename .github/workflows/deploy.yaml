@@ -55,7 +55,7 @@ jobs:
         run: |
           options(rsconnect.packrat = TRUE)
           rsconnect::deployApp(
-            appDir      = 'inst/app',
+            appDir      = '.',
             appName     = 'shinymrp',
             server      = 'shinyapps.io',
             forceUpdate = TRUE
