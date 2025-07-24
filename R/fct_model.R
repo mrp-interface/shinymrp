@@ -25,6 +25,7 @@
 #'
 #' @importFrom stringr str_interp
 create_formula <- function(effects) {
+
   m_fix_c <- names(effects$m_fix_c) %>%
     purrr::map_chr(function(s) strsplit(s, "\\.")[[1]][1]) %>%
     unique()
@@ -97,24 +98,36 @@ clean_prior_syntax <- function(s) {
 #'
 #' @noRd
 check_prior_syntax <- function(s) {
-  if(is.null(nullify(s))) {
+  if (is.null(nullify(s))) {
     return(TRUE)
   }
 
+  # decimal patterns:
+  decimal <- "[0-9]+(?:\\.[0-9]+)?"    # e.g. 0, 3.14, 42
+  signed_decimal <- "-?[0-9]+(?:\\.[0-9]+)?" # e.g. -1,  0.5, -2.718
+
   patterns <- list(
-    normal = "^normal\\([0-9]+,[1-9][0-9]*\\)$",
-    student_t = "^student_t\\([1-9][0-9]*,[0-9]+,[1-9][0-9]*)$",
+    normal    = paste0("^normal\\(",
+                       signed_decimal, ",",    # mean can be negative or positive decimal
+                       decimal,                # sd must be non-negative decimal
+                       "\\)$"),
+    student_t = paste0("^student_t\\(",
+                       "[1-9][0-9]*,",         # df: positive integer
+                       signed_decimal, ",",    # location (μ): signed decimal
+                       decimal,                # scale (σ): non-negative decimal
+                       "\\)$"),
     structured = "^structured$"
   )
-  
-  dist <- strsplit(s, '\\(')[[1]][1]
-  
-  if(dist %in% names(patterns)) {
-    return(grepl(patterns[[dist]], s))
+
+  dist <- strsplit(s, "\\(", fixed = FALSE)[[1]][1]
+
+  if (dist %in% names(patterns)) {
+    grepl(patterns[[dist]], s)
   } else {
-    return(FALSE)
+    FALSE
   }
 }
+
 
 #' Set Default Prior Distributions for Model Effects
 #'
