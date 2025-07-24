@@ -116,6 +116,14 @@ app_ui <- function(request) {
       bslib::nav_item(
         tags$a(
           class = "btn",
+          href = "https://mrp-interface.github.io/shinymrp/index.html",
+          target = "_blank",
+          bsicons::bs_icon("info-circle-fill", size = "1.5em")
+        )
+      ),
+      bslib::nav_item(
+        tags$a(
+          class = "btn",
           href = "https://docs.google.com/forms/d/e/1FAIpQLSdqjTlLsdziJNnPjGGR7vYbNxYeAGdLg5oAxEGMD1EA92g-UQ/viewform?usp=sf_link",
           target = "_blank",
           bsicons::bs_icon("chat-text-fill", size = "1.5em")
