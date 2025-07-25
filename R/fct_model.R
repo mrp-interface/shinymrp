@@ -1955,6 +1955,7 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #'     \item pstrat_vars: Character vector of demographic variables for subgroup analysis
 #'     \item is_timevar: Logical indicating whether estimates vary over time
 #'   }
+#' @param interval Confidence interval level for the estimates (default is 0.95)
 #'
 #' @return Named list of data frames, one for each demographic subgroup plus overall:
 #'   \item{overall}{Overall population estimates}
@@ -1998,8 +1999,11 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 get_estimates <- function(
   fit,
   new_data,
-  metadata
+  metadata,
+  interval = 0.95
 ) {
+
+  out <- check_interval(interval)
   
   # convert new data to numeric factors
   col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
@@ -2022,14 +2026,29 @@ get_estimates <- function(
     new_col_names <- if(metadata$is_timevar) c("time", "factor") else c("factor")
 
     # Order raw levels based on numeric levels to match order of posterior draws matrix
-    est[[s]] <- new_data %>%
+    est_ <- new_data %>%
       arrange(across(all_of(col_names))) %>%
       distinct(across(all_of(raw_col_names))) %>%
-      stats::setNames(new_col_names) %>%
-      mutate(
-        est = pred_mat %>% apply(1, mean),
-        std = pred_mat %>% apply(1, stats::sd)
-      )
+      stats::setNames(new_col_names)
+
+    if (out$is_ci) {
+      est[[s]] <- est_ %>%
+        mutate(
+          est = pred_mat %>% apply(1, mean),
+          lower = pred_mat %>% apply(1, quantile, probs = out$qlower),
+          upper = pred_mat %>% apply(1, quantile, probs = out$qupper)
+        )
+
+    } else {
+      est[[s]] <- est_ %>%
+        mutate(
+          est = pred_mat %>% apply(1, mean),
+          std = pred_mat %>% apply(1, stats::sd),
+          lower = .data$est - out$n_sd * .data$std,
+          upper = .data$est + out$n_sd * .data$std
+        ) %>%
+        select(-.data$std)
+    }
   }
 
   return(est)
@@ -2051,7 +2070,6 @@ get_estimates <- function(
 #'     \item family: Distribution family ("binomial" or "normal")
 #'   }
 #' @param N Integer. Number of posterior draws to extract for replication (default: 10).
-#' @param pred_interval Numeric. Prediction interval coverage for summary statistics (default: 0.95).
 #'
 #' @return Posterior predictive replications:
 #'   \itemize{
@@ -2098,12 +2116,8 @@ get_replicates <- function(
   fit,
   input_data,
   metadata,
-  N = 10,
-  pred_interval = 0.95
+  N = 10
 ) {
-
-  qlower <- (1 - pred_interval) / 2
-  qupper <- 1 - qlower
 
   # get draws from cmdstanr fit
   yrep_mat <- fit$draws(

@@ -250,7 +250,8 @@ prep_raw <- function(
 #' @param geo Character string specifying geographic level, either "county" or "state"
 #' @param time_index Optional integer specifying which time point to filter to
 #'   for time-varying estimates
-#'
+#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
+#' 
 #' @return A data frame with estimates, geographic information, and formatted hover
 #'   text for map visualization
 #'
@@ -260,7 +261,8 @@ prep_est <- function(
     est_df,
     fips_codes,
     geo,
-    time_index = NULL
+    time_index = NULL,
+    interval = 0.95
 ) {
   
   checkmate::assert_choice(
@@ -273,31 +275,35 @@ prep_est <- function(
     return(NULL)
   }
 
+  out <- check_interval(interval)
+
   fips_codes <- fips_codes %>% fips_upper()
   
   if(!is.null(time_index)) {
     est_df <- est_df %>% filter(.data$time == time_index)
   }
-
+  View(est_df)
   plot_df <- est_df %>%
     rename("fips" = "factor") %>%
     left_join(fips_codes, by = "fips")
 
-  if(geo == "state") {
-    plot_df <- plot_df %>% mutate(
-      value = .data$est,
-      hover = paste0(
-        .data$state, ": ", round(.data$est, 4), ' \u00B1 ', round(.data$std, 4)
-      )
+  # construct hover text
+  plot_df <- plot_df %>%
+    mutate(
+      hover_pre = if (geo == "state") {
+        paste0(.data$state, ": ", round(.data$est, 4))
+      } else {
+        paste0(.data$county, " (", .data$state, "): ", round(.data$est, 4))
+      },
+      hover_post = if (out$is_ci) {
+        paste0("<br/>", interval * 100, "% CI: ",
+               round(.data$lower, 4), " - ", round(.data$upper, 4))
+      } else {
+        paste0(" \u00B1 ", round((.data$est - .data$lower), 4))
+      },
+      hover = paste0(.data$hover_pre, .data$hover_post),
+      value = .data$est
     )
-  } else {
-    plot_df <- plot_df %>% mutate(
-      value = .data$est,
-      hover = paste0(
-        .data$county, " (", .data$state, "): ", round(.data$est, 4), ' \u00B1 ', round(.data$std, 4)
-      )
-    )
-  }
 
   return(plot_df)
 }
@@ -526,15 +532,11 @@ plot_outcome_timevar <- function(
 
   if(!is.null(yrep_est)) {
     plot_df <- plot_df %>%
-      left_join(yrep_est, by = "time") %>%
-      mutate(
-        bound_upper = .data$est + .data$std,
-        bound_lower = .data$est - .data$std
-      )
+      left_join(yrep_est, by = "time")
 
     if (metadata$family == "binomial") {
       # ensure bounds are non-negative for binomial family
-      plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
+      plot_df$lower[plot_df$lower < 0] <- 0
     }
   }
 
@@ -562,8 +564,8 @@ plot_outcome_timevar <- function(
       geom_ribbon(
         aes(
           y = .data$est,
-          ymin = .data$bound_lower,
-          ymax = .data$bound_upper
+          ymin = .data$lower,
+          ymax = .data$upper
         ),
         fill = config$mrp_color,
         alpha = 0.5
@@ -656,9 +658,9 @@ plot_outcome_static <- function(
     yrep_est <- yrep_est %>%
       mutate(
         data = "Estimate",
-        lower = .data$est - .data$std,
+        lower = .data$lower,
         median = .data$est,
-        upper = .data$est + .data$std
+        upper = .data$upper
       ) %>%
       select(.data$data, .data$lower, .data$median, .data$upper) 
 
@@ -979,17 +981,12 @@ plot_est_timevar <- function(
   xticks <- seq(1, max(plot_df$time, na.rm = TRUE), step)
   xticklabels <- if(!is.null(dates)) dates[xticks] else xticks
 
-  plot_df <- plot_df %>% mutate(
-    bound_lower = .data$est - .data$std,
-    bound_upper = .data$est + .data$std
-  )
-
   if(metadata$family == "binomial") {
     # ensure bounds are non-negative for binomial family
-    plot_df$bound_lower[plot_df$bound_lower < 0] <- 0
+    plot_df$lower[plot_df$lower < 0] <- 0
   }
   config <- list(
-    limits = c(min(plot_df$bound_lower), max(plot_df$bound_upper)),
+    limits = c(min(plot_df$lower), max(plot_df$upper)),
     expand = switch(metadata$family,
       "binomial" = c(5e-3, 0.1),
       c(0.1, 0.1)
@@ -1037,8 +1034,8 @@ plot_est_timevar <- function(
       geom_ribbon(
         aes(
           fill = .data$factor,
-          ymin = .data$bound_lower,
-          ymax = .data$bound_upper
+          ymin = .data$lower,
+          ymax = .data$upper
         ),
         alpha = 0.5
       ) +
@@ -1112,8 +1109,8 @@ plot_est_static <- function(plot_df, metadata = NULL) {
     geom_errorbar(
       aes(
         x = .data$factor,
-        ymin = .data$est - .data$std,
-        ymax = .data$est + .data$std
+        ymin = .data$lower,
+        ymax = .data$upper
       ),
       size = GLOBAL$plot$errorbar_size,
       width = GLOBAL$plot$errorbar_width
