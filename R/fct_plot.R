@@ -403,13 +403,7 @@ plot_demographic <- function(
       limits = c(0, 1),
       expand = c(0, 0)
     ) &
-    labs(x = "", y = "") &
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0.5),
-      plot.margin = margin(1, 1, 1, 1, "cm")
-    )
-
+    labs(x = "", y = "")
 
   return(p)
 }
@@ -479,8 +473,7 @@ plot_geographic <- function(
     ) +
     theme(
       plot.subtitle = element_text(size = 16, hjust = 0),
-      plot.caption = element_text(size = 16, hjust = 0.5),
-      plot.margin = margin(1, 1, 1, 1, "cm")
+      plot.caption = element_text(size = 16, hjust = 0.5)
     )
 
   return(p)
@@ -615,9 +608,7 @@ plot_outcome_timevar <- function(
     ) +
     theme(
       legend.title = element_blank(),
-      legend.position = if(is.null(yrep_est)) "none" else "bottom",
-      plot.caption = element_text(hjust = 0.5),
-      plot.margin = margin(1, 1, 1, 1, "cm")
+      legend.position = if(is.null(yrep_est)) "none" else "bottom"
     )
 
   return(p)
@@ -696,11 +687,6 @@ plot_outcome_static <- function(
       } else {
         NULL
       }
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0.5),
-      plot.margin = margin(1, 1, 1, 1, "cm")
     )
 
   return(p)
@@ -796,8 +782,7 @@ plot_ppc_timevar_subset <- function(
       )
     ) +
     theme(
-      legend.title = element_blank(),
-      plot.margin = margin(1, 1, 1, 1, "cm")
+      legend.title = element_blank()
     )
 
 }
@@ -895,8 +880,7 @@ plot_ppc_timevar_all <- function(
       values = c("Raw" = config$raw_color, "Replicated" = config$yrep_color)
     ) +
     theme(
-      legend.title = element_blank(),
-      plot.margin = margin(1, 1, 1, 1, "cm")
+      legend.title = element_blank()
     )
 
   return(p)
@@ -957,10 +941,7 @@ plot_ppc_static <- function(
       )
     ) +
     theme(
-      legend.title = element_blank(),
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0.5),
-      plot.margin = margin(1, 1, 1, 1, "cm")
+      legend.title = element_blank()
     )
 }
 
@@ -1096,8 +1077,7 @@ plot_est_timevar <- function(
     ncol = 1,
     nrow = length(levels) + 1
   ) +
-    patchwork::plot_annotation(caption = "*The shaded areas represent \u00B11 SD of uncertainty") &
-    theme(plot.caption = element_text(hjust = 0.5))
+    patchwork::plot_annotation(caption = "*The shaded areas represent \u00B11 SD of uncertainty")
 
   return(p)
 }
@@ -1150,10 +1130,7 @@ plot_est_static <- function(plot_df, metadata = NULL) {
       caption = "*The error bars represent \u00B11 SD of uncertainty"
     ) +
     theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.caption = element_text(hjust = 0.5),
-      axis.text.x = element_text(angle = if(n_distinct(plot_df$factor) > 20) 90 else 0),
-      plot.margin = margin(1, 1, 1, 1, "cm")
+      axis.text.x = element_text(angle = if(n_distinct(plot_df$factor) > 20) 90 else 0)
     )
 
   return(p)

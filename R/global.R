@@ -43,7 +43,7 @@ GLOBAL <- list(
       width = 18,
       height = 8,
       dpi = 300,
-      unit = "in"
+      units = "in"
     )
   ),
   ui = list(

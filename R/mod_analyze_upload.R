@@ -357,13 +357,15 @@ mod_analyze_upload_server <- function(id, global){
           )
         )
         
-      if (global$metadata$family == "normal") {
+      if (global$metadata$family == "normal" &&
+          "outcome" %in% names(df)) {
         df <- df %>%
           DT::formatRound(
             columns = c("outcome"),
             digits = 4
           )
-      } else {
+      } else if (global$metadata$family == "binomial" &&
+                 "positive" %in% names(df)) {
         df <- df %>%
           DT::formatStyle(
             columns = c("positive"),
