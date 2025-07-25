@@ -24,6 +24,8 @@ and post-stratification.
 \item \href{#method-MRPModel-metadata}{\code{MRPModel$metadata()}}
 \item \href{#method-MRPModel-plotdata}{\code{MRPModel$plotdata()}}
 \item \href{#method-MRPModel-linkdata}{\code{MRPModel$linkdata()}}
+\item \href{#method-MRPModel-stan_data}{\code{MRPModel$stan_data()}}
+\item \href{#method-MRPModel-stan_code}{\code{MRPModel$stan_code()}}
 \item \href{#method-MRPModel-fit}{\code{MRPModel$fit()}}
 \item \href{#method-MRPModel-check_fit_exists}{\code{MRPModel$check_fit_exists()}}
 \item \href{#method-MRPModel-code}{\code{MRPModel$code()}}
@@ -125,6 +127,26 @@ Retrieves the data linking information including geography and ACS year.
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MRPModel-stan_data"></a>}}
+\if{latex}{\out{\hypertarget{method-MRPModel-stan_data}{}}}
+\subsection{Method \code{stan_data()}}{
+Retrieves the Stan data structure used for MCMC sampling
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MRPModel$stan_data()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MRPModel-stan_code"></a>}}
+\if{latex}{\out{\hypertarget{method-MRPModel-stan_code}{}}}
+\subsection{Method \code{stan_code()}}{
+Retrieves Stan code.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MRPModel$stan_code()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MRPModel-fit"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPModel-fit}{}}}
 \subsection{Method \code{fit()}}{
@@ -213,9 +235,16 @@ Runs leave-one-out cross-validation to assess model predictive performance and e
 \subsection{Method \code{poststratify()}}{
 Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPModel$poststratify()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MRPModel$poststratify(interval = 0.95)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{interval}}{Confidence interval or standard deviation for the estimates (default is 0.95)}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MRPModel-save"></a>}}

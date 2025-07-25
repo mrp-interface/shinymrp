@@ -282,7 +282,7 @@ prep_est <- function(
   if(!is.null(time_index)) {
     est_df <- est_df %>% filter(.data$time == time_index)
   }
-  View(est_df)
+
   plot_df <- est_df %>%
     rename("fips" = "factor") %>%
     left_join(fips_codes, by = "fips")
@@ -491,8 +491,10 @@ plot_geographic <- function(
 #' model estimates and uncertainty bands. Supports both raw data and MRP estimates.
 #'
 #' @param raw A data frame containing raw survey data with time, positive, and total columns
-#' @param dates Optional character vector of date labels for x-axis
 #' @param yrep Optional data frame containing model estimates with time, est, and std columns
+#' @param dates Optional character vector of date labels for x-axis
+#' @param metadata A list containing metadata
+#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
 #' @param show_caption Logical indicating whether to show uncertainty caption
 #'
 #' @return A ggplot object showing prevalence time series with optional estimates
@@ -505,6 +507,7 @@ plot_outcome_timevar <- function(
   yrep_est = NULL,
   dates = NULL,
   metadata = NULL,
+  interval = 0.95,
   show_caption = FALSE,
   config = GLOBAL$plot
 ) {
@@ -512,6 +515,8 @@ plot_outcome_timevar <- function(
   if(is.null(raw)) {
     return(NULL)
   }
+
+  out <- check_interval(interval)
 
   # compute weekly rates/averages
   plot_df <- raw %>%
@@ -592,7 +597,11 @@ plot_outcome_timevar <- function(
         )
       },
       caption = if(show_caption) {
-        "*The shaded areas represent \u00B11 SD of uncertainty"
+        if (out$is_ci) {
+          sprintf("*The shaded areas represent %s%% confidence intervals", interval * 100)
+        } else {
+          "*The shaded areas represent \u00B11 SD of uncertainty"
+        }
       } else {
         NULL
       }
@@ -625,6 +634,8 @@ plot_outcome_timevar <- function(
 #' @param yrep_est A data frame containing model estimates with data, lower, median,
 #'   and upper columns
 #' @param raw A data frame containing raw survey data with positive and total columns
+#' @param metadata A list containing metadata
+#' @param show_caption Logical indicating whether to show uncertainty caption
 #'
 #' @return A ggplot object showing support comparison with error bars
 #'
@@ -635,11 +646,14 @@ plot_outcome_static <- function(
     raw,
     yrep_est = NULL,
     metadata = NULL,
+    interval = 0.95,
     show_caption = FALSE
 ) {
   if(is.null(raw)) {
     return(NULL)
   }
+
+  out <- check_interval(interval)
 
   raw_mean <- switch(metadata$family,
     "binomial" = sum(raw$positive) / sum(raw$total),
@@ -685,7 +699,11 @@ plot_outcome_static <- function(
         "normal" = "Mean estimates"
       ),
       caption = if(show_caption) {
-        "*The error bars represent \u00B11 SD of uncertainty"
+        if (out$is_ci) {
+          sprintf("*The shaded areas represent %s%% confidence intervals", interval * 100)
+        } else {
+          "*The shaded areas represent \u00B11 SD of uncertainty"
+        }
       } else {
         NULL
       }
@@ -955,6 +973,9 @@ plot_ppc_static <- function(
 #'
 #' @param df A data frame containing time-varying estimates with factor, time, est, and std columns
 #' @param dates Optional character vector of date labels for x-axis
+#' @param metadata A list containing metadata
+#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
+#' @param show_caption Logical indicating whether to show uncertainty caption
 #'
 #' @return A patchwork object containing multiple ggplot panels showing time-varying estimates
 #'
@@ -967,11 +988,15 @@ plot_ppc_static <- function(
 plot_est_timevar <- function(
     plot_df,
     dates,
-    metadata = NULL
+    metadata = NULL,
+    interval = 0.95,
+    show_caption = TRUE
 ) {
   if(is.null(nullify(plot_df))) {
     return(NULL)
   }
+
+  out <- check_interval(interval)
 
   levels <- unique(plot_df$factor) %>% sort()
   labels <- levels %>% as.character() %>% tools::toTitleCase()
@@ -1074,7 +1099,17 @@ plot_est_timevar <- function(
     ncol = 1,
     nrow = length(levels) + 1
   ) +
-    patchwork::plot_annotation(caption = "*The shaded areas represent \u00B11 SD of uncertainty")
+    patchwork::plot_annotation(
+      caption = if(show_caption) {
+        if (out$is_ci) {
+          sprintf("*The shaded areas represent %s%% confidence intervals", interval * 100)
+        } else {
+          "*The shaded areas represent \u00B11 SD of uncertainty"
+        }
+      } else {
+        NULL
+      }
+    )
 
   return(p)
 }
@@ -1085,6 +1120,9 @@ plot_est_timevar <- function(
 #' for different factor levels in cross-sectional data.
 #'
 #' @param plot_df A data frame containing estimates with factor, est, and std columns
+#' @param metadata A list containing metadata
+#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
+#' @param show_caption Logical indicating whether to show uncertainty caption
 #'
 #' @return A ggplot object showing static estimates with error bars
 #'
@@ -1093,10 +1131,17 @@ plot_est_timevar <- function(
 #' @importFrom scales percent
 #' @importFrom tools toTitleCase
 #' @importFrom dplyr n_distinct
-plot_est_static <- function(plot_df, metadata = NULL) {
+plot_est_static <- function(
+  plot_df,
+  metadata = NULL,
+  interval = 0.95,
+  show_caption = TRUE
+) {
   if(is.null(nullify(plot_df))) {
     return(NULL)
   }
+
+  out <- check_interval(interval)
 
   p <- ggplot(data = plot_df) +
     geom_point(
@@ -1124,7 +1169,15 @@ plot_est_static <- function(plot_df, metadata = NULL) {
         "binomial" = "Proportion estimates",
         "normal" = "Mean estimates"
       ),
-      caption = "*The error bars represent \u00B11 SD of uncertainty"
+      caption = if(show_caption) {
+        if (out$is_ci) {
+          sprintf("*The shaded areas represent %s%% confidence intervals", interval * 100)
+        } else {
+          "*The shaded areas represent \u00B11 SD of uncertainty"
+        }
+      } else {
+        NULL
+      }
     ) +
     theme(
       axis.text.x = element_text(angle = if(n_distinct(plot_df$factor) > 20) 90 else 0)
