@@ -8,8 +8,18 @@ app_server <- function(input, output, session) {
   # set file upload size limit
   options(shiny.maxRequestSize = 200*1024^2)
 
-    # set ggplot2 theme
-  ggplot2::theme_set(ggplot2::theme_light(base_family = "Arial", base_size = 20))
+  # set ggplot2 theme
+  ggplot2::theme_set(
+    ggplot2::theme_light(
+      base_family = "Arial",
+      base_size   = 20
+    ) +
+      ggplot2::theme(
+        plot.title   = ggplot2::element_text(hjust = 0.5),
+        plot.caption = ggplot2::element_text(hjust = 0.5),
+        plot.margin  = ggplot2::margin(1, 1, 1, 1, "cm")
+      )
+  )
 
   global <- reactiveValues(
     input = input,
