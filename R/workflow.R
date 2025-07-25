@@ -617,6 +617,7 @@ MRPWorkflow <- R6::R6Class(
           yrep_est = NULL,
           dates = private$plotdata_$dates,
           metadata = private$metadata_,
+
           show_caption = FALSE
         )
       } else {
@@ -707,33 +708,59 @@ MRPWorkflow <- R6::R6Class(
     #' @param ... Additional arguments passed to ggsave
     #'
     #' @return A ggplot object showing the group estimates
-    estimate_plot = function(model, group, interval = 0.95, file = NULL, ...) {
+    estimate_plot = function(model, group, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
       private$assert_mrp_exists()
       
       checkmate::assert_choice(
         group,
-        choices = intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels)),
+        choices = c("overall", intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels))),
         null.ok = FALSE
       )
 
+      est_list <- model$poststratify(interval = interval)
 
-      # Convert levels to "factor" type
-      est_df <- model$poststratify(interval = interval)[[group]] %>%
-        rename(!!group := factor) %>%
-        as_factor(model$mrp()$levels[group]) %>%
-        rename(factor := !!sym(group))
+      if (group == "overall") {
+        est_df <- est_list$overall
 
-      p <- if (model$metadata()$is_timevar) {
-        plot_est_timevar(
-          plot_df = est_df,
-          dates = model$plotdata()$dates,
-          metadata = model$metadata()
-        )
+        p <- if(model$metadata()$is_timevar) {
+          plot_outcome_timevar(
+            raw = model$mrp()$input,
+            yrep_est = est_df,
+            dates = model$plotdata()$dates,
+            metadata = model$metadata(),
+            show_caption = show_caption
+          )
+        } else {
+          plot_outcome_static(
+            raw = model$mrp()$input,
+            yrep_est = est_df,
+            metadata = model$metadata(),
+            show_caption = show_caption
+          )
+        }
       } else {
-        plot_est_static(
-          plot_df = est_df,
-          metadata = model$metadata()
-        )
+        # Convert levels to "factor" type
+        est_df <- est_list[[group]] %>%
+          rename(!!group := factor) %>%
+          as_factor(model$mrp()$levels[group]) %>%
+          rename(factor := !!sym(group))
+
+        p <- if (model$metadata()$is_timevar) {
+          plot_est_timevar(
+            plot_df = est_df,
+            dates = model$plotdata()$dates,
+            metadata = model$metadata(),
+            interval = interval,
+            show_caption = show_caption
+          )
+        } else {
+          plot_est_static(
+            plot_df = est_df,
+            metadata = model$metadata(),
+            interval = interval,
+            show_caption = show_caption
+          )
+        }
       }
 
       if (!is.null(file)) {

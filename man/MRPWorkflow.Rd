@@ -259,7 +259,14 @@ A highcharter map object showing outcome measures by geography
 \subsection{Method \code{estimate_plot()}}{
 Creates plots showing MRP estimates for different subgroups, either over time (for time-varying data) or as static estimates (for cross-sectional data).
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$estimate_plot(model, group, file = NULL, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$estimate_plot(
+  model,
+  group,
+  interval = 0.95,
+  show_caption = TRUE,
+  file = NULL,
+  ...
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -268,6 +275,8 @@ Creates plots showing MRP estimates for different subgroups, either over time (f
 \item{\code{model}}{Fitted MRPModel object}
 
 \item{\code{group}}{Character string specifying the demographic group for plotting}
+
+\item{\code{interval}}{Confidence interval or standard deviation for the estimates (default is 0.95)}
 
 \item{\code{file}}{Optional file path to save the plot}
 
@@ -289,6 +298,7 @@ Creates interactive choropleth maps showing MRP estimates by geographic regions.
   model,
   geo = NULL,
   time_index = NULL,
+  interval = 0.95,
   file = NULL,
   ...
 )}\if{html}{\out{</div>}}
@@ -302,6 +312,8 @@ Creates interactive choropleth maps showing MRP estimates by geographic regions.
 \item{\code{geo}}{Character string specifying the geographic level for mapping}
 
 \item{\code{time_index}}{Numeric value specifying the time index for time-varying data}
+
+\item{\code{interval}}{Confidence interval or standard deviation for the estimates (default is 0.95)}
 
 \item{\code{file}}{Optional file path to save the map}
 

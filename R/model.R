@@ -100,10 +100,12 @@ MRPModel <- R6::R6Class(
       return(private$linkdata_)
     },
     
+    #' @description Retrieves the Stan data structure used for MCMC sampling
     stan_data = function() {
       return(private$stan_data_)
     },
 
+    #' @description Retrieves Stan code.
     stan_code = function() {
       return(private$stan_code_)
     },

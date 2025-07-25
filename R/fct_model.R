@@ -2035,8 +2035,8 @@ get_estimates <- function(
       est[[s]] <- est_ %>%
         mutate(
           est = pred_mat %>% apply(1, mean),
-          lower = pred_mat %>% apply(1, quantile, probs = out$qlower),
-          upper = pred_mat %>% apply(1, quantile, probs = out$qupper)
+          lower = pred_mat %>% apply(1, stats::quantile, probs = out$qlower),
+          upper = pred_mat %>% apply(1, stats::quantile, probs = out$qupper)
         )
 
     } else {
