@@ -709,7 +709,6 @@ MRPWorkflow <- R6::R6Class(
     #'
     #' @return A ggplot object showing the group estimates
     estimate_plot = function(model, group, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
-      private$assert_mrp_exists()
       
       checkmate::assert_choice(
         group,
@@ -791,7 +790,6 @@ MRPWorkflow <- R6::R6Class(
       file = NULL,
       ...
     ) {
-      private$assert_mrp_exists()
 
       if (is.null(model$linkdata()$link_geo)) {
         stop("Linking geography is not available.")
@@ -880,7 +878,6 @@ MRPWorkflow <- R6::R6Class(
     #' @param file Optional file path to save the plot
     #' @param ... Additional arguments passed to ggsave
     pp_check = function(model, file = NULL, ...) {
-      private$assert_mrp_exists()
 
       p <- if (model$metadata()$is_timevar) {
         plot_ppc_timevar_subset(
@@ -913,7 +910,6 @@ MRPWorkflow <- R6::R6Class(
     #'
     #' @return A data frame summarizing the comparison results
     compare_models = function(..., suppress = NULL) {
-      private$assert_mrp_exists()
 
       if (length(list(...)) < 2) {
         stop("At least two models are required for comparison.")
