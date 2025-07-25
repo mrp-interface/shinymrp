@@ -36,6 +36,6 @@ Vignettes do not come with the installation, but they are always available onlin
 
 ### Installing CmdStan
 
-The package uses [CmdStanR](https://mc-stan.org/cmdstanr/) to handle the statistical modeling step of MRP, so its prerequisite, [CmdStan](https://mc-stan.org), is required. For more details about the setup, refer to the "Getting started with shinymrp" vignette.
+The package uses [CmdStanR](https://mc-stan.org/cmdstanr/) to handle the statistical modeling step of MRP, so its prerequisite, [CmdStan](https://mc-stan.org), is required. For more details about the setup, refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started) vignette.
 
 > *This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.*

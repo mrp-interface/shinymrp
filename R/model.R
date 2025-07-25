@@ -31,6 +31,7 @@ MRPModel <- R6::R6Class(
     log_lik_ = NULL,
     yrep_ = NULL,
     est_ = NULL,
+    buffer = NULL,
 
     assert_fit_exists = function() {
       if (!self$check_fit_exists()) {
@@ -64,6 +65,9 @@ MRPModel <- R6::R6Class(
       private$metadata_ <- metadata
       private$linkdata_ <- linkdata
       private$plotdata_ <- plotdata
+      private$buffer <- list(
+        interval = NULL
+      )
     },
 
     #' @description Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
@@ -94,6 +98,14 @@ MRPModel <- R6::R6Class(
     #' @description Retrieves the data linking information including geography and ACS year.
     linkdata = function() {
       return(private$linkdata_)
+    },
+    
+    stan_data = function() {
+      return(private$stan_data_)
+    },
+
+    stan_code = function() {
+      return(private$stan_code_)
     },
 
     #' @description Fits the MRP model using Stan for Bayesian estimation with MCMC sampling.
@@ -230,10 +242,13 @@ MRPModel <- R6::R6Class(
 
     #' @description Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
     #'
-    poststratify = function() {
+    #' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
+    poststratify = function(interval = 0.95) {
       private$assert_fit_exists()
 
-      if (is.null(private$est_)) {
+      check_interval(interval)
+
+      if (is.null(private$buffer$interval) || private$buffer$interval != interval) {
         message("Running post-stratification...")
 
         # run standalone generated quantities for post-stratification
@@ -248,8 +263,12 @@ MRPModel <- R6::R6Class(
         private$est_ <- get_estimates(
           fit_pstrat,
           private$mrp_$new,
-          private$metadata_
+          private$metadata_,
+          interval = interval
         )
+
+        # store the interval in the buffer
+        private$buffer$interval <- interval
       }
 
       return(private$est_)
@@ -260,7 +279,11 @@ MRPModel <- R6::R6Class(
     #' @param model Fitted MRPModel object to save
     #' @param file File path where the model should be saved
     save = function(file) {
-      checkmate::assert_file_exists(file, access = "w")
+      checkmate::assert_path_for_output(
+        file,
+        overwrite = TRUE,
+        extension = "RDS"
+      )
 
       # load CmdStan output files into the fitted model object
       if (!is.null(private$fit_)) {

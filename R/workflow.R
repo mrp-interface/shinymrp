@@ -461,20 +461,20 @@ MRPWorkflow <- R6::R6Class(
     #' @return A ggplot object showing the covariate distribution histogram
     covar_hist = function(covar, file = NULL, ...) {
       private$assert_mrp_exists()
-
+      
       raw_covariates <- private$plotdata_$raw_covariates
       if (is.null(raw_covariates)) {
         stop("Covariate data is not available. This method is only available for COVID data.")
       }
-
+      
       checkmate::assert_choice(
         covar,
         choices = GLOBAL$vars$covar,
         null.ok = FALSE
       )
-
+      
       config <- switch(covar,
-        "edu" = list(
+        "college" = list(
           threshold   = 0.5,
           operation   = ">=",
           breaks      = seq(0, 1, 0.05),
@@ -490,7 +490,7 @@ MRPWorkflow <- R6::R6Class(
           definition  = "Poverty measure of a zip code is defined as the percentage of the residing population\nwhose ratio of income to poverty level in the past 12 months is below 100%%.",
           name        = "Poverty measure"
         ),
-        "employ" = list(
+        "employment" = list(
           threshold   = 0.5,
           operation   = ">=",
           breaks      = seq(0, 1, 0.05),
@@ -506,7 +506,7 @@ MRPWorkflow <- R6::R6Class(
           definition  = "Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months\nweighted by tract population counts.",
           name        = "Average of median household income"
         ),
-        "adi" = list(
+        "urbanicity" = list(
           threshold   = 0.95,
           operation   = ">=",
           breaks      = seq(0, 1, 0.05),
@@ -514,7 +514,7 @@ MRPWorkflow <- R6::R6Class(
           definition  = "Urbanicity of a zip code is defined as the percentage of covered census tracts classified as urban\nweighted by tract population counts.",
           name        = "Urbanicity"
         ),
-        "urban" = list(
+        "adi" = list(
           threshold   = 80,
           operation   = ">",
           breaks      = seq(0, 100, 5),
@@ -523,7 +523,7 @@ MRPWorkflow <- R6::R6Class(
           name        = "Area Deprivation Index"
         )
       )
-
+      
       # Calculate statistics for description
       count <- switch(config$operation,
         ">" = sum(raw_covariates[[covar]] > config$threshold, na.rm = TRUE),
@@ -702,11 +702,12 @@ MRPWorkflow <- R6::R6Class(
     #'
     #' @param model Fitted MRPModel object
     #' @param group Character string specifying the demographic group for plotting
+    #' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
     #' @param file Optional file path to save the plot
     #' @param ... Additional arguments passed to ggsave
     #'
     #' @return A ggplot object showing the group estimates
-    estimate_plot = function(model, group, file = NULL, ...) {
+    estimate_plot = function(model, group, interval = 0.95, file = NULL, ...) {
       private$assert_mrp_exists()
       
       checkmate::assert_choice(
@@ -715,8 +716,9 @@ MRPWorkflow <- R6::R6Class(
         null.ok = FALSE
       )
 
+
       # Convert levels to "factor" type
-      est_df <- model$poststratify()[[group]] %>%
+      est_df <- model$poststratify(interval = interval)[[group]] %>%
         rename(!!group := factor) %>%
         as_factor(model$mrp()$levels[group]) %>%
         rename(factor := !!sym(group))
@@ -749,6 +751,7 @@ MRPWorkflow <- R6::R6Class(
     #' @param model Fitted MRPModel object
     #' @param geo Character string specifying the geographic level for mapping
     #' @param time_index Numeric value specifying the time index for time-varying data
+    #' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
     #' @param file Optional file path to save the map
     #' @param ... Additional arguments
     #' 
@@ -757,6 +760,7 @@ MRPWorkflow <- R6::R6Class(
       model,
       geo = NULL,
       time_index = NULL,
+      interval = 0.95,
       file = NULL,
       ...
     ) {
@@ -786,13 +790,14 @@ MRPWorkflow <- R6::R6Class(
         NULL
       }
 
-      est_df <- model$poststratify()[[geo]]
+      est_df <- model$poststratify(interval = interval)[[geo]]
 
       hc <- est_df %>% 
         prep_est(
           fips_codes = fips_[[geo]],
           geo = geo,
-          time_index = time_index
+          time_index = time_index,
+          interval = interval
         ) %>%
         choro_map(
           model$plotdata()$geojson[[geo]],

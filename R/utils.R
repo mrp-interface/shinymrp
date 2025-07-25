@@ -134,3 +134,39 @@ create_example_filename <- function(
 
   return(file_name)
 }
+
+#' @noRd
+check_interval <- function(interval) {
+  is_ci <- TRUE
+  qlower <- 0.025
+  qupper <- 0.975
+  n_sd <- 1
+
+  if (is.character(interval)) {
+    if (!grepl("^[1-3]+sd$", interval, ignore.case = FALSE)) {
+      stop("For standard deviation of uncertainty, 'interval' must be either '1sd', '2sd', or '3sd'.")
+    }
+    
+    is_ci <- FALSE
+    n_sd <- as.numeric(gsub("sd", "", interval))
+
+  } else if (is.numeric(interval)) {
+    if (interval < 0 || interval > 1) {
+      stop("For credible interval, 'interval' must be between 0 and 1.")
+    } 
+
+    is_ci <- TRUE
+    qlower <- (1 - interval) / 2
+    qupper <- 1 - qlower
+
+  } else {
+    stop("'interval' must be a character string or a numeric value between 0 and 1.")
+  }
+
+  return(list(
+    is_ci = is_ci,
+    qlower = qlower,
+    qupper = qupper,
+    n_sd = n_sd
+  ))
+}
