@@ -595,7 +595,7 @@ MRPWorkflow <- R6::R6Class(
         htmlwidgets::saveWidget(
           hc,
           file = file,
-          selfcontained = TRUE
+          selfcontained = FALSE
         )
       }
 
@@ -708,17 +708,17 @@ MRPWorkflow <- R6::R6Class(
     #' @param ... Additional arguments passed to ggsave
     #'
     #' @return A ggplot object showing the group estimates
-    estimate_plot = function(model, group, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
+    estimate_plot = function(model, group = NULL, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
       
       checkmate::assert_choice(
         group,
-        choices = c("overall", intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels))),
-        null.ok = FALSE
+        choices = intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels)),
+        null.ok = TRUE
       )
 
       est_list <- model$poststratify(interval = interval)
 
-      if (group == "overall") {
+      if (is.null(group)) {
         est_df <- est_list$overall
 
         p <- if(model$metadata()$is_timevar) {
@@ -764,8 +764,13 @@ MRPWorkflow <- R6::R6Class(
 
       if (!is.null(file)) {
         # Set default parameters for ggsave
-        dots <- modifyList(GLOBAL$plot$save, list(...))
-        dots$height <- 5 * (length(model$mrp()$levels[[group]]) + 1)
+        settings <- if (!is.null(group)) {
+          list(height = 4 * (length(model$mrp()$levels[[group]]) + 1))
+        } else{
+          list()
+        }
+        dots <- modifyList(GLOBAL$plot$save, settings) %>%
+          modifyList(list(...))
         do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
       }      
 
@@ -836,7 +841,7 @@ MRPWorkflow <- R6::R6Class(
         ) %>%
         highcharter::hc_exporting(
           enabled = TRUE,
-          filename = "sample_size_map",
+          filename = "estimate_map",
           type = "image/png"
         )
 
@@ -845,7 +850,7 @@ MRPWorkflow <- R6::R6Class(
         htmlwidgets::saveWidget(
           hc,
           file = file,
-          selfcontained = TRUE
+          selfcontained = FALSE
         )
       }
 
