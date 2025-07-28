@@ -86,7 +86,7 @@ mod_learn_preprocess_ui <- function(id){
         )
       ),
       tags$p("Below are example scripts and data files for data preprocessing."),
-      div(class = "d-flex justify-content-between",
+      div(class = "d-flex gap-2",
         downloadButton(ns("save_code"), "Preprocessing Script"),
         downloadButton(ns("save_geo_conversion"), "Geography Conversion Table"),
         downloadButton(ns("save_week_conversion"), "Week Conversion Table")
@@ -146,14 +146,14 @@ mod_learn_preprocess_server <- function(id, global){
     output$save_code <- downloadHandler(
       filename = function() { "preprocess.R" },
       content = function(file) {
-        readLines(app_sys("extdata/preprocess.R")) %>% writeLines(file)
+        readLines(app_sys("scripts/preprocess.R")) %>% writeLines(file)
       }
     )
     
     output$save_geo_conversion <- downloadHandler(
       filename = function() { "zip_county_state.csv" },
       content = function(file) {
-        readr::read_csv(app_sys("extdata/zip_county_state.csv"), show_col_types = FALSE) %>% readr::write_csv(file)
+        zip_$county_state %>% readr::write_csv(file)
       }
     )
     

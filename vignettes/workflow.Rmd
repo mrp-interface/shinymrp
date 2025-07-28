@@ -38,7 +38,12 @@ The goal of this stage is to produce two essential pieces of data:
 ### Use cases
 
 ```{r}
-sample_data <- example_sample_data()
+sample_data <- example_sample_data(
+  is_timevar = TRUE,
+  is_aggregated = TRUE,
+  special_case = NULL,
+  family = "binomial"
+)
 ```
 
 ### Individual-level vs. Aggregated Data
