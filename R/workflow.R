@@ -162,13 +162,17 @@ MRPWorkflow <- R6::R6Class(
     #' @param is_aggregated Logical indicating whether the data is already aggregated
     #' @param special_case Character string specifying special case handling (e.g., "covid", "poll")
     #' @param family Character string specifying the model family (e.g., "binomial", "normal")
+    #' @param zip_threshold Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)
+    #' @param state_threshold Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)
     #' 
     preprocess = function(
       data,
       is_timevar = FALSE,
       is_aggregated = FALSE,
       special_case = NULL,
-      family = NULL
+      family = NULL,
+      zip_threshold = 0,
+      state_threshold = 0
     ) {
 
       checkmate::assert_choice(
@@ -189,8 +193,11 @@ MRPWorkflow <- R6::R6Class(
         private$data_ <- preprocess(
           data = data,
           metadata = private$metadata_,
+          zip_county_state = zip_$county_state,
           is_sample = TRUE,
-          is_aggregated = is_aggregated
+          is_aggregated = is_aggregated,
+          zip_threshold = zip_threshold,
+          state_threshold = state_threshold
         )
       
       }, error = function(e) {
@@ -349,6 +356,7 @@ MRPWorkflow <- R6::R6Class(
         new_data <- preprocess(
           data = pstrat_data,
           metadata = private$metadata_,
+          zip_county_state = zip_$county_state,
           is_sample = FALSE,
           is_aggregated = is_aggregated
         )
@@ -705,6 +713,7 @@ MRPWorkflow <- R6::R6Class(
     #' @param group Character string specifying the demographic group for plotting
     #' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
     #' @param file Optional file path to save the plot
+    #' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE)
     #' @param ... Additional arguments passed to ggsave
     #'
     #' @return A ggplot object showing the group estimates

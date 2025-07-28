@@ -81,11 +81,82 @@ rename_columns_covid <- function(df) {
   return(df)
 }
 
+#' Remove duplicate COVID test records within time periods
+#'
+#' @title Remove duplicate COVID test records keeping the latest result per individual per time period
+#' @description Removes duplicate COVID test records for the same individual
+#' within the same time period, keeping only the latest test result when multiple
+#' tests exist for the same person in the same temporal unit. This is essential
+#' for longitudinal COVID surveillance data where individuals may have multiple
+#' tests recorded within the same time period (e.g., week, month) due to repeated
+#' testing, data collection artifacts, or administrative duplicates. Ensures each
+#' individual contributes only one observation per time period for valid
+#' statistical analysis while preserving the most recent test information.
+#'
+#' @param df A data frame containing individual-level COVID test data with the
+#'   following required columns:
+#' \itemize{
+#'   \item `id`: Character or factor - Individual identifier (typically encrypted
+#'     or masked for privacy protection)
+#'   \item `time`: Character, factor, or Date - Time period identifier (e.g.,
+#'     "2020-03", "Week 12", or date values that have been grouped into periods)
+#'   \item `date`: Date or POSIXct - Actual test date/timestamp used to determine
+#'     which record to keep when duplicates exist within the same time period
+#' }
+#' Additional columns (demographics, test results, geography) are preserved in
+#' the output.
+#'
+#' @return A data frame with duplicate records removed, containing one test record
+#'   per individual per time period. When multiple records exist for the same
+#'   `id`-`time` combination:
+#' \itemize{
+#'   \item The record with the latest `date` value is retained
+#'   \item All other duplicates are removed
+#'   \item All columns from the original data frame are preserved
+#'   \item Row count may be reduced if duplicates were present
+#' }
+#'
+#' @details
+#' **Duplicate Resolution Logic:**
+#' Uses `dplyr::slice_max()` on the `date` column within each `id`-`time` group:
+#' \itemize{
+#'   \item Groups data by individual identifier and time period
+#'   \item Selects the record with the maximum (latest) date value
+#'   \item Breaks ties deterministically using `with_ties = FALSE`
+#'   \item Maintains original column structure and data types
+#'   \item Handles missing date values by treating them as earliest
+#' }
+#'
+#' **Time Period Considerations:**
+#' The `time` variable should represent meaningful temporal units for analysis:
+#' \itemize{
+#'   \item Weekly periods for outbreak tracking
+#'   \item Monthly periods for trend analysis
+#'   \item Custom periods based on epidemiological needs
+#' }
+#'
+#' @section COVID Surveillance Context:
+#' Multiple test records within the same time period commonly occur due to:
+#' \itemize{
+#'   \item Individuals receiving multiple tests within a short timeframe
+#'   \item Confirmatory testing following initial results
+#'   \item Administrative data processing creating duplicate entries
+#'   \item Data integration from multiple testing sources
+#' }
+#'
+#' This function prioritizes the most recent test result, which is typically
+#' the most clinically relevant for surveillance purposes.
+#'
+#' @importFrom dplyr group_by slice_max ungroup
+#' @importFrom rlang .data
+#' @importFrom magrittr %>%
+#'
+#' @noRd
 remove_duplicates_covid <- function(df) {
   # only keep the latest result if a patient have multiple tests in the same week
   df <- df |>
     dplyr::group_by(.data$id, .data$time) |>
-    dplyr::slice_max(.data$time, n = 1, with_ties = FALSE) |>
+    dplyr::slice_max(.data$date, n = 1, with_ties = FALSE) |>
     dplyr::ungroup()
 
   return(df)

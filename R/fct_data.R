@@ -1017,7 +1017,7 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 #' }
 #' Additional columns (demographics, time periods) are preserved through filtering.
 #'
-#' @param covariates A data frame containing geographic covariates and identifiers
+#' @param zip_county_state A data frame containing geographic covariates and identifiers
 #'   with the following required columns:
 #' \itemize{
 #'   \item `zip`: Character or factor - ZIP code identifier matching `df$zip`
@@ -1095,9 +1095,9 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 #' @noRd
 filter_state_zip <- function(
     df,
-    covariates,
-    zip_threshold = 5,
-    state_threshold = 0.01
+    zip_county_state,
+    zip_threshold = 0,
+    state_threshold = 0
 ) {
   
   zip_count <- df %>%
@@ -1105,8 +1105,8 @@ filter_state_zip <- function(
     summarize(count = n())
 
   # create a table containing state, zip and zip count
-  state_zip <- covariates %>%
-    mutate(state = substr(.data$county, 1, 2)) %>%
+  state_zip <- zip_county_state %>%
+    mutate(state = substr(.data$fips, 1, 2)) %>%
     select(.data$zip, .data$state) %>%
     distinct(.data$zip, .keep_all = TRUE) %>%
     inner_join(zip_count, by = "zip")
@@ -1366,7 +1366,7 @@ get_possible_geos <- function(col_names) {
 #' geographic names to FIPS codes and joins with geographic crosswalk data.
 #'
 #' @param input_data Data frame containing input data with geographic variables.
-#' @param geo_all Character vector of all possible geographic scales in hierarchy.
+#' @param zip_county_state Data frame containing ZIP code to county/state crosswalk.
 #'
 #' @return Data frame with additional geographic variables at larger scales.
 #'
@@ -1374,7 +1374,7 @@ get_possible_geos <- function(col_names) {
 #'
 #' @importFrom dplyr select rename mutate distinct
 #' @importFrom rlang .data
-append_geo <- function(input_data) {
+append_geo <- function(input_data, zip_county_state) {
   # get the smallest geographic scale in the data
   smallest <- get_smallest_geo(names(input_data))
 
@@ -1386,7 +1386,7 @@ append_geo <- function(input_data) {
   }
 
   # Prepare geographic crosswalk
-  zip_county_state <- zip_$county_state %>%
+  zip_county_state <- zip_county_state %>%
     select(.data$zip, .data$fips) %>%
     rename(county = .data$fips) %>%
     mutate(state = substr(.data$county, 1, 2)) %>%
@@ -1819,10 +1819,15 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 #'     \item is_timevar: Logical indicating time-varying analysis
 #'     \item special_case: "covid" or "poll" for specialized processing
 #'   }
+#' @param zip_county_state Data frame containing ZIP code to county/state crosswalk.
 #' @param is_sample Logical. Whether the data represents sample data (TRUE) or
 #'   poststratification data (FALSE). Affects validation and processing steps.
 #' @param is_aggregated Logical. Whether the data is already aggregated (TRUE) or
 #'   individual-level records (FALSE). Determines if aggregation step is needed.
+#' @param zip_threshold Numeric. Minimum number of records required for a ZIP code
+#'  to be included in the analysis. Default is 0.
+#' @param state_threshold Numeric. Minimum proportion of records required for a
+#'  state to be included in the analysis. Default is 0.
 #'
 #' @return Preprocessed data frame ready for MRP analysis with:
 #' \itemize{
@@ -1910,8 +1915,11 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 preprocess <- function(
   data,
   metadata,
+  zip_county_state,
   is_sample = TRUE,
-  is_aggregated = TRUE
+  is_aggregated = TRUE,
+  zip_threshold = 0,
+  state_threshold = 0
 ) {
   
   is_covid <- !is.null(metadata$special_case) &&
@@ -1944,7 +1952,12 @@ preprocess <- function(
 
     # remove ZIP codes and states with small sample sizes
     if ("zip" %in% names(data)) {
-      data <- filter_state_zip(data, acs_covid_$covar)
+      data <- filter_state_zip(
+        data,
+        zip_county_state,
+        zip_threshold = zip_threshold,
+        state_threshold = state_threshold
+      )
     }
 
     # convert date to week indices if necessary
@@ -1983,7 +1996,7 @@ preprocess <- function(
   }
 
   # append geographic areas at larger scales if missing
-  data <- append_geo(data)
+  data <- append_geo(data, zip_county_state)
 
   return(data)
 }

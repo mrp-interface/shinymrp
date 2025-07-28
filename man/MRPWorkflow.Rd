@@ -78,7 +78,9 @@ Preprocesses the input sample data by cleaning, validating, and preparing it for
   is_timevar = FALSE,
   is_aggregated = FALSE,
   special_case = NULL,
-  family = NULL
+  family = NULL,
+  zip_threshold = 0,
+  state_threshold = 0
 )}\if{html}{\out{</div>}}
 }
 
@@ -94,6 +96,10 @@ Preprocesses the input sample data by cleaning, validating, and preparing it for
 \item{\code{special_case}}{Character string specifying special case handling (e.g., "covid", "poll")}
 
 \item{\code{family}}{Character string specifying the model family (e.g., "binomial", "normal")}
+
+\item{\code{zip_threshold}}{Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)}
+
+\item{\code{state_threshold}}{Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)}
 }
 \if{html}{\out{</div>}}
 }
@@ -261,7 +267,7 @@ Creates plots showing MRP estimates for different subgroups, either over time (f
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$estimate_plot(
   model,
-  group,
+  group = NULL,
   interval = 0.95,
   show_caption = TRUE,
   file = NULL,
@@ -277,6 +283,8 @@ Creates plots showing MRP estimates for different subgroups, either over time (f
 \item{\code{group}}{Character string specifying the demographic group for plotting}
 
 \item{\code{interval}}{Confidence interval or standard deviation for the estimates (default is 0.95)}
+
+\item{\code{show_caption}}{Logical indicating whether to show the caption in the plot (default is TRUE)}
 
 \item{\code{file}}{Optional file path to save the plot}
 
