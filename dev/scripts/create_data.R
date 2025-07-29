@@ -1,4 +1,4 @@
-source("R/utils_global.R")
+source("R/global.R")
 source("R/fct_data.R")
 
 library(dplyr)
@@ -10,9 +10,8 @@ library(magrittr)
 #' states by finding the most common county for each ZIP code and joining
 #' with FIPS county-state information. Handles ZIP codes that span multiple
 #' counties by selecting the most frequent county.
-#'
-#' @param fips_county_state Data frame containing FIPS county-state mappings
-#'   with columns: fips, county, state, state_name.
+#' 
+#' @param zip_tract Data frame containing ZIP code to census tract mapping
 #'
 #' @return Data frame with ZIP codes linked to their most common county and state:
 #' \itemize{
@@ -25,18 +24,31 @@ library(magrittr)
 #'
 #' @importFrom dplyr mutate group_by summarise left_join
 #' @importFrom rlang .data
-create_zip_county_state <- function(zip_tract, fips_county_state) {
+create_zip_county_state <- function(zip_tract) {
   # find the most common county for each zip code
-  zip_tract %>%
-    mutate(county_fips = substr(.data$geoid, 1, 5)) %>%
-    group_by(.data$zip) %>%
-    summarise(
-      fips = names(which.max(table(.data$county_fips)))
-    ) %>%
-    left_join(
-      fips_county_state,
-      by = "fips"
-    )
+  zip_fips <- zip_tract %>%
+    mutate(fips = substr(geoid, 1, 5)) %>%
+    # sum ratio by (zip, county)
+    group_by(zip, fips) %>%
+    summarise(total_ratio = sum(res_ratio, na.rm = TRUE), .groups = "drop") %>%
+    # for each zip, pick the county with the max total_ratio
+    group_by(zip) %>%
+    slice_max(total_ratio, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    select(-total_ratio)
+
+  fips_county_state <- tidycensus::fips_codes %>%
+    mutate(fips = paste0(state_code, county_code)) %>%
+    select(fips, county, state, state_name)
+
+  
+  zip_county_state <- left_join(
+    zip_fips,
+    fips_county_state,
+    by = "fips"
+  )
+  
+  return(zip_county_state)
 }
 
 #' Create FIPS county-state lookup table
