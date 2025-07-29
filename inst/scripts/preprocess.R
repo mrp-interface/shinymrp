@@ -631,9 +631,9 @@ rename_columns_covid <- function(df) {
 #' @noRd
 remove_duplicates_covid <- function(df) {
   # only keep the latest result if a patient have multiple tests in the same week
-  df <- df |>
-    dplyr::group_by(.data$id, .data$time) |>
-    dplyr::slice_max(.data$time, n = 1, with_ties = FALSE) |>
+  df <- df %>%
+    dplyr::group_by(.data$id, .data$time) %>%
+    dplyr::slice_max(.data$time, n = 1, with_ties = FALSE) %>%
     dplyr::ungroup()
 
   return(df)

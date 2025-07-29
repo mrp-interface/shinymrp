@@ -154,9 +154,9 @@ rename_columns_covid <- function(df) {
 #' @noRd
 remove_duplicates_covid <- function(df) {
   # only keep the latest result if a patient have multiple tests in the same week
-  df <- df |>
-    dplyr::group_by(.data$id, .data$time) |>
-    dplyr::slice_max(.data$date, n = 1, with_ties = FALSE) |>
+  df <- df %>%
+    dplyr::group_by(.data$id, .data$time) %>%
+    dplyr::slice_max(.data$date, n = 1, with_ties = FALSE) %>%
     dplyr::ungroup()
 
   return(df)
@@ -476,8 +476,7 @@ prepare_mrp_covid <- function(
     metadata
 ) {
 
-  # prep_old <- readRDS("/Users/tntoan/Desktop/MRP/Code/mrp_workflow_paper/preprocessed_old.RDS")
-  # covariates <- prep_old$covar |> rename("adi" = "ADI", "county" = "fips")
+
   covariates <- covariates %>% filter(.data$zip %in% input_data$zip)
   pstrat_data <- pstrat_data %>% filter(.data$zip %in% input_data$zip)
   cell_counts <- pstrat_data[-c(1, 2)] %>% t() %>% c()
@@ -487,7 +486,7 @@ prepare_mrp_covid <- function(
   input_data <- input_data %>% select(-all_of(dup_cols))
 
   input_data <- input_data %>%
-    left_join(covariates, by = "zip")
+    inner_join(covariates, by = "zip")
 
   # create lists of all factor levels
   levels <- create_expected_levels(metadata)
@@ -497,7 +496,7 @@ prepare_mrp_covid <- function(
   new_data <- expand.grid(levels, stringsAsFactors = FALSE) %>%
     arrange(.data$time, .data$zip, .data$sex, .data$race, .data$age) %>%  # IMPORTANT: To match the cell order of poststratification data
     mutate(total = rep(cell_counts, length(levels$time))) %>%
-    left_join(covariates, by = "zip")
+    inner_join(covariates, by = "zip")
 
   # append levels for other geographic predictors
   # NOTE: this must be done after new_data is created
