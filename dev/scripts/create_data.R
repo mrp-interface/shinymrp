@@ -193,7 +193,7 @@ zip_tract <- readr::read_csv(
   show_col_types = FALSE
 )
 
-# Create post-stratification and covariate data
+# Create poststratification and covariate data
 out <- combine_tracts_covid(
   tract_data = tract_data,
   zip_tract = zip_tract
@@ -203,7 +203,7 @@ write_csv(out$pstrat, paste0(save_dir, "acs/pstrat_covid.csv"))
 write_csv(out$covar, paste0(save_dir, "acs/covar_covid.csv"))
 
  
-# Create example post-stratification data
+# Create example poststratification data
 tract_data <- readr::read_csv(paste0(save_dir, "acs/acs_2019-2023.csv"), show_col_types = FALSE)
 
 zip_tract <- readr::read_csv(

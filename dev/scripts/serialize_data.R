@@ -23,18 +23,18 @@ geojson_ <- list(
     state  = qs::qread(paste0(path, "geojson_state.RDS"))
 )
 
-# post-stratification table for covid data
+# poststratification table for covid data
 acs_covid_ <- list(
     pstrat = readr::read_csv(paste0(path, "acs/pstrat_covid.csv"), show_col_types = FALSE),
     covar  = readr::read_csv(paste0(path, "acs/covar_covid.csv"), show_col_types = FALSE)
 )
 
-# post-stratification table for polling data
+# poststratification table for polling data
 acs_poll_ <- list(
     pstrat = readr::read_csv(paste0(path, "acs/pstrat_poll.csv"), show_col_types = FALSE)
 )
 
-# post-stratification table for general cases
+# poststratification table for general cases
 acs_years <- 2019:2023
 acs_ <- purrr::map(acs_years, function(year) {
     file_path <- paste0(path, "acs/acs_", year - 4, "-", year, ".csv")

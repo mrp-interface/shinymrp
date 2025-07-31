@@ -107,7 +107,7 @@ workflow$preprocess(
 )
 
 # Link data to the ACS
-# and obtain post-stratification data
+# and obtain poststratification data
 workflow$link_acs(
   link_geo = "zip",
   acs_year = 2021

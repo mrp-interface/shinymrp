@@ -2,15 +2,15 @@
 % Please edit documentation in R/example.R
 \name{example_pstrat_data}
 \alias{example_pstrat_data}
-\title{Create example post-stratification data
-#' @description Generates example post-stratification data for MRP analysis.}
+\title{Create example poststratification data
+#' @description Generates example poststratification data for MRP analysis.}
 \usage{
 example_pstrat_data()
 }
 \value{
-An example post-stratification table.
+An example poststratification table.
 }
 \description{
-Create example post-stratification data
-#' @description Generates example post-stratification data for MRP analysis.
+Create example poststratification data
+#' @description Generates example poststratification data for MRP analysis.
 }

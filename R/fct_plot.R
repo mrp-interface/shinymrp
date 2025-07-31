@@ -700,9 +700,9 @@ plot_outcome_static <- function(
       ),
       caption = if(show_caption) {
         if (out$is_ci) {
-          sprintf("*The shaded areas represent %s%% confidence intervals", interval * 100)
+          sprintf("*The error bars represent %s%% confidence intervals", interval * 100)
         } else {
-          "*The shaded areas represent \u00B11 SD of uncertainty"
+          "*The error bars represent \u00B11 SD of uncertainty"
         }
       } else {
         NULL
@@ -1171,9 +1171,9 @@ plot_est_static <- function(
       ),
       caption = if(show_caption) {
         if (out$is_ci) {
-          sprintf("*The shaded areas represent %s%% confidence intervals", interval * 100)
+          sprintf("*The error bars represent %s%% confidence intervals", interval * 100)
         } else {
-          "*The shaded areas represent \u00B11 SD of uncertainty"
+          "*The error bars represent \u00B11 SD of uncertainty"
         }
       } else {
         NULL

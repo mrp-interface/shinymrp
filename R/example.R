@@ -33,10 +33,10 @@ example_sample_data <- function(
 }
 
 
-#' Create example post-stratification data
-#' #' @description Generates example post-stratification data for MRP analysis.
+#' Create example poststratification data
+#' #' @description Generates example poststratification data for MRP analysis.
 #' 
-#' @return An example post-stratification table.
+#' @return An example poststratification table.
 #' 
 #' @export
 example_pstrat_data <- function() {
