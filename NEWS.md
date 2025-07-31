@@ -10,13 +10,13 @@
 # shinymrp 0.7.1
 
 ## Bugfixes
-- Fix incorrect estimates caused by level mismatch between sample and post-stratification data (#63)
+- Fix incorrect estimates caused by level mismatch between sample and poststratification data (#63)
 - Fix model compilation errors caused by including multiple varying slopes with the same categorical variable (#58)
 - Fix model compilation errors caused by interaction terms involving categorical variables included as fixed effects (#57)
 - Bugfix for static LOO-CV table (#59)
 - Fix error in "View results" tab caused by switching interface version (#62)
 - Fix consecutive model tab removal error (#61)
-- Bugfix for post-stratification table upload for general time-varying data (#60)
+- Bugfix for poststratification table upload for general time-varying data (#60)
 
 
 # shinymrp 0.7.0
@@ -24,7 +24,7 @@
 ## New features
 - Upgrade UI to Boostrap 5 standard (#42)
 - Add diagnostics sections for model fitting and comparison (#40)
-- Add post-stratification table upload (#54)
+- Add poststratification table upload (#54)
 - Add indicator for interface version/use case (#41)
 - Add download button for preprocessed data (#46)
 - Add back button and update use case description in the homepage ($48)
@@ -61,8 +61,8 @@
 # shinymrp 0.5.0
 
 ## New features
-- Allow users to run post-stratification separately (#20)
-- Significantly speed up post-stratification by running it through Stan (#21)
+- Allow users to run poststratification separately (#20)
+- Significantly speed up poststratification by running it through Stan (#21)
 
 ## Bugfixes
 - Fix errors thrown by renderPlot when users switch interface version (#25)

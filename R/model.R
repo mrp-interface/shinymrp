@@ -4,7 +4,7 @@
 #' `$create_model()` method of a
 #' [`MRPWorkflow`][MRPWorkflow] object. Each `MRPModel` object represents a
 #' multilevel regression model with methods for sampling, diagnostics,
-#' and post-stratification.
+#' and poststratification.
 #'
 #' @format
 #'   An [R6][R6::R6Class] generator object.
@@ -43,7 +43,7 @@ MRPModel <- R6::R6Class(
     #' @description Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
     #'
     #' @param effects List containing model effects specification including intercept, fixed effects, varying effects, and interactions
-    #' @param mrp List containing the MRP data structure with input sample data and new post-stratification data
+    #' @param mrp List containing the MRP data structure with input sample data and new poststratification data
     #' @param metadata List containing metadata about the analysis including family, time variables, and special cases
     #' @param linkdata List containing information about data linking including geography and ACS year
     #' @param plotdata List containing data prepared for visualization including dates and geojson objects
@@ -80,7 +80,7 @@ MRPModel <- R6::R6Class(
       return(private$formula_)
     },
 
-    #' @description Retrieves the MRP data structure containing input sample data and post-stratification data.
+    #' @description Retrieves the MRP data structure containing input sample data and poststratification data.
     mrp = function() {
       return(private$mrp_)
     },
@@ -242,7 +242,7 @@ MRPModel <- R6::R6Class(
       return(private$log_lik_)
     },
 
-    #' @description Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
+    #' @description Runs poststratification using the fitted model to generate population-level estimates across different subgroups and geographies.
     #'
     #' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
     poststratify = function(interval = 0.95) {
@@ -251,9 +251,9 @@ MRPModel <- R6::R6Class(
       check_interval(interval)
 
       if (is.null(private$buffer$interval) || private$buffer$interval != interval) {
-        message("Running post-stratification...")
+        message("Running poststratification...")
 
-        # run standalone generated quantities for post-stratification
+        # run standalone generated quantities for poststratification
         fit_pstrat <- run_gq(
           fit_mcmc = private$fit_,
           stan_code = private$stan_code_$pstrat,

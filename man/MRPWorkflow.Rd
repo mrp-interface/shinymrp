@@ -108,7 +108,7 @@ Preprocesses the input sample data by cleaning, validating, and preparing it for
 \if{html}{\out{<a id="method-MRPWorkflow-link_acs"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPWorkflow-link_acs}{}}}
 \subsection{Method \code{link_acs()}}{
-Links the preprocessed sample data to ACS post-stratification data based on geographic and demographic variables.
+Links the preprocessed sample data to ACS poststratification data based on geographic and demographic variables.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$link_acs(link_geo = NULL, acs_year = 2023)}\if{html}{\out{</div>}}
 }
@@ -118,7 +118,7 @@ Links the preprocessed sample data to ACS post-stratification data based on geog
 \describe{
 \item{\code{link_geo}}{Character string specifying the geographic level for linking (e.g., "state", "county", "zip")}
 
-\item{\code{acs_year}}{Numeric value specifying the ACS year to use for post-stratification data}
+\item{\code{acs_year}}{Numeric value specifying the ACS year to use for poststratification data}
 }
 \if{html}{\out{</div>}}
 }
@@ -127,7 +127,7 @@ Links the preprocessed sample data to ACS post-stratification data based on geog
 \if{html}{\out{<a id="method-MRPWorkflow-load_pstrat"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPWorkflow-load_pstrat}{}}}
 \subsection{Method \code{load_pstrat()}}{
-Loads and processes custom post-stratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
+Loads and processes custom poststratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPWorkflow$load_pstrat(pstrat_data, is_aggregated = FALSE)}\if{html}{\out{</div>}}
 }
@@ -135,9 +135,9 @@ Loads and processes custom post-stratification data instead of using ACS data. T
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pstrat_data}}{Custom post-stratification data to be loaded}
+\item{\code{pstrat_data}}{Custom poststratification data to be loaded}
 
-\item{\code{is_aggregated}}{Logical indicating whether the post-stratification data is already aggregated}
+\item{\code{is_aggregated}}{Logical indicating whether the poststratification data is already aggregated}
 }
 \if{html}{\out{</div>}}
 }

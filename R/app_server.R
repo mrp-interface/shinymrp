@@ -93,7 +93,7 @@ app_server <- function(input, output, session) {
         message <- if (is.null(global$data)) {
           "Invalid input data. Please make sure your data passes all requirements."
         } else if (is.null(global$mrp)) {
-          "Invalid post-stratification table. Please provide information for linking your data to the ACS data or upload your own poststatification table."
+          "Invalid poststratification table. Please provide information for linking your data to the ACS data or upload your own poststatification table."
         }
 
         showModal(modalDialog(

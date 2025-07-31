@@ -107,7 +107,7 @@ waiter_ui <- function(type = "") {
   } else if(type == "pstrat") {
     tagList(
       waiter::spin_loaders(2, color = "black"),
-      tags$h4("Running post-stratification...", style = text_style)
+      tags$h4("Running poststratification...", style = text_style)
     )
   } else if(type == "loo") {
     tagList(
@@ -557,7 +557,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
         },
         actionButton(
           inputId = ns(model$IDs$postprocess_btn),
-          label = "Run post-stratification"
+          label = "Run poststratification"
         ),
         tags$div(style = "margin-top: 30px",
           bslib::card(

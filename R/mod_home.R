@@ -145,7 +145,7 @@ mod_home_server <- function(id, global){
       switch(panel_group(),
         "main" = "Collected over time",
         "timevar" = "Data linking for ZIP-code-level covariates and poststratification",
-        "static" = "Data linking for post-stratification at state level",
+        "static" = "Data linking for poststratification at state level",
         "timevar_general" = "Data with a binary outcome variable",
         "static_general" = "Data with a binary outcome variable"
       )
@@ -168,8 +168,8 @@ mod_home_server <- function(id, global){
       
       switch(panel_group(),
         "main" = "Collected at a single time point",
-        "timevar" = "Data linking for post-stratification at state, county, or ZIP-code level",
-        "static" = "Data linking for post-stratification at state, county, or ZIP-code level",
+        "timevar" = "Data linking for poststratification at state, county, or ZIP-code level",
+        "static" = "Data linking for poststratification at state, county, or ZIP-code level",
         "timevar_general" = "Data with a continuous outcome variable",
         "static_general" = "Data with a continuous outcome variable"
       )

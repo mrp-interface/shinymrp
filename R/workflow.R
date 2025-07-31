@@ -208,10 +208,10 @@ MRPWorkflow <- R6::R6Class(
     
     },
 
-    #' @description Links the preprocessed sample data to ACS post-stratification data based on geographic and demographic variables.
+    #' @description Links the preprocessed sample data to ACS poststratification data based on geographic and demographic variables.
     #'
     #' @param link_geo Character string specifying the geographic level for linking (e.g., "state", "county", "zip")
-    #' @param acs_year Numeric value specifying the ACS year to use for post-stratification data
+    #' @param acs_year Numeric value specifying the ACS year to use for poststratification data
     #'
     link_acs = function(
       link_geo = NULL,
@@ -330,14 +330,14 @@ MRPWorkflow <- R6::R6Class(
       })
     },
     
-    #' @description Loads and processes custom post-stratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
+    #' @description Loads and processes custom poststratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
     #'
-    #' @param pstrat_data Custom post-stratification data to be loaded
-    #' @param is_aggregated Logical indicating whether the post-stratification data is already aggregated
+    #' @param pstrat_data Custom poststratification data to be loaded
+    #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated
     #'
     load_pstrat = function(pstrat_data, is_aggregated = FALSE) {
       if (!is.null(private$metadata_$special_case)) {
-        stop("Custom post-stratification data is not supported for special cases like COVID or polling data. Please use the `link_acs` method instead.")
+        stop("Custom poststratification data is not supported for special cases like COVID or polling data. Please use the `link_acs` method instead.")
       }
 
       if (is.null(private$data_)) {
@@ -348,7 +348,7 @@ MRPWorkflow <- R6::R6Class(
         stop("Post-stratification data is required. Please provide valid pstrat_data.")
       }
 
-      message("Preprocessing post-stratification data...")
+      message("Preprocessing poststratification data...")
 
       tryCatch({
 
