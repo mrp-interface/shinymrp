@@ -479,7 +479,7 @@ prepare_mrp_covid <- function(
 
   covariates <- covariates %>% filter(.data$zip %in% input_data$zip)
   pstrat_data <- pstrat_data %>% filter(.data$zip %in% input_data$zip)
-  cell_counts <- pstrat_data[-c(1, 2)] %>% t() %>% c()
+  cell_counts <- pstrat_data[-c(1)] %>% t() %>% c()
   
   # # prevent duplicate columns
   dup_cols <- intersect(names(input_data), names(covariates)) %>% setdiff(c("zip"))
@@ -501,7 +501,7 @@ prepare_mrp_covid <- function(
   # append levels for other geographic predictors
   # NOTE: this must be done after new_data is created
   # as these levels are not used in the poststratification table
-  levels$county <- pstrat_data$county %>% unique()
+  levels$county <- covariates$county %>% unique()
 
   # list of variables for model specification
   vars <- create_variable_list(input_data, covariates)
