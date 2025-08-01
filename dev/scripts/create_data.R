@@ -173,22 +173,22 @@ library(magrittr)
 library(dplyr)
 library(readr)
 
-save_dir <- "/Users/tntoan/Desktop/MRP/Data/shinymrp/"
+save_dir <- "/Users/tntoan/Desktop/MRP/Data/mrp_workflow_paper/"
 
 # Create tract data for COVID
-year <- 2021
-tract_data <- get_tract_data(year = year, include_covar = TRUE)
-readr::write_csv(tract_data, paste0(save_dir, "acs/acs_covid_", year-4, "-", year, ".csv"))
+# year <- 2021
+# tract_data <- get_tract_data(year = year, include_covar = TRUE)
+# readr::write_csv(tract_data, paste0(save_dir, "acs/acs_covid_", year-4, "-", year, ".csv"))
 
 # Get ZIP-tract crosswalk
-zip_tract <- get_zip_tract(Sys.getenv("USPS_CROSSWALK_API_KEY"))
+# zip_tract_full <- get_zip_tract(Sys.getenv("USPS_CROSSWALK_API_KEY"))
 
 tract_data <- readr::read_csv(
-  paste0(save_dir, "acs/acs_covid_2017-2021.csv"),
+  paste0(save_dir, "acs_covid_2017-2021.csv"),
   show_col_types = FALSE
 )
 
-zip_tract <- readr::read_csv(
+zip_tract_full <- readr::read_csv(
   paste0(save_dir, "zip_tract_full.csv"),
   show_col_types = FALSE
 )
@@ -196,32 +196,32 @@ zip_tract <- readr::read_csv(
 # Create poststratification and covariate data
 out <- combine_tracts_covid(
   tract_data = tract_data,
-  zip_tract = zip_tract
+  zip_tract = zip_tract_full
 )
 
-write_csv(out$pstrat, paste0(save_dir, "acs/pstrat_covid.csv"))
-write_csv(out$covar, paste0(save_dir, "acs/covar_covid.csv"))
+write_csv(out$pstrat, paste0(save_dir, "pstrat_covid.csv"))
+write_csv(out$covar, paste0(save_dir, "covar_covid.csv"))
 
  
 # Create example poststratification data
-tract_data <- readr::read_csv(paste0(save_dir, "acs/acs_2019-2023.csv"), show_col_types = FALSE)
+# tract_data <- readr::read_csv(paste0(save_dir, "acs/acs_2019-2023.csv"), show_col_types = FALSE)
 
-zip_tract <- readr::read_csv(
-  paste0(save_dir, "zip_tract.csv"),
-  show_col_types = FALSE,
-  col_types = readr::cols(.default = "c")
-)
+# zip_tract <- readr::read_csv(
+#   paste0(save_dir, "zip_tract.csv"),
+#   show_col_types = FALSE,
+#   col_types = readr::cols(.default = "c")
+# )
 
-metadata <- list(
-  special_case = NULL
-)
+# metadata <- list(
+#   special_case = NULL
+# )
 
-pstrat <- create_pstrat(
-  tract_data = tract_data,
-  zip_tract = zip_tract,
-  metadata = metadata,
-  link_geo = "county"
-)
+# pstrat <- create_pstrat(
+#   tract_data = tract_data,
+#   zip_tract = zip_tract,
+#   metadata = metadata,
+#   link_geo = "county"
+# )
 
-View(pstrat)
-readr::write_csv(pstrat, "inst/extdata/example/data/pstrat.csv")
+# View(pstrat)
+# readr::write_csv(pstrat, "inst/extdata/example/data/pstrat.csv")
