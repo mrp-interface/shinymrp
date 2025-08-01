@@ -2202,6 +2202,14 @@ preprocess <- function(
     check_cols <- setdiff(names(data), indiv_vars)
     data <- data %>% tidyr::drop_na(all_of(check_cols))
 
+    # convert date to week indices if necessary
+    if (metadata$is_timevar) {
+      data <- add_week_indices(data)
+    }
+
+    # remove duplicate rows
+    data <- remove_duplicates(data, is_covid)
+
     # remove ZIP codes and states with small sample sizes
     if ("zip" %in% names(data)) {
       data <- filter_state_zip(
@@ -2211,14 +2219,6 @@ preprocess <- function(
         state_threshold = state_threshold
       )
     }
-
-    # convert date to week indices if necessary
-    if (metadata$is_timevar) {
-      data <- add_week_indices(data)
-    }
-
-    # remove duplicate rows
-    data <- remove_duplicates(data, is_covid)
 
     # recode values to expected levels
     data <- recode_values(data, levels, is_covid)
