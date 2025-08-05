@@ -405,6 +405,7 @@ mod_analyze_upload_server <- function(id, global){
         global$data <- preprocess(
           data = raw_sample(),
           metadata = global$metadata,
+          zip_county_state = zip_$county_state,
           is_sample = TRUE,
           is_aggregated = global$metadata$family != "normal" &&
             input$toggle_sample == "agg"
@@ -649,6 +650,7 @@ mod_analyze_upload_server <- function(id, global){
         new_data <- preprocess(
           data = raw_pstrat(),
           metadata = global$metadata,
+          zip_county_state = zip_$county_state,
           is_sample = FALSE,
           is_aggregated = input$toggle_pstrat == "agg"
         )

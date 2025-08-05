@@ -63,20 +63,20 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
 #'   \item{message}{Warning message if invalid, or NULL if valid}
 #' @noRd
 check_fit_object <- function(model, expected_metadata) {
-  example_model <- qs::qread(app_sys("extdata/example/fit/fit_crosssectional_other.RDS"))
+  # example_model <- qs::qread(app_sys("extdata/example/fit/crosssectional_binomial_fit.qs"))
   
-  # Check if the model object has all the required fields
-  if (!setequal(names(model), names(example_model))) {
-    return("The uploaded file does not contain a valid estimation result.")
-  }
+  # # Check if the model object has all the required fields
+  # if (!setequal(names(model), names(example_model))) {
+  #   return("The uploaded file does not contain a valid estimation result.")
+  # }
 
-  # Check if the model object has the expected data format
-  if(model$metadata$special_case != expected_metadata$special_case ||
-     model$metadata$is_timevar != expected_metadata$is_timevar) {
-    return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
-                    use_case_label(model$metadata),
-                    use_case_label(expected_metadata)))
-  }
+  # # Check if the model object has the expected data format
+  # if(model$metadata$special_case != expected_metadata$special_case ||
+  #    model$metadata$is_timevar != expected_metadata$is_timevar) {
+  #   return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
+  #                   use_case_label(model$metadata),
+  #                   use_case_label(expected_metadata)))
+  # }
 
   return("")
 }

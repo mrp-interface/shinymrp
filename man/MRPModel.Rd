@@ -12,7 +12,7 @@ A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
 \verb{$create_model()} method of a
 \code{\link{MRPWorkflow}} object. Each \code{MRPModel} object represents a
 multilevel regression model with methods for sampling, diagnostics,
-and poststratification.
+and post-stratification.
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -52,7 +52,7 @@ Creates a new instance of the MRPModel class with specified effects, data, and m
 \describe{
 \item{\code{effects}}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
 
-\item{\code{mrp}}{List containing the MRP data structure with input sample data and new poststratification data}
+\item{\code{mrp}}{List containing the MRP data structure with input sample data and new post-stratification data}
 
 \item{\code{metadata}}{List containing metadata about the analysis including family, time variables, and special cases}
 
@@ -90,7 +90,7 @@ Retrieves the model formula constructed from the effects specification.
 \if{html}{\out{<a id="method-MRPModel-mrp"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPModel-mrp}{}}}
 \subsection{Method \code{mrp()}}{
-Retrieves the MRP data structure containing input sample data and poststratification data.
+Retrieves the MRP data structure containing input sample data and post-stratification data.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPModel$mrp()}\if{html}{\out{</div>}}
 }
@@ -233,7 +233,7 @@ Runs leave-one-out cross-validation to assess model predictive performance and e
 \if{html}{\out{<a id="method-MRPModel-poststratify"></a>}}
 \if{latex}{\out{\hypertarget{method-MRPModel-poststratify}{}}}
 \subsection{Method \code{poststratify()}}{
-Runs poststratification using the fitted model to generate population-level estimates across different subgroups and geographies.
+Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MRPModel$poststratify(interval = 0.95)}\if{html}{\out{</div>}}
 }

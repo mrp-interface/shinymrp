@@ -203,11 +203,11 @@ workflow$compare_models(model1, model2)
 ### Saving and loading models
 
 ```{r, save_model, eval=FALSE}
-workflow$save_model(model1, file = "model1.RDS")
+workflow$save_model(model1, file = "model1.qs")
 ```
 
 ```{r, load_model, eval=FALSE}
-model1 <- workflow$load_model("model1.RDS")
+model1 <- workflow$load_model("model1.qs")
 ```
 
 
