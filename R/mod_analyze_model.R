@@ -93,7 +93,7 @@ mod_analyze_model_ui <- function(id) {
         bslib::accordion_panel(
           title = "Estimation Result Upload",
           value = "model_upload",
-          fileInput(ns("fit_upload"), "Select RDS file with model estimation", accept = ".RDS"),
+          fileInput(ns("fit_upload"), "Select .qs file with model estimation", accept = ".qs"),
           uiOutput(ns("model_feedback")),
           tags$p("Or use example result", class = "mt-2 mb-1"),
           actionButton(ns("use_example"), "Example Estimation Result", icon("table"), class = "w-100")
@@ -759,7 +759,7 @@ mod_analyze_model_server <- function(id, global){
         html = waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
-      
+
       model <- qs::qread(input$fit_upload$datapath)
       check_fit_object(model, global$metadata) %>% model_feedback()
 
@@ -780,9 +780,9 @@ mod_analyze_model_server <- function(id, global){
       file_name <- create_example_filename(
         global$metadata,
         suffix = "fit",
-        ext = ".RDS"
+        ext = ".qs"
       )
-
+      print
       qs::qread(
         app_sys(paste0(GLOBAL$path$example_fit, file_name))
       ) %>% model_buffer()
@@ -965,13 +965,15 @@ mod_analyze_model_server <- function(id, global){
         # download fit result after postprocessing
         output[[model$IDs$save_fit_btn]] <- downloadHandler(
           filename = function() { 
-            paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".RDS")
+            paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
           },
           content = function(file) {
             waiter::waiter_show(
               html = waiter_ui("wait"),
               color = waiter::transparent(0.9)
             )
+
+            model$fit <- NULL  # remove fit object to save space
 
             qs::qsave(model, file)
             
@@ -988,7 +990,9 @@ mod_analyze_model_server <- function(id, global){
       
       # download fit result before postprocessing
       output[[model$IDs$save_fit_btn]] <- downloadHandler(
-        filename = function() { "model_fit_wo_postprocess.RDS" },
+        filename = function() { 
+          paste0("estimation_wo_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
+        },
         content = function(file) {
           waiter::waiter_show(
             html = waiter_ui("wait"),
