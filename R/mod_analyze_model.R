@@ -782,7 +782,7 @@ mod_analyze_model_server <- function(id, global){
         suffix = "fit",
         ext = ".qs"
       )
-      print
+
       qs::qread(
         app_sys(paste0(GLOBAL$path$example_fit, file_name))
       ) %>% model_buffer()
