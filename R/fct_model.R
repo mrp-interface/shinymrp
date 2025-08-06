@@ -20,10 +20,7 @@
 #'
 #' @return A character string representing the model formula with fixed effects,
 #'   varying intercepts (1 | group), and varying slopes (0 + variable | group)
-#'
 #' @noRd
-#'
-#' @importFrom stringr str_interp
 create_formula <- function(effects) {
 
   m_fix_c <- names(effects$m_fix_c) %>%
@@ -37,7 +34,7 @@ create_formula <- function(effects) {
 
   s_fixed <- if(length(fixed) > 0) paste(paste0(" + ", fixed), collapse = '') else ''
   s_varit <- if(length(varit) > 0) paste(paste0(" + (1 | ", varit, ")"), collapse = '') else ''
-  s_varsl <- if(length(varsl) > 0) paste(map(varsl, function(s) {
+  s_varsl <- if(length(varsl) > 0) paste(purrr::map(varsl, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     return(paste0(" + (0 + ", ss[2], " | ", ss[1], ')'))
   }), collapse = '') else ''
@@ -59,7 +56,6 @@ create_formula <- function(effects) {
 #'
 #' @return A cleaned character string with whitespace removed and converted to
 #'   lowercase (e.g., "normal(0,1)" or "student_t(3,0,1)").
-#'
 #' @noRd
 clean_prior_syntax <- function(s) {
   # Remove whitespace
@@ -88,14 +84,6 @@ clean_prior_syntax <- function(s) {
 #'
 #' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE).
 #'   Returns TRUE for NULL inputs (no prior specified).
-#'
-#' @details The function uses regex patterns to validate:
-#' \itemize{
-#'   \item Parameter count and format
-#'   \item Positive constraints on scale/variance parameters
-#'   \item Proper parentheses and comma placement
-#' }
-#'
 #' @noRd
 check_prior_syntax <- function(s) {
   if (is.null(nullify(s))) {
@@ -147,15 +135,6 @@ check_prior_syntax <- function(s) {
 #' @return List with same structure as input but with NULL priors replaced by
 #'   appropriate defaults from GLOBAL$default_priors. Each effect type gets its
 #'   corresponding default prior distribution.
-#'
-#' @details Default priors are applied for:
-#' \itemize{
-#'   \item Intercept: Typically normal(0, 2.5) for weakly informative prior
-#'   \item Fixed effects: Usually normal(0, 1) for standardized predictors
-#'   \item Varying effects: Often exponential(1) for scale parameters
-#'   \item Interactions: Context-dependent defaults based on effect type
-#' }
-#'
 #' @noRd
 set_default_priors <- function(effects) {
   for (type in c("Intercept", GLOBAL$args$effect_types)) {
@@ -176,14 +155,6 @@ set_default_priors <- function(effects) {
 #'
 #' @return Character string with variables sorted alphabetically within the pair.
 #'   For example, "gender:age" becomes "age:gender".
-#'
-#' @details This normalization is essential for:
-#' \itemize{
-#'   \item Consistent interaction term identification
-#'   \item Set operations on interaction collections
-#'   \item Avoiding duplicate interactions with different variable orders
-#' }
-#'
 #' @noRd
 # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
 norm_pair <- function(p, sep = ":") {
@@ -203,14 +174,6 @@ norm_pair <- function(p, sep = ":") {
 #'
 #' @return Character vector containing normalized interaction pairs that appear
 #'   in both pairs1 and pairs2, accounting for order-invariant matching.
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Normalizes both sets of pairs using norm_pair()
-#'   \item Computes set intersection on normalized forms
-#'   \item Returns pairs in canonical (alphabetically sorted) order
-#' }
-#'
 #' @noRd
 pair_intersect <- function(pairs1, pairs2, sep = ":") {
   # normalize pairs
@@ -232,7 +195,6 @@ pair_intersect <- function(pairs1, pairs2, sep = ":") {
 #'
 #' @return Character vector containing pairs from pairs1 that are not present in pairs2,
 #'   accounting for order-invariant matching
-#'
 #' @noRd
 pair_setdiff <- function(pairs1, pairs2, sep = ":") {
   # precompute the normalized sets of pairs
@@ -259,9 +221,7 @@ pair_setdiff <- function(pairs1, pairs2, sep = ":") {
 #' @param dat Data frame containing the variables referenced in interactions
 #'
 #' @return Character vector of filtered interaction terms suitable for structured priors
-#'
 #' @noRd
-#'
 filter_interactions <- function(interactions, fixed_effects, data) {
   bool <- purrr::map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -288,9 +248,7 @@ filter_interactions <- function(interactions, fixed_effects, data) {
 #'
 #' @return Character vector of interaction terms with variables reordered within
 #'   each term according to type hierarchy (binary < categorical < continuous)
-#'
 #' @noRd
-#'
 sort_interactions <- function(interactions, dat) {
   interactions <- purrr::map_chr(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -426,7 +384,6 @@ group_fixed <- function(fixed, dat) {
 #'     \item varying_intercept: Categorical×categorical interactions
 #'     \item varying_intercept_special: Binary×categorical interactions
 #'   }
-#'
 #' @noRd
 group_interactions <- function(interactions, dat) {
   out <- list(
@@ -491,7 +448,6 @@ group_interactions <- function(interactions, dat) {
 #'     \item interaction: Grouped interactions without structured priors
 #'     \item structured: Grouped interactions with structured priors
 #'   }
-#'
 #' @noRd
 group_effects <- function(effects, dat) {
   out <- list()
@@ -543,7 +499,6 @@ group_effects <- function(effects, dat) {
 #'     \item s_varit: Structured varying-intercept interactions
 #'     \item s_varits: Special structured varying-intercept interactions
 #'   }
-#'
 #' @noRd
 ungroup_effects <- function(effects) {
   # for cleaner code
@@ -594,7 +549,7 @@ data_ <- function(effects, metadata) {
   ) %>% 
     unique()
   for(s in union(m_fix_c_names, names(effects$m_var))) {
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   int<lower=1> N_${s};
   array[N] int<lower=1, upper=N_${s}> J_${s};
   int<lower=1> N_${s}_pop;
@@ -605,7 +560,7 @@ data_ <- function(effects, metadata) {
   # interactions
   int <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   for(s in gsub(':', '', names(int))) {
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   int<lower=1> N_${s};
   array[N] int<lower=1, upper=N_${s}> J_${s};
   int<lower=1> N_${s}_pop;
@@ -620,11 +575,11 @@ data_ <- function(effects, metadata) {
   ")
   
   for(s in metadata$pstrat_vars) {
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   int<lower=1> N_${s}_pstrat;
   array[N_pop] int<lower=1, upper=N_${s}_pstrat> J_${s}_pstrat;
   vector<lower=0, upper=1>[N_pop] P_${s}_pstrat;
-  ")) 
+  "))
   }
   
   if(metadata$is_timevar) {
@@ -653,7 +608,7 @@ parameters_ <- function(effects, metadata) {
   
   # varying main effect
   for(s in names(effects$m_var)) {
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${s};
   vector[N_${s}] z_${s};"))
   }
@@ -661,7 +616,7 @@ parameters_ <- function(effects, metadata) {
   # varying-intercept interaction without structured prior
   for(s in names(c(effects$i_varit, effects$i_varits))) {
     s <- gsub(':', '', s)
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${s};
   vector[N_${s}] z_${s};"))
   }
@@ -670,7 +625,7 @@ parameters_ <- function(effects, metadata) {
   for(s in names(effects$i_varsl)) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda2_${s};
   vector[N_${ss[1]}] z2_${s};"))
   }
@@ -678,7 +633,7 @@ parameters_ <- function(effects, metadata) {
   # varying-intercept interaction with structured prior
   for(s in names(c(effects$s_varit, effects$s_varits))) {
     s <- gsub(':', '', s)
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   vector[N_${s}] z_${s};"))
   }
   
@@ -686,7 +641,7 @@ parameters_ <- function(effects, metadata) {
   for(s in names(effects$s_varsl)) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   vector[N_${ss[1]}] z2_${s};"))
   }
 
@@ -712,9 +667,9 @@ transformed_parameters_ <- function(effects, metadata) {
   
   struct_effects <- c(
     names(effects$s_varsl) %>%
-      map(function(s) strsplit(s, ':')[[1]][1]),
+      purrr::map(function(s) strsplit(s, ':')[[1]][1]),
     names(c(effects$s_varit, effects$s_varits)) %>%
-      map(function(s) strsplit(s, ':')[[1]]) %>%
+      purrr::map(function(s) strsplit(s, ':')[[1]]) %>%
       do.call(c, .)
   ) %>%
     unlist() %>%
@@ -723,21 +678,21 @@ transformed_parameters_ <- function(effects, metadata) {
   # varying main effects
   for(s in names(effects$m_var)) {
     if(s %in% struct_effects) {
-      scode <- paste0(scode, str_interp("
+      scode <- paste0(scode, stringr::str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s} * tau;"))
     } else {
-      scode <- paste0(scode, str_interp("
+      scode <- paste0(scode, stringr::str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s};"))
     }
     
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   vector[N_${s}] a_${s} = z_${s} * scaled_lambda_${s};"))
   }
   
   # varying-intercept interaction without structured prior
   for(s in names(c(effects$i_varit, effects$i_varits))) {
     s <- gsub(':', '', s)
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   vector[N_${s}] a_${s} = z_${s} * lambda_${s};"))
   }
   
@@ -745,7 +700,7 @@ transformed_parameters_ <- function(effects, metadata) {
   for(s in names(effects$i_varsl)) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   vector[N_${ss[1]}] b_${s} = z2_${s} * lambda2_${s};"))
   }
   
@@ -753,7 +708,7 @@ transformed_parameters_ <- function(effects, metadata) {
   for(s in names(c(effects$s_varit))) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${s} = lambda_${ss[1]} * lambda_${ss[2]} * delta * tau;
   vector[N_${s}] a_${s} = z_${s} * lambda_${s};"))
   }
@@ -762,7 +717,7 @@ transformed_parameters_ <- function(effects, metadata) {
   for(s in names(c(effects$s_varits))) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${s} = lambda_${ss[2]} * delta * tau;
   vector[N_${s}] a_${s} = z_${s} * lambda_${s};"))
   }
@@ -771,7 +726,7 @@ transformed_parameters_ <- function(effects, metadata) {
   for(s in names(effects$s_varsl)) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda2_${s} = lambda_${ss[1]} * delta * tau;
   vector[N_${ss[1]}] b_${s} = z2_${s} * lambda2_${s};"))
   }
@@ -788,12 +743,12 @@ transformed_parameters_ <- function(effects, metadata) {
   vector[N] mu = Intercept%s%s%s%s;"
   }
   s_fixed <- if(length(fixed) > 0) " + X * beta" else ""
-  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
-  s_int_varit <- paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
-  s_int_varsl <- paste(map(names(int_varsl), function(s) {
+  s_mvar <- paste(purrr::map(names(effects$m_var), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
+  s_int_varit <- paste(purrr::map(gsub(':', '', names(int_varit)), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
+  s_int_varsl <- paste(purrr::map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    return(str_interp(" + b_${s}[J_${ss[1]}] .* X[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
+    return(stringr::str_interp(" + b_${s}[J_${ss[1]}] .* X[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
   }), collapse = "")
   
   scode <- paste0(scode, sprintf(s_formula, s_fixed, s_mvar, s_int_varit, s_int_varsl))
@@ -821,20 +776,7 @@ transformed_parameters_ <- function(effects, metadata) {
 #'     \item Standardized effects: Standard normal priors for z parameters
 #'     \item Structured priors: Global and local scale parameters (if used)
 #'   }
-#'
-#' @details Model block components:
-#' \enumerate{
-#'   \item Outcome likelihood based on family type
-#'   \item Prior specifications for all parameter types
-#'   \item Hierarchical structure for varying effects
-#'   \item Non-centered parameterization for efficiency
-#'   \item Structured prior implementation for interactions
-#' }
-#'
 #' @noRd
-#'
-#' @importFrom stringr str_interp
-#' @importFrom purrr map
 model_ <- function(effects, metadata) {
   # group effects
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
@@ -855,20 +797,20 @@ model_ <- function(effects, metadata) {
   
   scode <- paste0(
     scode, 
-    str_interp("\n  Intercept ~ ${effects$Intercept$Intercept};"),
-    if(length(fixed) > 0) paste(map(1:length(fixed), ~ str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
-    paste(map(names(effects$m_var), ~ str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
-    paste(map(names(int_varit), ~ str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
-    paste(map(names(int_varsl), ~ str_interp("\n  z2_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
-    paste(map(names(effects$m_var), ~ str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
-    paste(map(names(int_varit_wo_struct), ~ str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varit[[.x]]};")), collapse = ""),
-    paste(map(names(int_varsl_wo_struct), ~ str_interp("\n  lambda2_${gsub(':', '', .x)} ~ ${int_varsl[[.x]]};")), collapse = "")
+    stringr::str_interp("\n  Intercept ~ ${effects$Intercept$Intercept};"),
+    if(length(fixed) > 0) paste(purrr::map(1:length(fixed), ~ stringr::str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
+    paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
+    paste(purrr::map(names(int_varit), ~ stringr::str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
+    paste(purrr::map(names(int_varsl), ~ stringr::str_interp("\n  z2_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
+    paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
+    paste(purrr::map(names(int_varit_wo_struct), ~ stringr::str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varit[[.x]]};")), collapse = ""),
+    paste(purrr::map(names(int_varsl_wo_struct), ~ stringr::str_interp("\n  lambda2_${gsub(':', '', .x)} ~ ${int_varsl[[.x]]};")), collapse = "")
   )
   
   # include the parameters below if structured prior is used
   int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
   if(length(int_struct) > 0) {
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   tau ~ ${GLOBAL$default_priors$global_scale};
   delta ~ ${GLOBAL$default_priors$local_scale};"))
   }
@@ -880,12 +822,11 @@ model_ <- function(effects, metadata) {
 #'
 #' @description Creates generated quantities block code for computing log-likelihood
 #' values needed for leave-one-out cross-validation (LOO-CV) model comparison.
-#' 
+#'
 #' @param metadata List containing model specifications, including outcome distribution family
-#' 
+#'
 #' @return Character string containing Stan generated quantities code that computes
 #'   log_lik vector with binomial log probability mass function values for each observation
-#'
 #' @noRd
 gq_loo <- function(metadata) {
   lpf <- switch(metadata$family,
@@ -909,7 +850,6 @@ gq_loo <- function(metadata) {
 #'
 #' @return Character string containing Stan generated quantities code that generates
 #'   y_rep array with binomial random draws using fitted probabilities
-#'
 #' @noRd
 gq_ppc <- function(metadata) {
   scode <- switch(metadata$family,
@@ -940,10 +880,7 @@ gq_ppc <- function(metadata) {
 #'     \item Aggregating by subgroups using poststratification weights
 #'     \item Temporal aggregation if specified
 #'   }
-#'
 #' @noRd
-#'
-#' @importFrom stringr str_interp
 gq_pstrat <- function(effects, metadata) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
@@ -952,7 +889,7 @@ gq_pstrat <- function(effects, metadata) {
   
   # sample from posterior for parameters of new levels
   for(s in gsub(':', '', names(int_varit))) {
-    scode <- paste0(scode, str_interp("
+    scode <- paste0(scode, stringr::str_interp("
   vector[N_${s}_pop] a_${s}_pop;
   if(N_${s} == N_${s}_pop) {
     a_${s}_pop = a_${s};
@@ -966,11 +903,11 @@ gq_pstrat <- function(effects, metadata) {
   # initialize vectors
   if(metadata$is_timevar) {
     init_overall <- "vector[N_time_pstrat] theta_overall_pop = rep_vector(0, N_time_pstrat);"
-    init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+    init_marginal <- paste(purrr::map(metadata$pstrat_vars, ~ stringr::str_interp("
   matrix[N_${.x}_pstrat, N_time_pstrat] theta_${.x}_pop = rep_matrix(0, N_${.x}_pstrat, N_time_pstrat);")), collapse = "")
   } else {
     init_overall <- "real theta_overall_pop;"
-    init_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+    init_marginal <- paste(purrr::map(metadata$pstrat_vars, ~ stringr::str_interp("
   vector[N_${.x}_pstrat] theta_${.x}_pop = rep_vector(0, N_${.x}_pstrat);")), collapse = "")
   }
   
@@ -987,12 +924,12 @@ gq_pstrat <- function(effects, metadata) {
   }
 
   s_fixed <- if(length(fixed) > 0) " + X_pop * beta" else ""
-  s_mvar <- paste(map(names(effects$m_var), ~ str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = "")
-  s_int_varit <- paste(map(gsub(':', '', names(int_varit)), ~ str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
-  s_int_varsl <- paste(map(names(int_varsl), function(s) {
+  s_mvar <- paste(purrr::map(names(effects$m_var), ~ stringr::str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = "")
+  s_int_varit <- paste(purrr::map(gsub(':', '', names(int_varit)), ~ stringr::str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
+  s_int_varsl <- paste(purrr::map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
-    return(str_interp(" + b_${s}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
+    return(stringr::str_interp(" + b_${s}[J_${ss[1]}_pop] .* X_pop[:, ${which(names(effects$m_fix_bc) == ss[2])}]"))
   }), collapse = "")
 
   est_cell <- sprintf(est_cell, s_fixed, s_mvar, s_int_varit, s_int_varsl)
@@ -1004,30 +941,30 @@ gq_pstrat <- function(effects, metadata) {
       theta_overall_pop[J_time_pstrat[i]] += theta_pop_scaled[i];
     }"
     
-    est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+    est_marginal <- paste(purrr::map(metadata$pstrat_vars, ~ stringr::str_interp("
     theta_pop_scaled = theta_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
       theta_${.x}_pop[J_${.x}_pstrat[i], J_time_pstrat[i]] += theta_pop_scaled[i];
     }")), collapse = "")
   } else {
-    est_overall <- str_interp("
+    est_overall <- stringr::str_interp("
     theta_pop_scaled = theta_pop .* P_overall_pstrat;
     theta_overall_pop = sum(theta_pop_scaled);")
     
-    est_marginal <- paste(map(metadata$pstrat_vars, ~ str_interp("
+    est_marginal <- paste(purrr::map(metadata$pstrat_vars, ~ stringr::str_interp("
     theta_pop_scaled = theta_pop .* P_${.x}_pstrat;
     for (i in 1:N_pop) {
       theta_${.x}_pop[J_${.x}_pstrat[i]] += theta_pop_scaled[i];
-    }")), collapse = "") 
+    }")), collapse = "")
   }
   
-  scode <- paste0(scode, str_interp("
+  scode <- paste0(scode, stringr::str_interp("
   ${init_overall}
   ${init_marginal}
   {  ${est_cell}
      ${est_overall}
      ${est_marginal}
-  }                
+  }
   "))
 
   
@@ -1056,13 +993,10 @@ gq_pstrat <- function(effects, metadata) {
 #'     \item model block: Likelihood and prior specifications
 #'   }
 #'   Ready for compilation and MCMC sampling.
-#'
 #' @noRd
-#'
-#' @importFrom stringr str_interp
 make_stancode_mcmc <- function(effects, metadata=NULL) {
   
-  scode <- str_interp("
+  scode <- stringr::str_interp("
 data { ${data_(effects, metadata)}
 }
 
@@ -1105,10 +1039,7 @@ model { ${model_(effects, metadata)}
 #'     \item generated quantities block: Specific to gq_type
 #'   }
 #'   Ready for use with generate_quantities() method.
-#'
 #' @noRd
-#'
-#' @importFrom stringr str_interp
 make_stancode_gq <- function(
   effects,
   metadata,
@@ -1121,7 +1052,7 @@ make_stancode_gq <- function(
     "pstrat" = gq_pstrat(effects, metadata)
   )
   
-  scode <- str_interp("
+  scode <- stringr::str_interp("
 data { ${data_(effects, metadata)}
 }
 
@@ -1156,32 +1087,21 @@ generated quantities { ${gq_code}
 #'     \item Original values: Saved with "_raw" suffix for reference
 #'     \item Ignored columns: Left unchanged (outcome variables, totals, etc.)
 #'   }
-#'
-#' @details The transformation process:
-#' \enumerate{
-#'   \item Identifies columns to transform (excluding GLOBAL$vars$ignore)
-#'   \item Determines data type for each column using data_type()
-#'   \item Applies appropriate transformation based on type
-#'   \item Preserves original values with "_raw" suffix
-#'   \item Combines transformed and raw columns
-#' }
-#'
 #' @noRd
-#' @importFrom dplyr mutate select rename_with bind_cols across all_of
 stan_factor <- function(df) {
   # find the columns to mutate
   col_names <- setdiff(names(df), GLOBAL$vars$ignore)
   
   # save the “raw” columns
   df_raw <- df %>%
-    select(all_of(col_names)) %>%
-    rename_with(~ paste0(.x, "_raw"), everything())
+    dplyr::select(dplyr::all_of(col_names)) %>%
+    dplyr::rename_with(~ paste0(.x, "_raw"), dplyr::everything())
   
   # transform the original columns in-place
   df_mutated <- df %>%
-    mutate(
-      across(
-        all_of(col_names),
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(col_names),
         ~ {
           vec   <- .
           dtype <- data_type(vec)
@@ -1203,7 +1123,7 @@ stan_factor <- function(df) {
     )
   
   # concatenate the "raw" columns
-  df_out <- bind_cols(df_mutated, df_raw)
+  df_out <- dplyr::bind_cols(df_mutated, df_raw)
   
   return(df_out)
 }
@@ -1243,22 +1163,7 @@ stan_factor <- function(df) {
 #'     \item Poststratification weights and indices
 #'     \item sens, spec: Sensitivity and specificity parameters
 #'   }
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Creates outcome variables based on family type
-#'   \item Constructs design matrices for fixed effects and interactions
-#'   \item Sets up grouping variables for varying effects
-#'   \item Computes interaction level indices
-#'   \item Prepares poststratification weights and groupings
-#'   \item Handles time-varying data structure
-#' }
-#'
 #' @noRd
-#'
-#' @importFrom dplyr select mutate group_by n_distinct
-#' @importFrom stringr str_interp
-#' @importFrom rlang syms .data
 make_standata <- function(
     input_data,
     new_data,
@@ -1293,18 +1198,18 @@ make_standata <- function(
 
     # fixed main effects (continuous && binary)
     X_cont <- dat %>%
-      select(all_of(names(effects$m_fix_bc))) %>%
+      dplyr::select(dplyr::all_of(names(effects$m_fix_bc))) %>%
       data.matrix()
 
     # fixed main effects (categorical)
-    X_cat <- map(names(effects$m_fix_c), function(s) {
+    X_cat <- purrr::map(names(effects$m_fix_c), function(s) {
       ss <- strsplit(s, split = '\\.')[[1]]
       as.integer(dat[[paste0(ss[1], "_raw")]] == ss[2])
     }) %>%
       do.call(cbind, .)
     
     # interaction between fixed effects
-    X_int <- map(names(effects$i_fixsl), function(s) {
+    X_int <- purrr::map(names(effects$i_fixsl), function(s) {
       ss <- strsplit(s, split = ':')[[1]]
       return(dat[[ss[1]]] * dat[[ss[2]]])
     }) %>%
@@ -1322,8 +1227,8 @@ make_standata <- function(
     ) %>% 
       unique()
     for(s in union(m_fix_c_names, names(effects$m_var))) {
-      stan_data[[str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
-      stan_data[[str_interp("J_${s}${subfix}")]] <- dat[[s]]
+      stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- dplyr::n_distinct(dat[[s]])
+      stan_data[[stringr::str_interp("J_${s}${subfix}")]] <- dat[[s]]
     }
     
     # interactions
@@ -1334,11 +1239,11 @@ make_standata <- function(
       int_lvls <- interaction_levels(dat[[ss[1]]], dat[[ss[2]]])
       unq_int_lvls <- sort(unique(int_lvls))
       n_int_lvls <- length(unq_int_lvls)
-      stan_data[[str_interp("N_${s}${subfix}")]] <- n_int_lvls
-      stan_data[[str_interp("J_${s}${subfix}")]] <- factor(int_lvls, levels = unq_int_lvls, labels = 1:n_int_lvls) %>% as.numeric()
+      stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- n_int_lvls
+      stan_data[[stringr::str_interp("J_${s}${subfix}")]] <- factor(int_lvls, levels = unq_int_lvls, labels = 1:n_int_lvls) %>% as.numeric()
       
       if(name == "input") {
-        stan_data[[str_interp("I_${s}")]] <- unq_int_lvls
+        stan_data[[stringr::str_interp("I_${s}")]] <- unq_int_lvls
       }
     }
   }
@@ -1346,26 +1251,26 @@ make_standata <- function(
   # poststratification
   if (!is.null(metadata)) {
     pstrat_data <- new_data %>%
-      mutate(
-        across(everything(), ~ if(n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
+      dplyr::mutate(
+        dplyr::across(dplyr::everything(), ~ if(dplyr::n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
         overall = 1
       )
     for(s in c("overall", metadata$pstrat_vars)) {
       group_cols <- if(metadata$is_timevar) c("time", s) else c(s)
       
       pop_prop <- pstrat_data %>%
-        group_by(!!!syms(group_cols)) %>%
-        mutate(prop = .data$total / sum(.data$total))
+        dplyr::group_by(!!!rlang::syms(group_cols)) %>%
+        dplyr::mutate(prop = .data$total / sum(.data$total))
       
       if(s != "overall") {
-        stan_data[[str_interp("N_${s}_pstrat")]] <- n_distinct(pstrat_data[[s]])
-        stan_data[[str_interp("J_${s}_pstrat")]] <- pstrat_data[[s]] 
+        stan_data[[stringr::str_interp("N_${s}_pstrat")]] <- dplyr::n_distinct(pstrat_data[[s]])
+        stan_data[[stringr::str_interp("J_${s}_pstrat")]] <- pstrat_data[[s]]
       }
-      stan_data[[str_interp("P_${s}_pstrat")]] <- pop_prop$prop
+      stan_data[[stringr::str_interp("P_${s}_pstrat")]] <- pop_prop$prop
     }
     
     if(metadata$is_timevar) {
-      stan_data$N_time_pstrat <- n_distinct(new_data$time)
+      stan_data$N_time_pstrat <- dplyr::n_distinct(new_data$time)
       stan_data$J_time_pstrat <- new_data$time
     }
   }
@@ -1405,28 +1310,6 @@ make_standata <- function(
 #'   \item{fit}{CmdStanR fit object with MCMC samples}
 #'   \item{stan_data}{List of data passed to Stan}
 #'   \item{stan_code}{List of generated Stan code for mcmc, ppc, loo, and pstrat}
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Generates Stan code for MCMC sampling and generated quantities
-#'   \item Prepares data in Stan-compatible format
-#'   \item Compiles the Stan model with threading support
-#'   \item Runs MCMC sampling with specified parameters
-#'   \item Returns fit object and associated data/code for further analysis
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Fit a basic multilevel model
-#' result <- run_mcmc(
-#'   input_data = processed_data,
-#'   new_data = pstrat_data,
-#'   effects = model_effects,
-#'   metadata = model_metadata,
-#'   n_iter = 2000,
-#'   n_chains = 4
-#' )
-#' }
 #' @noRd
 run_mcmc <- function(
     input_data,
@@ -1493,34 +1376,6 @@ run_mcmc <- function(
 #'
 #' @return CmdStanR generated quantities fit object containing the requested
 #'   generated quantities (e.g., y_rep for PPC, log_lik for LOO, theta_pop for MRP).
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Compiles the generated quantities Stan code
-#'   \item Uses fitted parameters from MCMC to generate additional quantities
-#'   \item Runs in parallel across chains with threading support
-#'   \item Suppresses compilation and sampling messages for cleaner output
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Run posterior predictive checks
-#' ppc_fit <- run_gq(
-#'   fit_mcmc = mcmc_result$fit,
-#'   stan_code = mcmc_result$stan_code$ppc,
-#'   stan_data = mcmc_result$stan_data,
-#'   n_chains = 4
-#' )
-#'
-#' # Run poststratification
-#' pstrat_fit <- run_gq(
-#'   fit_mcmc = mcmc_result$fit,
-#'   stan_code = mcmc_result$stan_code$pstrat,
-#'   stan_data = mcmc_result$stan_data,
-#'   n_chains = 4
-#' )
-#' }
-#'
 #' @noRd
 run_gq <- function(
     fit_mcmc,
@@ -1570,15 +1425,6 @@ run_gq <- function(
 #'     \item Continuous variables: Unchanged
 #'     \item Row names: Updated to include variable.level format
 #'   }
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Identifies binary variables and their "1" level labels
-#'   \item Determines categorical variable levels and reference levels
-#'   \item Expands the summary table to include all levels
-#'   \item Sets NA values for reference levels (not estimated)
-#' }
-#'
 #' @noRd
 add_ref_lvl <- function(df_fixed, effects, input_data) {
   ### include reference levels for binary variables
@@ -1636,14 +1482,6 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
 #'     \item rhat: R-hat convergence diagnostic
 #'     \item ess_bulk, ess_tail: Effective sample size measures
 #'   }
-#'
-#' @details Uses posterior package functions for:
-#' \itemize{
-#'   \item Default summary measures (mean, median, sd, mad)
-#'   \item Custom quantiles for credible intervals
-#'   \item Convergence diagnostics (R-hat, ESS)
-#' }
-#'
 #' @noRd
 get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
   fit$summary(
@@ -1674,15 +1512,6 @@ get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
 #'     \item R-hat: Convergence diagnostic
 #'     \item Bulk_ESS, Tail_ESS: Effective sample size measures
 #'   }
-#'
-#' @details Column transformations:
-#' \enumerate{
-#'   \item Selects relevant statistical columns
-#'   \item Renames to standard reporting format
-#'   \item Calculates credible interval coverage percentage
-#'   \item Applies custom row names if provided
-#' }
-#'
 #' @noRd
 format_params_summary <- function(
     df,
@@ -1696,7 +1525,7 @@ format_params_summary <- function(
     "rhat", "ess_bulk", "ess_tail"
   )
   df <- df %>%
-    select(all_of(col_names)) %>%
+    dplyr::select(dplyr::all_of(col_names)) %>%
     as.data.frame()
 
   # rename columns
@@ -1748,35 +1577,6 @@ format_params_summary <- function(
 #'       \item Other model-specific parameters
 #'     }
 #'   }
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Extracts parameter summaries with convergence diagnostics
-#'   \item Formats column names and adds reference levels
-#'   \item Organizes parameters by type (fixed, varying, other)
-#'   \item Provides proper labeling for categorical variables
-#' }
-#'
-#' @importFrom dplyr select
-#' @importFrom rlang .data
-#'
-#' @examples
-#' \dontrun{
-#' # Extract parameter estimates
-#' params <- get_parameters(
-#'   fit = mcmc_result$fit,
-#'   effects = model_effects,
-#'   input_data = processed_data,
-#'   metadata = model_metadata
-#' )
-#'
-#' # View fixed effects
-#' print(params$fixed)
-#'
-#' # View varying effects
-#' print(params$varying)
-#' }
-#' 
 #' @noRd
 get_parameters <- function(
   fit,
@@ -1877,32 +1677,6 @@ get_parameters <- function(
 #'     }
 #'   }
 #'   \item{show_warnings}{Logical indicating whether any diagnostic issues were found}
-#'
-#' @details Diagnostic interpretation:
-#' \itemize{
-#'   \item Divergent transitions: Should be 0; indicates sampling problems
-#'   \item Max tree depth: Should be low; indicates inefficient sampling
-#'   \item E-BFMI < 0.3: Indicates potential energy problems in sampling
-#' }
-#'
-#' @examples
-#' \dontrun{
-#' # Extract diagnostics
-#' diagnostics <- get_diagnostics(
-#'   fit = mcmc_result$fit,
-#'   total_transitions = 2000,  # 500 samples * 4 chains
-#'   max_depth = 10
-#' )
-#'
-#' # View diagnostic summary
-#' print(diagnostics$summary)
-#'
-#' # Check if warnings should be shown
-#' if (diagnostics$show_warnings) {
-#'   warning("MCMC diagnostics indicate potential sampling issues")
-#' }
-#' }
-#'
 #' @noRd
 get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
   # Get diagnostic summary
@@ -1968,33 +1742,6 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #'     \item est: Posterior mean estimate
 #'     \item std: Posterior standard deviation
 #'   }
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Extracts posterior draws for each demographic subgroup
-#'   \item Computes posterior means and standard deviations
-#'   \item Organizes results by subgroup and time period
-#'   \item Matches factor levels to original data labels
-#' }
-#'
-#' @importFrom dplyr select mutate arrange distinct across all_of
-#'
-#' @examples
-#' \dontrun{
-#' # Extract poststratification estimates
-#' estimates <- get_estimates(
-#'   fit = pstrat_fit,
-#'   new_data = pstrat_data,
-#'   metadata = model_metadata
-#' )
-#'
-#' # View overall estimates
-#' print(estimates$overall)
-#'
-#' # View estimates by age group
-#' print(estimates$age)
-#' }
-#' 
 #' @noRd
 get_estimates <- function(
   fit,
@@ -2008,8 +1755,8 @@ get_estimates <- function(
   # convert new data to numeric factors
   col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
   new_data <- new_data %>%
-    select(all_of(col_names)) %>%
-    mutate(overall = "overall") %>%  # add placeholder column for overall estimates
+    dplyr::select(dplyr::all_of(col_names)) %>%
+    dplyr::mutate(overall = "overall") %>%  # add placeholder column for overall estimates
     stan_factor()
 
   est <- list()
@@ -2017,7 +1764,7 @@ get_estimates <- function(
   for(s in c("overall", metadata$pstrat_vars)) {
     # get posterior draws for each subgroup
     pred_mat <- fit$draws(
-      variables = str_interp("theta_${s}_pop"),
+      variables = stringr::str_interp("theta_${s}_pop"),
       format = "draws_matrix"
     ) %>% t()
 
@@ -2027,13 +1774,13 @@ get_estimates <- function(
 
     # Order raw levels based on numeric levels to match order of posterior draws matrix
     est_ <- new_data %>%
-      arrange(across(all_of(col_names))) %>%
-      distinct(across(all_of(raw_col_names))) %>%
+      dplyr::arrange(dplyr::across(dplyr::all_of(col_names))) %>%
+      dplyr::distinct(dplyr::across(dplyr::all_of(raw_col_names))) %>%
       stats::setNames(new_col_names)
 
     if (out$is_ci) {
       est[[s]] <- est_ %>%
-        mutate(
+        dplyr::mutate(
           est = pred_mat %>% apply(1, mean),
           lower = pred_mat %>% apply(1, stats::quantile, probs = out$qlower),
           upper = pred_mat %>% apply(1, stats::quantile, probs = out$qupper)
@@ -2041,13 +1788,13 @@ get_estimates <- function(
 
     } else {
       est[[s]] <- est_ %>%
-        mutate(
+        dplyr::mutate(
           est = pred_mat %>% apply(1, mean),
           std = pred_mat %>% apply(1, stats::sd),
           lower = .data$est - out$n_sd * .data$std,
           upper = .data$est + out$n_sd * .data$std
         ) %>%
-        select(-.data$std)
+        dplyr::select(-.data$std)
     }
   }
 
@@ -2080,37 +1827,6 @@ get_estimates <- function(
 #'         \item V1, V2, ..., VN: Proportion estimates for each posterior draw
 #'       }
 #'   }
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Extracts y_rep draws from generated quantities
-#'   \item Randomly samples N posterior draws
-#'   \item Aggregates by time period if time-varying
-#'   \item Converts counts to proportions using total sample sizes
-#' }
-#'
-#' @importFrom rlang .data
-#' @importFrom dplyr select mutate group_by summarise_all ungroup mutate_all
-#'
-#' @examples
-#' \dontrun{
-#' # Extract posterior predictive replications
-#' y_rep <- get_replicates(
-#'   fit = ppc_fit,
-#'   input_data = processed_data,
-#'   metadata = model_metadata,
-#'   N = 20
-#' )
-#'
-#' # For time-varying data, y_rep is a data frame
-#' if (model_metadata$is_timevar) {
-#'   print(head(y_rep))
-#' } else {
-#'   # For non-time-varying, y_rep is a vector
-#'   print(summary(y_rep))
-#' }
-#' }
-#'
 #' @noRd
 get_replicates <- function(
   fit,
@@ -2131,20 +1847,20 @@ get_replicates <- function(
   yrep <- if (metadata$is_timevar) {
     yrep_mat %>%
       as.data.frame() %>%
-      mutate(
+      dplyr::mutate(
         time = input_data$time,
         total = input_data$total
       ) %>%
-      group_by(.data$time) %>%
-      summarise_all(sum) %>%
-      ungroup() %>%
-      mutate(
-        across(
+      dplyr::group_by(.data$time) %>%
+      dplyr::summarise_all(sum) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(
+        dplyr::across(
           -c(.data$time, .data$total),
           ~ .x / .data$total
         )
       ) %>%
-      select(-.data$total)
+      dplyr::select(-.data$total)
   } else {
     colSums(yrep_mat) / sum(input_data$total)
   }

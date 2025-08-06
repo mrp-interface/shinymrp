@@ -1,6 +1,5 @@
 #' Read data from various file formats
 #'
-#' @title Read data from multiple file formats
 #' @description Reads data from CSV, Excel (xlsx/xls), or SAS (sas7bdat) files
 #' based on the file extension. Automatically detects the file format and uses
 #' the appropriate reading function with optimized parameters for each format.
@@ -15,39 +14,6 @@
 #'   \item CSV files: Uses readr::read_csv() with column type detection disabled
 #'   \item Excel files: Uses readxl::read_excel() with increased guess_max for better type detection
 #'   \item SAS files: Uses haven::read_sas() with native SAS data types preserved
-#' }
-#'
-#' @details The function determines the file format using string pattern matching
-#' on the file extension and applies format-specific reading parameters:
-#' \itemize{
-#'   \item CSV: show_col_types = FALSE to suppress column type messages
-#'   \item Excel: guess_max = 5000 to improve column type detection
-#'   \item SAS: Default haven parameters for optimal compatibility
-#' }
-#'
-#' @section Supported File Formats:
-#' \itemize{
-#'   \item .csv: Comma-separated values
-#'   \item .xlsx: Excel 2007+ format
-#'   \item .xls: Legacy Excel format
-#'   \item .sas7bdat: SAS dataset format
-#' }
-#'
-#' @seealso
-#' * readr::read_csv() for CSV file reading
-#' * readxl::read_excel() for Excel file reading
-#' * haven::read_sas() for SAS file reading
-#'
-#' @examples
-#' \dontrun{
-#' # Read CSV file
-#' csv_data <- read_data("data/survey.csv")
-#'
-#' # Read Excel file
-#' excel_data <- read_data("data/survey.xlsx")
-#'
-#' # Read SAS file
-#' sas_data <- read_data("data/survey.sas7bdat")
 #' }
 #'
 #' @noRd
@@ -68,7 +34,6 @@ read_data <- function(file_path) {
 
 #' Clean and standardize column names
 #'
-#' @title Clean and standardize column names
 #' @description Converts column names to a standardized format by applying
 #' multiple cleaning transformations. Creates consistent, R-friendly variable
 #' names that follow best practices for data analysis and modeling.
@@ -85,35 +50,6 @@ read_data <- function(file_path) {
 #'   \item Leading and trailing underscores removed
 #' }
 #'
-#' @details The cleaning process follows these steps in order:
-#' \enumerate{
-#'   \item Convert to lowercase using tolower()
-#'   \item Replace all digits [0-9] with underscores
-#'   \item Replace all non-alphabetic characters with underscores using [^[:alpha:]]
-#'   \item Collapse multiple consecutive underscores to single underscores
-#'   \item Remove leading and trailing underscores
-#' }
-#'
-#' @section Cleaning Rules:
-#' \itemize{
-#'   \item "Age Group 1" -> "age_group"
-#'   \item "Income_2023" -> "income"
-#'   \item "Race/Ethnicity" -> "race_ethnicity"
-#'   \item "__Test__Variable__" -> "test_variable"
-#' }
-#'
-#' @seealso
-#' * clean_data() for comprehensive data frame cleaning
-#' * format_geocode() for geographic identifier formatting
-#'
-#' @examples
-#' \dontrun{
-#' # Clean messy column names
-#' messy_names <- c("Age Group 1", "Income_2023", "Race/Ethnicity", "__Test__")
-#' clean_names(messy_names)
-#' # Returns: c("age_group", "income", "race_ethnicity", "test")
-#' }
-#'
 #' @noRd
 clean_names <- function(names) {
   names %>% 
@@ -127,7 +63,6 @@ clean_names <- function(names) {
 
 #' Clean character columns in a data frame
 #'
-#' @title Clean character columns in data frame
 #' @description Standardizes all character columns in a data frame by converting
 #' to lowercase and removing leading/trailing whitespace. This ensures consistent
 #' string formatting for categorical variables and text data used in MRP analysis.
@@ -143,57 +78,19 @@ clean_names <- function(names) {
 #'   \item Original data frame structure and row order preserved
 #' }
 #'
-#' @details The function uses dplyr's across() with where(is.character) to
-#' selectively apply transformations only to character columns. The cleaning
-#' process combines:
-#' \itemize{
-#'   \item tolower() for case standardization
-#'   \item stringr::str_trim() for whitespace removal
-#' }
-#'
-#' This is particularly important for categorical variables that will be used
-#' in factor creation and model fitting, where inconsistent capitalization
-#' or whitespace can cause matching issues.
-#'
-#' @section Character Cleaning Examples:
-#' \itemize{
-#'   \item "  Male  " -> "male"
-#'   \item "FEMALE" -> "female"
-#'   \item "White " -> "white"
-#'   \item " Other Race" -> "other race"
-#' }
-#'
-#' @seealso
-#' * clean_data() for comprehensive data cleaning including character cleaning
-#' * clean_names() for column name standardization
-#' * stringr::str_trim() for whitespace removal
-#'
-#' @examples
-#' \dontrun{
-#' # Clean character columns in survey data
-#' survey_data <- data.frame(
-#'   age = c(25, 30, 35),
-#'   sex = c("  Male  ", "FEMALE", "male"),
-#'   race = c("White ", "BLACK", " Other")
-#' )
-#' cleaned_data <- clean_chr(survey_data)
-#' # Character columns now: "male", "female", "male" and "white", "black", "other"
-#' }
-#'
 #' @noRd
 #'
 #' @importFrom dplyr mutate across where
 #' @importFrom stringr str_trim
 clean_chr <- function(df) {
   # Convert character columns to lowercase and trim whitespace
-  df %>% mutate(
-    across(where(is.character), ~ stringr::str_trim(tolower(.x)))
+  df %>% dplyr::mutate(
+    dplyr::across(dplyr::where(is.character), ~ stringr::str_trim(tolower(.x)))
   )
 }
 
 #' Validate and clean geocodes
 #'
-#' @title Validate and clean geocodes
 #' @description Validates geocodes by checking if they conform to the standard
 #' 5-digit format required for ZIP codes and county FIPS codes. Invalid geocodes
 #' are replaced with NA to ensure data quality for geographic analysis and mapping.
@@ -207,41 +104,6 @@ clean_chr <- function(df) {
 #'   \item Valid geocodes: Exactly 5 digits, returned as character strings
 #'   \item Invalid geocodes: Replaced with NA_character_
 #'   \item Original NA values: Preserved as NA_character_
-#' }
-#'
-#' @details The validation process:
-#' \enumerate{
-#'   \item Converts all input to character format using as.character()
-#'   \item Applies regex pattern "^[0-9]{5}$" to check for exactly 5 digits
-#'   \item Replaces any non-matching values with NA_character_
-#'   \item Preserves existing NA values in their character form
-#' }
-#'
-#' @section Validation Rules:
-#' Valid geocodes must:
-#' \itemize{
-#'   \item Contain exactly 5 digits (0-9)
-#'   \item Have no leading/trailing characters
-#'   \item Have no embedded spaces or special characters
-#' }
-#'
-#' @section Examples of Valid/Invalid Geocodes:
-#' \itemize{
-#'   \item Valid: "12345", "00123", "90210"
-#'   \item Invalid: "1234" (too short), "123456" (too long), "1234a", " 12345 "
-#' }
-#'
-#' @seealso
-#' * format_geocode() for comprehensive geographic identifier formatting
-#' * to_fips() for converting geographic names to FIPS codes
-#' * clean_data() for overall data cleaning including geocode validation
-#'
-#' @examples
-#' \dontrun{
-#' # Validate mixed geocode formats
-#' geocodes <- c("12345", "1234", "90210", "abcde", NA, "123456")
-#' validated <- find_bad_geocode(geocodes)
-#' # Returns: c("12345", NA, "90210", NA, NA, NA)
 #' }
 #'
 #' @noRd
@@ -276,48 +138,7 @@ find_bad_geocode <- function(geocodes) {
 #'   \item state: 2-digit character strings with leading zeros (FIPS format)
 #'   \item Other columns: Unchanged
 #' }
-#'
-#' @details The formatting process handles different input types:
-#'
-#' **For zip and county columns:**
-#' \itemize{
-#'   \item Numeric inputs: Formatted using sprintf("%05d", value)
-#'   \item Character inputs: Validated using find_bad_geocode()
-#'   \item Invalid entries: Replaced with NA
-#' }
-#'
-#' **For state columns:**
-#' \itemize{
-#'   \item Numeric inputs: Formatted using sprintf("%02d", value)
-#'   \item Character inputs: Left unchanged (assumed to be state names/abbreviations)
-#' }
-#'
-#' @section Geographic Identifier Standards:
-#' \itemize{
-#'   \item ZIP codes: 5-digit postal codes (e.g., "90210", "01234")
-#'   \item County FIPS: 5-digit codes (2-digit state + 3-digit county)
-#'   \item State FIPS: 2-digit codes (e.g., "01" for Alabama, "06" for California)
-#' }
-#'
-#' @seealso
-#' * find_bad_geocode() for geocode validation
-#' * to_fips() for converting geographic names to FIPS codes
-#' * clean_data() for comprehensive data cleaning including geocode formatting
-#'
-#' @examples
-#' \dontrun{
-#' # Format mixed geographic identifiers
-#' geo_data <- data.frame(
-#'   zip = c(90210, 1234, "12345"),
-#'   county = c("6037", 6037, "invalid"),
-#'   state = c(6, "CA", 1)
-#' )
-#' formatted <- format_geocode(geo_data)
-#' # zip: c("90210", NA, "12345")
-#' # county: c("06037", "06037", NA)
-#' # state: c("06", "CA", "01")
-#' }
-#'
+#' 
 #' @noRd
 format_geocode <- function(df) {
   if ("zip" %in% names(df)) {
@@ -369,56 +190,6 @@ format_geocode <- function(df) {
 #'   \item Consistent data structure ready for further processing
 #' }
 #'
-#' @details The cleaning pipeline executes the following steps in order:
-#' \enumerate{
-#'   \item **Column name cleaning**: Uses clean_names() to standardize column names
-#'   \item **Duplicate removal**: Removes duplicate column names, keeping first occurrence
-#'   \item **Character standardization**: Uses clean_chr() for lowercase conversion and trimming
-#'   \item **NA conversion**: Converts specified strings to actual NA values across all columns
-#'   \item **Geographic formatting**: Uses format_geocode() for proper FIPS code formatting
-#' }
-#'
-#' @section Default NA Strings:
-#' The following strings are converted to NA by default (case-insensitive):
-#' \itemize{
-#'   \item Empty string: ""
-#'   \item Explicit NA representations: "na", "n/a"
-#'   \item Null representations: "none", "null"
-#'   \item Unknown values: "unknown"
-#' }
-#'
-#' @section Geographic Identifier Processing:
-#' If the data contains geographic columns (zip, county, state), they are
-#' automatically formatted according to standard conventions:
-#' \itemize{
-#'   \item ZIP codes: 5-digit format with leading zeros
-#'   \item County FIPS: 5-digit format with leading zeros
-#'   \item State FIPS: 2-digit format with leading zeros
-#' }
-#'
-#' @seealso
-#' * clean_names() for column name standardization
-#' * clean_chr() for character column cleaning
-#' * format_geocode() for geographic identifier formatting
-#' * preprocess() for full preprocessing pipeline including data cleaning
-#'
-#' @examples
-#' \dontrun{
-#' # Clean messy survey data
-#' messy_data <- data.frame(
-#'   `Age Group` = c(25, 30, "unknown"),
-#'   `  Sex  ` = c("  MALE  ", "female", ""),
-#'   ZIP_Code = c(90210, 1234, "n/a"),
-#'   `ZIP_Code` = c("duplicate", "column", "removed")  # duplicate column
-#' )
-#'
-#' cleaned <- clean_data(messy_data)
-#' # Result has standardized names: age_group, sex, zip_code
-#' # Character values cleaned: "male", "female", NA
-#' # Geographic codes formatted: "90210", NA, NA
-#' # Duplicate column removed
-#' }
-#'
 #' @noRd
 #' @importFrom dplyr mutate across everything if_else
 clean_data <- function(
@@ -438,9 +209,9 @@ clean_data <- function(
   df <- clean_chr(df)
 
   # Convert common NA strings to actual NA
-  df <- df %>% 
-    mutate(across(everything(), 
-                 ~if_else(.x %in% na_strings, NA, .x)))
+  df <- df %>%
+    dplyr::mutate(dplyr::across(dplyr::everything(),
+                 ~dplyr::if_else(.x %in% na_strings, NA, .x)))
 
   # Format geographic identifiers
   df <- format_geocode(df)
@@ -450,7 +221,6 @@ clean_data <- function(
 
 #' Preprocess example data for demonstration purposes
 #'
-#' @title Preprocess example data
 #' @description Applies basic data cleaning and state FIPS code conversion to
 #' example datasets. This is a simplified preprocessing function used specifically
 #' for example data in the shinymrp package demonstrations and tutorials.
@@ -467,16 +237,6 @@ clean_data <- function(
 #'   \item State names/codes converted to 2-digit FIPS codes
 #' }
 #'
-#' @details This function is a wrapper around clean_data() that additionally
-#' converts state identifiers to FIPS codes using to_fips(). It's designed for
-#' use with the package's example datasets and may not handle all edge cases
-#' present in real-world data.
-#'
-#' @seealso
-#' * clean_data() for comprehensive data cleaning
-#' * to_fips() for geographic code conversion
-#' * preprocess() for full preprocessing pipeline
-#'
 #' @noRd
 preprocess_example <- function(df) {
   df <- df %>% clean_data()
@@ -490,7 +250,6 @@ preprocess_example <- function(df) {
 
 #' Rename columns based on expected variable names
 #'
-#' @title Rename columns to standard variable names
 #' @description Renames columns in the data frame to match expected variable
 #' names defined in the global constants. Uses pattern matching to identify
 #' columns that correspond to standard demographic, geographic, and outcome
@@ -508,50 +267,6 @@ preprocess_example <- function(df) {
 #'   \item Geographic variables: zip, county, state
 #'   \item Outcome variables: positive, outcome, total
 #'   \item Other columns: Unchanged if no pattern match found
-#' }
-#'
-#' @details The renaming process:
-#' \enumerate{
-#'   \item Checks if COVID-specific renaming is requested
-#'   \item Combines target variable names from GLOBAL$vars (indiv, geo, ignore)
-#'   \item Uses case-insensitive grep() to find matching column names
-#'   \item Creates rename specification using first match for each target
-#'   \item Applies renaming using dplyr::rename() with !!!rename_spec syntax
-#' }
-#'
-#' @section Variable Categories:
-#' The function targets variables defined in GLOBAL$vars:
-#' \itemize{
-#'   \item **Individual variables**: Demographic characteristics (sex, race, age, edu, time)
-#'   \item **Geographic variables**: Spatial identifiers (zip, county, state)
-#'   \item **Ignore variables**: Outcome and auxiliary variables (date, total, positive, outcome)
-#' }
-#'
-#' @section Pattern Matching:
-#' Uses case-insensitive pattern matching to identify columns:
-#' \itemize{
-#'   \item "sex" matches: "Sex", "GENDER", "sex_var"
-#'   \item "age" matches: "Age", "AGE_GROUP", "age_category"
-#'   \item "race" matches: "Race", "ETHNICITY", "race_eth"
-#' }
-#'
-#' @seealso
-#' * rename_columns_covid() for COVID-specific column renaming
-#' * GLOBAL$vars for variable name specifications
-#' * clean_data() for comprehensive data cleaning including column renaming
-#'
-#' @examples
-#' \dontrun{
-#' # Rename survey data columns
-#' survey_data <- data.frame(
-#'   Gender = c("Male", "Female"),
-#'   Age_Group = c("25-34", "35-44"),
-#'   Race_Ethnicity = c("White", "Black"),
-#'   ZIP_Code = c("90210", "10001")
-#' )
-#'
-#' renamed <- rename_columns(survey_data)
-#' # Columns now: sex, age, race, zip
 #' }
 #'
 #' @noRd
@@ -586,6 +301,18 @@ rename_columns <- function(
   dplyr::rename(df, !!!rename_spec)
 }
 
+#' Remove duplicate records from data
+#'
+#' @description Removes duplicate records from the data frame. For COVID data,
+#' uses specialized duplicate removal function.
+#'
+#' @param data Data frame to remove duplicates from.
+#' @param is_covid Logical. If TRUE, uses COVID-specific duplicate removal.
+#'   Default is FALSE.
+#'
+#' @return Data frame with duplicate records removed.
+#'
+#' @noRd
 remove_duplicates <- function(data, is_covid = FALSE) {
   if (is_covid) {
     data <- remove_duplicates_covid(data)
@@ -596,7 +323,6 @@ remove_duplicates <- function(data, is_covid = FALSE) {
 
 #' Impute missing values using frequency-based sampling
 #'
-#' @title Impute missing values using frequency-based sampling
 #' @description Imputes missing values in a vector by sampling from the
 #' observed values based on their frequency distribution. This method preserves
 #' the original distribution of the variable while filling in missing data,
@@ -612,52 +338,6 @@ remove_duplicates <- function(data, is_covid = FALSE) {
 #'   \item Sampling probabilities proportional to observed frequencies
 #'   \item Original data type and non-missing values preserved
 #'   \item If no missing values exist, returns original vector unchanged
-#' }
-#'
-#' @details The imputation process:
-#' \enumerate{
-#'   \item Identifies missing values using is.na()
-#'   \item If no missing values, returns original vector
-#'   \item Creates frequency table of observed (non-missing) values
-#'   \item Samples replacement values with probabilities proportional to frequencies
-#'   \item Handles both numeric and character vectors appropriately
-#'   \item Uses replacement sampling to handle cases with many missing values
-#' }
-#'
-#' @section Imputation Method:
-#' This frequency-based imputation method:
-#' \itemize{
-#'   \item **Preserves distribution**: Maintains the original frequency distribution
-#'   \item **Handles all types**: Works with numeric, character, and factor variables
-#'   \item **Probabilistic**: Uses random sampling rather than deterministic replacement
-#'   \item **Conservative**: Only imputes when sufficient observed data exists
-#' }
-#'
-#' @section Use Cases:
-#' Particularly effective for:
-#' \itemize{
-#'   \item Categorical demographic variables (sex, race, education)
-#'   \item Discrete numeric variables with limited unique values
-#'   \item Variables where mode imputation would be too simplistic
-#'   \item Preserving uncertainty in imputed values through randomization
-#' }
-#'
-#' @seealso
-#' * preprocess() for comprehensive preprocessing including imputation
-#' * recode_values() for value recoding before imputation
-#' * table() for frequency table creation
-#'
-#' @examples
-#' \dontrun{
-#' # Impute missing categorical values
-#' sex_var <- c("male", "female", "male", NA, "female", NA, "male")
-#' imputed_sex <- impute(sex_var)
-#' # Missing values replaced with "male" or "female" based on observed frequencies
-#'
-#' # Impute missing numeric values
-#' age_var <- c(25, 30, 25, NA, 35, NA, 30)
-#' imputed_age <- impute(age_var)
-#' # Missing values replaced with 25, 30, or 35 based on frequencies
 #' }
 #'
 #' @noRd
@@ -686,141 +366,45 @@ impute <- function(v) {
   return(v)
 }
 
-#' Convert dates to week indices and create timeline
+#' Get period indices and first-of-period dates for week/month/year
 #'
-#' @title Convert dates to cumulative week indices
-#' @description Converts date strings to cumulative ISO week indices and creates
-#' a complete timeline of dates. This function is essential for time-varying MRP
-#' models that require consistent temporal indexing across potentially multi-year
-#' datasets with irregular date spacing.
-#'
-#' @param strings Character vector of date strings to be converted. Should be in
-#'   standard date format (YYYY-MM-DD) or any format parseable by as.Date().
-#'
-#' @return List containing two components:
-#' \itemize{
-#'   \item **indices**: Numeric vector of cumulative week indices starting from 1,
-#'     with the same length as input strings
-#'   \item **timeline**: Date vector containing the first day (Monday) of each week
-#'     in the complete timeline from earliest to latest week
-#' }
-#'
-#' @details The conversion process handles complex multi-year scenarios:
-#' \enumerate{
-#'   \item Converts dates to ISO week format using ISOweek::ISOweek()
-#'   \item Extracts year and week components from ISO week strings
-#'   \item For single-year data: Uses week numbers directly
-#'   \item For multi-year data: Calculates cumulative weeks across years
-#'   \item Accounts for varying weeks per year (52 or 53 weeks)
-#'   \item Creates complete timeline filling gaps between min and max weeks
-#'   \item Returns first day (Monday) of each week using ISOweek2date()
-#' }
-#'
-#' @section ISO Week Handling:
-#' The function uses ISO 8601 week numbering where:
-#' \itemize{
-#'   \item Week 1 contains the first Thursday of the year
-#'   \item Weeks run Monday to Sunday
-#'   \item Years can have 52 or 53 weeks
-#'   \item Week numbers are cumulative across multiple years
-#' }
-#'
-#' @section Multi-Year Processing:
-#' For datasets spanning multiple years:
-#' \itemize{
-#'   \item Calculates weeks per year using December 28th (always in last week)
-#'   \item Applies cumulative offsets to create continuous week indices
-#'   \item Fills complete timeline including weeks with no data
-#'   \item Ensures consistent indexing for time-varying models
-#' }
-#'
-#' @seealso
-#' * add_week_indices() for adding week indices to data frames
-#' * ISOweek::ISOweek() for ISO week conversion
-#' * ISOweek::ISOweek2date() for converting back to dates
-#' * preprocess() for full preprocessing including time handling
-#'
-#' @examples
-#' \dontrun{
-#' # Single year example
-#' dates_2023 <- c("2023-01-02", "2023-01-09", "2023-01-16")
-#' result <- get_week_indices(dates_2023)
-#' # result$indices: c(1, 2, 3)
-#' # result$timeline: Mondays of weeks 1, 2, 3 in 2023
-#'
-#' # Multi-year example
-#' dates_multi <- c("2022-12-26", "2023-01-02", "2023-01-09")
-#' result <- get_week_indices(dates_multi)
-#' # result$indices: cumulative across years
-#' # result$timeline: complete timeline from 2022 week 52 to 2023 week 2
-#' }
+#' @param date_strings A character vector of dates ("YYYY-MM-DD").
+#' @param freq         One of "week", "month", or "year".
+#' @return A list with:
+#'   - indices: integer vector giving the 1-based period index for each input date
+#'   - timeline: Date vector of the first date of every period between the min and max
 #'
 #' @noRd
-#'
-#' @importFrom ISOweek ISOweek ISOweek2date
-get_week_indices <- function(strings) {
-  # extract week numbers, months and years from dates
-  years_weeks <- ISOweek::ISOweek(strings)
-  years <- years_weeks %>% sapply(substr, start = 1, stop = 4) %>% as.numeric()
-  weeks <- years_weeks %>% sapply(substr, start = 7, stop = 8) %>% as.numeric()
-  months <- strings %>% as.Date() %>% format("%m") %>% as.numeric()
-
-  # find year range
-  year_min <- min(years)
-  year_max <- max(years)
-  all_years <- year_min:year_max
-
-
-  if(year_min == year_max) {
-    weeks_accum <- weeks
-    timeline_week <- min(weeks_accum):max(weeks_accum)
-    timeline_year <- rep(year_min, length(timeline_week))
-  } else {
-    # add offsets to week numbers in later years
-    weeks_per_year <- paste0(all_years, "-12-28") %>%
-      ISOweek::ISOweek() %>%
-      sapply(substr, start = 7, stop = 8) %>%
-      as.numeric()
-
-    weeks_offset <- c(0, cumsum(weeks_per_year[1:(length(weeks_per_year)-1)]))
-    offsets <- years %>% sapply(function(y) weeks_offset[which(all_years == y)])
-
-    weeks_accum <- weeks + offsets
-    weeks_accum <- weeks_accum - min(weeks_accum) + 1
-
-    # find all weeks between the earliest and most recent dates
-    start <- which.min(weeks_accum)
-    end <- which.max(weeks_accum)
-    year_start <- which(all_years == years[start])
-    year_end <- which(all_years == years[end])
-
-    # first year
-    timeline_week <- weeks[start]:weeks_per_year[year_start]
-    timeline_year <- rep(all_years[year_start], length(timeline_week))
-
-    # in-between year
-    for(year_ind in (year_start+1):(year_end-1)) {
-      timeline_week <- c(timeline_week, 1:weeks_per_year[year_ind])
-      timeline_year <- c(timeline_year, rep(all_years[year_ind], weeks_per_year[year_ind]))
-    }
-
-    # last year
-    timeline_week <- c(timeline_week, 1:weeks[end])
-    timeline_year <- c(timeline_year, rep(all_years[year_end], weeks[end]))
-  }
-
-  # get the start of each week
-  timeline_date <- mapply(function(y, w) sprintf("%d-W%02d-1", y, w),
-                          timeline_year,
-                          timeline_week) %>%
-    ISOweek::ISOweek2date()
-
-
-  return(list(
-    indices = weeks_accum,
-    timeline = timeline_date
-  ))
+get_time_indices <- function(date_strings, freq = c("week", "month", "year")) {
+  freq <- base::match.arg(freq)
+  dates <- base::as.Date(date_strings)
+  
+  # 1) Floor each date to the start of its period
+  period_starts <- switch(freq,
+                          week  = lubridate::floor_date(dates, unit = "week",  week_start = 1),
+                          month = lubridate::floor_date(dates, unit = "month"),
+                          year  = lubridate::floor_date(dates, unit = "year")
+  )
+  
+  # 2) Build a complete sequence of period-start dates
+  seq_by <- switch(freq,
+                   week  = "1 week",
+                   month = "1 month",
+                   year  = "1 year"
+  )
+  start <- base::min(period_starts, na.rm = TRUE)
+  end   <- base::max(period_starts, na.rm = TRUE)
+  timeline <- base::seq(from = start, to = end, by = seq_by)
+  
+  # 3) Map each date’s period to its position in the full timeline
+  indices <- base::match(period_starts, timeline)
+  
+  list(
+    indices  = indices,
+    timeline = timeline
+  )
 }
+
 
 #' Add week indices to time-varying data
 #'
@@ -833,6 +417,9 @@ get_week_indices <- function(strings) {
 #' @param df Data frame containing time-related columns. Must contain either a
 #'   'date' column with date strings or existing time indices matching
 #'   GLOBAL$vars$time specification.
+#' @param freq Character string specifying the frequency of time indices to be
+#'  added. Must be one of "week", "month", or "year". Determines how dates are
+#'  grouped into time periods.
 #'
 #' @return Data frame with added time indices and complete timeline:
 #' \itemize{
@@ -842,53 +429,21 @@ get_week_indices <- function(strings) {
 #'   \item Complete timeline created via full_join to ensure no missing weeks
 #' }
 #'
-#' @details The function:
-#' \enumerate{
-#'   \item Checks for time-related columns defined in GLOBAL$vars$time
-#'   \item If 'date' column exists, converts to week indices using get_week_indices()
-#'   \item Creates complete timeline from week 1 to maximum week index
-#'   \item Performs full_join to ensure all weeks are represented
-#'   \item Throws error if no time-related columns are found
-#' }
-#'
-#' @section Time Variable Requirements:
-#' The function expects time variables as defined in GLOBAL$vars$time:
-#' \itemize{
-#'   \item date: Date strings in standard format (YYYY-MM-DD)
-#'   \item time: Existing numeric time indices
-#' }
-#'
-#' @seealso
-#' * get_week_indices() for date to week index conversion
-#' * GLOBAL$vars$time for time variable specifications
-#' * preprocess() for full preprocessing pipeline including time handling
-#'
-#' @examples
-#' \dontrun{
-#' # Data with dates
-#' df_with_dates <- data.frame(
-#'   date = c("2023-01-01", "2023-01-08", "2023-01-15"),
-#'   outcome = c(0.1, 0.2, 0.3)
-#' )
-#' result <- add_week_indices(df_with_dates)
-#' # Result includes time column with indices 1, 2, 3
-#' }
-#'
 #' @noRd
 #'
 #' @importFrom dplyr full_join
-add_week_indices <- function(df) {
+add_time_indices <- function(df, freq) {
   common <- intersect(names(df), GLOBAL$vars$time)
 
   if (length(common) == 1 && "date" %in% common) {
     # convert date to week indices
-    week <- get_week_indices(df$date)
+    week <- get_time_indices(df$date, freq)
     df$time <- week$indices
 
     # add the column containing first dates of the weeks
-    df <- df %>% select(-"date")
+    df <- df %>% dplyr::select(-"date")
     df <- df %>%
-      full_join(
+      dplyr::full_join(
         data.frame(
           time = 1:max(df$time),
           date = as.character(week$timeline)
@@ -913,7 +468,6 @@ add_week_indices <- function(df) {
 #' @return Character vector of formatted unique dates in sorted order.
 #'
 #' @noRd
-#'
 get_dates <- function(df) {
   df$date %>%
     stats::na.omit() %>%
@@ -955,12 +509,12 @@ recode_values <- function(df, expected_levels, is_covid=FALSE) {
   breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
   colnames <- names(df)
 
-  df <- df %>% mutate(
-    sex  = if("sex" %in% colnames) if_else(.data$sex %in% expected_levels$sex, .data$sex, NA),
-    race = if("race" %in% colnames) if_else(.data$race %in% c(expected_levels$race, NA), .data$race, "other"),
+  df <- df %>% dplyr::mutate(
+    sex  = if("sex" %in% colnames) dplyr::if_else(.data$sex %in% expected_levels$sex, .data$sex, NA),
+    race = if("race" %in% colnames) dplyr::if_else(.data$race %in% c(expected_levels$race, NA), .data$race, "other"),
     age  = if("age" %in% colnames) cut(df$age, breaks, ranges) %>% as.character(),
-    edu  = if("edu" %in% colnames) if_else(.data$edu %in% expected_levels$edu, .data$edu, NA),
-    positive = if("positive" %in% colnames) case_match(
+    edu  = if("edu" %in% colnames) dplyr::if_else(.data$edu %in% expected_levels$edu, .data$edu, NA),
+    positive = if("positive" %in% colnames) dplyr::case_match(
       as.character(.data$positive),
       c("positive", "detected", "yes", "y", "true", "1") ~ 1,
       c("negative", "undetected", "no", "n", "false", "0") ~ 0
@@ -999,7 +553,6 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 
 #' Filter data based on state and ZIP code thresholds
 #'
-#' @title Apply geographic filtering for reliable COVID analysis
 #' @description Filters COVID data to include only ZIP codes and states that
 #' meet minimum sample size requirements for reliable statistical inference.
 #' This two-stage filtering process removes geographic areas with insufficient
@@ -1048,46 +601,6 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 #' The returned data frame maintains the same structure as the input but with
 #' potentially fewer rows due to geographic exclusions.
 #'
-#' @details
-#' **Two-Stage Filtering Process:**
-#' \enumerate{
-#'   \item **State-level filtering**: Calculates total observations per state
-#'     by summing ZIP-level counts within each state. Excludes entire states
-#'     that fall below the proportional threshold.
-#'   \item **ZIP-level filtering**: Among remaining states, excludes individual
-#'     ZIP codes that fall below the absolute count threshold.
-#' }
-#'
-#' **Geographic Hierarchy:**
-#' The function uses FIPS codes to establish the state-ZIP hierarchy:
-#' \itemize{
-#'   \item State FIPS codes are extracted from the first 2 digits of county FIPS
-#'   \item ZIP codes are mapped to states through county assignments
-#'   \item Handles cases where ZIP codes cross county boundaries (uses first match)
-#' }
-#'
-#' **Sample Size Considerations:**
-#' Appropriate thresholds depend on:
-#' \itemize{
-#'   \item Model complexity (more complex models need larger samples)
-#'   \item Geographic resolution requirements
-#'   \item Balance between coverage and precision
-#'   \item COVID outbreak patterns and testing density
-#' }
-#'
-#' @section COVID Analysis Context:
-#' Geographic filtering is particularly important for COVID data because:
-#' \itemize{
-#'   \item Testing rates vary dramatically across regions
-#'   \item Rural areas may have very small sample sizes
-#'   \item Outbreak timing creates temporal variation in geographic coverage
-#'   \item MRP models require sufficient data for stable geographic effects
-#' }
-#'
-#' This filtering ensures that downstream MRP analysis focuses on areas with
-#' adequate data for reliable inference while maintaining broad geographic
-#' representation.
-#'
 #' @importFrom dplyr group_by summarize mutate select distinct inner_join filter ungroup
 #' @importFrom magrittr %>%
 #' @importFrom rlang .data
@@ -1101,37 +614,36 @@ filter_state_zip <- function(
 ) {
   
   zip_count <- df %>%
-    group_by(.data$zip) %>%
-    summarize(count = n())
+    dplyr::group_by(.data$zip) %>%
+    dplyr::summarize(count = dplyr::n())
 
   # create a table containing state, zip and zip count
   state_zip <- zip_county_state %>%
-    mutate(state = substr(.data$fips, 1, 2)) %>%
-    select(.data$zip, .data$state) %>%
-    distinct(.data$zip, .keep_all = TRUE) %>%
-    inner_join(zip_count, by = "zip")
+    dplyr::mutate(state = substr(.data$fips, 1, 2)) %>%
+    dplyr::select(.data$zip, .data$state) %>%
+    dplyr::distinct(.data$zip, .keep_all = TRUE) %>%
+    dplyr::inner_join(zip_count, by = "zip")
 
   # filter based on proportion of state
   N <- sum(state_zip$count)
   state_zip <- state_zip %>%
-    group_by(.data$state) %>%
-    filter(sum(.data$count) > state_threshold * N) %>%
-    ungroup()
+    dplyr::group_by(.data$state) %>%
+    dplyr::filter(sum(.data$count) > state_threshold * N) %>%
+    dplyr::ungroup()
 
   # filter based on number of zip
   state_zip <- state_zip %>%
-    group_by(.data$zip) %>%
-    filter(sum(.data$count) > zip_threshold) %>%
-    ungroup()
+    dplyr::group_by(.data$zip) %>%
+    dplyr::filter(sum(.data$count) > zip_threshold) %>%
+    dplyr::ungroup()
 
-  df <- df %>% filter(.data$zip %in% state_zip$zip)
+  df <- df %>% dplyr::filter(.data$zip %in% state_zip$zip)
 
   return(df)
 }
 
 #' Convert geographic identifiers to FIPS codes
 #'
-#' @title Convert geographic identifiers to FIPS codes
 #' @description Converts geographic identifiers (names, abbreviations, or codes)
 #' to standardized FIPS codes used for geographic linking in MRP analysis. Handles
 #' both numeric codes that need formatting and text identifiers that require
@@ -1153,57 +665,6 @@ filter_state_zip <- function(
 #'   \item State FIPS: 2-digit codes with leading zeros (e.g., "06" for California)
 #'   \item County FIPS: 5-digit codes with leading zeros (e.g., "06037" for Los Angeles)
 #'   \item NA values for identifiers that cannot be matched
-#' }
-#'
-#' @details The conversion process:
-#' \enumerate{
-#'   \item Validates link_geo parameter against GLOBAL$vars$geo2
-#'   \item Selects appropriate lookup table (fips_$county or fips_$state)
-#'   \item For numeric input: Applies sprintf formatting with leading zeros
-#'   \item For character input: Finds best matching column in lookup table
-#'   \item Uses column with highest match count for identifier resolution
-#'   \item Returns formatted FIPS codes or NA for unmatched identifiers
-#' }
-#'
-#' @section FIPS Code Standards:
-#' \itemize{
-#'   \item **State FIPS**: 2-digit codes (01-56) assigned by Census Bureau
-#'   \item **County FIPS**: 5-digit codes (2-digit state + 3-digit county)
-#'   \item **Leading zeros**: Essential for proper geographic linking
-#'   \item **Consistency**: Standardized format across all geographic scales
-#' }
-#'
-#' @section Lookup Table Matching:
-#' For text identifiers, the function:
-#' \itemize{
-#'   \item Tests all columns in the lookup table for matches
-#'   \item Selects the column with the highest number of matches
-#'   \item Handles variations in naming conventions and abbreviations
-#'   \item Returns NA for identifiers not found in any column
-#' }
-#'
-#' @seealso
-#' * fips_$county and fips_$state for lookup tables
-#' * format_geocode() for comprehensive geographic identifier formatting
-#' * append_geo() for adding geographic variables at multiple scales
-#' * GLOBAL$vars$geo2 for valid geographic level specifications
-#'
-#' @examples
-#' \dontrun{
-#' # Convert state names to FIPS codes
-#' states <- c("California", "New York", "Texas")
-#' state_fips <- to_fips(states, "state")
-#' # Returns: c("06", "36", "48")
-#'
-#' # Convert numeric county codes to formatted FIPS
-#' counties <- c(6037, 36061, 48201)
-#' county_fips <- to_fips(counties, "county")
-#' # Returns: c("06037", "36061", "48201")
-#'
-#' # Handle mixed formats
-#' mixed_states <- c("CA", "New York", 48)
-#' mixed_fips <- to_fips(mixed_states, "state")
-#' # Returns: c("06", "36", "48")
 #' }
 #'
 #' @noRd
@@ -1252,16 +713,16 @@ to_fips <- function(vec, link_geo) {
 #' @importFrom dplyr group_by summarize_all select distinct all_of sym n_distinct
 get_geo_predictors <- function(df, geo_col) {
   bool <- df %>%
-    group_by(!!sym(geo_col)) %>%
-    summarize_all(n_distinct) %>%
+    dplyr::group_by(!!dplyr::sym(geo_col)) %>%
+    dplyr::summarize_all(dplyr::n_distinct) %>%
     lapply(function(c) all(c == 1)) %>%
     unlist()
 
   geo_pred_cols <- names(bool)[bool]
 
   geo_preds <- df %>%
-    select(all_of(c(geo_col, geo_pred_cols))) %>%
-    distinct(!!sym(geo_col), .keep_all = TRUE)
+    dplyr::select(dplyr::all_of(c(geo_col, geo_pred_cols))) %>%
+    dplyr::distinct(!!dplyr::sym(geo_col), .keep_all = TRUE)
 
   return(geo_preds)
 }
@@ -1272,7 +733,6 @@ get_geo_predictors <- function(df, geo_col) {
 #' present in the data based on the hierarchy defined in GLOBAL$vars$geo.
 #'
 #' @param col_names Character vector of column names in the data.
-#' @param geo_col Character string specifying geographic column (currently unused).
 #'
 #' @return List containing:
 #'   \item{geo}{Character string of the smallest geographic scale}
@@ -1301,7 +761,6 @@ get_smallest_geo <- function(col_names) {
 
 #' Get possible geographic scales for data
 #'
-#' @title Get possible geographic scales
 #' @description Determines all possible geographic scales that can be used with
 #' the data based on the smallest geographic scale present. Returns geographic
 #' variables from the smallest scale up to the largest (national) scale according
@@ -1313,40 +772,6 @@ get_smallest_geo <- function(col_names) {
 #' @return Character vector of geographic scale names from smallest to largest
 #'   that can be used with the data, or NULL if no geographic variables are found.
 #'   Geographic scales follow the hierarchy: zip -> county -> state.
-#'
-#' @details The function:
-#' \enumerate{
-#'   \item Uses get_smallest_geo() to find the most granular geographic scale
-#'   \item Returns all scales from that level up to the largest scale
-#'   \item Follows the geographic hierarchy: zip (most granular) to state (least granular)
-#'   \item Returns NULL if no geographic columns are detected
-#' }
-#'
-#' @section Geographic Hierarchy:
-#' The geographic hierarchy used is defined in GLOBAL$vars$geo:
-#' \itemize{
-#'   \item zip: ZIP code level (most granular)
-#'   \item county: County level (FIPS codes)
-#'   \item state: State level (FIPS codes)
-#' }
-#'
-#' @seealso
-#' * get_smallest_geo() for finding the smallest geographic scale
-#' * append_geo() for adding geographic variables at larger scales
-#' * GLOBAL$vars$geo for geographic variable hierarchy
-#'
-#' @examples
-#' \dontrun{
-#' # Data with county information can use county and state scales
-#' col_names <- c("sex", "age", "county", "outcome")
-#' possible_geos <- get_possible_geos(col_names)
-#' # Returns: c("county", "state")
-#'
-#' # Data with ZIP codes can use all scales
-#' col_names <- c("sex", "age", "zip", "outcome")
-#' possible_geos <- get_possible_geos(col_names)
-#' # Returns: c("zip", "county", "state")
-#' }
 #'
 #' @noRd
 get_possible_geos <- function(col_names) {
@@ -1387,11 +812,11 @@ append_geo <- function(input_data, zip_county_state) {
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_county_state %>%
-    select(.data$zip, .data$fips) %>%
-    rename(county = .data$fips) %>%
-    mutate(state = substr(.data$county, 1, 2)) %>%
-    select(all_of(geo_vars)) %>%
-    distinct()
+    dplyr::select(.data$zip, .data$fips) %>%
+    dplyr::rename(county = .data$fips) %>%
+    dplyr::mutate(state = substr(.data$county, 1, 2)) %>%
+    dplyr::select(dplyr::all_of(geo_vars)) %>%
+    dplyr::distinct()
   
   # Convert names to FIPS for smallest geographic scale
   if (smallest$geo != "zip") { 
@@ -1497,8 +922,8 @@ clean_left_join <- function(df1, df2, by) {
   common <- intersect(names(df1), names(df2))
   to_drop <- setdiff(common, by)
   df_join <- df2 %>%
-    select(-all_of(to_drop)) %>%
-    right_join(df1, by = by)
+    dplyr::select(-dplyr::all_of(to_drop)) %>%
+    dplyr::right_join(df1, by = by)
 
   
   return(df_join)
@@ -1506,7 +931,6 @@ clean_left_join <- function(df1, df2, by) {
 
 #' Determine data type of a column
 #'
-#' @title Classify column data type for statistical modeling
 #' @description Intelligently classifies a data column as binary, categorical, or
 #' continuous based on its values, distribution, and uniqueness patterns. This
 #' classification is crucial for determining appropriate statistical modeling
@@ -1528,66 +952,6 @@ clean_left_join <- function(df1, df2, by) {
 #'   \item **Continuous ("cont" or 3)**: High uniqueness or non-integer numeric values
 #' }
 #'
-#' @details The classification algorithm:
-#'
-#' **For numeric columns:**
-#' \enumerate{
-#'   \item Check if all values are integers AND uniqueness is below threshold
-#'   \item If 2 unique values: classify as binary
-#'   \item If >2 unique values: classify as categorical
-#'   \item Otherwise: classify as continuous (non-integers or high uniqueness)
-#' }
-#'
-#' **For non-numeric columns:**
-#' \enumerate{
-#'   \item Count distinct values (excluding NA)
-#'   \item If exactly 2 unique values: classify as binary
-#'   \item Otherwise: classify as categorical
-#' }
-#'
-#' @section Classification Logic:
-#' \itemize{
-#'   \item **Uniqueness test**: mean(table(col) == 1) > threshold indicates high uniqueness
-#'   \item **Integer test**: all(as.integer(col) == col) checks for whole numbers
-#'   \item **Distinct count**: Uses dplyr::n_distinct() with NA handling
-#' }
-#'
-#' @section Use Cases:
-#' \itemize{
-#'   \item **Model specification**: Determines fixed vs. varying effects treatment
-#'   \item **Data validation**: Ensures variables match expected types
-#'   \item **Variable selection**: Identifies appropriate predictors for MRP models
-#'   \item **Factor conversion**: Guides factor level creation for categorical variables
-#' }
-#'
-#' @seealso
-#' * create_expected_types() for creating expected type specifications
-#' * check_data() for data validation using type classifications
-#' * create_variable_list() for organizing variables by type
-#' * dplyr::n_distinct() for counting unique values
-#'
-#' @examples
-#' \dontrun{
-#' # Binary classification
-#' sex_var <- c("male", "female", "male", "female")
-#' data_type(sex_var)  # Returns "bin"
-#'
-#' # Categorical classification
-#' race_var <- c("white", "black", "hispanic", "asian", "other")
-#' data_type(race_var)  # Returns "cat"
-#'
-#' # Continuous classification
-#' income_var <- c(45000, 52000, 38000, 67000, 41000)
-#' data_type(income_var)  # Returns "cont"
-#'
-#' # Numeric codes
-#' data_type(sex_var, num = TRUE)  # Returns 1
-#'
-#' # Custom threshold
-#' age_var <- c(25, 30, 35, 40, 45)  # Low uniqueness
-#' data_type(age_var, threshold = 0.3)  # May return "cat" instead of "cont"
-#' }
-#'
 #' @noRd
 #'
 #' @importFrom dplyr n_distinct
@@ -1595,13 +959,13 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
   if(is.numeric(col)) {
     if(!all(as.integer(col) == col) | mean(table(col) == 1) > threshold) {
       dtype <- if(num) 3 else "cont"
-    } else if(n_distinct(col) == 2) {
+    } else if(dplyr::n_distinct(col) == 2) {
       dtype <- if(num) 1 else "bin"
     } else {
       dtype <- if(num) 2 else "cat"
     }
   } else {
-    if(n_distinct(col, na.rm = TRUE) == 2) {
+    if(dplyr::n_distinct(col, na.rm = TRUE) == 2) {
       dtype <- if(num) 1 else "bin"
     } else {
       dtype <- if(num) 2 else "cat"
@@ -1728,7 +1092,7 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
   }
   
   # Check data types
-  types <- df %>% select(all_of(expected_columns)) %>% lapply(data_type) %>% unlist()
+  types <- df %>% dplyr::select(dplyr::all_of(expected_columns)) %>% lapply(data_type) %>% unlist()
   valid <- unlist(expected_types) == types
   valid[expected_types == "ignore"] <- TRUE
   
@@ -1805,7 +1169,6 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 
 #' Main preprocessing function for uploaded data
 #'
-#' @title Comprehensive data preprocessing pipeline
 #' @description The primary preprocessing function that transforms raw uploaded data
 #' into a standardized format suitable for MRP analysis. This comprehensive pipeline
 #' handles data cleaning, validation, transformation, and preparation across different
@@ -1840,73 +1203,6 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 #'   \item **Aggregation**: Cross-tabulated data for modeling (if individual-level input)
 #' }
 #'
-#' @details The preprocessing pipeline executes these steps in sequence:
-#' \enumerate{
-#'   \item **Setup**: Determine COVID status and create expected factor levels
-#'   \item **Data cleaning**: Apply clean_data() for standardization
-#'   \item **Column renaming**: Use rename_columns() for standard variable names
-#'   \item **Validation**: Check data types and structure with check_data()
-#'   \item **Individual-level processing** (if not aggregated):
-#'     \itemize{
-#'       \item Remove rows with missing outcome/geographic data
-#'       \item Convert dates to week indices for time-varying data
-#'       \item Recode demographic variables to expected levels
-#'       \item Impute missing demographic data
-#'       \item Aggregate to cell counts for non-normal outcomes
-#'     }
-#'   \item **Geographic enhancement**: Add geographic variables at larger scales
-#' }
-#'
-#' @section Data Type Handling:
-#' The function handles different data scenarios:
-#' \itemize{
-#'   \item **COVID data**: Uses specialized column renaming and value recoding
-#'   \item **Poll data**: Handles education variables and different age groupings
-#'   \item **Time-varying**: Converts dates to week indices and creates timelines
-#'   \item **Cross-sectional**: Standard demographic processing without time components
-#'   \item **Binomial outcomes**: Aggregates to positive/total counts
-#'   \item **Normal outcomes**: Preserves individual-level structure
-#' }
-#'
-#' @section Aggregation Process:
-#' For individual-level data (is_aggregated = FALSE):
-#' \itemize{
-#'   \item Groups by demographic variables and smallest geographic scale
-#'   \item Calculates total counts (with weights if available)
-#'   \item Sums positive outcomes for binomial data
-#'   \item Preserves geographic covariates through first() function
-#' }
-#'
-#' @seealso
-#' * clean_data() for data cleaning and standardization
-#' * rename_columns() for column name standardization
-#' * check_data() for data validation
-#' * recode_values() for demographic variable recoding
-#' * add_week_indices() for time-varying data processing
-#' * append_geo() for geographic variable enhancement
-#' * create_expected_levels() for factor level specifications
-#'
-#' @examples
-#' \dontrun{
-#' # Preprocess COVID time-varying data
-#' covid_metadata <- list(
-#'   family = "binomial",
-#'   is_timevar = TRUE,
-#'   special_case = "covid"
-#' )
-#' processed_covid <- preprocess(raw_covid_data, covid_metadata,
-#'                              is_sample = TRUE, is_aggregated = FALSE)
-#'
-#' # Preprocess poll cross-sectional data
-#' poll_metadata <- list(
-#'   family = "binomial",
-#'   is_timevar = FALSE,
-#'   special_case = "poll"
-#' )
-#' processed_poll <- preprocess(raw_poll_data, poll_metadata,
-#'                             is_sample = TRUE, is_aggregated = TRUE)
-#' }
-#' 
 #' @noRd
 #'
 #' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
@@ -1916,6 +1212,7 @@ preprocess <- function(
   data,
   metadata,
   zip_county_state,
+  freq = NULL,
   is_sample = TRUE,
   is_aggregated = TRUE,
   zip_threshold = 0,
@@ -1948,11 +1245,11 @@ preprocess <- function(
   if (!is_aggregated) {
     # remove NAs
     check_cols <- setdiff(names(data), indiv_vars)
-    data <- data %>% tidyr::drop_na(all_of(check_cols))
+    data <- data %>% tidyr::drop_na(dplyr::all_of(check_cols))
 
-    # convert date to week indices if necessary
-    if (metadata$is_timevar) {
-      data <- add_week_indices(data)
+    # convert date to time indices if necessary
+    if (metadata$is_timevar & !is.null(freq)) {
+      data <- add_time_indices(data, freq = freq)
     }
 
     # remove duplicate rows
@@ -1972,7 +1269,7 @@ preprocess <- function(
     data <- recode_values(data, levels, is_covid)
 
     # impute missing demographic data based on frequency
-    data <- data %>% mutate(across(all_of(indiv_vars), impute))
+    data <- data %>% dplyr::mutate(dplyr::across(dplyr::all_of(indiv_vars), impute))
 
     if (metadata$family != "normal") {
       # aggregate test records based on combinations of factors
@@ -1983,15 +1280,15 @@ preprocess <- function(
 
       # cross-tabulate data
       data <- data %>%
-        group_by(!!!syms(group_vars)) %>%
-        summarize(
-          across(any_of(geo_covars), first),
-          date = if("date" %in% names(data)) first(.data$date),
-          total = if("weight" %in% names(data)) sum(.data$weight) else n(),
+        dplyr::group_by(!!!rlang::syms(group_vars)) %>%
+        dplyr::summarize(
+          dplyr::across(dplyr::any_of(geo_covars), dplyr::first),
+          date = if("date" %in% names(data)) dplyr::first(.data$date),
+          total = if("weight" %in% names(data)) sum(.data$weight) else dplyr::n(),
           positive = sum(.data$positive)
 
         ) %>%
-        ungroup()
+        dplyr::ungroup()
     }
   }
 
@@ -2045,7 +1342,7 @@ create_variable_list <- function(input_data, covariates) {
   # Helper function to process variables and add them to appropriate lists
   add_variables <- function(group_name, var_names, data_source, vars) {
     for (v in var_names) {
-      if (!is.null(data_source[[v]]) && n_distinct(data_source[[v]]) > 1) {
+      if (!is.null(data_source[[v]]) && dplyr::n_distinct(data_source[[v]]) > 1) {
         if (data_type(data_source[[v]]) == "cat") {
           vars$varying[[group_name]] <- c(vars$varying[[group_name]], v)
         }
@@ -2113,47 +1410,47 @@ combine_tracts <- function(
   if (is.null(link_geo)) {
 
     pstrat_data <- tract_data %>%
-      mutate(geocode = "place_holder") %>%
-      select(-.data$GEOID) %>%
-      group_by(.data$geocode) %>%
-      summarize_all(sum)
+      dplyr::mutate(geocode = "place_holder") %>%
+      dplyr::select(-.data$GEOID) %>%
+      dplyr::group_by(.data$geocode) %>%
+      dplyr::summarize_all(sum)
 
   } else if (link_geo == "zip") {
 
     # join tract-level data with zip-tract conversion table then group by zip
     by_zip <- zip_$tract %>%
-      select(.data$geoid, .data$zip) %>%
-      rename("GEOID" = "geoid") %>%
-      inner_join(
+      dplyr::select(.data$geoid, .data$zip) %>%
+      dplyr::rename("GEOID" = "geoid") %>%
+      dplyr::inner_join(
         tract_data,
         by = "GEOID"
       ) %>%
-      group_by(.data$zip)
+      dplyr::group_by(.data$zip)
     
     # compute zip-level population size by aggregating across overlapping tracts
     all_colnames <- names(tract_data)
     pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
     pstrat_data <- by_zip %>%
-      summarise(
-        across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
+      dplyr::summarise(
+        dplyr::across(dplyr::all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
       ) %>%
-      rename("geocode" = "zip")
+      dplyr::rename("geocode" = "zip")
 
   } else if (link_geo == "county") {
 
     pstrat_data <- tract_data %>%
-      mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
-      select(-.data$GEOID) %>%
-      group_by(.data$geocode) %>%
-      summarize_all(sum)
+      dplyr::mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
+      dplyr::select(-.data$GEOID) %>%
+      dplyr::group_by(.data$geocode) %>%
+      dplyr::summarize_all(sum)
 
   } else if (link_geo == "state") {
 
     pstrat_data <- tract_data %>%
-      mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
-      select(-.data$GEOID) %>%
-      group_by(.data$geocode) %>%
-      summarize_all(sum)
+      dplyr::mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
+      dplyr::select(-.data$GEOID) %>%
+      dplyr::group_by(.data$geocode) %>%
+      dplyr::summarize_all(sum)
 
   }
 
@@ -2182,17 +1479,7 @@ combine_tracts <- function(
 #'   \item{levels}{Complete list of factor levels for all variables}
 #'   \item{vars}{Variable lists for model specification (fixed, varying, omit)}
 #'
-#' @details The function:
-#' \enumerate{
-#'   \item Aggregates tract data to the specified geographic scale
-#'   \item Filters both datasets to common geographic areas
-#'   \item Creates complete demographic combinations using expand.grid()
-#'   \item Adds population weights from Census data
-#'   \item Appends geographic predictors from input data
-#'   \item Generates variable lists for modeling
-#' }
-#' 
-#' @noRd 
+#' @noRd
 #'
 #' @importFrom dplyr filter select mutate arrange across left_join
 #' @importFrom rlang sym .data
@@ -2210,10 +1497,10 @@ prepare_mrp_acs <- function(
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
     shared_geocodes <- intersect(unique(input_data[[link_geo]]), pstrat_data$geocode)
-    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
-    pstrat_data <- pstrat_data %>% filter(.data$geocode %in% shared_geocodes)
+    input_data <- input_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
+    pstrat_data <- pstrat_data %>% dplyr::filter(.data$geocode %in% shared_geocodes)
   }
-  cell_counts <- pstrat_data %>% select(-.data$geocode) %>% t() %>% c()
+  cell_counts <- pstrat_data %>% dplyr::select(-.data$geocode) %>% t() %>% c()
 
   # create lists of all factor levels
   n_time_indices <- 1
@@ -2231,8 +1518,8 @@ prepare_mrp_acs <- function(
     intersect(names(levels))
 
   new_data <- expand.grid(levels, stringsAsFactors = FALSE) %>%
-    arrange(across(all_of(sort_vars))) %>% # IMPORTANT: To match the cell order of poststratification data
-    mutate(total = rep(cell_counts, n_time_indices))
+    dplyr::arrange(dplyr::across(dplyr::all_of(sort_vars))) %>% # IMPORTANT: To match the cell order of poststratification data
+    dplyr::mutate(total = rep(cell_counts, n_time_indices))
 
   # append geographic predictors
   covariates <- NULL
@@ -2240,7 +1527,7 @@ prepare_mrp_acs <- function(
     # find geographic covariates
     covariates <- get_geo_predictors(input_data, link_geo)
     if(ncol(covariates) > 1) {
-      new_data <- left_join(new_data, covariates, by = link_geo)
+      new_data <- dplyr::left_join(new_data, covariates, by = link_geo)
     }
   }
 
@@ -2253,7 +1540,7 @@ prepare_mrp_acs <- function(
 
   # add 'total' column to interface with plotting functions
   if (metadata$family == "normal") {
-    input_data <- input_data %>% mutate(total = 1)
+    input_data <- input_data %>% dplyr::mutate(total = 1)
   }
 
   # create variable lists for model specification
@@ -2288,15 +1575,6 @@ prepare_mrp_acs <- function(
 #'   \item{levels}{Complete list of factor levels for all variables}
 #'   \item{vars}{Variable lists for model specification (fixed, varying, omit)}
 #'
-#' @details The function:
-#' \enumerate{
-#'   \item Filters both datasets to common geographic areas
-#'   \item Creates factor levels from the filtered data
-#'   \item Appends geographic predictors from input data
-#'   \item Duplicates poststratification rows for each time period
-#'   \item Generates variable lists for modeling
-#' }
-#' 
 #' @noRd
 #'
 #' @importFrom dplyr filter mutate
@@ -2312,8 +1590,8 @@ prepare_mrp_custom <- function(
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
     shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(new_data[[link_geo]]))
-    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
-    new_data <- new_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+    input_data <- input_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
+    new_data <- new_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
   }
 
   # create lists of all factor levels
@@ -2345,12 +1623,12 @@ prepare_mrp_custom <- function(
   # duplicate rows for each time index
   new_data <- purrr::map_dfr(
     seq_len(n_time_indices),
-    ~ new_data %>% mutate(time = .x)
+    ~ new_data %>% dplyr::mutate(time = .x)
   )
 
   # add 'total' column to interface with plotting functions
   if (metadata$family == "normal") {
-    input_data <- input_data %>% mutate(total = 1)
+    input_data <- input_data %>% dplyr::mutate(total = 1)
   }
 
   vars <- create_variable_list(input_data, covariates)
@@ -2383,9 +1661,9 @@ prepare_mrp_custom <- function(
 aggregate_fips <- function(df) {
 
   df <- df %>%
-    mutate(fips = substr(.data$fips, 1, 2)) %>%
-    select(-.data$county) %>%
-    distinct(.data$fips, .keep_all = TRUE)
+    dplyr::mutate(fips = substr(.data$fips, 1, 2)) %>%
+    dplyr::select(-.data$county) %>%
+    dplyr::distinct(.data$fips, .keep_all = TRUE)
 
   return(df)
 }

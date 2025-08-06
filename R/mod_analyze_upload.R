@@ -36,25 +36,50 @@ mod_analyze_upload_ui <- function(id) {
           title = "Sample",
           value = "sample",
           conditionalPanel(
-            condition = "output.family != 'normal'",
-            tags$p(tags$strong("Upload individual-level or aggregated sample data")),
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("toggle_sample"),
-              label = NULL,
-              choices = c("Individual-level" = "indiv", "Aggregated" = "agg"),
-              selected = "agg",
-              justified = TRUE,
-              size = "sm"
+            condition = "output.family != 'normal' || output.is_timevar",
+            tags$div(
+              actionButton(
+                inputId = ns("sample_spec_popover_btn"),
+                label = "Data Specification",
+                icon = icon("chevron-down"),
+                class = "btn btn-sm btn-secondary"
+              )
+            ),
+            tags$div(id = ns("sample_spec_popover"),
+              bslib::card(class = "mt-2 mb-0",
+                bslib::card_body(
+                  conditionalPanel(
+                    condition = "output.family != 'normal'",
+                    shinyWidgets::radioGroupButtons(
+                      inputId = ns("toggle_sample"),
+                      label = "Data is aggregated?",
+                      choices = c( "Yes" = "agg", "No" = "indiv"),
+                      selected = "agg",
+                      justified = TRUE,
+                      size = "sm"
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "output.is_timevar",
+                    shinyWidgets::radioGroupButtons(
+                      inputId = ns("freq_select"),
+                      label = "Group dates by",
+                      choices = c( "Week" = "week", "Month" = "month", "Year" = "year"),
+                      selected = "week",
+                      justified = TRUE,
+                      size = "sm"
+                    )
+                  )
+                )
+              )
             )
           ),
-          conditionalPanel(
-            condition = "output.family == 'normal'",
-            tags$p(tags$strong("Upload individual-level sample data")),
-          ),
-          fileInput(
-            inputId = ns("sample_upload"),
-            label = NULL,
-            accept = GLOBAL$ui$format$data
+          tags$div(class = "mt-2",
+            fileInput(
+              inputId = ns("sample_upload"),
+              label = NULL,
+              accept = GLOBAL$ui$format$data
+            )
           ),
           uiOutput(ns("sample_feedback")),
           p(class = "mt-0 small",
@@ -290,13 +315,14 @@ mod_analyze_upload_server <- function(id, global){
         session = session
       )
 
-      # reset the poststratification data panel
+      # reset popover states
+      shinyjs::show("sample_spec_popover")
       shinyjs::show("link_acs_popover")
       shinyjs::hide("pstrat_upload_popover")
     })
     
     # --------------------------------------------------------------------------
-    # Make poststratification data options exclusive
+    # Popover event handlers
     # --------------------------------------------------------------------------
     observeEvent(
       eventExpr = list(
@@ -308,6 +334,10 @@ mod_analyze_upload_server <- function(id, global){
         shinyjs::toggle(id = "link_acs_popover")
       }
     )
+
+    observeEvent(input$sample_spec_popover_btn, {
+      shinyjs::toggle(id = "sample_spec_popover")
+    })
 
 
     # --------------------------------------------------------------------------
@@ -406,6 +436,7 @@ mod_analyze_upload_server <- function(id, global){
           data = raw_sample(),
           metadata = global$metadata,
           zip_county_state = zip_$county_state,
+          freq = input$freq_select,
           is_sample = TRUE,
           is_aggregated = global$metadata$family != "normal" &&
             input$toggle_sample == "agg"
@@ -651,6 +682,7 @@ mod_analyze_upload_server <- function(id, global){
           data = raw_pstrat(),
           metadata = global$metadata,
           zip_county_state = zip_$county_state,
+          freq = NULL,
           is_sample = FALSE,
           is_aggregated = input$toggle_pstrat == "agg"
         )
