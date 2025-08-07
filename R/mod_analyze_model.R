@@ -783,9 +783,8 @@ mod_analyze_model_server <- function(id, global){
         ext = ".qs"
       )
 
-      qs::qread(
-        app_sys(paste0(GLOBAL$path$example_fit, file_name))
-      ) %>% model_buffer()
+      fetch_data(file_name, subdir = "example/fit") %>%
+        model_buffer()
     })
     
     # create new model tab

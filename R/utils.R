@@ -27,6 +27,18 @@ nullify <- function(x) {
   return(x)
 }
 
+#' Replace NULL values with a replacement value
+#'
+#' @description Replaces NULL values with a specified replacement value,
+#' leaving non-NULL values unchanged. Useful for providing default values
+#' when NULL inputs are encountered.
+#'
+#' @param x Any R object to check for NULL
+#' @param replacement Any R object to use as replacement when x is NULL
+#'
+#' @return The replacement value if x is NULL, otherwise returns x unchanged
+#'
+#' @noRd
 replace_null <- function(x, replacement) {
   if (is.null(x)) {
     return(replacement)
@@ -104,6 +116,22 @@ get_config <- function(value) {
   )
 }
 
+#' Create standardized example filenames
+#'
+#' @description Generates standardized filenames for example data files based on
+#' metadata specifications. Combines use case, family, and suffix information
+#' to create consistent naming conventions for different file types.
+#'
+#' @param metadata List containing metadata with family and case information
+#' @param suffix Character vector specifying file suffix, one of "raw", "prep", or "fit"
+#' @param ext Character string specifying file extension (default: ".csv")
+#' @param sep Character string used as separator in filename (default: "_")
+#' @param valid_families Character vector of valid family values for validation
+#'
+#' @return Character string containing the constructed filename following the
+#'   pattern: usecase_family_suffix.ext (e.g., "covid_binomial_raw.csv")
+#'
+#' @noRd
 create_example_filename <- function(
   metadata,
   suffix = c("raw", "prep", "fit"),
@@ -135,6 +163,25 @@ create_example_filename <- function(
   return(file_name)
 }
 
+#' Validate and parse interval specifications
+#'
+#' @description Validates and parses interval specifications for uncertainty
+#' quantification, supporting both credible intervals (numeric) and standard
+#' deviation multiples (character). Returns standardized parameters for
+#' interval calculations.
+#'
+#' @param interval Numeric value between 0 and 1 for credible intervals
+#'   (e.g., 0.95 for 95% CI), or character string for standard deviations
+#'   ("1sd", "2sd", or "3sd")
+#'
+#' @return List containing interval parameters:
+#'   \itemize{
+#'     \item is_ci: Logical indicating if credible interval (TRUE) or standard deviation (FALSE)
+#'     \item qlower: Lower quantile for credible intervals
+#'     \item qupper: Upper quantile for credible intervals
+#'     \item n_sd: Number of standard deviations for uncertainty bands
+#'   }
+#'
 #' @noRd
 check_interval <- function(interval) {
   is_ci <- TRUE
@@ -169,4 +216,102 @@ check_interval <- function(interval) {
     qupper = qupper,
     n_sd = n_sd
   ))
+}
+
+#' Fetch data files from remote repository with caching
+#'
+#' @description Downloads and caches data files from a GitHub repository,
+#' with support for local caching and remote-change detection. Automatically handles
+#' different file formats (CSV, QS) and manages cache directory creation.
+#'
+#' @param file Character string specifying the filename to fetch (including extension)
+#' @param org Character string specifying the GitHub organization (default: "mrp-interface")
+#' @param repo Character string specifying the repository name (default: "shinymrp-data")
+#' @param branch Character string specifying the git branch (default: "main")
+#' @param subdir Character string specifying subdirectory path within repo (default: "")
+#' @param cache_dir Character string specifying local cache directory path
+#' @param check_remote Logical; if TRUE, perform an HTTP HEAD request to detect remote updates (default: TRUE)
+#'
+#' @return Data frame or object loaded from the specified file, with format
+#'   determined by file extension (CSV files return data frames, QS files
+#'   return the original R object)  
+#' @noRd
+#' Fetch data files from remote repository with caching
+#'
+#' @description Downloads and caches data files from a GitHub repository,
+#' with support for local caching and remote-change detection via httr2.
+#' Automatically handles different file formats (CSV, QS, R) and manages cache directory creation.
+#'
+#' @param file Character string specifying the filename to fetch (including extension)
+#' @param org Character string specifying the GitHub organization (default: "mrp-interface")
+#' @param repo Character string specifying the repository name (default: "shinymrp-data")
+#' @param branch Character string specifying the git branch (default: "main")
+#' @param subdir Character string specifying subdirectory path within repo (default: "")
+#' @param cache_dir Character string specifying local cache directory path
+#' @param check_remote Logical; if TRUE, perform an HTTP HEAD request via httr2 to detect remote updates (default: TRUE)
+#'
+#' @return Data frame or object loaded from the specified file, with format
+#'   determined by file extension (CSV files return data frames, QS files
+#'   return the original R object, and R files return character lines)
+#' @noRd
+fetch_data <- function(
+  file,
+  org          = "mrp-interface",
+  repo         = "shinymrp-data",
+  branch       = "main",
+  subdir       = "",
+  cache_dir    = tools::R_user_dir("shinymirp", which = "cache"),
+  check_remote = TRUE
+) {
+  # ensure cache directory exists
+  if (!dir.exists(cache_dir)) {
+    dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  # construct local path and raw URL
+  dest <- file.path(cache_dir, file)
+  file_path <- if (nzchar(subdir)) paste0(subdir, "/", file) else file
+  raw_url <- sprintf(
+    "https://raw.githubusercontent.com/%s/%s/%s/%s",
+    org, repo, branch, file_path
+  )
+
+  # determine if download is needed
+  should_dl <- !file.exists(dest)
+
+  if (!should_dl && check_remote) {
+    # perform HEAD request via httr2 to compare Last-Modified
+    resp <- httr2::request(raw_url) %>%
+      httr2::req_method("HEAD") %>%
+      httr2::req_perform()
+
+    if (httr2::resp_status(resp) == 200) {
+      lm <- httr2::resp_header(resp, "last-modified")
+      if (!is.null(lm)) {
+        remote_time <- as.POSIXct(
+          lm,
+          format = "%a, %d %b %Y %H:%M:%S %Z",
+          tz = "GMT"
+        )
+        local_time <- file.info(dest)$mtime
+        if (remote_time > local_time) {
+          should_dl <- TRUE
+        }
+      }
+    }
+  }
+
+  # download if required
+  if (should_dl) {
+    utils::download.file(raw_url, destfile = dest, mode = "wb")
+  }
+
+  # read file based on extension
+  ext <- tools::file_ext(file)
+  switch(ext,
+    csv = readr::read_csv(dest, show_col_types = FALSE),
+    qs  = qs::qread(dest),
+    R   = readLines(dest),
+    stop("Unsupported file extension: ", ext)
+  )
 }

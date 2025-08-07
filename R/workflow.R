@@ -190,10 +190,12 @@ MRPWorkflow <- R6::R6Class(
       message("Preprocessing sample data...")
 
       tryCatch({
+        zip_county_state <- fetch_data("zip_county_state.csv", subdir = "geo")
+
         private$data_ <- preprocess(
           data = data,
           metadata = private$metadata_,
-          zip_county_state = zip_$county_state,
+          zip_county_state = zip_county_state,
           is_sample = TRUE,
           is_aggregated = is_aggregated,
           zip_threshold = zip_threshold,
@@ -250,11 +252,14 @@ MRPWorkflow <- R6::R6Class(
             warning(stringr::str_interp("Linking geography is either incorrect or not specified. Using 'zip' as default for COVID data."))
           }
 
+          pstrat_covid <- fetch_data("pstrat_covid.csv", subdir = "acs")
+          covar_covid <- fetch_data("covar_covid.csv", subdir = "acs")
+
           # prepare data for MRP
           private$mrp_ <- prepare_mrp_covid(
             input_data = private$data_,
-            pstrat_data = acs_covid_$pstrat,
-            covariates = acs_covid_$covar,
+            pstrat_data = pstrat_covid,
+            covariates = covar_covid,
             metadata   = private$metadata_
           )
 
@@ -265,7 +270,7 @@ MRPWorkflow <- R6::R6Class(
               geojson_$county,
               private$mrp_$levels$county
             )),
-            raw_covariates = acs_covid_$covar %>%  
+            raw_covariates = covar_covid %>%
               filter(.data$zip %in% unique(private$mrp_$input$zip))
           )
 
@@ -278,7 +283,7 @@ MRPWorkflow <- R6::R6Class(
             warning(stringr::str_interp("Linking geography is either incorrect or not specified. Using 'state' as default for polling data."))
           }
 
-          new_data <- acs_poll_$pstrat %>%
+          new_data <- fetch_data("pstrat_poll.csv", subdir = "acs") %>%
             mutate(state = to_fips(.data$state, "state"))
 
           private$mrp_ <- prepare_mrp_custom(
@@ -303,12 +308,18 @@ MRPWorkflow <- R6::R6Class(
           }
 
           # retrieve ACS data based on user's input
-          tract_data <- acs_[[as.character(private$linkdata_$acs_year)]]
+          acs_year <- private$linkdata_$acs_year
+          tract_data <- fetch_data(
+            paste0("acs_", acs_year - 4, "-", acs_year, ".csv"),
+            subdir = "acs"
+          )
+          zip_tract <- fetch_data("zip_tract.csv", subdir = "geo")
 
           # prepare data for MRP
           private$mrp_ <- prepare_mrp_acs(
             input_data = private$data_,
             tract_data = tract_data,
+            zip_tract = zip_tract,
             metadata = private$metadata_,
             link_geo = private$linkdata_$link_geo
           )
@@ -351,12 +362,13 @@ MRPWorkflow <- R6::R6Class(
       message("Preprocessing poststratification data...")
 
       tryCatch({
+        zip_county_state <- fetch_data("zip_county_state.csv", subdir = "geo")
 
         # Process data
         new_data <- preprocess(
           data = pstrat_data,
           metadata = private$metadata_,
-          zip_county_state = zip_$county_state,
+          zip_county_state = zip_county_state,
           is_sample = FALSE,
           is_aggregated = is_aggregated
         )

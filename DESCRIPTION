@@ -28,6 +28,7 @@ Imports:
     haven,
     highcharter,
     htmlwidgets,
+    httr2,
     loo,
     lubridate,
     magrittr,
