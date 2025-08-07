@@ -1398,6 +1398,7 @@ create_variable_list <- function(input_data, covariates) {
 #' @importFrom rlang .data
 combine_tracts <- function(
     tract_data,
+    zip_tract,
     link_geo = NULL
 ) {
 
@@ -1418,7 +1419,7 @@ combine_tracts <- function(
   } else if (link_geo == "zip") {
 
     # join tract-level data with zip-tract conversion table then group by zip
-    by_zip <- zip_$tract %>%
+    by_zip <- zip_tract %>%
       dplyr::select(.data$geoid, .data$zip) %>%
       dplyr::rename("GEOID" = "geoid") %>%
       dplyr::inner_join(
@@ -1486,12 +1487,13 @@ combine_tracts <- function(
 prepare_mrp_acs <- function(
     input_data,
     tract_data,
+    zip_tract,
     metadata,
     link_geo = NULL
 ) {
 
   # compute cell counts based on given geographic scale
-  pstrat_data <- combine_tracts(tract_data, link_geo)
+  pstrat_data <- combine_tracts(tract_data, zip_tract, link_geo)
 
   # filter based on common GEOIDs
   shared_geocodes <- c()

@@ -432,10 +432,12 @@ mod_analyze_upload_server <- function(id, global){
       tryCatch({
         read_data(input$sample_upload$datapath) %>% raw_sample()
 
+        zip_county_state <- fetch_data("zip_county_state.csv", subdir = "geo")
+
         global$data <- preprocess(
           data = raw_sample(),
           metadata = global$metadata,
-          zip_county_state = zip_$county_state,
+          zip_county_state = zip_county_state,
           freq = input$freq_select,
           is_sample = TRUE,
           is_aggregated = global$metadata$family != "normal" &&
@@ -462,18 +464,12 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      file_name <- create_example_filename(global$metadata, suffix = "raw")
-      readr::read_csv(
-        app_sys(paste0(GLOBAL$path$example_data, file_name)),
-        show_col_types = FALSE
-      ) %>%
+      create_example_filename(global$metadata, suffix = "raw") %>%
+        fetch_data(subdir = "example/data") %>%
         raw_sample()
 
-      file_name <- create_example_filename(global$metadata, suffix = "prep")
-      global$data <- readr::read_csv(
-        app_sys(paste0(GLOBAL$path$example_data, file_name)),
-        show_col_types = FALSE
-      ) %>%
+      global$data <- create_example_filename(global$metadata, suffix = "prep") %>%
+        fetch_data(subdir = "example/data") %>%
         preprocess_example()
       
       waiter::waiter_hide()
@@ -486,8 +482,10 @@ mod_analyze_upload_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      file_name <- create_example_filename(global$metadata, suffix = "prep")
-      readr::read_csv(app_sys(paste0(GLOBAL$path$example_data, file_name)), show_col_types = FALSE) %>% raw_sample()
+      create_example_filename(global$metadata, suffix = "prep") %>%
+        fetch_data(subdir = "example/data") %>%
+        raw_sample()
+
       global$data <- preprocess_example(raw_sample())
 
       waiter::waiter_hide()
@@ -520,7 +518,7 @@ mod_analyze_upload_server <- function(id, global){
         inputId = "link_geo",
         choices = link_geos
       )
-
+      print("fasdfasdfsa")
       updateSelectInput(session,
         inputId = "acs_year",
         choices = paste0(acs_years - 4, "-", acs_years)
@@ -561,13 +559,16 @@ mod_analyze_upload_server <- function(id, global){
           )
 
           if(!is.null(global$metadata$special_case) &&
-             global$metadata$special_case == "covid") {
+            global$metadata$special_case == "covid") {
+
+            pstrat_covid <- fetch_data("pstrat_covid.csv", subdir = "acs")
+            covar_covid <- fetch_data("covar_covid.csv", subdir = "acs")
 
             # prepare data for MRP
             global$mrp <- prepare_mrp_covid(
               input_data = global$data,
-              pstrat_data = acs_covid_$pstrat,
-              covariates = acs_covid_$covar,
+              pstrat_data = pstrat_covid,
+              covariates = covar_covid,
               metadata   = global$metadata
             )
 
@@ -578,13 +579,13 @@ mod_analyze_upload_server <- function(id, global){
                 geojson_$county,
                 global$mrp$levels$county
               )),
-              raw_covariates = acs_covid_$covar %>%  
+              raw_covariates = covar_covid %>%
                 filter(.data$zip %in% unique(global$mrp$input$zip))
             )
 
           } else if (!is.null(global$metadata$special_case) &&
                      global$metadata$special_case == "poll") {
-            new_data <- acs_poll_$pstrat %>%
+            new_data <- fetch_data("pstrat_poll.csv", subdir = "acs") %>%
               mutate(state = to_fips(.data$state, "state"))
 
             global$mrp <- prepare_mrp_custom(
@@ -604,12 +605,17 @@ mod_analyze_upload_server <- function(id, global){
 
           } else {
             # retrieve ACS data based on user's selection
-            tract_data <- acs_[[strsplit(global$linkdata$acs_year, "-")[[1]][2]]]
+            tract_data <- fetch_data(
+              paste0("acs_", global$linkdata$acs_year, ".csv"),
+              subdir = "acs"
+            )
+            zip_tract <- fetch_data("zip_tract.csv", subdir = "geo")
 
             # prepare data for MRP
             global$mrp <- prepare_mrp_acs(
               input_data = global$data,
               tract_data = tract_data,
+              zip_tract = zip_tract,
               metadata = global$metadata,
               link_geo = global$linkdata$link_geo
             )
@@ -677,11 +683,13 @@ mod_analyze_upload_server <- function(id, global){
         # Read in data first
         read_data(input$pstrat_upload$datapath) %>% raw_pstrat()
 
+        zip_county_state <- fetch_data("zip_county_state.csv", subdir = "geo")
+
         # Process data
         new_data <- preprocess(
           data = raw_pstrat(),
           metadata = global$metadata,
-          zip_county_state = zip_$county_state,
+          zip_county_state = zip_county_state,
           freq = NULL,
           is_sample = FALSE,
           is_aggregated = input$toggle_pstrat == "agg"
@@ -787,13 +795,8 @@ mod_analyze_upload_server <- function(id, global){
         paste0("pstrat_example_", format(Sys.Date(), "%Y%m%d"), ".csv")
       },
       content = function(file) {
-        file_name <- "pstrat.csv"
-        
         # Read the example file and write it to the download location
-        readr::read_csv(
-          app_sys(paste0(GLOBAL$path$example_data, file_name)),
-          show_col_types = FALSE
-        ) %>% 
+        fetch_data("pstrat.csv", subdir = "example/data") %>%
           readr::write_csv(file)
       }
     )

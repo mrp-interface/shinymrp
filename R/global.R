@@ -23,10 +23,6 @@ module_ids <- list(
 #' @noRd
 #' @keywords internal
 GLOBAL <- list(
-  path = list(
-    example_data = "extdata/example/data/",
-    example_fit = "extdata/example/fit/"
-  ),
   plot = list(
     point_size = 3.5,
     errorbar_size = 0.8,
