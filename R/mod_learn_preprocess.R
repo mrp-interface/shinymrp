@@ -146,7 +146,7 @@ mod_learn_preprocess_server <- function(id, global){
     output$save_code <- downloadHandler(
       filename = function() { "preprocess.R" },
       content = function(file) {
-        fetch_data("preprocess.R", subdir = "download") %>%
+        .fetch_data("preprocess.R", subdir = "download") %>%
           writeLines(file)
       }
     )
@@ -154,7 +154,7 @@ mod_learn_preprocess_server <- function(id, global){
     output$save_geo_conversion <- downloadHandler(
       filename = function() { "zip_county_state.csv" },
       content = function(file) {
-        fetch_data("zip_county_state.csv", subdir = "geo") %>%
+        .fetch_data("zip_county_state.csv", subdir = "geo") %>%
           readr::write_csv(file)
       }
     )
@@ -162,7 +162,7 @@ mod_learn_preprocess_server <- function(id, global){
     output$save_week_conversion <- downloadHandler(
       filename = function() { "week_conversion.csv" },
       content = function(file) {
-        fetch_data("week_conversion.csv", subdir = "download") %>%
+        .fetch_data("week_conversion.csv", subdir = "download") %>%
           readr::write_csv(file)
       }
     )

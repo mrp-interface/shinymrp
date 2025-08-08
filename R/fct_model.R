@@ -1,3 +1,55 @@
+#' Check MCMC iteration and chain parameters
+#'
+#' @description Validates MCMC sampling parameters including number of iterations,
+#' chains, and seed values to ensure they fall within acceptable ranges and are
+#' of correct numeric types.
+#'
+#' @param n_iter Numeric. Number of MCMC iterations to validate
+#' @param n_iter_range Numeric vector of length 2. Minimum and maximum allowed iterations
+#' @param n_chains Numeric. Number of MCMC chains to validate
+#' @param n_chains_range Numeric vector of length 2. Minimum and maximum allowed chains
+#' @param seed Numeric. Random seed value to validate
+#'
+#' @return A list containing:
+#'   \item{valid}{Logical indicating if all parameters are valid}
+#'   \item{msg}{Character vector of validation error messages, empty if valid}
+#'
+#' @noRd
+.check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, seed) {
+  flag <- TRUE
+  msg <- c()
+  
+  if(is.numeric(n_iter) && is.numeric(n_chains) && is.numeric(seed)) {
+    if(n_iter < n_iter_range[1] | n_iter > n_iter_range[2]) {
+      msg <- c(msg, paste0("The number of iterations must be between ", n_iter_range[1], " and ", n_iter_range[2], "."))
+      flag <- FALSE
+    }
+    
+    if(n_chains < n_chains_range[1] | n_chains > n_chains_range[2]) {
+      msg <- c(msg, paste0("The number of chains must be between ", n_chains_range[1], " and ", n_chains_range[2], "."))
+      flag <- FALSE
+    }
+  } else {
+    flag <- FALSE
+    
+    if(!is.numeric(n_iter)) {
+      msg <- c(msg, "The number of iterations must be a numeric value.")
+    }
+    
+    if(!is.numeric(n_chains)) {
+      msg <- c(msg, "The number of chains must be a numeric value.")
+    }
+    
+    if(!is.numeric(seed)) {
+      msg <- c(msg, "The seed must be a numeric value.")
+    }
+  }
+  return(list(
+    valid = flag, 
+    msg = msg
+  ))
+}
+
 #' Create Model Formula from Effects Structure
 #'
 #' @description Creates a formula string for multilevel regression models based on
@@ -21,7 +73,7 @@
 #' @return A character string representing the model formula with fixed effects,
 #'   varying intercepts (1 | group), and varying slopes (0 + variable | group)
 #' @noRd
-create_formula <- function(effects) {
+.create_formula <- function(effects) {
 
   m_fix_c <- names(effects$m_fix_c) %>%
     purrr::map_chr(function(s) strsplit(s, "\\.")[[1]][1]) %>%
@@ -57,7 +109,7 @@ create_formula <- function(effects) {
 #' @return A cleaned character string with whitespace removed and converted to
 #'   lowercase (e.g., "normal(0,1)" or "student_t(3,0,1)").
 #' @noRd
-clean_prior_syntax <- function(s) {
+.clean_prior_syntax <- function(s) {
   # Remove whitespace
   s <- gsub("\\s+", "", s)
 
@@ -85,8 +137,8 @@ clean_prior_syntax <- function(s) {
 #' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE).
 #'   Returns TRUE for NULL inputs (no prior specified).
 #' @noRd
-check_prior_syntax <- function(s) {
-  if (is.null(nullify(s))) {
+.check_prior_syntax <- function(s) {
+  if (is.null(.nullify(s))) {
     return(TRUE)
   }
 
@@ -136,9 +188,9 @@ check_prior_syntax <- function(s) {
 #'   appropriate defaults from GLOBAL$default_priors. Each effect type gets its
 #'   corresponding default prior distribution.
 #' @noRd
-set_default_priors <- function(effects) {
+.set_default_priors <- function(effects) {
   for (type in c("Intercept", GLOBAL$args$effect_types)) {
-    effects[[type]] <- purrr::map(effects[[type]], ~ replace_null(nullify(.x), GLOBAL$default_priors[[type]]))
+    effects[[type]] <- purrr::map(effects[[type]], ~ .replace_null(.nullify(.x), GLOBAL$default_priors[[type]]))
   }
 
   return(effects)
@@ -157,7 +209,7 @@ set_default_priors <- function(effects) {
 #'   For example, "gender:age" becomes "age:gender".
 #' @noRd
 # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
-norm_pair <- function(p, sep = ":") {
+.norm_pair <- function(p, sep = ":") {
   parts <- strsplit(p, sep, fixed = TRUE)[[1]]
   paste(sort(parts), collapse = sep)
 }
@@ -175,10 +227,10 @@ norm_pair <- function(p, sep = ":") {
 #' @return Character vector containing normalized interaction pairs that appear
 #'   in both pairs1 and pairs2, accounting for order-invariant matching.
 #' @noRd
-pair_intersect <- function(pairs1, pairs2, sep = ":") {
+.pair_intersect <- function(pairs1, pairs2, sep = ":") {
   # normalize pairs
-  norms1 <- vapply(pairs1, norm_pair, FUN.VALUE = character(1), sep = sep)
-  norms2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1), sep = sep)
+  norms1 <- vapply(pairs1, .norm_pair, FUN.VALUE = character(1), sep = sep)
+  norms2 <- vapply(pairs2, .norm_pair, FUN.VALUE = character(1), sep = sep)
 
   return(intersect(norms1, norms2))
 }
@@ -196,10 +248,10 @@ pair_intersect <- function(pairs1, pairs2, sep = ":") {
 #' @return Character vector containing pairs from pairs1 that are not present in pairs2,
 #'   accounting for order-invariant matching
 #' @noRd
-pair_setdiff <- function(pairs1, pairs2, sep = ":") {
+.pair_setdiff <- function(pairs1, pairs2, sep = ":") {
   # precompute the normalized sets of pairs
-  norm1 <- vapply(pairs1, norm_pair, FUN.VALUE = character(1), sep = sep)
-  norm2 <- vapply(pairs2, norm_pair, FUN.VALUE = character(1), sep = sep)
+  norm1 <- vapply(pairs1, .norm_pair, FUN.VALUE = character(1), sep = sep)
+  norm2 <- vapply(pairs2, .norm_pair, FUN.VALUE = character(1), sep = sep)
 
   # keep those in pairs1 whose normalized form is NOT in norm2
   keep <- !norm1 %in% norm2
@@ -222,11 +274,11 @@ pair_setdiff <- function(pairs1, pairs2, sep = ":") {
 #'
 #' @return Character vector of filtered interaction terms suitable for structured priors
 #' @noRd
-filter_interactions <- function(interactions, fixed_effects, data) {
+.filter_interactions <- function(interactions, fixed_effects, data) {
   bool <- purrr::map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    type1 <- data_type(data[[ss[1]]])
-    type2 <- data_type(data[[ss[2]]])
+    type1 <- .data_type(data[[ss[1]]])
+    type2 <- .data_type(data[[ss[2]]])
     is_cat <- c(type1, type2) == "cat"
 
     any(is_cat) && all(!ss[is_cat] %in% fixed_effects)
@@ -249,11 +301,11 @@ filter_interactions <- function(interactions, fixed_effects, data) {
 #' @return Character vector of interaction terms with variables reordered within
 #'   each term according to type hierarchy (binary < categorical < continuous)
 #' @noRd
-sort_interactions <- function(interactions, dat) {
+.sort_interactions <- function(interactions, dat) {
   interactions <- purrr::map_chr(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
-    type1 <- data_type(dat[[ss[1]]], num = TRUE)
-    type2 <- data_type(dat[[ss[2]]], num = TRUE)
+    type1 <- .data_type(dat[[ss[1]]], num = TRUE)
+    type2 <- .data_type(dat[[ss[2]]], num = TRUE)
     
     if(type1 > type2) {
       s <- paste0(ss[2], ':', ss[1])
@@ -281,7 +333,7 @@ sort_interactions <- function(interactions, dat) {
 #' @noRd
 #'
 #' @importFrom rlang .data
-create_interactions <- function(fixed_effects, varying_effects, dat) {
+.create_interactions <- function(fixed_effects, varying_effects, dat) {
   main_effects <- c(fixed_effects, varying_effects)
   
   if(dplyr::n_distinct(main_effects) <= 1) {
@@ -317,7 +369,7 @@ create_interactions <- function(fixed_effects, varying_effects, dat) {
 #'
 #' @noRd
 #'
-interaction_levels <- function(levels1, levels2) {
+.interaction_levels <- function(levels1, levels2) {
   numcat1 <- dplyr::n_distinct(levels1)
   numcat2 <- dplyr::n_distinct(levels2)
 
@@ -347,14 +399,14 @@ interaction_levels <- function(levels1, levels2) {
 #'   }
 #'
 #' @noRd
-group_fixed <- function(fixed, dat) {
+.group_fixed <- function(fixed, dat) {
   out <- list(
     cat = list(),
     bincont = list()
   )
 
   for(s in names(fixed)) {
-    if(data_type(dat[[s]]) == "cat") {
+    if(.data_type(dat[[s]]) == "cat") {
       levels <- sort(unique(dat[[s]]))
       dummies <- paste0(s, ".", levels[2:length(levels)])   # first level is the reference level
       for(d in dummies) {
@@ -385,7 +437,7 @@ group_fixed <- function(fixed, dat) {
 #'     \item varying_intercept_special: Binary×categorical interactions
 #'   }
 #' @noRd
-group_interactions <- function(interactions, dat) {
+.group_interactions <- function(interactions, dat) {
   out <- list(
     fixed_slope = list(),
     varying_slope = list(),
@@ -395,8 +447,8 @@ group_interactions <- function(interactions, dat) {
   
   for(s in names(interactions)) {
     ss <- strsplit(s, split = ':')[[1]]
-    type1 <- data_type(dat[[ss[1]]])
-    type2 <- data_type(dat[[ss[2]]])
+    type1 <- .data_type(dat[[ss[1]]])
+    type2 <- .data_type(dat[[ss[2]]])
     
     # binary x continuous or continuous x continuous
     if((type1 == "cont" && type2 == "cont") ||
@@ -449,30 +501,30 @@ group_interactions <- function(interactions, dat) {
 #'     \item structured: Grouped interactions with structured priors
 #'   }
 #' @noRd
-group_effects <- function(effects, dat) {
+.group_effects <- function(effects, dat) {
   out <- list()
   
   # global intercept
   out$Intercept <- effects$Intercept
   
   # fixed main effects
-  out$fixed <- group_fixed(effects$fixed, dat)
+  out$fixed <- .group_fixed(effects$fixed, dat)
   
   # varying main effects
   out$varying <- if(is.null(effects$varying)) list() else effects$varying
   
   # reorder terms in interactions
   if(!is.null(effects$interaction)) {
-    names(effects$interaction) <- sort_interactions(names(effects$interaction), dat) 
+    names(effects$interaction) <- .sort_interactions(names(effects$interaction), dat) 
   }
   
   # interactions without structured priors
   wo_struct <- effects$interaction[effects$interaction != "structured"]
-  out$interaction <- group_interactions(wo_struct, dat)
+  out$interaction <- .group_interactions(wo_struct, dat)
   
   # interactions with structured priors
   w_struct <- effects$interaction[effects$interaction == "structured"]
-  out$structured <- group_interactions(w_struct, dat)
+  out$structured <- .group_interactions(w_struct, dat)
   
   
   return(out)
@@ -483,7 +535,7 @@ group_effects <- function(effects, dat) {
 #' @description Flattens the grouped effects structure into individual components
 #' with standardized naming conventions for easier Stan code generation.
 #'
-#' @param effects Grouped effects structure from group_effects()
+#' @param effects Grouped effects structure from .group_effects()
 #'
 #' @return List with flattened effect components:
 #'   \itemize{
@@ -500,7 +552,7 @@ group_effects <- function(effects, dat) {
 #'     \item s_varits: Special structured varying-intercept interactions
 #'   }
 #' @noRd
-ungroup_effects <- function(effects) {
+.ungroup_effects <- function(effects) {
   # for cleaner code
   out <- list(
     Intercept = effects$Intercept,
@@ -520,7 +572,7 @@ ungroup_effects <- function(effects) {
 }
 
 # Stan code and data generation functions
-data_ <- function(effects, metadata) {
+.data_stan <- function(effects, metadata) {
   scode <- "
   int<lower=1> N;
   int<lower=0> K;
@@ -598,7 +650,7 @@ data_ <- function(effects, metadata) {
 }
 
 
-parameters_ <- function(effects, metadata) {
+.parameters_stan <- function(effects, metadata) {
   scode <- "
   real Intercept;"
   
@@ -662,7 +714,7 @@ parameters_ <- function(effects, metadata) {
   return(scode)
 }
 
-transformed_parameters_ <- function(effects, metadata) {
+.transformed_parameters_stan <- function(effects, metadata) {
   scode <- ""
   
   struct_effects <- c(
@@ -762,7 +814,7 @@ transformed_parameters_ <- function(effects, metadata) {
 #' likelihood function and prior distributions. Combines outcome distribution
 #' with hierarchical priors for all model parameters.
 #'
-#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   all model specifications and prior distributions.
 #' @param metadata List containing model specifications including family type
 #'   for determining the likelihood function.
@@ -777,7 +829,7 @@ transformed_parameters_ <- function(effects, metadata) {
 #'     \item Structured priors: Global and local scale parameters (if used)
 #'   }
 #' @noRd
-model_ <- function(effects, metadata) {
+.model_stan <- function(effects, metadata) {
   # group effects
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -828,7 +880,7 @@ model_ <- function(effects, metadata) {
 #' @return Character string containing Stan generated quantities code that computes
 #'   log_lik vector with binomial log probability mass function values for each observation
 #' @noRd
-gq_loo <- function(metadata) {
+.gq_loo <- function(metadata) {
   lpf <- switch(metadata$family,
     binomial = "binomial_lpmf(y[n] | n_sample[n], p_sample[n])",
     normal = "normal_lpdf(y[n] | mu[n], sigma)"
@@ -851,7 +903,7 @@ gq_loo <- function(metadata) {
 #' @return Character string containing Stan generated quantities code that generates
 #'   y_rep array with binomial random draws using fitted probabilities
 #' @noRd
-gq_ppc <- function(metadata) {
+.gq_ppc <- function(metadata) {
   scode <- switch(metadata$family,
     binomial = "\n  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);",
     normal = "\n  array[N] real y_rep = normal_rng(mu, sigma);"
@@ -866,7 +918,7 @@ gq_ppc <- function(metadata) {
 #' and poststratification (MRP). Generates population-level predictions and
 #' aggregates them using poststratification weights.
 #'
-#' @param effects Ungrouped effects structure from ungroup_effects()
+#' @param effects Ungrouped effects structure from .ungroup_effects()
 #' @param metadata List containing poststratification specifications:
 #'   \itemize{
 #'     \item pstrat_vars: Character vector of demographic subgroups
@@ -881,7 +933,7 @@ gq_ppc <- function(metadata) {
 #'     \item Temporal aggregation if specified
 #'   }
 #' @noRd
-gq_pstrat <- function(effects, metadata) {
+.gq_pstrat <- function(effects, metadata) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
@@ -979,7 +1031,7 @@ gq_pstrat <- function(effects, metadata) {
 #' function for generating Stan code for model fitting, assembling all components
 #' into a compilable Stan program.
 #'
-#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   all model specifications (fixed, varying, interactions).
 #' @param metadata List containing model specifications including family type,
 #'   poststratification variables, and time-varying flags. Used for data block
@@ -994,19 +1046,19 @@ gq_pstrat <- function(effects, metadata) {
 #'   }
 #'   Ready for compilation and MCMC sampling.
 #' @noRd
-make_stancode_mcmc <- function(effects, metadata=NULL) {
+.make_stancode_mcmc <- function(effects, metadata=NULL) {
   
   scode <- stringr::str_interp("
-data { ${data_(effects, metadata)}
+data { ${.data_stan(effects, metadata)}
 }
 
-parameters { ${parameters_(effects, metadata)}
+parameters { ${.parameters_stan(effects, metadata)}
 }
 
-transformed parameters { ${transformed_parameters_(effects, metadata)}
+transformed parameters { ${.transformed_parameters_stan(effects, metadata)}
 }
 
-model { ${model_(effects, metadata)}
+model { ${.model_stan(effects, metadata)}
 }
   ")
   
@@ -1020,7 +1072,7 @@ model { ${model_(effects, metadata)}
 #' Uses fitted parameters from MCMC to generate additional quantities of interest
 #' without re-estimating parameters.
 #'
-#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   model specifications needed for generated quantities.
 #' @param metadata List containing model specifications including family type
 #'   and poststratification variables.
@@ -1040,26 +1092,26 @@ model { ${model_(effects, metadata)}
 #'   }
 #'   Ready for use with generate_quantities() method.
 #' @noRd
-make_stancode_gq <- function(
+.make_stancode_gq <- function(
   effects,
   metadata,
   gq_type = c("loo", "ppc", "pstrat")
 ) {
   gq_type <- match.arg(gq_type)
   gq_code <- switch(gq_type,
-    "loo" = gq_loo(metadata),
-    "ppc" = gq_ppc(metadata),
-    "pstrat" = gq_pstrat(effects, metadata)
+    "loo" = .gq_loo(metadata),
+    "ppc" = .gq_ppc(metadata),
+    "pstrat" = .gq_pstrat(effects, metadata)
   )
   
   scode <- stringr::str_interp("
-data { ${data_(effects, metadata)}
+data { ${.data_stan(effects, metadata)}
 }
 
-parameters { ${parameters_(effects, metadata)}
+parameters { ${.parameters_stan(effects, metadata)}
 }
 
-transformed parameters { ${transformed_parameters_(effects, metadata)}
+transformed parameters { ${.transformed_parameters_stan(effects, metadata)}
 }
 
 generated quantities { ${gq_code}
@@ -1088,7 +1140,7 @@ generated quantities { ${gq_code}
 #'     \item Ignored columns: Left unchanged (outcome variables, totals, etc.)
 #'   }
 #' @noRd
-stan_factor <- function(df) {
+.stan_factor <- function(df) {
   # find the columns to mutate
   col_names <- setdiff(names(df), GLOBAL$vars$ignore)
   
@@ -1104,7 +1156,7 @@ stan_factor <- function(df) {
         dplyr::all_of(col_names),
         ~ {
           vec   <- .
-          dtype <- data_type(vec)
+          dtype <- .data_type(vec)
           
           if (dtype %in% c("bin", "cat")) {
             if (is.factor(vec)) vec <- as.character(vec)
@@ -1146,7 +1198,7 @@ stan_factor <- function(df) {
 #'   }
 #' @param new_data Data frame containing population data for prediction/poststratification
 #'   with same predictor variables and population counts (total column).
-#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   all model components (fixed, varying, interactions).
 #' @param metadata List containing model specifications including family, pstrat_vars,
 #'   and is_timevar flags.
@@ -1164,7 +1216,7 @@ stan_factor <- function(df) {
 #'     \item sens, spec: Sensitivity and specificity parameters
 #'   }
 #' @noRd
-make_standata <- function(
+.make_standata <- function(
     input_data,
     new_data,
     effects,
@@ -1236,7 +1288,7 @@ make_standata <- function(
     for(s in names(int)) {
       ss <- strsplit(s, split = ':')[[1]]
       s <- paste0(ss[1], ss[2])
-      int_lvls <- interaction_levels(dat[[ss[1]]], dat[[ss[2]]])
+      int_lvls <- .interaction_levels(dat[[ss[1]]], dat[[ss[2]]])
       unq_int_lvls <- sort(unique(int_lvls))
       n_int_lvls <- length(unq_int_lvls)
       stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- n_int_lvls
@@ -1289,7 +1341,7 @@ make_standata <- function(
 #'   positive (number of successes), total (number of trials), and predictor variables.
 #' @param new_data Data frame containing poststratification data with population
 #'   counts and the same predictor variables as input_data.
-#' @param effects Ungrouped effects structure from ungroup_effects() specifying
+#' @param effects Ungrouped effects structure from .ungroup_effects() specifying
 #'   model formula components (fixed effects, varying effects, interactions).
 #' @param metadata List containing model specifications including:
 #'   \itemize{
@@ -1311,7 +1363,7 @@ make_standata <- function(
 #'   \item{stan_data}{List of data passed to Stan}
 #'   \item{stan_code}{List of generated Stan code for mcmc, ppc, loo, and pstrat}
 #' @noRd
-run_mcmc <- function(
+.run_mcmc <- function(
     input_data,
     new_data,
     effects,
@@ -1325,12 +1377,12 @@ run_mcmc <- function(
 ) {
 
   stan_code <- list()
-  stan_code$mcmc <- make_stancode_mcmc(effects, metadata)
-  stan_code$ppc <- make_stancode_gq(effects, metadata, "ppc")
-  stan_code$loo <- make_stancode_gq(effects, metadata, "loo")
-  stan_code$pstrat <- make_stancode_gq(effects, metadata, "pstrat")
+  stan_code$mcmc <- .make_stancode_mcmc(effects, metadata)
+  stan_code$ppc <- .make_stancode_gq(effects, metadata, "ppc")
+  stan_code$loo <- .make_stancode_gq(effects, metadata, "loo")
+  stan_code$pstrat <- .make_stancode_gq(effects, metadata, "pstrat")
 
-  stan_data <- make_standata(input_data, new_data, effects, metadata, extra)
+  stan_data <- .make_standata(input_data, new_data, effects, metadata, extra)
 
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)
@@ -1367,17 +1419,17 @@ run_mcmc <- function(
 #' cross-validation, or poststratification estimates. Uses the generate_quantities
 #' method from CmdStanR.
 #'
-#' @param fit_mcmc CmdStanR fit object from run_mcmc() containing MCMC samples.
+#' @param fit_mcmc CmdStanR fit object from .run_mcmc() containing MCMC samples.
 #' @param stan_code Character string containing Stan code for generated quantities
 #'   (from stan_code$ppc, stan_code$loo, or stan_code$pstrat).
-#' @param stan_data List of data in Stan format (from run_mcmc() output).
+#' @param stan_data List of data in Stan format (from .run_mcmc() output).
 #' @param n_chains Integer. Number of chains to use for generated quantities
 #'   (should match the number used in MCMC fitting).
 #'
 #' @return CmdStanR generated quantities fit object containing the requested
 #'   generated quantities (e.g., y_rep for PPC, log_lik for LOO, theta_pop for MRP).
 #' @noRd
-run_gq <- function(
+.run_gq <- function(
     fit_mcmc,
     stan_code,
     stan_data,
@@ -1413,7 +1465,7 @@ run_gq <- function(
 #'
 #' @param df_fixed Data frame containing fixed effects parameter summaries
 #'   with row names corresponding to parameter names.
-#' @param effects Ungrouped effects structure from ungroup_effects() containing
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   fixed effects specifications.
 #' @param input_data Original input data frame used for model fitting, needed
 #'   to determine variable types and levels.
@@ -1426,12 +1478,12 @@ run_gq <- function(
 #'     \item Row names: Updated to include variable.level format
 #'   }
 #' @noRd
-add_ref_lvl <- function(df_fixed, effects, input_data) {
+.add_ref_lvl <- function(df_fixed, effects, input_data) {
   ### include reference levels for binary variables
   m_fix_bc_names <- names(effects$m_fix_bc) %>%
     purrr::map_chr(function(s) {
-      if (data_type(input_data[[s]]) == "bin") {
-        df <- data.frame(x = input_data[[s]]) %>% stan_factor()
+      if (.data_type(input_data[[s]]) == "bin") {
+        df <- data.frame(x = input_data[[s]]) %>% .stan_factor()
         eq1 <- unique(df$x_raw[df$x == 1])
         paste0(s, ".", eq1)
       } else {
@@ -1483,7 +1535,7 @@ add_ref_lvl <- function(df_fixed, effects, input_data) {
 #'     \item ess_bulk, ess_tail: Effective sample size measures
 #'   }
 #' @noRd
-get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
+.get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
   fit$summary(
     variables = variables,
     posterior::default_summary_measures()[1:4],
@@ -1498,7 +1550,7 @@ get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
 #' standardized column names and optional custom row names. Converts technical
 #' column names to user-friendly labels suitable for reporting.
 #'
-#' @param df Data frame containing parameter summary statistics from get_params_summary().
+#' @param df Data frame containing parameter summary statistics from .get_params_summary().
 #' @param row_names Optional character vector of custom row names to replace
 #'   default parameter names (default: NULL uses existing row names).
 #' @param probs Numeric vector of quantile probabilities used for credible
@@ -1513,7 +1565,7 @@ get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
 #'     \item Bulk_ESS, Tail_ESS: Effective sample size measures
 #'   }
 #' @noRd
-format_params_summary <- function(
+.format_params_summary <- function(
     df,
     row_names = NULL,
     probs = c(0.025, 0.975)
@@ -1549,8 +1601,8 @@ format_params_summary <- function(
 #' organizing them into fixed effects, varying effects, and other parameters.
 #' Includes reference levels for categorical variables and proper labeling.
 #'
-#' @param fit CmdStanR fit object from run_mcmc() containing MCMC samples.
-#' @param effects Ungrouped effects structure from ungroup_effects() used in model fitting.
+#' @param fit CmdStanR fit object from .run_mcmc() containing MCMC samples.
+#' @param effects Ungrouped effects structure from .ungroup_effects() used in model fitting.
 #' @param input_data Original input data frame used for model fitting, needed
 #'   for determining reference levels and variable types.
 #' @param metadata List containing model specifications including family type.
@@ -1578,7 +1630,7 @@ format_params_summary <- function(
 #'     }
 #'   }
 #' @noRd
-get_parameters <- function(
+.get_parameters <- function(
   fit,
   effects,
   input_data,
@@ -1592,13 +1644,13 @@ get_parameters <- function(
   df_fixed <- data.frame()
   if(length(fixed) > 0) {
     # extract summary table
-    df_fixed <- get_params_summary(fit, variables = c("Intercept", "beta"))
+    df_fixed <- .get_params_summary(fit, variables = c("Intercept", "beta"))
 
     # format the summary table
-    df_fixed <- format_params_summary(df_fixed)
+    df_fixed <- .format_params_summary(df_fixed)
 
     # add reference levels
-    df_fixed <- add_ref_lvl(df_fixed, effects, input_data)
+    df_fixed <- .add_ref_lvl(df_fixed, effects, input_data)
   }
 
   ### varying effects
@@ -1608,7 +1660,7 @@ get_parameters <- function(
   if(length(effects$m_var) > 0) {
     df_varying <- rbind(
       df_varying,
-      get_params_summary(fit, variables = paste0("scaled_lambda_", names(effects$m_var)))
+      .get_params_summary(fit, variables = paste0("scaled_lambda_", names(effects$m_var)))
     )
     row_names <- c(row_names, paste0(names(effects$m_var), " (intercept)"))
   }
@@ -1616,7 +1668,7 @@ get_parameters <- function(
   if(length(int_varit) > 0) {
     df_varying <- rbind(
       df_varying, 
-      get_params_summary(fit, variables = paste0("lambda_", gsub(':', '', names(int_varit))))
+      .get_params_summary(fit, variables = paste0("lambda_", gsub(':', '', names(int_varit))))
     )
     row_names <- c(row_names, paste0(names(int_varit), " (intercept)"))
   }
@@ -1624,13 +1676,13 @@ get_parameters <- function(
   if(length(int_varsl) > 0) {
     df_varying <- rbind(
       df_varying, 
-      get_params_summary(fit, variables = paste0("lambda2_", gsub(':', '', names(int_varsl))))
+      .get_params_summary(fit, variables = paste0("lambda2_", gsub(':', '', names(int_varsl))))
     )
     row_names <- c(row_names, paste0(names(int_varsl), " (slope)"))
   }
 
   if(nrow(df_varying) > 0) {
-    df_varying <- format_params_summary(df_varying, row_names = row_names)
+    df_varying <- .format_params_summary(df_varying, row_names = row_names)
   }
 
 
@@ -1641,13 +1693,13 @@ get_parameters <- function(
   if (metadata$family == "normal") {
     df_other <- rbind(
       df_other,
-      get_params_summary(fit, variables = "sigma")
+      .get_params_summary(fit, variables = "sigma")
     )
     row_names <- c(row_names, "Residual SD")
   }
 
   if (nrow(df_other) > 0) {
-    df_other <- format_params_summary(df_other, row_names = row_names)
+    df_other <- .format_params_summary(df_other, row_names = row_names)
   }
 
   return(list(
@@ -1663,7 +1715,7 @@ get_parameters <- function(
 #' transitions, maximum tree depth hits, and energy Bayesian fraction of missing
 #' information (E-BFMI). Provides formatted diagnostic messages for model assessment.
 #'
-#' @param fit CmdStanR fit object from run_mcmc() containing MCMC samples.
+#' @param fit CmdStanR fit object from .run_mcmc() containing MCMC samples.
 #' @param total_transitions Integer. Total number of MCMC transitions across
 #'   all chains (typically n_iter/2 * n_chains for post-warmup samples).
 #' @param max_depth Integer. Maximum tree depth limit used in sampling (default: 10).
@@ -1678,7 +1730,7 @@ get_parameters <- function(
 #'   }
 #'   \item{show_warnings}{Logical indicating whether any diagnostic issues were found}
 #' @noRd
-get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
+.get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
   # Get diagnostic summary
   diag_summary <- fit$diagnostic_summary(quiet = TRUE)
   
@@ -1721,7 +1773,7 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #' periods. Provides point estimates and standard errors for each subgroup.
 #'
 #' @param fit CmdStanR generated quantities fit object from poststratification
-#'   (output of run_gq with pstrat code).
+#'   (output of .run_gq with pstrat code).
 #' @param new_data Data frame containing poststratification data with demographic
 #'   variables and population counts.
 #' @param metadata List containing model specifications including:
@@ -1743,21 +1795,21 @@ get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
 #'     \item std: Posterior standard deviation
 #'   }
 #' @noRd
-get_estimates <- function(
+.get_estimates <- function(
   fit,
   new_data,
   metadata,
   interval = 0.95
 ) {
 
-  out <- check_interval(interval)
+  out <- .check_interval(interval)
   
   # convert new data to numeric factors
   col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
   new_data <- new_data %>%
     dplyr::select(dplyr::all_of(col_names)) %>%
     dplyr::mutate(overall = "overall") %>%  # add placeholder column for overall estimates
-    stan_factor()
+    .stan_factor()
 
   est <- list()
 
@@ -1808,7 +1860,7 @@ get_estimates <- function(
 #' time-varying and provides replicated datasets for model validation.
 #'
 #' @param fit CmdStanR generated quantities fit object from posterior predictive
-#'   checks (output of run_gq with ppc code).
+#'   checks (output of .run_gq with ppc code).
 #' @param input_data Original input data frame used for model fitting with
 #'   columns: positive, total, and time (if time-varying).
 #' @param metadata List containing model specifications including:
@@ -1828,7 +1880,7 @@ get_estimates <- function(
 #'       }
 #'   }
 #' @noRd
-get_replicates <- function(
+.get_replicates <- function(
   fit,
   input_data,
   metadata,

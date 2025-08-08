@@ -1,56 +1,3 @@
-#' Check MCMC iteration and chain parameters
-#'
-#' @description Validates MCMC sampling parameters including number of iterations,
-#' chains, and seed values to ensure they fall within acceptable ranges and are
-#' of correct numeric types.
-#'
-#' @param n_iter Numeric. Number of MCMC iterations to validate
-#' @param n_iter_range Numeric vector of length 2. Minimum and maximum allowed iterations
-#' @param n_chains Numeric. Number of MCMC chains to validate
-#' @param n_chains_range Numeric vector of length 2. Minimum and maximum allowed chains
-#' @param seed Numeric. Random seed value to validate
-#'
-#' @return A list containing:
-#'   \item{valid}{Logical indicating if all parameters are valid}
-#'   \item{msg}{Character vector of validation error messages, empty if valid}
-#'
-#' @noRd
-check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, seed) {
-  flag <- TRUE
-  msg <- c()
-  
-  if(is.numeric(n_iter) && is.numeric(n_chains) && is.numeric(seed)) {
-    if(n_iter < n_iter_range[1] | n_iter > n_iter_range[2]) {
-      msg <- c(msg, paste0("The number of iterations must be between ", n_iter_range[1], " and ", n_iter_range[2], "."))
-      flag <- FALSE
-    }
-    
-    if(n_chains < n_chains_range[1] | n_chains > n_chains_range[2]) {
-      msg <- c(msg, paste0("The number of chains must be between ", n_chains_range[1], " and ", n_chains_range[2], "."))
-      flag <- FALSE
-    }
-  } else {
-    flag <- FALSE
-    
-    if(!is.numeric(n_iter)) {
-      msg <- c(msg, "The number of iterations must be a numeric value.")
-    }
-    
-    if(!is.numeric(n_chains)) {
-      msg <- c(msg, "The number of chains must be a numeric value.")
-    }
-    
-    if(!is.numeric(seed)) {
-      msg <- c(msg, "The seed must be a numeric value.")
-    }
-  }
-  
-  return(list(
-    valid = flag, 
-    msg = msg
-  ))
-}
-
 #' Check Model Fit Object
 #'
 #' Validates if the model's data format matches the expected format.
@@ -62,7 +9,7 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
 #'   \item{valid}{Logical indicating if the format is valid}
 #'   \item{message}{Warning message if invalid, or NULL if valid}
 #' @noRd
-check_fit_object <- function(model, expected_metadata) {
+.check_fit_object <- function(model, expected_metadata) {
 
   return("")
 }
@@ -82,7 +29,7 @@ check_fit_object <- function(model, expected_metadata) {
 #' @importFrom shiny tagList tags
 #'
 #' @noRd
-waiter_ui <- function(type = "") {
+.waiter_ui <- function(type = "") {
   text_style <- "color: black; margin-top: 10px;"
 
   if(type == "fit") {
@@ -134,7 +81,7 @@ waiter_ui <- function(type = "") {
 #' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
-show_alert <- function(message, session) {
+.show_alert <- function(message, session) {
   showModal(
     modalDialog(
       title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
@@ -157,7 +104,7 @@ show_alert <- function(message, session) {
 #' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
-show_notif <- function(message, session) {
+.show_notif <- function(message, session) {
   showModal(
     modalDialog(
       title = tagList(icon("bell", "fa"), "Notification"),
@@ -181,7 +128,7 @@ show_notif <- function(message, session) {
 #' @importFrom shiny tags withMathJax
 #'
 #' @noRd
-create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit")) {
+.create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit")) {
   open <- match.arg(open)
 
   bslib::accordion(
@@ -433,18 +380,18 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
 #' application usage.
 #'
 #' @param open Character. Which accordion panel should be open by default.
-#'   If NULL, uses default from create_guide function
+#'   If NULL, uses default from .create_guide function
 #'
 #' @return No return value, called for side effect of showing modal
 #'
 #' @importFrom shiny showModal modalDialog modalButton
 #'
 #' @noRd
-show_guide <- function(open = NULL) {
+.show_guide <- function(open = NULL) {
   showModal(
     modalDialog(
       title = "User Guide",
-      create_guide(open),
+      .create_guide(open),
       size = "xl",
       easyClose = TRUE,
       footer = modalButton("Close")
@@ -468,7 +415,7 @@ show_guide <- function(open = NULL) {
 #' @importFrom shiny tags actionButton downloadButton textOutput plotOutput tableOutput icon HTML
 #'
 #' @noRd
-create_model_tab <- function(ns, model, last_tab_id) {
+.create_model_tab <- function(ns, model, last_tab_id) {
   
   tab_header <- tags$div(
     class = "model_tab_header",
@@ -604,7 +551,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
 #' @importFrom shinyjs reset
 #'
 #' @noRd
-reset_inputs <- function(vars) {
+.reset_inputs <- function(vars) {
   shinyWidgets::updateVirtualSelect(
     inputId = "fixed",
     choices = vars$fixed,
@@ -649,7 +596,7 @@ reset_inputs <- function(vars) {
 #' @importFrom shinyjs disable
 #'
 #' @noRd
-start_busy <- function(session, id, label) {
+.start_busy <- function(session, id, label) {
   updateActionButton(
     session = session,
     inputId = id,
@@ -659,7 +606,7 @@ start_busy <- function(session, id, label) {
 
   shinyjs::disable(id)
   waiter::waiter_show(
-    html = waiter_ui(),
+    html = .waiter_ui(),
     color = waiter::transparent(0)
   )
 }
@@ -681,7 +628,7 @@ start_busy <- function(session, id, label) {
 #' @importFrom shinyjs enable
 #'
 #' @noRd
-stop_busy <- function(session, id, label, success) {
+.stop_busy <- function(session, id, label, success) {
   updateActionButton(
     session = session,
     inputId = id,
@@ -693,7 +640,7 @@ stop_busy <- function(session, id, label, success) {
   waiter::waiter_hide()
 }
 
-to_analyze <- function(session) {
+.to_analyze <- function(session) {
   bslib::nav_select(
     id = "navbar",
     selected = "nav_analyze",

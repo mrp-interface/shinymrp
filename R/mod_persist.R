@@ -33,7 +33,7 @@ mod_persist_ui <- function(id) {
     ),
     tags$div(class = "help_btn_container",
       shinyWidgets::actionBttn(
-        inputId = ns("show_guide"),
+        inputId = ns(".show_guide"),
         style = "material-circle",
         size = "l",
         color = "success",
@@ -71,11 +71,11 @@ mod_persist_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    shinyjs::addClass("show_guide", "spin")
-    shinyjs::delay(2000, shinyjs::removeClass("show_guide", "spin"))
+    shinyjs::addClass(".show_guide", "spin")
+    shinyjs::delay(2000, shinyjs::removeClass(".show_guide", "spin"))
  
-    observeEvent(input$show_guide, {
-      show_guide("workflow")
+    observeEvent(input$.show_guide, {
+      .show_guide("workflow")
     })
     
     observeEvent(input$at_top, {

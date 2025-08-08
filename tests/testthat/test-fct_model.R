@@ -105,7 +105,7 @@ test_that("estimated parameters match saved values", {
   struct_prior <- "structured"
 
   data <- create_test_data(seed = seed) %>%
-    stan_factor()
+    .stan_factor()
 
   metadata <- list(
     special_case = NULL,
@@ -122,10 +122,10 @@ test_that("estimated parameters match saved values", {
       cont3 = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -157,10 +157,10 @@ test_that("estimated parameters match saved values", {
       bin3 = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -192,10 +192,10 @@ test_that("estimated parameters match saved values", {
       cat3 = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -227,10 +227,10 @@ test_that("estimated parameters match saved values", {
       cat3 = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -268,10 +268,10 @@ test_that("estimated parameters match saved values", {
       `cont3:cont1` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -309,10 +309,10 @@ test_that("estimated parameters match saved values", {
       `bin3:bin1` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -350,10 +350,10 @@ test_that("estimated parameters match saved values", {
       `cat3:cat1` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -391,10 +391,10 @@ test_that("estimated parameters match saved values", {
       `cat3:cat1` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -434,10 +434,10 @@ test_that("estimated parameters match saved values", {
       `bin2:cont2` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -478,10 +478,10 @@ test_that("estimated parameters match saved values", {
       `cat2:cont2` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -524,10 +524,10 @@ test_that("estimated parameters match saved values", {
       `cat2:cont2` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -568,10 +568,10 @@ test_that("estimated parameters match saved values", {
       `bin2:cat2` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -614,10 +614,10 @@ test_that("estimated parameters match saved values", {
       `bin2:cat2` = effect_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -655,10 +655,10 @@ test_that("estimated parameters match saved values", {
       `cat3:cat1` = struct_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -701,10 +701,10 @@ test_that("estimated parameters match saved values", {
       `cat2:cont2` = struct_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,
@@ -747,10 +747,10 @@ test_that("estimated parameters match saved values", {
       `bin2:cat2` = struct_prior
     )
   ) %>%
-    group_effects(data) %>%
-    ungroup_effects()
+    .group_effects(data) %>%
+    .ungroup_effects()
 
-  result <- run_mcmc(
+  result <- .run_mcmc(
     input_data = data,
     new_data = data,
     effects = effects,

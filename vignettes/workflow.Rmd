@@ -166,8 +166,8 @@ model2 <- workflow$create_model(
 ### Run MCMC
 
 ```{r}
-model1$fit(n_iter = 1000, n_chains = 2, seed = 123)
-model2$fit(n_iter = 1000, n_chains = 2, seed = 123)
+model1$fit(n_iter = 500, n_chains = 2, seed = 123)
+model2$fit(n_iter = 500, n_chains = 2, seed = 123)
 ```
 
 ### Diagnostics

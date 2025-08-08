@@ -9,7 +9,7 @@
 #' @return A data frame with state names converted to uppercase, state_name to title case,
 #'   and county names to title case if present
 #' @noRd
-fips_upper <- function(fips) {
+.fips_upper <- function(fips) {
   has_county <- "county" %in% names(fips)
 
   fips %>% dplyr::mutate(
@@ -35,7 +35,7 @@ fips_upper <- function(fips) {
 #' @return A data frame formatted for visualization with geographic identifiers, counts,
 #'   percentages, and hover text for maps or cleaned names for tables
 #' @noRd
-prep_sample_size <- function(
+.prep_sample_size <- function(
   input_data,
   fips_codes,
   geo,
@@ -53,7 +53,7 @@ prep_sample_size <- function(
   }
 
   input_data <- input_data %>% dplyr::mutate(fips = input_data[[geo]])
-  fips_codes <- fips_codes %>% fips_upper()
+  fips_codes <- fips_codes %>% .fips_upper()
   
   total_count <- sum(input_data$total)
   plot_df <- input_data %>%
@@ -120,7 +120,7 @@ prep_sample_size <- function(
 #'   }
 #'   Returns NULL if input_data is NULL.
 #' @noRd
-prep_raw <- function(
+.prep_raw <- function(
   input_data,
   fips_codes,
   geo,
@@ -145,7 +145,7 @@ prep_raw <- function(
   }
 
   input_data <- input_data %>% dplyr::mutate(fips = input_data[[geo]])
-  fips_codes <- fips_codes %>% fips_upper()
+  fips_codes <- fips_codes %>% .fips_upper()
 
   # compute weekly average
   group_cols <- if(metadata$is_timevar) c("fips", "time") else c("fips")
@@ -159,7 +159,7 @@ prep_raw <- function(
     )
 
   if (metadata$is_timevar) {
-    summary_type <- replace_null(summary_type, "max")
+    summary_type <- .replace_null(summary_type, "max")
 
     summary_fn <- switch(summary_type,
       "max" = max,
@@ -237,7 +237,7 @@ prep_raw <- function(
 #' @return A data frame with estimates, geographic information, and formatted hover
 #'   text for map visualization
 #' @noRd
-prep_est <- function(
+.prep_est <- function(
     est_df,
     fips_codes,
     geo,
@@ -255,9 +255,9 @@ prep_est <- function(
     return(NULL)
   }
 
-  out <- check_interval(interval)
+  out <- .check_interval(interval)
 
-  fips_codes <- fips_codes %>% fips_upper()
+  fips_codes <- fips_codes %>% .fips_upper()
   
   if(!is.null(time_index)) {
     est_df <- est_df %>% dplyr::filter(.data$time == time_index)
@@ -303,7 +303,7 @@ prep_est <- function(
 #'
 #' @return A ggplot object or patchwork object showing demographic comparisons
 #' @noRd
-plot_demographic <- function(
+.plot_demographic <- function(
     input_data,
     new_data,
     levels,
@@ -402,7 +402,7 @@ plot_demographic <- function(
 #'
 #' @return A ggplot object showing the covariate distribution histogram
 #' @noRd
-plot_geographic <- function(
+.plot_geographic <- function(
     covariates,
     breaks,
     description,
@@ -470,7 +470,7 @@ plot_geographic <- function(
 #'
 #' @return A ggplot object showing prevalence time series with optional estimates
 #' @noRd
-plot_outcome_timevar <- function(
+.plot_outcome_timevar <- function(
   raw,
   yrep_est = NULL,
   dates = NULL,
@@ -484,7 +484,7 @@ plot_outcome_timevar <- function(
     return(NULL)
   }
 
-  out <- check_interval(interval)
+  out <- .check_interval(interval)
 
   # compute weekly rates/averages
   plot_df <- raw %>%
@@ -608,7 +608,7 @@ plot_outcome_timevar <- function(
 #'
 #' @return A ggplot object showing support comparison with error bars
 #' @noRd
-plot_outcome_static <- function(
+.plot_outcome_static <- function(
     raw,
     yrep_est = NULL,
     metadata = NULL,
@@ -619,7 +619,7 @@ plot_outcome_static <- function(
     return(NULL)
   }
 
-  out <- check_interval(interval)
+  out <- .check_interval(interval)
 
   raw_mean <- switch(metadata$family,
     "binomial" = sum(raw$positive) / sum(raw$total),
@@ -692,7 +692,7 @@ plot_outcome_static <- function(
 #'
 #' @return A ggplot object showing posterior predictive check with multiple replications
 #' @noRd
-plot_ppc_timevar_subset <- function(
+.plot_ppc_timevar_subset <- function(
     yrep,
     raw,
     dates,
@@ -784,7 +784,7 @@ plot_ppc_timevar_subset <- function(
 #'
 #' @return A ggplot object showing posterior predictive check with summary statistics
 #' @noRd
-plot_ppc_timevar_all <- function(
+.plot_ppc_timevar_all <- function(
     yrep,
     raw,
     dates,
@@ -878,7 +878,7 @@ plot_ppc_timevar_all <- function(
 #'
 #' @return A ggplot object showing posterior predictive check for polling data
 #' @noRd
-plot_ppc_static <- function(
+.plot_ppc_static <- function(
     yrep,
     raw,
     metadata = NULL,
@@ -938,18 +938,18 @@ plot_ppc_static <- function(
 #'
 #' @return A patchwork object containing multiple ggplot panels showing time-varying estimates
 #' @noRd
-plot_est_timevar <- function(
+.plot_est_timevar <- function(
     plot_df,
     dates,
     metadata = NULL,
     interval = 0.95,
     show_caption = TRUE
 ) {
-  if(is.null(nullify(plot_df))) {
+  if(is.null(.nullify(plot_df))) {
     return(NULL)
   }
 
-  out <- check_interval(interval)
+  out <- .check_interval(interval)
 
   levels <- unique(plot_df$factor) %>% sort()
   labels <- levels %>% as.character() %>% tools::toTitleCase()
@@ -1079,17 +1079,17 @@ plot_est_timevar <- function(
 #'
 #' @return A ggplot object showing static estimates with error bars
 #' @noRd
-plot_est_static <- function(
+.plot_est_static <- function(
   plot_df,
   metadata = NULL,
   interval = 0.95,
   show_caption = TRUE
 ) {
-  if(is.null(nullify(plot_df))) {
+  if(is.null(.nullify(plot_df))) {
     return(NULL)
   }
 
-  out <- check_interval(interval)
+  out <- .check_interval(interval)
 
   p <- ggplot2::ggplot(data = plot_df) +
     ggplot2::geom_point(
@@ -1146,7 +1146,7 @@ plot_est_static <- function(
 #'
 #' @return A highcharter map object showing choropleth visualization
 #' @noRd
-choro_map <- function(
+.choro_map <- function(
     plot_df,
     geojson,
     geo,

@@ -420,7 +420,7 @@ mod_analyze_upload_server <- function(id, global){
     # Handle sample data upload
     observeEvent(input$sample_upload, {
       waiter::waiter_show(
-        html = waiter_ui("wait"),
+        html = .waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
       
@@ -430,11 +430,11 @@ mod_analyze_upload_server <- function(id, global){
       global$plotdata <- NULL
 
       tryCatch({
-        read_data(input$sample_upload$datapath) %>% raw_sample()
+        .read_data(input$sample_upload$datapath) %>% raw_sample()
 
-        zip_county_state <- fetch_data("zip_county_state.csv", subdir = "geo")
+        zip_county_state <- .fetch_data("zip_county_state.csv", subdir = "geo")
 
-        global$data <- preprocess(
+        global$data <- .preprocess(
           data = raw_sample(),
           metadata = global$metadata,
           zip_county_state = zip_county_state,
@@ -446,11 +446,11 @@ mod_analyze_upload_server <- function(id, global){
 
         sample_errors(character(0))
       
-      }, error = function(e) {
-        # show error message
-        error_message <- paste("Error processing data:\n", e$message)
-        sample_errors(error_message)
-        message(error_message)
+      # }, error = function(e) {
+      #   # show error message
+      #   error_message <- paste("Error processing data:\n", e$message)
+      #   sample_errors(error_message)
+      #   message(error_message)
       }, finally = {
         # Always hide the waiter
         waiter::waiter_hide()
@@ -460,17 +460,17 @@ mod_analyze_upload_server <- function(id, global){
     # Use individual-level example data
     observeEvent(input$use_indiv_example, {
       waiter::waiter_show(
-        html = waiter_ui("wait"),
+        html = .waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
 
-      create_example_filename(global$metadata, suffix = "raw") %>%
-        fetch_data(subdir = "example/data") %>%
+      .create_example_filename(global$metadata, suffix = "raw") %>%
+        .fetch_data(subdir = "example/data") %>%
         raw_sample()
 
-      global$data <- create_example_filename(global$metadata, suffix = "prep") %>%
-        fetch_data(subdir = "example/data") %>%
-        preprocess_example()
+      global$data <- .create_example_filename(global$metadata, suffix = "prep") %>%
+        .fetch_data(subdir = "example/data") %>%
+        .preprocess_example()
       
       waiter::waiter_hide()
     })
@@ -478,15 +478,15 @@ mod_analyze_upload_server <- function(id, global){
     # Use aggregated example data
     observeEvent(input$use_agg_example, {
       waiter::waiter_show(
-        html = waiter_ui("wait"),
+        html = .waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
 
-      create_example_filename(global$metadata, suffix = "prep") %>%
-        fetch_data(subdir = "example/data") %>%
+      .create_example_filename(global$metadata, suffix = "prep") %>%
+        .fetch_data(subdir = "example/data") %>%
         raw_sample()
 
-      global$data <- preprocess_example(raw_sample())
+      global$data <- .preprocess_example(raw_sample())
 
       waiter::waiter_hide()
     })
@@ -508,7 +508,7 @@ mod_analyze_upload_server <- function(id, global){
         acs_years <- 2018
       } else {
         link_geos <- c(
-          get_possible_geos(names(global$data)),
+          .get_possible_geos(names(global$data)),
           "Do not include geography"
         )
         acs_years <- 2019:2023
@@ -518,7 +518,7 @@ mod_analyze_upload_server <- function(id, global){
         inputId = "link_geo",
         choices = link_geos
       )
-      print("fasdfasdfsa")
+
       updateSelectInput(session,
         inputId = "acs_year",
         choices = paste0(acs_years - 4, "-", acs_years)
@@ -541,7 +541,7 @@ mod_analyze_upload_server <- function(id, global){
     observeEvent(input$link_acs, {
       req(global$data)
 
-      start_busy(
+      .start_busy(
         session = session,
         id = "link_acs",
         label = "Linking..."
@@ -561,11 +561,11 @@ mod_analyze_upload_server <- function(id, global){
           if(!is.null(global$metadata$special_case) &&
             global$metadata$special_case == "covid") {
 
-            pstrat_covid <- fetch_data("pstrat_covid.csv", subdir = "acs")
-            covar_covid <- fetch_data("covar_covid.csv", subdir = "acs")
+            pstrat_covid <- .fetch_data("pstrat_covid.csv", subdir = "acs")
+            covar_covid <- .fetch_data("covar_covid.csv", subdir = "acs")
 
             # prepare data for MRP
-            global$mrp <- prepare_mrp_covid(
+            global$mrp <- .prepare_mrp_covid(
               input_data = global$data,
               pstrat_data = pstrat_covid,
               covariates = covar_covid,
@@ -574,8 +574,8 @@ mod_analyze_upload_server <- function(id, global){
 
             # prepare data for plotting
             global$plotdata <- list(
-              dates = if("date" %in% names(global$data)) get_dates(global$data) else NULL,
-              geojson = list(county = filter_geojson(
+              dates = if("date" %in% names(global$data)) .get_dates(global$data) else NULL,
+              geojson = list(county = .filter_geojson(
                 geojson_$county,
                 global$mrp$levels$county
               )),
@@ -585,10 +585,10 @@ mod_analyze_upload_server <- function(id, global){
 
           } else if (!is.null(global$metadata$special_case) &&
                      global$metadata$special_case == "poll") {
-            new_data <- fetch_data("pstrat_poll.csv", subdir = "acs") %>%
-              mutate(state = to_fips(.data$state, "state"))
+            new_data <- .fetch_data("pstrat_poll.csv", subdir = "acs") %>%
+              mutate(state = .to_fips(.data$state, "state"))
 
-            global$mrp <- prepare_mrp_custom(
+            global$mrp <- .prepare_mrp_custom(
               input_data = global$data,
               new_data = new_data,
               metadata = global$metadata,
@@ -597,7 +597,7 @@ mod_analyze_upload_server <- function(id, global){
 
             # prepare data for plotting
             global$plotdata <- list(
-              geojson = list(state = filter_geojson(
+              geojson = list(state = .filter_geojson(
                 geojson_$state,
                 global$mrp$levels$state
               ))
@@ -605,14 +605,14 @@ mod_analyze_upload_server <- function(id, global){
 
           } else {
             # retrieve ACS data based on user's selection
-            tract_data <- fetch_data(
+            tract_data <- .fetch_data(
               paste0("acs_", global$linkdata$acs_year, ".csv"),
               subdir = "acs"
             )
-            zip_tract <- fetch_data("zip_tract.csv", subdir = "geo")
+            zip_tract <- .fetch_data("zip_tract.csv", subdir = "geo")
 
             # prepare data for MRP
-            global$mrp <- prepare_mrp_acs(
+            global$mrp <- .prepare_mrp_acs(
               input_data = global$data,
               tract_data = tract_data,
               zip_tract = zip_tract,
@@ -622,15 +622,15 @@ mod_analyze_upload_server <- function(id, global){
 
             # prepare data for plotting
             plotdata <- list()
-            plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+            plotdata$dates <- if("date" %in% names(global$data)) .get_dates(global$data) else NULL
             plotdata$geojson <- names(geojson_) %>%
               stats::setNames(nm = .) %>%
-              purrr::map(~filter_geojson(
+              purrr::map(~.filter_geojson(
                 geojson = geojson_[[.x]], 
                 geoids = global$mrp$levels[[.x]]
               ))
 
-            global$plotdata <- nullify(plotdata)
+            global$plotdata <- .nullify(plotdata)
           }
 
           # set success to TRUE if no errors occurred
@@ -639,7 +639,7 @@ mod_analyze_upload_server <- function(id, global){
         }, error = function(e) {
           message(paste("Error linking data:\n", e$message))
         }, finally = {
-          stop_busy(
+          .stop_busy(
             session = session,
             id = "link_acs",
             label = if(success) "Linking complete" else "Linking failed",
@@ -675,18 +675,18 @@ mod_analyze_upload_server <- function(id, global){
     #----------------------------------------------------------------------------
     observeEvent(input$pstrat_upload, {
       waiter::waiter_show(
-        html = waiter_ui("wait"),
+        html = .waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
 
       tryCatch({
         # Read in data first
-        read_data(input$pstrat_upload$datapath) %>% raw_pstrat()
+        .read_data(input$pstrat_upload$datapath) %>% raw_pstrat()
 
-        zip_county_state <- fetch_data("zip_county_state.csv", subdir = "geo")
+        zip_county_state <- .fetch_data("zip_county_state.csv", subdir = "geo")
 
         # Process data
-        new_data <- preprocess(
+        new_data <- .preprocess(
           data = raw_pstrat(),
           metadata = global$metadata,
           zip_county_state = zip_county_state,
@@ -696,12 +696,12 @@ mod_analyze_upload_server <- function(id, global){
         )
 
         # Compare to sample data
-        check_pstrat(new_data, global$data, create_expected_levels(global$metadata))
+        .check_pstrat(new_data, global$data, .create_expected_levels(global$metadata))
 
         # Find the smallest common geography
         link_geo <- NULL
         common <- intersect(names(global$data), names(new_data))
-        smallest <- get_smallest_geo(common)
+        smallest <- .get_smallest_geo(common)
         if (!is.null(smallest)) {
           link_geo <- smallest$geo
         }
@@ -713,7 +713,7 @@ mod_analyze_upload_server <- function(id, global){
         )
 
         # Prepare data for MRP
-        global$mrp <- prepare_mrp_custom(
+        global$mrp <- .prepare_mrp_custom(
           input_data = global$data,
           new_data = new_data,
           metadata = global$metadata,
@@ -723,15 +723,15 @@ mod_analyze_upload_server <- function(id, global){
 
         # prepare data for plotting
         plotdata <- list()
-        plotdata$dates <- if("date" %in% names(global$data)) get_dates(global$data) else NULL
+        plotdata$dates <- if("date" %in% names(global$data)) .get_dates(global$data) else NULL
         plotdata$geojson <- names(geojson_) %>%
           stats::setNames(nm = .) %>%
-          purrr::map(~filter_geojson(
+          purrr::map(~.filter_geojson(
             geojson = geojson_[[.x]], 
             geoids = global$mrp$levels[[.x]]
           ))
 
-        global$plotdata <- nullify(plotdata)
+        global$plotdata <- .nullify(plotdata)
 
         # Trigger success feedback
         pstrat_errors(character(0))
@@ -778,7 +778,7 @@ mod_analyze_upload_server <- function(id, global){
 
 
     observeEvent(input$show_upload_guide, {
-      show_guide("upload")
+      .show_guide("upload")
     })
 
     observeEvent(input$to_preprocess, {
@@ -796,7 +796,7 @@ mod_analyze_upload_server <- function(id, global){
       },
       content = function(file) {
         # Read the example file and write it to the download location
-        fetch_data("pstrat.csv", subdir = "example/data") %>%
+        .fetch_data("pstrat.csv", subdir = "example/data") %>%
           readr::write_csv(file)
       }
     )

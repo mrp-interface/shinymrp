@@ -245,7 +245,7 @@ simulate_data <- function(
 #' @return Character. A random alphanumeric string of length n
 #'
 #' @noRd
-generate_id <- function(n = 8) {
+.generate_id <- function(n = 8) {
   # Define the pool of characters: digits, lowercase and uppercase letters
   chars <- c(0:9, letters, LETTERS)
   
@@ -283,7 +283,7 @@ prepare_indiv_agg <- function(
   if (extra$covid) {
     data_indiv <- data_indiv %>% 
       rename(result_date = date) %>%
-      mutate(masked_id = purrr::map_chr(seq_len(n()), ~ generate_id())) %>% 
+      mutate(masked_id = purrr::map_chr(seq_len(n()), ~ .generate_id())) %>% 
       select(masked_id, everything())
   }
 
@@ -435,7 +435,7 @@ run_simulation <- function(
   base_data <- add_covariates(base_data, covar_geo, covar_vars)
 
   # Create numeric factors for Stan
-  base_data_stan <- base_data %>% stan_factor(ignore_vars)
+  base_data_stan <- base_data %>% .stan_factor(ignore_vars)
 
   # Simulate data
   sim <- simulate_data(
@@ -510,15 +510,15 @@ check_simulation_result <- function(
   }
 
   # Group effects for MCMC
-  effects <- effects %>% group_effects(sim_data) %>% ungroup_effects()
+  effects <- effects %>% .group_effects(sim_data) %>% .ungroup_effects()
   
   # Setup generated quantities data
   metadata <- list()
 
   # Run MCMC
-  mod <- run_mcmc(
-    input_data = sim_data %>% stan_factor(ignore_vars),
-    new_data = sim_data %>% stan_factor(ignore_vars),
+  mod <- .run_mcmc(
+    input_data = sim_data %>% .stan_factor(ignore_vars),
+    new_data = sim_data %>% .stan_factor(ignore_vars),
     effects = effects,
     metadata = metadata,
     spec = 1,

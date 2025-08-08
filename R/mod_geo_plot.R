@@ -45,7 +45,7 @@ mod_geo_plot_server <- function(id, data, varname, config){
       # Create plot
       data() %>%
         mutate(covar = !!sym(varname)) %>%
-        plot_geographic(
+        .plot_geographic(
           breaks = config$breaks,
           description = sprintf(config$description, count, total, perc, threshold),
           definition = config$definition,
