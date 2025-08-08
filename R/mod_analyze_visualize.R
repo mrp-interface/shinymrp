@@ -259,7 +259,7 @@ mod_analyze_visualize_server <- function(id, global){
     output$positive_plot <- renderPlot({
       req(input$plot_subcategory == "overall")
 
-      plot_outcome_timevar(
+      .plot_outcome_timevar(
         raw = global$mrp$input,
         dates = global$plotdata$dates,
         metadata = global$metadata
@@ -277,7 +277,7 @@ mod_analyze_visualize_server <- function(id, global){
         geo <- "county"  # Plot county-level map for ZIP codes
       }
 
-      out <- prep_raw(
+      out <- .prep_raw(
         global$mrp$input,
         fips_[[geo]],
         geo = geo,
@@ -292,7 +292,7 @@ mod_analyze_visualize_server <- function(id, global){
       }
       config <- c(config, out$title)
 
-      choro_map(
+      .choro_map(
         out$plot_df,
         global$plotdata$geojson[[geo]],
         geo = geo,

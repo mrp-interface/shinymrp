@@ -9,7 +9,7 @@
 #' @return NULL if the input is considered empty, otherwise returns x unchanged
 #'
 #' @noRd
-nullify <- function(x) {
+.nullify <- function(x) {
   # Check for empty vector and NULL
   if (length(x) == 0) return(NULL)
 
@@ -39,7 +39,7 @@ nullify <- function(x) {
 #' @return The replacement value if x is NULL, otherwise returns x unchanged
 #'
 #' @noRd
-replace_null <- function(x, replacement) {
+.replace_null <- function(x, replacement) {
   if (is.null(x)) {
     return(replacement)
   } else {
@@ -57,7 +57,7 @@ replace_null <- function(x, replacement) {
 #'   or "Unknown Data Format" if the format is not recognized
 #'
 #' @noRd
-use_case_label <- function(metadata, labels = GLOBAL$ui$use_case_labels) {
+.use_case_label <- function(metadata, labels = GLOBAL$ui$use_case_labels) {
   if (!is.null(metadata$special_case)) {
     switch(metadata$special_case,
       poll = labels$poll,
@@ -87,7 +87,7 @@ use_case_label <- function(metadata, labels = GLOBAL$ui$use_case_labels) {
 #' @return Character. A random alphanumeric string of length n
 #'
 #' @noRd
-generate_id <- function(n = 8) {
+.generate_id <- function(n = 8) {
   # Define the pool of characters: digits, lowercase and uppercase letters
   chars <- c(0:9, letters, LETTERS)
   
@@ -108,7 +108,7 @@ generate_id <- function(n = 8) {
 #' @importFrom config get
 #'
 #' @noRd
-get_config <- function(value) {
+.get_config <- function(value) {
   config::get(
     value  = value,
     config = Sys.getenv("R_CONFIG_ACTIVE", "default"),
@@ -132,7 +132,7 @@ get_config <- function(value) {
 #'   pattern: usecase_family_suffix.ext (e.g., "covid_binomial_raw.csv")
 #'
 #' @noRd
-create_example_filename <- function(
+.create_example_filename <- function(
   metadata,
   suffix = c("raw", "prep", "fit"),
   ext = ".csv",
@@ -183,7 +183,7 @@ create_example_filename <- function(
 #'   }
 #'
 #' @noRd
-check_interval <- function(interval) {
+.check_interval <- function(interval) {
   is_ci <- TRUE
   qlower <- 0.025
   qupper <- 0.975
@@ -235,7 +235,7 @@ check_interval <- function(interval) {
 #' @return Data frame or object loaded from the specified file, with format
 #'   determined by file extension (CSV files return data frames, QS files
 #'   return the original R object)  
-#' @noRd
+#'
 #' Fetch data files from remote repository with caching
 #'
 #' @description Downloads and caches data files from a GitHub repository,
@@ -254,7 +254,7 @@ check_interval <- function(interval) {
 #'   determined by file extension (CSV files return data frames, QS files
 #'   return the original R object, and R files return character lines)
 #' @noRd
-fetch_data <- function(
+.fetch_data <- function(
   file,
   org          = "mrp-interface",
   repo         = "shinymrp-data",

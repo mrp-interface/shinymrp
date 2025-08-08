@@ -43,12 +43,12 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
       geo <- if(link_geo() == "zip") "county" else link_geo()
 
       mrp_input() %>%
-        prep_sample_size(
+        .prep_sample_size(
           fips_codes = fips_codes[[geo]],
           geo = geo,
           for_map = TRUE
         ) %>%
-        choro_map(
+        .choro_map(
           geojson()[[geo]],
           geo = geo,
           config = list(
@@ -65,7 +65,7 @@ mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
       geo <- if(link_geo() == "zip") "county" else link_geo()
 
       mrp_input() %>%
-        prep_sample_size(
+        .prep_sample_size(
           fips_codes = fips_codes[[geo]],
           geo = geo,
           for_map = FALSE

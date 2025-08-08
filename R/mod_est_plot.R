@@ -28,13 +28,13 @@ mod_est_plot_server <- function(id, model, var) {
         mutate(factor = factor(.data$factor, levels = model()$mrp$levels[[var]]))
 
       if (model()$metadata$is_timevar) {
-        plot_est_timevar(
+        .plot_est_timevar(
           plot_df = est_df,
           dates = model()$plotdata$dates,
           metadata = model()$metadata
         )
       } else {
-        plot_est_static(
+        .plot_est_static(
           plot_df = est_df,
           metadata = model()$metadata
         )

@@ -22,7 +22,7 @@
 #' @importFrom readxl read_excel
 #' @importFrom haven read_sas
 #' @importFrom stringr str_ends
-read_data <- function(file_path) {
+.read_data <- function(file_path) {
   if(stringr::str_ends(file_path, "csv")) {
     readr::read_csv(file_path, show_col_types = FALSE)
   } else if (stringr::str_ends(file_path, "(xlsx|xls)")) {
@@ -51,7 +51,7 @@ read_data <- function(file_path) {
 #' }
 #'
 #' @noRd
-clean_names <- function(names) {
+.clean_names <- function(names) {
   names %>% 
     tolower() %>% 
     gsub("[0-9]", "_", .) %>%
@@ -82,7 +82,7 @@ clean_names <- function(names) {
 #'
 #' @importFrom dplyr mutate across where
 #' @importFrom stringr str_trim
-clean_chr <- function(df) {
+.clear_chr <- function(df) {
   # Convert character columns to lowercase and trim whitespace
   df %>% dplyr::mutate(
     dplyr::across(dplyr::where(is.character), ~ stringr::str_trim(tolower(.x)))
@@ -107,7 +107,7 @@ clean_chr <- function(df) {
 #' }
 #'
 #' @noRd
-find_bad_geocode <- function(geocodes) {
+.find_bad_geocode <- function(geocodes) {
   # Coerce to character (so that NA stays NA_character_)
   geocodes <- as.character(geocodes)
   
@@ -140,12 +140,12 @@ find_bad_geocode <- function(geocodes) {
 #' }
 #' 
 #' @noRd
-format_geocode <- function(df) {
+.format_geocode <- function(df) {
   if ("zip" %in% names(df)) {
     if (is.numeric(df$zip)) {
       df$zip <- sprintf("%05d", df$zip)
     } else {
-      df$zip <- find_bad_geocode(df$zip)
+      df$zip <- .find_bad_geocode(df$zip)
     }
   }
 
@@ -153,7 +153,7 @@ format_geocode <- function(df) {
     if (is.numeric(df$county)) {
       df$county <- sprintf("%05d", df$county)
     } else {
-      df$county <- find_bad_geocode(df$county)
+      df$county <- .find_bad_geocode(df$county)
     }
   }
 
@@ -192,13 +192,13 @@ format_geocode <- function(df) {
 #'
 #' @noRd
 #' @importFrom dplyr mutate across everything if_else
-clean_data <- function(
+.clean_data <- function(
     df,
     na_strings = c("", "na", "n/a", "none", "null", "unknown")
 ) {
 
   # Clean column names
-  names(df) <- clean_names(names(df))
+  names(df) <- .clean_names(names(df))
 
   # Remove duplicate column names (keeping first occurrence)
   if (any(duplicated(names(df)))) {
@@ -206,7 +206,7 @@ clean_data <- function(
   }
 
   # Convert character columns to lowercase and trim whitespace
-  df <- clean_chr(df)
+  df <- .clear_chr(df)
 
   # Convert common NA strings to actual NA
   df <- df %>%
@@ -214,7 +214,7 @@ clean_data <- function(
                  ~dplyr::if_else(.x %in% na_strings, NA, .x)))
 
   # Format geographic identifiers
-  df <- format_geocode(df)
+  df <- .format_geocode(df)
   
   return(df)
 }
@@ -238,11 +238,11 @@ clean_data <- function(
 #' }
 #'
 #' @noRd
-preprocess_example <- function(df) {
-  df <- df %>% clean_data()
+.preprocess_example <- function(df) {
+  df <- df %>% .clean_data()
   
   if ("state" %in% names(df)) {
-    df$state <- to_fips(df$state, "state")
+    df$state <- .to_fips(df$state, "state")
   }
 
   return(df)
@@ -258,7 +258,7 @@ preprocess_example <- function(df) {
 #' @param df Data frame with columns to be renamed. Column names will be matched
 #'   against expected patterns to identify standard variables.
 #' @param covid_indiv Logical. If TRUE, uses COVID-specific individual data
-#'   column renaming via rename_columns_covid(). Default is FALSE for general
+#'   column renaming via .rename_columns_covid(). Default is FALSE for general
 #'   data processing.
 #'
 #' @return Data frame with renamed columns matching standard variable names:
@@ -270,12 +270,12 @@ preprocess_example <- function(df) {
 #' }
 #'
 #' @noRd
-rename_columns <- function(
+.rename_columns <- function(
     df,
     covid_indiv = FALSE
 ) {
   if (covid_indiv) {
-    return(rename_columns_covid(df))
+    return(.rename_columns_covid(df))
   }
 
   target_names <- c(
@@ -313,9 +313,9 @@ rename_columns <- function(
 #' @return Data frame with duplicate records removed.
 #'
 #' @noRd
-remove_duplicates <- function(data, is_covid = FALSE) {
+.remove_duplicates <- function(data, is_covid = FALSE) {
   if (is_covid) {
-    data <- remove_duplicates_covid(data)
+    data <- .remove_duplicates_covid(data)
   }
 
   return(data)
@@ -341,7 +341,7 @@ remove_duplicates <- function(data, is_covid = FALSE) {
 #' }
 #'
 #' @noRd
-impute <- function(v) {
+.impute <- function(v) {
   cond <- is.na(v)
  
   if(sum(cond) == 0) {
@@ -375,7 +375,7 @@ impute <- function(v) {
 #'   - timeline: Date vector of the first date of every period between the min and max
 #'
 #' @noRd
-get_time_indices <- function(date_strings, freq = c("week", "month", "year")) {
+.get_time_indices <- function(date_strings, freq = c("week", "month", "year")) {
   freq <- base::match.arg(freq)
   dates <- base::as.Date(date_strings)
   
@@ -432,12 +432,12 @@ get_time_indices <- function(date_strings, freq = c("week", "month", "year")) {
 #' @noRd
 #'
 #' @importFrom dplyr full_join
-add_time_indices <- function(df, freq) {
+.add_time_indices <- function(df, freq) {
   common <- intersect(names(df), GLOBAL$vars$time)
 
   if (length(common) == 1 && "date" %in% common) {
     # convert date to week indices
-    week <- get_time_indices(df$date, freq)
+    week <- .get_time_indices(df$date, freq)
     df$time <- week$indices
 
     # add the column containing first dates of the weeks
@@ -468,7 +468,7 @@ add_time_indices <- function(df, freq) {
 #' @return Character vector of formatted unique dates in sorted order.
 #'
 #' @noRd
-get_dates <- function(df) {
+.get_dates <- function(df) {
   df$date %>%
     stats::na.omit() %>%
     unique() %>%
@@ -494,9 +494,9 @@ get_dates <- function(df) {
 #'
 #' @importFrom dplyr mutate if_else case_match
 #' @importFrom rlang .data
-recode_values <- function(df, expected_levels, is_covid=FALSE) {
+.recode_values <- function(df, expected_levels, is_covid=FALSE) {
   if (is_covid) {
-    return(recode_covid(df, expected_levels))
+    return(.recode_covid(df, expected_levels))
   }
 
   # this function assumes that strings are already lower case
@@ -538,14 +538,14 @@ recode_values <- function(df, expected_levels, is_covid=FALSE) {
 #'
 #' @noRd
 #'
-filter_geojson <- function(geojson, geoids, omit = FALSE) {
+.filter_geojson <- function(geojson, geoids, omit = FALSE) {
   if(is.null(geojson) | is.null(geoids)) {
     return(NULL)
   }
 
   geojson$features <- purrr::keep(
     geojson$features,
-    function(f) !is.null(nullify(f$properties$fips)) && f$properties$fips %in% geoids
+    function(f) !is.null(.nullify(f$properties$fips)) && f$properties$fips %in% geoids
   )
 
   return(geojson)
@@ -606,7 +606,7 @@ filter_geojson <- function(geojson, geoids, omit = FALSE) {
 #' @importFrom rlang .data
 #'
 #' @noRd
-filter_state_zip <- function(
+.filter_state_zip <- function(
     df,
     zip_county_state,
     zip_threshold = 0,
@@ -668,7 +668,7 @@ filter_state_zip <- function(
 #' }
 #'
 #' @noRd
-to_fips <- function(vec, link_geo) {
+.to_fips <- function(vec, link_geo) {
   checkmate::assert_choice(
     link_geo,
     choices = GLOBAL$vars$geo2,
@@ -711,7 +711,7 @@ to_fips <- function(vec, link_geo) {
 #' @noRd
 #'
 #' @importFrom dplyr group_by summarize_all select distinct all_of sym n_distinct
-get_geo_predictors <- function(df, geo_col) {
+.get_geo_predictors <- function(df, geo_col) {
   bool <- df %>%
     dplyr::group_by(!!dplyr::sym(geo_col)) %>%
     dplyr::summarize_all(dplyr::n_distinct) %>%
@@ -741,7 +741,7 @@ get_geo_predictors <- function(df, geo_col) {
 #'
 #' @noRd
 #'
-get_smallest_geo <- function(col_names) {
+.get_smallest_geo <- function(col_names) {
   geo_all <- GLOBAL$vars$geo
 
   # Find the smallest geographic index
@@ -774,8 +774,8 @@ get_smallest_geo <- function(col_names) {
 #'   Geographic scales follow the hierarchy: zip -> county -> state.
 #'
 #' @noRd
-get_possible_geos <- function(col_names) {
-  smallest <- get_smallest_geo(col_names)
+.get_possible_geos <- function(col_names) {
+  smallest <- .get_smallest_geo(col_names)
   if (is.null(smallest)) {
     return(NULL)
   }
@@ -799,12 +799,12 @@ get_possible_geos <- function(col_names) {
 #'
 #' @importFrom dplyr select rename mutate distinct
 #' @importFrom rlang .data
-append_geo <- function(input_data, zip_county_state) {
+.append_geo <- function(input_data, zip_county_state) {
   # get the smallest geographic scale in the data
-  smallest <- get_smallest_geo(names(input_data))
+  smallest <- .get_smallest_geo(names(input_data))
 
   # Get geographic variables at current and larger scales
-  geo_vars <- get_possible_geos(names(input_data))
+  geo_vars <- .get_possible_geos(names(input_data))
 
   if (is.null(geo_vars)) {
     return(input_data)
@@ -820,19 +820,19 @@ append_geo <- function(input_data, zip_county_state) {
   
   # Convert names to FIPS for smallest geographic scale
   if (smallest$geo != "zip") { 
-    input_data[[smallest$geo]] <- to_fips(
+    input_data[[smallest$geo]] <- .to_fips(
       input_data[[smallest$geo]], 
       smallest$geo
     )
   }
 
   # Join geographic variables
-  input_data <- clean_left_join(input_data, zip_county_state, by = smallest$geo)
+  input_data <- .clean_left_join(input_data, zip_county_state, by = smallest$geo)
 
   # Convert names to GEOIDs for larger geographic scales
   for (geo in setdiff(geo_vars, smallest$geo)) {
     if (geo != "zip") {
-      input_data[[geo]] <- to_fips(
+      input_data[[geo]] <- .to_fips(
         input_data[[geo]], 
         geo
       )
@@ -856,7 +856,7 @@ append_geo <- function(input_data, zip_county_state) {
 #' @return Data frame with specified columns converted to factors.
 #'
 #' @noRd
-as_factor <- function(df, levels) {
+.as_factor <- function(df, levels) {
   # Find columns that exist in both df and have defined levels
   cols_to_convert <- intersect(names(df), names(levels))
   
@@ -885,7 +885,7 @@ as_factor <- function(df, levels) {
 #'
 #' @noRd
 #'
-find_nested <- function(df, cols, sep = "---") {
+.find_nested <- function(df, cols, sep = "---") {
   # generate all 2-column combinations
   pairs <- utils::combn(cols, 2, simplify = FALSE)
   
@@ -918,7 +918,7 @@ find_nested <- function(df, cols, sep = "---") {
 #' @noRd
 #'
 #' @importFrom dplyr select right_join
-clean_left_join <- function(df1, df2, by) {
+.clean_left_join <- function(df1, df2, by) {
   common <- intersect(names(df1), names(df2))
   to_drop <- setdiff(common, by)
   df_join <- df2 %>%
@@ -955,7 +955,7 @@ clean_left_join <- function(df1, df2, by) {
 #' @noRd
 #'
 #' @importFrom dplyr n_distinct
-data_type <- function(col, num = FALSE, threshold = 0.1) {
+.data_type <- function(col, num = FALSE, threshold = 0.1) {
   if(is.numeric(col)) {
     if(!all(as.integer(col) == col) | mean(table(col) == 1) > threshold) {
       dtype <- if(num) 3 else "cont"
@@ -988,7 +988,7 @@ data_type <- function(col, num = FALSE, threshold = 0.1) {
 #'   data types ("bin", "cat", "cont", "ignore").
 #'
 #' @noRd
-create_expected_types <- function(
+.create_expected_types <- function(
   metadata,
   is_sample = TRUE,
   is_aggregated = FALSE
@@ -1040,7 +1040,7 @@ create_expected_types <- function(
 #' }
 #'
 #' @noRd
-create_expected_levels <- function(metadata) {
+.create_expected_levels <- function(metadata) {
   if (!is.null(metadata$special_case) &&
       metadata$special_case == "poll") {
     list(
@@ -1080,7 +1080,7 @@ create_expected_levels <- function(metadata) {
 #'
 #' @noRd
 #'
-check_data <- function(df, expected_types, na_threshold = 0.5) {
+.check_data <- function(df, expected_types, na_threshold = 0.5) {
   expected_columns <- names(expected_types)
 
   # Check for missing columns
@@ -1092,7 +1092,7 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
   }
   
   # Check data types
-  types <- df %>% dplyr::select(dplyr::all_of(expected_columns)) %>% lapply(data_type) %>% unlist()
+  types <- df %>% dplyr::select(dplyr::all_of(expected_columns)) %>% lapply(.data_type) %>% unlist()
   valid <- unlist(expected_types) == types
   valid[expected_types == "ignore"] <- TRUE
   
@@ -1142,7 +1142,7 @@ check_data <- function(df, expected_types, na_threshold = 0.5) {
 #' }
 #'
 #' @noRd
-check_pstrat <- function(df, df_ref, expected_levels) {
+.check_pstrat <- function(df, df_ref, expected_levels) {
   if (is.null(df_ref)) {
     stop("Sample data is not provided.")
   }
@@ -1208,7 +1208,7 @@ check_pstrat <- function(df, df_ref, expected_levels) {
 #' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
 #' @importFrom tidyr drop_na
 #' @importFrom rlang syms .data
-preprocess <- function(
+.preprocess <- function(
   data,
   metadata,
   zip_county_state,
@@ -1221,25 +1221,25 @@ preprocess <- function(
   
   is_covid <- !is.null(metadata$special_case) &&
               metadata$special_case == "covid"
-  levels <- create_expected_levels(metadata)
+  levels <- .create_expected_levels(metadata)
   indiv_vars <- names(levels)
   if (metadata$is_timevar) {
     indiv_vars <- c(indiv_vars, "time")
   }
 
   # Clean data
-  data <- clean_data(data)
+  data <- .clean_data(data)
 
   # Find and rename columns
-  data <- rename_columns(data, is_covid && !is_aggregated)
+  data <- .rename_columns(data, is_covid && !is_aggregated)
 
   # Check for common dataframe issues
-  types <- create_expected_types(
+  types <- .create_expected_types(
     metadata = metadata,
     is_sample = is_sample,
     is_aggregated = is_aggregated
   )
-  check_data(data, types)
+  .check_data(data, types)
 
   # Aggregate if needed
   if (!is_aggregated) {
@@ -1249,15 +1249,15 @@ preprocess <- function(
 
     # convert date to time indices if necessary
     if (metadata$is_timevar & !is.null(freq)) {
-      data <- add_time_indices(data, freq = freq)
+      data <- .add_time_indices(data, freq = freq)
     }
 
     # remove duplicate rows
-    data <- remove_duplicates(data, is_covid)
+    data <- .remove_duplicates(data, is_covid)
 
     # remove ZIP codes and states with small sample sizes
     if ("zip" %in% names(data)) {
-      data <- filter_state_zip(
+      data <- .filter_state_zip(
         data,
         zip_county_state,
         zip_threshold = zip_threshold,
@@ -1266,17 +1266,17 @@ preprocess <- function(
     }
 
     # recode values to expected levels
-    data <- recode_values(data, levels, is_covid)
+    data <- .recode_values(data, levels, is_covid)
 
-    # impute missing demographic data based on frequency
-    data <- data %>% dplyr::mutate(dplyr::across(dplyr::all_of(indiv_vars), impute))
+    # .impute missing demographic data based on frequency
+    data <- data %>% dplyr::mutate(dplyr::across(dplyr::all_of(indiv_vars), .impute))
 
     if (metadata$family != "normal") {
       # aggregate test records based on combinations of factors
-      smallest <- get_smallest_geo(names(data))
+      smallest <- .get_smallest_geo(names(data))
       smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
       group_vars <- c(indiv_vars, smallest_geo)
-      geo_covars <- if(!is.null(smallest_geo)) names(get_geo_predictors(data, smallest_geo)) else NULL
+      geo_covars <- if(!is.null(smallest_geo)) names(.get_geo_predictors(data, smallest_geo)) else NULL
 
       # cross-tabulate data
       data <- data %>%
@@ -1293,7 +1293,7 @@ preprocess <- function(
   }
 
   # append geographic areas at larger scales if missing
-  data <- append_geo(data, zip_county_state)
+  data <- .append_geo(data, zip_county_state)
 
   return(data)
 }
@@ -1322,7 +1322,7 @@ preprocess <- function(
 #'
 #' @noRd
 #'
-create_variable_list <- function(input_data, covariates) {
+.create_variable_list <- function(input_data, covariates) {
   # list of variables for model specification
   vars <- list(
     fixed = list(
@@ -1343,7 +1343,7 @@ create_variable_list <- function(input_data, covariates) {
   add_variables <- function(group_name, var_names, data_source, vars) {
     for (v in var_names) {
       if (!is.null(data_source[[v]]) && dplyr::n_distinct(data_source[[v]]) > 1) {
-        if (data_type(data_source[[v]]) == "cat") {
+        if (.data_type(data_source[[v]]) == "cat") {
           vars$varying[[group_name]] <- c(vars$varying[[group_name]], v)
         }
         vars$fixed[[group_name]] <- c(vars$fixed[[group_name]], v) 
@@ -1396,7 +1396,7 @@ create_variable_list <- function(input_data, covariates) {
 #'
 #' @importFrom dplyr select rename inner_join group_by summarise across mutate summarize_all
 #' @importFrom rlang .data
-combine_tracts <- function(
+.combine_tracts <- function(
     tract_data,
     zip_tract,
     link_geo = NULL
@@ -1484,7 +1484,7 @@ combine_tracts <- function(
 #'
 #' @importFrom dplyr filter select mutate arrange across left_join
 #' @importFrom rlang sym .data
-prepare_mrp_acs <- function(
+.prepare_mrp_acs <- function(
     input_data,
     tract_data,
     zip_tract,
@@ -1493,7 +1493,7 @@ prepare_mrp_acs <- function(
 ) {
 
   # compute cell counts based on given geographic scale
-  pstrat_data <- combine_tracts(tract_data, zip_tract, link_geo)
+  pstrat_data <- .combine_tracts(tract_data, zip_tract, link_geo)
 
   # filter based on common GEOIDs
   shared_geocodes <- c()
@@ -1506,7 +1506,7 @@ prepare_mrp_acs <- function(
 
   # create lists of all factor levels
   n_time_indices <- 1
-  levels <- create_expected_levels(metadata)
+  levels <- .create_expected_levels(metadata)
   if(metadata$is_timevar) {
     levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
@@ -1527,7 +1527,7 @@ prepare_mrp_acs <- function(
   covariates <- NULL
   if(!is.null(link_geo)) {
     # find geographic covariates
-    covariates <- get_geo_predictors(input_data, link_geo)
+    covariates <- .get_geo_predictors(input_data, link_geo)
     if(ncol(covariates) > 1) {
       new_data <- dplyr::left_join(new_data, covariates, by = link_geo)
     }
@@ -1546,7 +1546,7 @@ prepare_mrp_acs <- function(
   }
 
   # create variable lists for model specification
-  vars <- create_variable_list(input_data, covariates)
+  vars <- .create_variable_list(input_data, covariates)
 
   return(list(
     input = input_data,
@@ -1581,7 +1581,7 @@ prepare_mrp_acs <- function(
 #'
 #' @importFrom dplyr filter mutate
 #' @importFrom rlang sym
-prepare_mrp_custom <- function(
+.prepare_mrp_custom <- function(
     input_data,
     new_data,
     metadata,
@@ -1598,7 +1598,7 @@ prepare_mrp_custom <- function(
 
   # create lists of all factor levels
   n_time_indices <- 1
-  levels <- create_expected_levels(metadata)
+  levels <- .create_expected_levels(metadata)
   if(metadata$is_timevar) {
     levels$time <- unique(input_data$time) %>% sort()
     n_time_indices <- length(levels$time)
@@ -1611,9 +1611,9 @@ prepare_mrp_custom <- function(
   covariates <- NULL
   if(!is.null(link_geo)) {
     # find geographic covariates
-    covariates <- get_geo_predictors(input_data, link_geo)
+    covariates <- .get_geo_predictors(input_data, link_geo)
     if(ncol(covariates) > 1) {
-      new_data <- clean_left_join(new_data, covariates, by = link_geo)
+      new_data <- .clean_left_join(new_data, covariates, by = link_geo)
     }
   }
 
@@ -1633,7 +1633,7 @@ prepare_mrp_custom <- function(
     input_data <- input_data %>% dplyr::mutate(total = 1)
   }
 
-  vars <- create_variable_list(input_data, covariates)
+  vars <- .create_variable_list(input_data, covariates)
 
   return(list(
     input = input_data,
@@ -1660,7 +1660,7 @@ prepare_mrp_custom <- function(
 #'
 #' @importFrom dplyr mutate select distinct
 #' @importFrom rlang .data
-aggregate_fips <- function(df) {
+.aggregate_fips <- function(df) {
 
   df <- df %>%
     dplyr::mutate(fips = substr(.data$fips, 1, 2)) %>%

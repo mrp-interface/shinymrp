@@ -163,11 +163,11 @@ mod_analyze_model_server <- function(id, global){
     show_effect_warning <- reactiveVal(FALSE)
 
     observeEvent(input$show_priors, {
-      show_guide("model_spec")
+      .show_guide("model_spec")
     })
 
     observeEvent(input$show_fit_guide, {
-      show_guide("model_fit")
+      .show_guide("model_fit")
     })
 
 
@@ -244,12 +244,12 @@ mod_analyze_model_server <- function(id, global){
     #--------------------------------------------------------------------------
     observeEvent(input$interaction_open, {
       if(input$interaction_open) {
-        choices <- create_interactions(
+        choices <- .create_interactions(
           input$fixed,
           input$varying,
           global$mrp$input
         ) %>% 
-        pair_setdiff(global$mrp$vars$omit$nested)
+        .pair_setdiff(global$mrp$vars$omit$nested)
 
         shinyWidgets::updateVirtualSelect(
           inputId = "interaction",
@@ -311,7 +311,7 @@ mod_analyze_model_server <- function(id, global){
               interactions <- list()
               
               if(length(input$interaction) > 0) {
-                interactions <- filter_interactions(input$interaction, input$fixed, global$mrp$input)
+                interactions <- .filter_interactions(input$interaction, input$fixed, global$mrp$input)
                 interactions <- stats::setNames(paste0("interaction_", interactions), interactions)
               }
             }
@@ -470,7 +470,7 @@ mod_analyze_model_server <- function(id, global){
 
       if(length(selected_ids) >= 1) {
         waiter::waiter_show(
-          html = waiter_ui("loo"),
+          html = .waiter_ui("loo"),
           color = waiter::transparent(0.9)
         )
 
@@ -483,14 +483,14 @@ mod_analyze_model_server <- function(id, global){
             if(global$metadata$is_timevar) {
               req(global$models)
 
-              plot_ppc_timevar_subset(
+              .plot_ppc_timevar_subset(
                 yrep = yreps[[i]],
                 raw = inputs[[i]],
                 dates = global$plotdata$dates,
                 metadata = global$metadata
               )
             } else {
-              plot_ppc_static(
+              .plot_ppc_static(
                 yrep = yreps[[i]],
                 raw = inputs[[i]],
                 metadata = global$metadata
@@ -539,7 +539,7 @@ mod_analyze_model_server <- function(id, global){
 
           }, error = function(e) {
             message(paste0("Error during LOO-CV: ", e$message))
-            show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
+            .show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
           })
 
           output$loo_table <- renderTable(compare_df, rownames = TRUE, width = "300px")
@@ -616,7 +616,7 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(input$reset_btn, {
       prior_buffer(list())
 
-      reset_inputs(global$mpr$vars)
+      .reset_inputs(global$mpr$vars)
     })
 
     #-----------------------------------------------------------------------
@@ -625,10 +625,10 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(input$add_model, {
       # Check if CmdStan is installed
       if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-        if(get_config("demo")) {
-          show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+        if(.get_config("demo")) {
+          .show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
         } else {
-          show_alert(tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+          .show_alert(tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
         }
         return()
       }
@@ -638,14 +638,14 @@ mod_analyze_model_server <- function(id, global){
       n_chains <- input$chain_select
       seed <- input$seed_select
       
-      check <- check_iter_chain(
+      check <- .check_iter_chain(
         n_iter, GLOBAL$ui$model$iter_range,
         n_chains, GLOBAL$ui$model$chain_range,
         seed
       )
       
       if(!check$valid) {
-        show_alert(
+        .show_alert(
           tagList(
             tags$ul(
               purrr::map(check$msg, ~ tags$li(.x))
@@ -658,31 +658,31 @@ mod_analyze_model_server <- function(id, global){
       
       # Check if maximum number of models is reached
       if(length(global$models) + 1 > GLOBAL$ui$model$max_models) {
-        show_alert("Maximum number of models reached. Please remove existing models to add more.", global$session)
+        .show_alert("Maximum number of models reached. Please remove existing models to add more.", global$session)
         return()
       }
       
       # Check if the user selected any predictors
       if(length(c(input$fixed, input$varying, input$interaction)) == 0) {
-        show_alert("No predictor has been selected. Please include at least one.", global$session)
+        .show_alert("No predictor has been selected. Please include at least one.", global$session)
         return()
       }
       
       # Check if prior syntax is correct
       valid_priors <- purrr::map(1:(length(prior_buffer()) + 1), function(i) {
         input[[paste0("prior_dist_", i)]] %>%
-          clean_prior_syntax() %>%
-          check_prior_syntax()
+          .clean_prior_syntax() %>%
+          .check_prior_syntax()
       }) %>% unlist()
       
       if(!all(valid_priors)) {
-        show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
+        .show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
         return()
       }
       
       # All validation passed, show waiter and proceed
       waiter::waiter_show(
-        html = waiter_ui("fit"),
+        html = .waiter_ui("fit"),
         color = waiter::transparent(0.9)
       )
       
@@ -698,10 +698,10 @@ mod_analyze_model_server <- function(id, global){
     
         # assign user-specified priors
         for(i in 1:(length(prior_buffer()) + 1)) {
-          dist <- input[[paste0("prior_dist_", i)]] %>% clean_prior_syntax()
+          dist <- input[[paste0("prior_dist_", i)]] %>% .clean_prior_syntax()
           eff <- input[[paste0("prior_eff_", i)]]
 
-          if(!is.null(nullify(dist))) {
+          if(!is.null(.nullify(dist))) {
             for(s in eff) {
               ss <- strsplit(s, split = "_")[[1]]
               effects[[ss[1]]][[ss[2]]] <- dist
@@ -712,9 +712,9 @@ mod_analyze_model_server <- function(id, global){
         # Create model object
         model <- list()
         model$effects <- effects %>%
-          group_effects(global$mrp$input) %>%
-          ungroup_effects()
-        model$formula <- create_formula(model$effects)
+          .group_effects(global$mrp$input) %>%
+          .ungroup_effects()
+        model$formula <- .create_formula(model$effects)
         model$mrp <- global$mrp
         model$plotdata <- global$plotdata
         model$linkdata <- global$linkdata
@@ -734,9 +734,9 @@ mod_analyze_model_server <- function(id, global){
           )
         }
 
-        mcmc <- run_mcmc(
-          input_data = stan_factor(model$mrp$input),
-          new_data = stan_factor(model$mrp$new),
+        mcmc <- .run_mcmc(
+          input_data = .stan_factor(model$mrp$input),
+          new_data = .stan_factor(model$mrp$new),
           effects = model$effects,
           metadata = model$metadata,
           n_iter = model$metadata$n_iter,
@@ -749,19 +749,19 @@ mod_analyze_model_server <- function(id, global){
         
       }, error = function(e) {
         message(paste0("Error fitting model: ", e$message))
-        show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
+        .show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
         waiter::waiter_hide()
       })
     })
 
     observeEvent(input$fit_upload, {
       waiter::waiter_show(
-        html = waiter_ui("wait"),
+        html = .waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
 
       model <- qs::qread(input$fit_upload$datapath)
-      check_fit_object(model, global$metadata) %>% model_feedback()
+      .check_fit_object(model, global$metadata) %>% model_feedback()
 
       if(model_feedback() == "") {
         model_buffer(model)
@@ -773,17 +773,17 @@ mod_analyze_model_server <- function(id, global){
 
     observeEvent(input$use_example, {
       waiter::waiter_show(
-        html = waiter_ui("wait"),
+        html = .waiter_ui("wait"),
         color = waiter::transparent(0.9)
       )
 
-      file_name <- create_example_filename(
+      file_name <- .create_example_filename(
         global$metadata,
         suffix = "fit",
         ext = ".qs"
       )
 
-      fetch_data(file_name, subdir = "example/fit") %>%
+      .fetch_data(file_name, subdir = "example/fit") %>%
         model_buffer()
     })
     
@@ -794,7 +794,7 @@ mod_analyze_model_server <- function(id, global){
       # extract sampler diagnostics
       show_warnings <- FALSE
       if (is.null(model$diagnostics$mcmc)) {
-        out <- get_diagnostics(
+        out <- .get_diagnostics(
           fit = model$fit,
           total_transitions = model$metadata$n_iter / 2 * model$metadata$n_chains
         )
@@ -804,7 +804,7 @@ mod_analyze_model_server <- function(id, global){
       
       # extract posterior summary of coefficients
       if (is.null(model$params)) {
-        model$params <- get_parameters(
+        model$params <- .get_parameters(
           fit = model$fit,
           effects = model$effects,
           input_data = model$mrp$input,
@@ -814,7 +814,7 @@ mod_analyze_model_server <- function(id, global){
       
       # run standalone generated quantities for LOO
       if (is.null(model$log_lik)) {
-        fit_loo <- run_gq(
+        fit_loo <- .run_gq(
           fit_mcmc = model$fit,
           stan_code = model$stan_code$loo,
           stan_data = model$stan_data,
@@ -827,7 +827,7 @@ mod_analyze_model_server <- function(id, global){
       # data for PPC plots
       if (is.null(model$yrep)) {
         # run standalone generated quantities for PPC
-        fit_ppc <- run_gq(
+        fit_ppc <- .run_gq(
           fit_mcmc = model$fit,
           stan_code = model$stan_code$ppc,
           stan_data = model$stan_data,
@@ -835,7 +835,7 @@ mod_analyze_model_server <- function(id, global){
         )
 
         # extract draws and format PPC draws
-        model$yrep <- get_replicates(
+        model$yrep <- .get_replicates(
           fit_ppc,
           model$mrp$input,
           model$metadata
@@ -843,7 +843,7 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # UI element IDs
-      model_id <- generate_id()
+      model_id <- .generate_id()
       model$IDs <- list(
         main = model_id,
         fixed_tbl = paste0("fixed_tbl_", model_id),
@@ -865,7 +865,7 @@ mod_analyze_model_server <- function(id, global){
       # create new model tab
       tab_ids <- purrr::map_chr(global$models, function(m) m$IDs$tab)
       last_tab_id <- if(length(tab_ids) > 0) as.character(tab_ids[length(tab_ids)]) else "nav_compare"
-      create_model_tab(ns, model, last_tab_id)
+      .create_model_tab(ns, model, last_tab_id)
 
       # changeable tab title
       model_name <- paste0("Model ", length(global$models) + 1)
@@ -916,14 +916,14 @@ mod_analyze_model_server <- function(id, global){
         req(model$yrep)
         
         if(global$metadata$is_timevar) {
-          plot_ppc_timevar_subset(
+          .plot_ppc_timevar_subset(
             yrep = model$yrep,
             raw = model$mrp$input,
             dates = global$plotdata$dates,
             metadata = global$metadata
           )
         } else {
-          plot_ppc_static(
+          .plot_ppc_static(
             yrep = model$yrep,
             raw = model$mrp$input,
             metadata = global$metadata
@@ -936,20 +936,20 @@ mod_analyze_model_server <- function(id, global){
 
         if(is.null(global$models[[model_id]]$est)) {
           waiter::waiter_show(
-            html = waiter_ui("pstrat"),
+            html = .waiter_ui("pstrat"),
             color = waiter::transparent(0.9)
           )
           
           model <- global$models[[model_id]]
           
-          fit_pstrat <- run_gq(
+          fit_pstrat <- .run_gq(
             fit_mcmc = model$fit,
             stan_code = model$stan_code$pstrat,
             stan_data = model$stan_data,
             n_chains = model$metadata$n_chains
           )
           
-          model$est <- get_estimates(
+          model$est <- .get_estimates(
             fit_pstrat,
             model$mrp$new,
             model$metadata
@@ -968,7 +968,7 @@ mod_analyze_model_server <- function(id, global){
           },
           content = function(file) {
             waiter::waiter_show(
-              html = waiter_ui("wait"),
+              html = .waiter_ui("wait"),
               color = waiter::transparent(0.9)
             )
 
@@ -994,7 +994,7 @@ mod_analyze_model_server <- function(id, global){
         },
         content = function(file) {
           waiter::waiter_show(
-            html = waiter_ui("wait"),
+            html = .waiter_ui("wait"),
             color = waiter::transparent(0.9)
           )
           
@@ -1046,7 +1046,7 @@ mod_analyze_model_server <- function(id, global){
         model_feedback(NULL)
         pareto_k_dfs(NULL)
 
-        reset_inputs(vars = list(
+        .reset_inputs(vars = list(
           fixed = list(),
           varying = list()
         ))

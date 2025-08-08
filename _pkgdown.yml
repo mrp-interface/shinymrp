@@ -21,9 +21,6 @@ toc:
   depth: 3
 
 reference:
-  - title: "Installing CmdStan"
-    contents:
-      - install_cmdstan
   - title: "Running the Shiny app"
     contents:
       - run_app
@@ -31,9 +28,11 @@ reference:
     contents:
       - mrp_workflow
       - MRPWorkflow
+      - starts_with("MRPWorkflow-method-")
   - title: "Model object and methods"
     contents:
       - MRPModel
+      - starts_with("MRPModel-method-")
   - title: "Other functions"
     contents:
       - example_sample_data
