@@ -19,8 +19,8 @@ methods, many of which have their own (linked) documentation pages:
 \subsection{Data preparation}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPWorkflow-method-preprocess]{$preprocess()}} \tab Preprocess sample data. \cr
-   \code{\link[=MRPWorkflow-method-link_acs]{link_acs()}} \tab Link sample data to ACS data. \cr
-   \code{\link[=MRPWorkflow-method-load_pstrat]{load_pstrat()}} \tab Load custom post-stratification data. \cr
+   \code{\link[=MRPWorkflow-method-link_acs]{$link_acs()}} \tab Link sample data to ACS data. \cr
+   \code{\link[=MRPWorkflow-method-load_pstrat]{$load_pstrat()}} \tab Load custom post-stratification data. \cr
 }
 
 }
@@ -30,7 +30,7 @@ methods, many of which have their own (linked) documentation pages:
    \code{\link[=MRPWorkflow-method-check_effects]{$check_effects()}} \tab Check model specification. \cr
    \code{\link[=MRPWorkflow-method-create_model]{$create_model()}} \tab Create a \code{\link{MRPModel}} object. \cr
    \code{\link[=MRPWorkflow-method-load_model]{$load_model()}} \tab Load a previously saved model. \cr
-   \code{\link[=MRPWorkflow-method-check_model]{$pp_check()}} \tab Perform posterior predictive check. \cr
+   \code{\link[=MRPWorkflow-method-pp_check]{$pp_check()}} \tab Perform posterior predictive check. \cr
    \code{\link[=MRPWorkflow-method-compare_models]{$compare_models()}} \tab Compare models using LOO-CV. \cr
 }
 
@@ -52,7 +52,7 @@ methods, many of which have their own (linked) documentation pages:
 \subsection{Other}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPWorkflow-method-metadata]{$metadata()}} \tab Return metadata information. \cr
-   \code{\link[=MRPWorkflow-method-data]{$data()}} \tab Return preprocessed sample data. \cr
+   \code{\link[=MRPWorkflow-method-preprocessed_data]{$preprocessed_data()}} \tab Return preprocessed sample data. \cr
 }
 
 }

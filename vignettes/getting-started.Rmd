@@ -9,9 +9,9 @@ vignette: >
 
 ## Overview
 
-shinymrp is a two-in-one package that offers both a graphical and a programmatic interface for applications for Multilevel Regression and Post-stratification (MRP). They parallel each other in their implementation of the data analysis [workflow](https://mrp-interface.github.io/shinymrp/articles/getting-started.html#shinymrp-workflow) that MRP underlies.
+shinymrp is a two-in-one package that offers both a graphical and a programmatic interface for applications for Multilevel Regression and Post-stratification (MRP). They parallel each other in their implementation of the data analysis [workflow](https://mrp-interface.github.io/shinymrp/articles/getting-started.html#shinymrp-workflow) that the methodology underlies.
 
-We recommend the Shiny app (GUI) for new users. You can launch the Shiny app by running
+We recommend the graphical interface for new users. You can launch it by running
 
 ```{r, eval = FALSE}
 shinymrp::run_app()

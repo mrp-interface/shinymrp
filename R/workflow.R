@@ -30,8 +30,8 @@ mrp_workflow <- function() {
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
 #'   [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
-#'   [`link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
-#'   [`load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
+#'   [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
+#'   [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
 #'
 #'   ## Model fitting & diagnostics
 #'   |**Method**|**Description**|
@@ -39,7 +39,7 @@ mrp_workflow <- function() {
 #'   [`$check_effects()`][MRPWorkflow-method-check_effects] | Check model specification. |
 #'   [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
 #'   [`$load_model()`][MRPWorkflow-method-load_model] | Load a previously saved model. |
-#'   [`$pp_check()`][MRPWorkflow-method-check_model] | Perform posterior predictive check. |
+#'   [`$pp_check()`][MRPWorkflow-method-pp_check] | Perform posterior predictive check. |
 #'   [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
 #' 
 #'   ## Visualization
@@ -57,7 +57,7 @@ mrp_workflow <- function() {
 #'  |**Method**|**Description**|
 #'  |:----------|:---------------|
 #'  [`$metadata()`][MRPWorkflow-method-metadata] | Return metadata information. |
-#'  [`$data()`][MRPWorkflow-method-data] | Return preprocessed sample data. |
+#'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
 #'
 #' 
 #' @examples
@@ -834,13 +834,13 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #'
 #' @return A ggplot object showing the group estimates
 estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
-  print("fasdfasdfasdfas")
+
   checkmate::assert_choice(
     group,
     choices = intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels)),
     null.ok = TRUE
   )
-  print("fasdfasd")
+
   est_list <- model$poststratify(interval = interval)
 
   if (is.null(group)) {
