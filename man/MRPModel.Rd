@@ -19,7 +19,7 @@ A new \code{MRPModel} object initialized with the provided effects, MRP data, me
 }
 \description{
 A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
-\verb{$create_model()} method of a
+\code{\link[=MRPWorkflow-method-create_model]{$create_model()}} method of a
 \code{\link{MRPWorkflow}} object. Each \code{MRPModel} object represents a
 multilevel regression model with methods for sampling, diagnostics,
 and post-stratification.

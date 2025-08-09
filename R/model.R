@@ -1,7 +1,7 @@
 #' MRPModel objects
 #'
 #' @description A `MRPModel` object is an [R6][R6::R6Class] object created by the
-#' `$create_model()` method of a
+#' [`$create_model()`][MRPWorkflow-method-create_model] method of a
 #' [`MRPWorkflow`][MRPWorkflow] object. Each `MRPModel` object represents a
 #' multilevel regression model with methods for sampling, diagnostics,
 #' and post-stratification.
