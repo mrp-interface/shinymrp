@@ -147,7 +147,7 @@
   input_data <- input_data %>% dplyr::mutate(fips = input_data[[geo]])
   fips_codes <- fips_codes %>% .fips_upper()
 
-  # compute weekly average
+  # compute temporal average
   group_cols <- if(metadata$is_timevar) c("fips", "time") else c("fips")
   plot_df <- input_data %>%
     dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
@@ -193,7 +193,7 @@
     "binomial" = "Positive Response Rate",
     "normal" = "Outcome Average"
   )
-  prefix <- if (metadata$is_timevar) "Weekly " else ""
+  prefix <- if (metadata$is_timevar) "Temporal " else ""
   suffix <- " by Geography"
   title$main_title <- paste0(prefix, main, suffix)
 
@@ -203,8 +203,8 @@
       "normal" = "Average"
     )
     switch(summary_type,
-      "max" = stringr::str_interp("Highest Weekly ${s}"),
-      "min" = stringr::str_interp("Lowest Weekly ${s}")
+      "max" = stringr::str_interp("Highest Temporal ${s}"),
+      "min" = stringr::str_interp("Lowest Temporal ${s}")
     )
   } else {
     switch(metadata$family,
@@ -486,7 +486,7 @@
 
   out <- .check_interval(interval)
 
-  # compute weekly rates/averages
+  # compute temporal rates/averages
   plot_df <- raw %>%
     dplyr::group_by(.data$time) %>%
     dplyr::summarize(
@@ -552,7 +552,7 @@
   p <- p +
     ggplot2::labs(
       title = "",
-      x = if(is.null(dates)) "Week index" else "",
+      x = if(is.null(dates)) "Time index" else "",
       y = if(is.null(yrep_est)) {
         switch(metadata$family,
           "binomial" = "Positive response rate",
@@ -744,7 +744,7 @@
     ) +
     ggplot2::labs(
       title = "",
-      x = if(is.null(dates)) "Week index" else "",
+      x = if(is.null(dates)) "Time index" else "",
       y = switch(metadata$family,
         "binomial" = "Positive response rate",
         "normal" = "Outcome average"
@@ -843,7 +843,7 @@
     ) +
     ggplot2::labs(
       title = "",
-      x = if(is.null(dates)) "Week index" else "",
+      x = if(is.null(dates)) "Time index" else "",
       y = switch(metadata$family,
         "binomial" = "Positive response rate",
         "normal" = "Outcome average"
@@ -1025,7 +1025,7 @@
     plot_list[[i]] <- plot_list[[i]] +
       ggplot2::labs(
         title = "",
-        x = if(is.null(dates)) "Week index" else "",
+        x = if(is.null(dates)) "Time index" else "",
         y = switch(metadata$family,
           "binomial" = "Proportion estimates",
           "normal" = "Mean estimates"

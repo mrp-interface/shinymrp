@@ -406,11 +406,11 @@
 }
 
 
-#' Add week indices to time-varying data
+#' Add time indices to time-varying data
 #'
-#' @title Add week indices to data frame
-#' @description Converts date columns to cumulative week indices for time-varying
-#' analysis. Creates a complete timeline of weeks and adds corresponding time
+#' @title Add time indices to data frame
+#' @description Converts date columns to cumulative time indices for time-varying
+#' analysis. Creates a complete timeline of periods and adds corresponding time
 #' indices to the data frame. Essential for time-varying MRP models that require
 #' consistent temporal indexing.
 #'
@@ -423,10 +423,10 @@
 #'
 #' @return Data frame with added time indices and complete timeline:
 #' \itemize{
-#'   \item time: Numeric column with cumulative week indices starting from 1
-#'   \item date: Character column with first date of each week (if dates provided)
+#'   \item time: Numeric column with cumulative time indices starting from 1
+#'   \item date: Character column with first date of each period (if dates provided)
 #'   \item Original columns preserved
-#'   \item Complete timeline created via full_join to ensure no missing weeks
+#'   \item Complete timeline created via full_join to ensure no missing periods
 #' }
 #'
 #' @noRd
@@ -436,22 +436,22 @@
   common <- intersect(names(df), GLOBAL$vars$time)
 
   if (length(common) == 1 && "date" %in% common) {
-    # convert date to week indices
-    week <- .get_time_indices(df$date, freq)
-    df$time <- week$indices
+    # convert date to time indices
+    out <- .get_time_indices(df$date, freq)
+    df$time <- out$indices
 
-    # add the column containing first dates of the weeks
+    # add the column containing first dates of the periods
     df <- df %>% dplyr::select(-"date")
     df <- df %>%
       dplyr::full_join(
         data.frame(
           time = 1:max(df$time),
-          date = as.character(week$timeline)
+          date = as.character(out$timeline)
         ),
         by = "time"
       )
   } else if (length(common) == 0) {
-    stop("No dates or week indices found.")
+    stop("No dates or time indices found.")
   }
 
   return(df)
@@ -1117,10 +1117,10 @@
   if("time" %in% expected_columns) {
     if("date" %in% names(df)) {
       if (anyNA(as.Date(stats::na.omit(df$date), optional = TRUE))) {
-        warning("Provided dates are not in expected format. Plots will use week indices instead.")
+        warning("Provided dates are not in expected format. Plots will use time indices instead.")
       }
     } else {
-      warning("Dates are not provided. Plots will use week indices instead.")
+      warning("Dates are not provided. Plots will use time indices instead.")
     }
   }
 }
@@ -1198,7 +1198,7 @@
 #'   \item **Validated data types**: Appropriate types for demographic and outcome variables
 #'   \item **Recoded variables**: Demographic variables matching expected factor levels
 #'   \item **Geographic integration**: Geographic variables at multiple scales with FIPS codes
-#'   \item **Time handling**: Week indices and complete timelines for time-varying data
+#'   \item **Time handling**: Time indices and complete timelines for time-varying data
 #'   \item **Missing data treatment**: Imputed demographic variables using frequency-based sampling
 #'   \item **Aggregation**: Cross-tabulated data for modeling (if individual-level input)
 #' }
@@ -1250,6 +1250,10 @@
     # convert date to time indices if necessary
     if (metadata$is_timevar & !is.null(freq)) {
       data <- .add_time_indices(data, freq = freq)
+
+      if (dplyr::n_distinct(data$time) == 1) {
+        stop("Time variable has only one unique value. Please use modules for cross-sectional data instead.")
+      }
     }
 
     # remove duplicate rows

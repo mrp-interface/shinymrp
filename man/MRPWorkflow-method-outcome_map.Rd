@@ -17,7 +17,7 @@ A highcharter map object showing outcome measures by geography
 }
 \description{
 Creates maps showing average outcome measure by geography for
-cross-sectional data, or highest/lowest weekly average for time-varying data.
+cross-sectional data, or highest/lowest temporal average for time-varying data.
 }
 \seealso{
 Other MRPWorkflow methods: 
