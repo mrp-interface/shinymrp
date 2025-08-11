@@ -89,7 +89,7 @@ mod_learn_mrp_ui <- function(id){
         withMathJax("We use a Bayesian framework to account for the PCR testing sensitivity and specificity and apply MRP to COVID testing records for population representation, here using the following adjustment variables: the biological variable of sex, age, race, and zip codes.")
       ),
       tags$div(class = "mb-3",
-        withMathJax("We denote the PCR test result for individual \\(i\\) as \\(y_i\\), where \\(y_i=1\\) indicating a positive result and \\(y_i=0\\) indicating negative. With poststratification cells, we can directly model cell-wise summaries. We can obtain aggregated counts as the number of tests \\(n_k\\) and the number of positive cases \\(y^*_k\\) in group \\(k\\), defined as a cell \\(k\\) in the cross-tabulation of sex, age, race, zip code and indicators of time in weeks based on the test result dates. We assume that individuals in the same group have the same probability of being infected.")
+        withMathJax("We denote the PCR test result for individual \\(i\\) as \\(y_i\\), where \\(y_i=1\\) indicating a positive result and \\(y_i=0\\) indicating negative. With poststratification cells, we can directly model cell-wise summaries. We can obtain aggregated counts as the number of tests \\(n_k\\) and the number of positive cases \\(y^*_k\\) in group \\(k\\), defined as a cell \\(k\\) in the cross-tabulation of sex, age, race, zip code and indicators of time in weeks, months, or years based on the test result dates. We assume that individuals in the same group have the same probability of being infected.")
       ),
       tags$div(class = "mb-2",
         withMathJax("Let \\(p_k=\\textrm{Pr}(y_{k[i]}=1)\\) be the probability that person \\(i\\) in group \\(k\\) tests positive. The analytic incidence \\(p_k\\) is a function of the test sensitivity \\(\\delta\\), specificity \\(\\gamma\\), and the true incidence \\(\\pi_k\\) for individuals in group \\(k\\):")
@@ -98,13 +98,13 @@ mod_learn_mrp_ui <- function(id){
         withMathJax("$$p_k=(1-\\gamma)(1-\\pi_k )+\\delta \\pi_k.$$")
       ),
       tags$div(class = "mb-3",
-        withMathJax("We will start by fitting a Binomial model for \\(y^*_k\\), \\(y^*_k \\sim \\textrm{Binomial}(n_k, p_k)\\) with a logit function for \\(\\pi_k\\) with covariates including sex, age, race, zip codes, and time in weeks to allow time variation of prevalence over time in the multilevel model.")
+        withMathJax("We will start by fitting a Binomial model for \\(y^*_k\\), \\(y^*_k \\sim \\textrm{Binomial}(n_k, p_k)\\) with a logit function for \\(\\pi_k\\) with covariates including sex, age, race, zip codes, and time indices to allow time variation of prevalence over time in the multilevel model.")
       ),
       tags$div(class = "mb-2",
         withMathJax("\\begin{align} \\tag{2} \\label{pi} \\textrm{logit}(\\pi_k)=\\beta_1+\\beta_2male_k+\\alpha_{age[k]}^{\\rm age}+\\alpha_{race[k]}^{\\rm race}+\\alpha_{zip[k]}^{\\rm zip}+\\alpha_{time[k]}^{\\rm time},\\end{align}")
       ),
       tags$div(class = "mb-2",
-        withMathJax("where \\(male_k\\) is an indicator for men; age[k], race[k], and zip[k] represent age, race, and zip code levels; and time[k] indices the time in weeks when the test result is collected for group \\(k\\). We include zip code level covariates \\(\\vec{Z}^{zip}_{j}\\) for zip code \\(j\\),")
+        withMathJax("where \\(male_k\\) is an indicator for men; age[k], race[k], and zip[k] represent age, race, and zip code levels; and time[k] indices the time in weeks, months, or years when the test result is collected for group \\(k\\). We include zip code level covariates \\(\\vec{Z}^{zip}_{j}\\) for zip code \\(j\\),")
       ),
       tags$div(class = "mb-2",
         withMathJax("$$\\alpha_{j}^{\\rm zip} =\\vec{\\alpha}\\vec{Z}^{\\rm zip}_{j} +  e_j.$$")
@@ -116,7 +116,7 @@ mod_learn_mrp_ui <- function(id){
         withMathJax("According to the test protocol, the sensitivity is unknown, and the specificity is around 100%. We solicit prior information from previous testing results and try different values of the hyper-parameters for sensitivity analysis. The current setting fixes the sensitivity at 0.7 and specificity at 1.")
       ),
       tags$div(class = "mb-2",
-        withMathJax("Using the estimated incidence \\(\\hat{\\pi}_k\\) based on the Bayesian model in \\eqref{pi}, we adjust for selection bias by applying the socio-demographic distributions in the community to generate the population-level prevalence estimates, as the poststratification step in MRP. For each cell in the cross-tabulation table of sex, age, race, and zip code (40 levels), we have the cell-wise incidence estimate \\(\\hat{\\pi}_c\\) and population count \\(N_c\\), where \\(c\\) is the cell index, and calculate the weekly prevalence estimate in the population,")
+        withMathJax("Using the estimated incidence \\(\\hat{\\pi}_k\\) based on the Bayesian model in \\eqref{pi}, we adjust for selection bias by applying the socio-demographic distributions in the community to generate the population-level prevalence estimates, as the poststratification step in MRP. For each cell in the cross-tabulation table of sex, age, race, and zip code (40 levels), we have the cell-wise incidence estimate \\(\\hat{\\pi}_c\\) and population count \\(N_c\\), where \\(c\\) is the cell index, and calculate the temporal prevalence estimate in the population,")
       ),
       tags$div(class = "mb-2",
         withMathJax("$$\\hat{pi}_{avg} = \\sum_c N_c\\hat{\\pi}_c/\\sum_c N_c,$$")

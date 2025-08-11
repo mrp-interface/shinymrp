@@ -755,7 +755,7 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #' @family MRPWorkflow methods
 #'
 #' @description Creates maps showing average outcome measure by geography for
-#' cross-sectional data, or highest/lowest weekly average for time-varying data.
+#' cross-sectional data, or highest/lowest temporal average for time-varying data.
 #'
 #' @param summary_type Character string for time-varying data: "max" or "min"
 #' @param file Optional file path to save the map

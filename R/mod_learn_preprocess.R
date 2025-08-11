@@ -30,7 +30,7 @@ mod_learn_preprocess_ui <- function(id){
       tags$p("The preprocessing workflow follows these general steps for both cross-sectional and time-varying data:"),
       tags$ul(
         tags$li(tags$b("Data cleaning:"), " standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes"),
-        tags$li(tags$b("Conversion to categorical data:"), " recoding categorical data, converting numeric values to categories using predefined intervals, assigning week indices to dates"),
+        tags$li(tags$b("Conversion to categorical data:"), " recoding categorical data, converting numeric values to categories using predefined intervals, assigning time indices to dates"),
         tags$li(tags$b("Data imputation:"), " imputing missing data based on frequency distributions of converted categories in the data"),
         tags$li(tags$b("Data aggregation:"), " aggregating individual-level records to create cell counts for each unique combination of relevant demographic-geographic factors")
       ),
@@ -48,7 +48,7 @@ mod_learn_preprocess_ui <- function(id){
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
               tags$li("ZIP code"),
-              tags$li("Week indices")
+              tags$li("Time indices")
             ),
             
             tags$h5("General", class = "mt-3"),
@@ -56,8 +56,8 @@ mod_learn_preprocess_ui <- function(id){
               tags$li("Sex: male, female"),
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
-              tags$li("Week indices"),
-              tags$li("User selected geograhic levels")
+              tags$li("Time indices"),
+              tags$li("User selected geographic levels")
             )
           )
         ),

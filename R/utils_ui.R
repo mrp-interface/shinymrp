@@ -176,7 +176,7 @@
         tags$li(withMathJax("ZIP code\\(^1\\)")),
         tags$li(withMathJax("County\\(^1\\)")),
         tags$li("State\\(^1\\)"),
-        tags$li(withMathJax("Week indices (time)\\(^2\\)")),
+        tags$li(withMathJax("Time indices (time)\\(^2\\)")),
         tags$li("Date"),
         tags$li(withMathJax("Continuous outcome measure (outcome)\\(^3\\)")),
         tags$li(withMathJax("Positive response indicator or number of positive responses (positive)\\(^4\\)")),
@@ -185,7 +185,7 @@
       ),
       tags$p("1. For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.",
         class = "fst-italic small mb-1"),
-      tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.",
+      tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains time indices. An optional 'date' column containing the date of the first day of each period can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to time indices, but users can also provide the time indices directly. The interface uses time-invariant poststratification data.",
         class = "fst-italic small mb-1"),
       tags$p("3. For data with continuous outcome measures, the outcome column must be named 'outcome'.",
         class = "fst-italic small mb-1"),
@@ -194,7 +194,7 @@
       tags$p("5. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
         class = "fst-italic small"),
       tags$h5("Data Preprocessing", class = "mt-4"),
-      tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to week index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
+      tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to time index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
       tags$h5("Data Linking", class = "mt-4"),
       tags$p("To enhance linking capabilities, the interface identifies the smallest geographic unit in the sample data and infers corresponding larger geographic areas from the smallest units (e.g., ZIP code to county and state with most overlapping areas). Additionally, the interface supplements geographic covariates on the zip code level (e.g., urbanicity, Area Deprivation Index, etc.). More details are available on the ", tags$b("Learn > Data Preprocessing"), " page."),
       tags$p("The MRP interface facilitates linking to the ACS to obtain approximate population counts critical to poststratification. Users can select geographic factors and ACS data years, with specific restrictions for use cases of COVID-19 and public opinion polling data. Current options link COVID records to five-year ACS data (2017-2021) via ZIP codes and poll data to five-year ACS (2014-2018) via states. More options exist for general applications, including ZIP code, county, or state-based links."),
@@ -213,7 +213,7 @@
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
               tags$li("ZIP code (zip): Each ZIP code is treated as distinct"),
-              tags$li("Time: Dates (yyyy-mm-dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
+              tags$li("Time: Dates (yyyy-mm-dd) or time indices (starting with index 1 assigned to the earliest period in the data)")
             ),
             tags$p("2. Poststratification data"),
             tags$ul(
@@ -230,7 +230,7 @@
               tags$li("ZIP code: Each ZIP code is treated as distinct"),
               tags$li("County: Five-digit FIPS codes required due to duplicates in county names"),
               tags$li("State: Names, abbreviations, or FIPS accepted"),
-              tags$li("Time: Dates (yyyy-mm-dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
+              tags$li("Time: Dates (yyyy-mm-dd) or time indices (starting with index 1 assigned to the earliest period in the data)")
             ),
             tags$p("2. Poststratification data"),
             tags$ul(
