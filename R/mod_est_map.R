@@ -88,12 +88,12 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       }
 
       model()$est[[geo]] %>% 
-        prep_est(
+        .prep_est(
           fips_codes = fips_[[geo]],
           geo = geo,
           time_index = time_index
         ) %>%
-        choro_map(
+        .choro_map(
           model()$plotdata$geojson[[geo]],
           geo = geo,
           config = list(
@@ -112,7 +112,7 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model(), geo_scale())
       
       geo <- isolate(geo_scale())
-      fips_df <- fips_[[geo]] %>% fips_upper()
+      fips_df <- fips_[[geo]] %>% .fips_upper()
 
       plot_df <- model()$est[[geo]] %>%
         rename("fips" = "factor") %>%
@@ -121,13 +121,13 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
         filter(factor %in% geo_subset())
 
       if(model()$metadata$is_timevar) {
-        plot_est_timevar(
+        .plot_est_timevar(
           plot_df = plot_df,
           dates = model()$plotdata$dates,
           metadata = model()$metadata
         )
       } else {
-        plot_est_static(
+        .plot_est_static(
           plot_df = plot_df,
           metadata = model()$metadata
         )

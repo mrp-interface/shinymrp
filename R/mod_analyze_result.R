@@ -142,7 +142,7 @@ mod_analyze_result_server <- function(id, global){
     output$est_overall <- renderPlot({
       req(selected_model())
       if(global$metadata$is_timevar) {
-        plot_outcome_timevar(
+        .plot_outcome_timevar(
           raw = selected_model()$mrp$input,
           yrep_est = selected_model()$est$overall,
           dates = selected_model()$plotdata$dates,
@@ -150,7 +150,7 @@ mod_analyze_result_server <- function(id, global){
           show_caption = TRUE
         )
       } else {
-        plot_outcome_static(
+        .plot_outcome_static(
           raw = selected_model()$mrp$input,
           yrep_est = selected_model()$est$overall,
           metadata = selected_model()$metadata,
@@ -241,7 +241,7 @@ mod_analyze_result_server <- function(id, global){
       geo <- isolate(input$geo_scale_select)
       fips_df <- fips_[[geo]] %>%
         filter(.data$fips %in% selected_model()$mrp$levels[[geo]]) %>%
-        fips_upper()
+        .fips_upper()
       choices <- sort(fips_df[[geo]])
       updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
 

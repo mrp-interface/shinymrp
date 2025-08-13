@@ -104,7 +104,7 @@ mod_home_server <- function(id, global){
     output$panel_group <- reactive(panel_group())
     outputOptions(output, "panel_group", suspendWhenHidden = FALSE)
     
-    if (get_config("demo")) {
+    if (.get_config("demo")) {
       shinyWidgets::sendSweetAlert(
         title = "Information",
         text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
@@ -113,11 +113,11 @@ mod_home_server <- function(id, global){
     }
 
     # install CmdStan if not installed already
-    if (get_config("install_cmdstan") &&
+    if (.get_config("install_cmdstan") &&
         is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
           
       waiter::waiter_show(
-        html = waiter_ui("setup"),
+        html = .waiter_ui("setup"),
         color = waiter::transparent(0.9)
       )
 
@@ -187,7 +187,7 @@ mod_home_server <- function(id, global){
           family = "binomial"
         )
 
-        to_analyze(global$session)
+        .to_analyze(global$session)
       } else if (panel_group() == "static") {
         global$metadata <- list(
           is_timevar = FALSE,
@@ -195,7 +195,7 @@ mod_home_server <- function(id, global){
           family = "binomial"
         )
 
-        to_analyze(global$session)
+        .to_analyze(global$session)
       } else if (panel_group() == "timevar_general") {
         global$metadata <- list(
           is_timevar = TRUE,
@@ -203,7 +203,7 @@ mod_home_server <- function(id, global){
           family = "binomial"
         )
 
-        to_analyze(global$session)
+        .to_analyze(global$session)
       } else if (panel_group() == "static_general") {
         global$metadata <- list(
           is_timevar = FALSE,
@@ -211,7 +211,7 @@ mod_home_server <- function(id, global){
           family = "binomial"
         )
 
-        to_analyze(global$session)
+        .to_analyze(global$session)
       }
     })
 
@@ -231,7 +231,7 @@ mod_home_server <- function(id, global){
           family = "normal"
         )
 
-        to_analyze(global$session)
+        .to_analyze(global$session)
       } else if (panel_group() == "static_general") {
         global$metadata <- list(
           is_timevar = FALSE,
@@ -239,7 +239,7 @@ mod_home_server <- function(id, global){
           family = "normal"
         )
 
-        to_analyze(global$session)
+        .to_analyze(global$session)
       }
     })
 
