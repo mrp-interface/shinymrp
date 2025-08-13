@@ -1,56 +1,3 @@
-#' Check MCMC iteration and chain parameters
-#'
-#' @description Validates MCMC sampling parameters including number of iterations,
-#' chains, and seed values to ensure they fall within acceptable ranges and are
-#' of correct numeric types.
-#'
-#' @param n_iter Numeric. Number of MCMC iterations to validate
-#' @param n_iter_range Numeric vector of length 2. Minimum and maximum allowed iterations
-#' @param n_chains Numeric. Number of MCMC chains to validate
-#' @param n_chains_range Numeric vector of length 2. Minimum and maximum allowed chains
-#' @param seed Numeric. Random seed value to validate
-#'
-#' @return A list containing:
-#'   \item{valid}{Logical indicating if all parameters are valid}
-#'   \item{msg}{Character vector of validation error messages, empty if valid}
-#'
-#' @noRd
-check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, seed) {
-  flag <- TRUE
-  msg <- c()
-  
-  if(is.numeric(n_iter) && is.numeric(n_chains) && is.numeric(seed)) {
-    if(n_iter < n_iter_range[1] | n_iter > n_iter_range[2]) {
-      msg <- c(msg, paste0("The number of iterations must be between ", n_iter_range[1], " and ", n_iter_range[2], "."))
-      flag <- FALSE
-    }
-    
-    if(n_chains < n_chains_range[1] | n_chains > n_chains_range[2]) {
-      msg <- c(msg, paste0("The number of chains must be between ", n_chains_range[1], " and ", n_chains_range[2], "."))
-      flag <- FALSE
-    }
-  } else {
-    flag <- FALSE
-    
-    if(!is.numeric(n_iter)) {
-      msg <- c(msg, "The number of iterations must be a numeric value.")
-    }
-    
-    if(!is.numeric(n_chains)) {
-      msg <- c(msg, "The number of chains must be a numeric value.")
-    }
-    
-    if(!is.numeric(seed)) {
-      msg <- c(msg, "The seed must be a numeric value.")
-    }
-  }
-  
-  return(list(
-    valid = flag, 
-    msg = msg
-  ))
-}
-
 #' Check Model Fit Object
 #'
 #' Validates if the model's data format matches the expected format.
@@ -62,21 +9,7 @@ check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, see
 #'   \item{valid}{Logical indicating if the format is valid}
 #'   \item{message}{Warning message if invalid, or NULL if valid}
 #' @noRd
-check_fit_object <- function(model, expected_metadata) {
-  # example_model <- qs::qread(app_sys("extdata/example/fit/crosssectional_binomial_fit.qs"))
-  
-  # # Check if the model object has all the required fields
-  # if (!setequal(names(model), names(example_model))) {
-  #   return("The uploaded file does not contain a valid estimation result.")
-  # }
-
-  # # Check if the model object has the expected data format
-  # if(model$metadata$special_case != expected_metadata$special_case ||
-  #    model$metadata$is_timevar != expected_metadata$is_timevar) {
-  #   return(sprintf("The uploaded file contains model estimation for %s instead of %s.",
-  #                   use_case_label(model$metadata),
-  #                   use_case_label(expected_metadata)))
-  # }
+.check_fit_object <- function(model, expected_metadata) {
 
   return("")
 }
@@ -96,7 +29,7 @@ check_fit_object <- function(model, expected_metadata) {
 #' @importFrom shiny tagList tags
 #'
 #' @noRd
-waiter_ui <- function(type = "") {
+.waiter_ui <- function(type = "") {
   text_style <- "color: black; margin-top: 10px;"
 
   if(type == "fit") {
@@ -148,7 +81,7 @@ waiter_ui <- function(type = "") {
 #' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
-show_alert <- function(message, session) {
+.show_alert <- function(message, session) {
   showModal(
     modalDialog(
       title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
@@ -171,7 +104,7 @@ show_alert <- function(message, session) {
 #' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
-show_notif <- function(message, session) {
+.show_notif <- function(message, session) {
   showModal(
     modalDialog(
       title = tagList(icon("bell", "fa"), "Notification"),
@@ -195,7 +128,7 @@ show_notif <- function(message, session) {
 #' @importFrom shiny tags withMathJax
 #'
 #' @noRd
-create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit")) {
+.create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit")) {
   open <- match.arg(open)
 
   bslib::accordion(
@@ -243,7 +176,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
         tags$li(withMathJax("ZIP code\\(^1\\)")),
         tags$li(withMathJax("County\\(^1\\)")),
         tags$li("State\\(^1\\)"),
-        tags$li(withMathJax("Week indices (time)\\(^2\\)")),
+        tags$li(withMathJax("Time indices (time)\\(^2\\)")),
         tags$li("Date"),
         tags$li(withMathJax("Continuous outcome measure (outcome)\\(^3\\)")),
         tags$li(withMathJax("Positive response indicator or number of positive responses (positive)\\(^4\\)")),
@@ -252,7 +185,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       ),
       tags$p("1. For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.",
         class = "fst-italic small mb-1"),
-      tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains week indices. An optional 'date' column containing the date of the first day of each week can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to week indices, but users can also provide the week indices directly. The interface uses time-invariant poststratification data.",
+      tags$p("2. If the input sample data are in aggregated format, there has to be a column named 'time' that contains time indices. An optional 'date' column containing the date of the first day of each period can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to time indices, but users can also provide the time indices directly. The interface uses time-invariant poststratification data.",
         class = "fst-italic small mb-1"),
       tags$p("3. For data with continuous outcome measures, the outcome column must be named 'outcome'.",
         class = "fst-italic small mb-1"),
@@ -261,7 +194,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
       tags$p("5. Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.",
         class = "fst-italic small"),
       tags$h5("Data Preprocessing", class = "mt-4"),
-      tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to week index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
+      tags$p("The application performs several preprocessing steps to prepare the data for MRP, such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to time index), etc. However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand. Preprocessing code is available for download and customization via the ", tags$b("Learn > Data Preprocessing"), " page."),
       tags$h5("Data Linking", class = "mt-4"),
       tags$p("To enhance linking capabilities, the interface identifies the smallest geographic unit in the sample data and infers corresponding larger geographic areas from the smallest units (e.g., ZIP code to county and state with most overlapping areas). Additionally, the interface supplements geographic covariates on the zip code level (e.g., urbanicity, Area Deprivation Index, etc.). More details are available on the ", tags$b("Learn > Data Preprocessing"), " page."),
       tags$p("The MRP interface facilitates linking to the ACS to obtain approximate population counts critical to poststratification. Users can select geographic factors and ACS data years, with specific restrictions for use cases of COVID-19 and public opinion polling data. Current options link COVID records to five-year ACS data (2017-2021) via ZIP codes and poll data to five-year ACS (2014-2018) via states. More options exist for general applications, including ZIP code, county, or state-based links."),
@@ -280,7 +213,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
               tags$li("Race: Black, White, other"),
               tags$li("Age: 0-17, 18-34, 35-64, 65-74, 75+"),
               tags$li("ZIP code (zip): Each ZIP code is treated as distinct"),
-              tags$li("Time: Dates (yyyy-mm-dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
+              tags$li("Time: Dates (yyyy-mm-dd) or time indices (starting with index 1 assigned to the earliest period in the data)")
             ),
             tags$p("2. Poststratification data"),
             tags$ul(
@@ -297,7 +230,7 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
               tags$li("ZIP code: Each ZIP code is treated as distinct"),
               tags$li("County: Five-digit FIPS codes required due to duplicates in county names"),
               tags$li("State: Names, abbreviations, or FIPS accepted"),
-              tags$li("Time: Dates (yyyy-mm-dd) or week indices (starting with index 1 assigned to the earliest week in the data)")
+              tags$li("Time: Dates (yyyy-mm-dd) or time indices (starting with index 1 assigned to the earliest period in the data)")
             ),
             tags$p("2. Poststratification data"),
             tags$ul(
@@ -447,18 +380,18 @@ create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit
 #' application usage.
 #'
 #' @param open Character. Which accordion panel should be open by default.
-#'   If NULL, uses default from create_guide function
+#'   If NULL, uses default from .create_guide function
 #'
 #' @return No return value, called for side effect of showing modal
 #'
 #' @importFrom shiny showModal modalDialog modalButton
 #'
 #' @noRd
-show_guide <- function(open = NULL) {
+.show_guide <- function(open = NULL) {
   showModal(
     modalDialog(
       title = "User Guide",
-      create_guide(open),
+      .create_guide(open),
       size = "xl",
       easyClose = TRUE,
       footer = modalButton("Close")
@@ -482,7 +415,7 @@ show_guide <- function(open = NULL) {
 #' @importFrom shiny tags actionButton downloadButton textOutput plotOutput tableOutput icon HTML
 #'
 #' @noRd
-create_model_tab <- function(ns, model, last_tab_id) {
+.create_model_tab <- function(ns, model, last_tab_id) {
   
   tab_header <- tags$div(
     class = "model_tab_header",
@@ -618,7 +551,7 @@ create_model_tab <- function(ns, model, last_tab_id) {
 #' @importFrom shinyjs reset
 #'
 #' @noRd
-reset_inputs <- function(vars) {
+.reset_inputs <- function(vars) {
   shinyWidgets::updateVirtualSelect(
     inputId = "fixed",
     choices = vars$fixed,
@@ -663,7 +596,7 @@ reset_inputs <- function(vars) {
 #' @importFrom shinyjs disable
 #'
 #' @noRd
-start_busy <- function(session, id, label) {
+.start_busy <- function(session, id, label) {
   updateActionButton(
     session = session,
     inputId = id,
@@ -673,7 +606,7 @@ start_busy <- function(session, id, label) {
 
   shinyjs::disable(id)
   waiter::waiter_show(
-    html = waiter_ui(),
+    html = .waiter_ui(),
     color = waiter::transparent(0)
   )
 }
@@ -695,7 +628,7 @@ start_busy <- function(session, id, label) {
 #' @importFrom shinyjs enable
 #'
 #' @noRd
-stop_busy <- function(session, id, label, success) {
+.stop_busy <- function(session, id, label, success) {
   updateActionButton(
     session = session,
     inputId = id,
@@ -707,7 +640,7 @@ stop_busy <- function(session, id, label, success) {
   waiter::waiter_hide()
 }
 
-to_analyze <- function(session) {
+.to_analyze <- function(session) {
   bslib::nav_select(
     id = "navbar",
     selected = "nav_analyze",

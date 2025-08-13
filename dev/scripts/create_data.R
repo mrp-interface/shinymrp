@@ -151,11 +151,11 @@ create_pstrat <- function(
 ) {
   
   # compute cell counts based on given geographic scale
-  pstrat_data <- combine_tracts(tract_data, zip_tract, link_geo)
+  pstrat_data <- .combine_tracts(tract_data, zip_tract, link_geo)
   cell_counts <- pstrat_data %>% select(-geocode) %>% t() %>% c()
   
   # create lists of all factor levels
-  levels <- create_expected_levels(metadata)
+  levels <- .create_expected_levels(metadata)
   if(!is.null(link_geo)) {
     levels[[link_geo]] <- pstrat_data$geocode
   }

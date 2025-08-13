@@ -24,12 +24,9 @@ example_sample_data <- function(
     family = family
   )
   suffix <- if (is_aggregated) "prep" else "raw"
-  filename <- create_example_filename(metadata, suffix)
+  filename <- .create_example_filename(metadata, suffix)
 
-  readr::read_csv(
-    system.file("extdata", "example", "data", filename, package = "shinymrp"),
-    show_col_types = FALSE
-  )
+  .fetch_data(filename, subdir = "example/data")
 }
 
 
@@ -40,8 +37,5 @@ example_sample_data <- function(
 #' 
 #' @export
 example_pstrat_data <- function() {
-  readr::read_csv(
-    system.file("extdata", "example", "data", "pstrat.csv", package = "shinymrp"),
-    show_col_types = FALSE
-  )
+  .fetch_data("pstrat.csv", subdir = "example/data")
 }
