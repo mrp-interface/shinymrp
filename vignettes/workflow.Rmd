@@ -2,12 +2,13 @@
 title: "Walkthrough of shinymrp workflow"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Walkthrough of shinymrp workflow}
+  %\VignetteIndexEntry{Workflow Deep Dive}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-This vignette provides more details about the individual methods of the [`MRPWorkflow`][MRPWorkflow] object, including their purposes, input requirements, and caveats. For a general overview, please refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
+
+This vignette provides more details about the individual methods of the [`MRPWorkflow`](https://mrp-interface.github.io/shinymrp/reference/MRPWorkflow.html) objects and [`MRPModel`](https://mrp-interface.github.io/shinymrp/reference/MRPModel.html) objects, including their purposes, arguments, and caveats. For a more general overview of the classes, please refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -19,14 +20,14 @@ knitr::opts_chunk$set(
 ```{r setup, include=FALSE}
 
 ggplot2::theme_update(
-  text = ggplot2::element_text(size = 12),
+  text = ggplot2::element_text(size = 10),
   plot.margin = ggplot2::margin(0, 0, 0, 0)
 )
 ```
 
 ## Initializing the workflow
 
-The process begins with creating an `MRPWorkflow` object using the `mrp_workflow` function. The object-oriented design allows the object to manage the essential data under the hood and offer a clean interface that does not require the users to input the same piece of information repeatedly.
+The process begins with creating an `MRPWorkflow` object using the `mrp_workflow()` function. The object-oriented design allows the object to manage the essential data under the hood and offer a clean interface that does not require the users to input the same piece of information repeatedly. Methods from [R6 classes](https://r6.r-lib.org/) can be accessed with the `$` operator.
 
 ```{r}
 library(shinymrp)
