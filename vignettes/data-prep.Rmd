@@ -17,3 +17,37 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(shinymrp)
 ```
+
+
+### Individual-level vs. Aggregated Data
+
+The package accepts data in two formats:
+
+- **Individual-level**: Each row contains information for on individual.
+- **Aggregated**: Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.
+
+Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure.
+
+### Required Columns and Categories
+
+The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):
+
+- Sex: male, female
+- Race: Black, White, other
+- Age
+- Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
+- ZIP code [^geo]
+- County [^geo]
+- State [^geo]
+- Time indices (time) [^time]
+- Date
+- Continuous outcome measure (outcome) [^outcome-cont]
+- Positive response indicator or number of positive responses (positive) [^outcome-bin]
+- Cross-tabulation cell counts (total) [^outcome-bin]
+- Survey weights (weight) [^weight]
+
+[^geo]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
+[^time]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains time indices. An optional 'date' column containing the date of the first day of each period can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to time indices, but users can also provide the time indices directly. The interface uses time-invariant poststratification data.
+[^outcome-cont]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
+[^outcome-bin]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
+[^weight]: Please name the column containing survey weights in the data 'weight'. If the input poststratification data include survey weights, the interface uses weights to estimate the population counts.
