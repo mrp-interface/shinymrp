@@ -85,19 +85,20 @@ mod_analyze_visualize_server <- function(id, global){
     ns <- session$ns
 
     # Update the plot category selectInput based on the linking geography.
-    observeEvent(global$linkdata, {
+    observeEvent(global$mrp_ver, {
+      req(global$workflow)
+
       # Reset the select inputs
       shinyjs::reset("summary_slt")
 
-      choices <- GLOBAL$ui$plot_selection$vis_main[[global$metadata$family]]
-      global$metadata$family
+      choices <- GLOBAL$ui$plot_selection$vis_main[[global$workflow$metadata()$family]]
 
-      if (is.null(global$linkdata$link_geo)) {
+      if (is.null(global$workflow$link_data()$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
 
       # Update the plot category selectInput with the new choices.
-      updateSelectInput(session, "plot_category", choices = c("foo")) # Placeholder to trigger update
+      updateSelectInput(session, "plot_category", choices = c("foo")) # trigger update
       updateSelectInput(session, "plot_category", choices = choices)
     })
 
@@ -108,26 +109,26 @@ mod_analyze_visualize_server <- function(id, global){
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
-        if(is.null(global$metadata$special_case) ||
-           global$metadata$special_case != "poll") {
+        if(is.null(global$workflow$metadata()$special_case) ||
+           global$workflow$metadata()$special_case != "poll") {
           choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$geo
-        if (!is.null(global$metadata$special_case) &&
-            global$metadata$special_case == "covid") {
+        if (!is.null(global$workflow$metadata()$special_case) &&
+            global$workflow$metadata()$special_case == "covid") {
           choices <- c(choices, GLOBAL$ui$plot_selection$geo_covar)
         }
       } else if (input$plot_category == "outcome") {
         label <- "2. Select plot type"
         choices <- GLOBAL$ui$plot_selection$outcome
 
-        if (!global$metadata$is_timevar) {
+        if (!global$workflow$metadata()$is_timevar) {
           choices <- choices[!choices == "overall"]
         }
 
-        if (is.null(global$linkdata$link_geo)) {
+        if (is.null(global$workflow$link_data()$link_geo)) {
           choices <- choices[!choices == "by_geo"]
         }
       } else {
@@ -178,10 +179,10 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     # Module Server Calls for Individual-level Plots
     # --------------------------------------------------------------------------
-    mod_indiv_plot_server("indiv_sex", reactive(global$mrp), "sex")
-    mod_indiv_plot_server("indiv_race", reactive(global$mrp), "race")
-    mod_indiv_plot_server("indiv_age", reactive(global$mrp), "age")
-    mod_indiv_plot_server("indiv_edu", reactive(global$mrp), "edu")
+    mod_indiv_plot_server("indiv_sex", reactive(global$workflow$mrp_data()), "sex")
+    mod_indiv_plot_server("indiv_race", reactive(global$workflow$mrp_data()), "race")
+    mod_indiv_plot_server("indiv_age", reactive(global$workflow$mrp_data()), "age")
+    mod_indiv_plot_server("indiv_edu", reactive(global$workflow$mrp_data()), "edu")
 
   
     # --------------------------------------------------------------------------
@@ -189,16 +190,16 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     mod_indiv_map_server(
       "geo_sample",
-      reactive(global$mrp$input),
-      reactive(global$linkdata$link_geo),
-      reactive(global$plotdata$geojson),
+      reactive(global$workflow$mrp_data()$input),
+      reactive(global$workflow$link_data()$link_geo),
+      reactive(global$workflow$plot_data()$geojson),
       fips_
     )
 
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_college", reactive(global$plotdata$raw_covariates), "college", list(
+    mod_geo_plot_server("geo_college", reactive(global$workflow$plot_data()$raw_covariates), "college", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -207,7 +208,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Higher education measure"
     ))
     
-    mod_geo_plot_server("geo_poverty", reactive(global$plotdata$raw_covariates), "poverty", list(
+    mod_geo_plot_server("geo_poverty", reactive(global$workflow$plot_data()$raw_covariates), "poverty", list(
       threshold   = 0.2,
       operation   = "<=",
       breaks      = seq(0, 1, 0.05),
@@ -216,7 +217,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Poverty measure"
     ))
 
-    mod_geo_plot_server("geo_employment", reactive(global$plotdata$raw_covariates), "employment", list(
+    mod_geo_plot_server("geo_employment", reactive(global$workflow$plot_data()$raw_covariates), "employment", list(
       threshold   = 0.5,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -225,7 +226,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Employment rate"
     ))
     
-    mod_geo_plot_server("geo_income", reactive(global$plotdata$raw_covariates), "income", list(
+    mod_geo_plot_server("geo_income", reactive(global$workflow$plot_data()$raw_covariates), "income", list(
       threshold   = 70784,
       operation   = ">",
       breaks      = seq(0, 150000, 5000),
@@ -234,7 +235,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Average of median household income"
     ))
 
-    mod_geo_plot_server("geo_urbanicity", reactive(global$plotdata$raw_covariates), "urbanicity", list(
+    mod_geo_plot_server("geo_urbanicity", reactive(global$workflow$plot_data()$raw_covariates), "urbanicity", list(
       threshold   = 0.95,
       operation   = ">=",
       breaks      = seq(0, 1, 0.05),
@@ -243,7 +244,7 @@ mod_analyze_visualize_server <- function(id, global){
       name        = "Urbanicity"
     ))
     
-    mod_geo_plot_server("geo_adi", reactive(global$plotdata$raw_covariates), "adi", list(
+    mod_geo_plot_server("geo_adi", reactive(global$workflow$plot_data()$raw_covariates), "adi", list(
       threshold   = 80,
       operation   = ">",
       breaks      = seq(0, 100, 5),
@@ -260,9 +261,9 @@ mod_analyze_visualize_server <- function(id, global){
       req(input$plot_subcategory == "overall")
 
       .plot_outcome_timevar(
-        raw = global$mrp$input,
-        dates = global$plotdata$dates,
-        metadata = global$metadata
+        raw = global$workflow$mrp_data()$input,
+        dates = global$workflow$plot_data()$dates,
+        metadata = global$workflow$metadata()
       )
     })
 
@@ -270,19 +271,20 @@ mod_analyze_visualize_server <- function(id, global){
     # Map for Outcome Measure
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
-      req(global$linkdata$link_geo)
+      req(global$workflow)
+      req(global$workflow$link_data()$link_geo)
 
-      geo <- global$linkdata$link_geo
+      geo <- global$workflow$link_data()$link_geo
       if (geo == "zip") {
         geo <- "county"  # Plot county-level map for ZIP codes
       }
 
       out <- .prep_raw(
-        global$mrp$input,
+        global$workflow$mrp_data()$input,
         fips_[[geo]],
         geo = geo,
         summary_type = input$summary_slt,
-        metadata = global$metadata
+        metadata = global$workflow$metadata()
       )
 
       config <- list()
@@ -294,7 +296,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       .choro_map(
         out$plot_df,
-        global$plotdata$geojson[[geo]],
+        global$workflow$plot_data()$geojson[[geo]],
         geo = geo,
         config = config
       )
