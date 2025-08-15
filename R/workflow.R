@@ -83,13 +83,13 @@ MRPWorkflow <- R6::R6Class(
 
     assert_data_exists = function() {
       if (is.null(private$data_)) {
-        stop("Sample data is not available. Please run data preparation steps first.")
+        stop("Sample data is not available. Please run 'preprocess' first.")
       }
     },
 
     assert_mrp_exists = function() {
       if (is.null(private$mrp_)) {
-        stop("Data for MRP is not available. Please run data preparation steps first.")
+        stop("Data for MRP is not available. Please run 'link_acs' or 'load_pstrat' first.")
       }
     },
 
@@ -165,9 +165,26 @@ MRPWorkflow <- R6::R6Class(
     #' @description Initializes the MRPWorkflow object, setting up necessary fields for data processing and model fitting.
     #' 
     #' @return A new MRPWorkflow object.
-    initialize = function() {}
+    initialize = function() {},
+
+    check_metadata_exists = function() {
+      return(!is.null(private$metadata_))
+    },
+
+    check_data_exists = function() {
+      return(!is.null(private$data_))
+    },
+
+    check_mrp_exists = function() {
+      return(!is.null(private$mrp_))
+    },
+
+    mrp_data = function() {
+      return(private$mrp_)
+    }
   )
 )
+
 #' Return workflow metadata
 #' 
 #' @name MRPWorkflow-method-metadata
@@ -177,7 +194,6 @@ MRPWorkflow <- R6::R6Class(
 #' @description Retrieves the metadata associated with the current workflow, including information about time variables, family, and special cases.
 #'
 metadata <- function() {
-  private$assert_metadata_exists()
   return(private$metadata_)
 }
 MRPWorkflow$set("public", "metadata", metadata)
@@ -192,10 +208,10 @@ MRPWorkflow$set("public", "metadata", metadata)
 #' @description Retrieves the preprocessed sample data that has been prepared for MRP analysis.
 #'
 preprocessed_data <- function() {
-  private$assert_data_exists()
   return(private$data_)
 }
 MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
+
 
 #' Preprocess sample data
 #'
@@ -219,6 +235,7 @@ preprocess <- function(
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
+  freq = NULL
   zip_threshold = 0,
   state_threshold = 0
 ) {
@@ -228,6 +245,14 @@ preprocess <- function(
     choices = GLOBAL$args$family,
     null.ok = TRUE
   )
+
+  if (!is_timevar && !is.null(freq)) {
+    stop("Time indexing frequency cannot be specified for static data.")
+  }
+
+  if (family == "normal" && is_aggregated) {
+    stop("is_aggregated cannot be TRUE for data with continuous outcome (normal family).")
+  }
 
   private$metadata_ <- list(
     is_timevar = is_timevar,
@@ -244,6 +269,7 @@ preprocess <- function(
       data = data,
       metadata = private$metadata_,
       zip_county_state = zip_county_state,
+      freq = freq,
       is_sample = TRUE,
       is_aggregated = is_aggregated,
       zip_threshold = zip_threshold,
