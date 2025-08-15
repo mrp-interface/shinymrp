@@ -564,6 +564,10 @@ mod_analyze_upload_server <- function(id, global){
 
         success <- global$workflow$check_mrp_exists()
 
+        if (success) {
+          global$trigger_mrp_change()
+        }
+
         .stop_busy(
           session = session,
           id = "link_acs",
@@ -608,6 +612,10 @@ mod_analyze_upload_server <- function(id, global){
         raw_pstrat_rv(),
         is_aggregated = input$toggle_pstrat == "agg"
       )
+
+      if (global$workflow$check_mrp_exists()) {
+        global$trigger_mrp_change()
+      }
 
       waiter::waiter_hide()
     })
