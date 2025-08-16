@@ -13,6 +13,7 @@ Runs leave-one-out cross-validation to assess model predictive performance and e
 \seealso{
 Other MRPModel methods: 
 \code{\link{MRPModel-method-check_fit_exists}},
+\code{\link{MRPModel-method-check_if_poststratified}},
 \code{\link{MRPModel-method-code}},
 \code{\link{MRPModel-method-diagnostics}},
 \code{\link{MRPModel-method-fit}},

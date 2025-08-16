@@ -271,8 +271,7 @@ mod_analyze_visualize_server <- function(id, global){
     # Map for Outcome Measure
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
-      req(global$workflow)
-      req(global$workflow$link_data()$link_geo)
+      req(global$workflow, global$workflow$link_data()$link_geo)
 
       geo <- global$workflow$link_data()$link_geo
       if (geo == "zip") {

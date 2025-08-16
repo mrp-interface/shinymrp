@@ -3,15 +3,10 @@
 \name{MRPWorkflow}
 \alias{MRPWorkflow}
 \title{MRPWorkflow objects}
-\value{
-A new MRPWorkflow object.
-}
 \description{
 A \code{MRPWorkflow} object is an \link[R6:R6Class]{R6} object created by
 the \code{\link[=mrp_workflow]{mrp_workflow()}} function. This class provides methods for all steps
 in the workflow, from data preparation and visualization to model fittingg.
-
-Initializes the MRPWorkflow object, setting up necessary fields for data processing and model fitting.
 }
 \section{Methods}{
  \code{MRPWorkflow} objects have the following associated
