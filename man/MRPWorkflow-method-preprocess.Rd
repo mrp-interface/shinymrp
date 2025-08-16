@@ -27,6 +27,8 @@ preprocess(
 
 \item{family}{Character string specifying the model family (e.g., "binomial", "normal")}
 
+\item{freq}{Character string specifying the time indexing frequency (e.g., "day", "month")}
+
 \item{zip_threshold}{Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)}
 
 \item{state_threshold}{Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)}
@@ -44,7 +46,6 @@ Other MRPWorkflow methods:
 \code{\link{MRPWorkflow-method-estimate_plot}},
 \code{\link{MRPWorkflow-method-link_acs}},
 \code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
 \code{\link{MRPWorkflow-method-outcome_map}},
 \code{\link{MRPWorkflow-method-outcome_plot}},
 \code{\link{MRPWorkflow-method-pp_check}},

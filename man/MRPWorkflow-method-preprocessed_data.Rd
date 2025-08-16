@@ -20,7 +20,6 @@ Other MRPWorkflow methods:
 \code{\link{MRPWorkflow-method-estimate_plot}},
 \code{\link{MRPWorkflow-method-link_acs}},
 \code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
 \code{\link{MRPWorkflow-method-outcome_map}},
 \code{\link{MRPWorkflow-method-outcome_plot}},
 \code{\link{MRPWorkflow-method-pp_check}},

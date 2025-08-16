@@ -54,7 +54,6 @@ mrp_workflow <- function() {
 #'  ## Other
 #'  |**Method**|**Description**|
 #'  |:----------|:---------------|
-#'  [`$metadata()`][MRPWorkflow-method-metadata] | Return metadata information. |
 #'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
 #'
 #' 
@@ -64,6 +63,8 @@ mrp_workflow <- function() {
 #'   } 
 #' 
 #' @export
+#' 
+#' @importFrom R6 R6Class
 MRPWorkflow <- R6::R6Class(
   "MRPWorkflow",
   private = list(
@@ -160,20 +161,6 @@ MRPWorkflow <- R6::R6Class(
   )
 )
 
-#' Return workflow metadata
-#' 
-#' @name MRPWorkflow-method-metadata
-#' @aliases metadata
-#' @family MRPWorkflow methods
-#' 
-#' @description Retrieves the metadata associated with the current workflow, including information about time variables, family, and special cases.
-#'
-metadata <- function() {
-  return(private$metadat_)
-}
-MRPWorkflow$set("public", "metadata", metadata)
-
-
 #' Return preprocessed sample data
 #' 
 #' @name MRPWorkflow-method-preprocessed_data
@@ -201,6 +188,7 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' @param is_aggregated Logical indicating whether the data is already aggregated
 #' @param special_case Character string specifying special case handling (e.g., "covid", "poll")
 #' @param family Character string specifying the model family (e.g., "binomial", "normal")
+#' @param freq Character string specifying the time indexing frequency (e.g., "day", "month")
 #' @param zip_threshold Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)
 #' @param state_threshold Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)
 #'

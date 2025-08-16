@@ -21,7 +21,7 @@
 #'   ## Model fitting
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
-#'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using [cmdstanr][cmdstanr]. |
+#'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using CmdStanR. |
 #'   [`$check_fit_exists()`][MRPModel-method-check_fit_exists] | Check if model has been fitted. |
 #'   [`$check_estimate_exists()`][MRPModel-method-check_estimate_exists] | Check if post-stratification has been performed. |
 #'
@@ -45,7 +45,9 @@
 #'   library(shinymrp)
 #'   } 
 #' 
-#' @export 
+#' @export
+#' 
+#' @importFrom R6 R6Class
 MRPModel <- R6::R6Class(
   "MRPModel",
   private = list(
@@ -277,6 +279,8 @@ MRPModel$set("public", "summary", summary)
 #' @family MRPModel methods
 #'
 #' @description Retrieves MCMC diagnostics including convergence statistics and sampling efficiency measures.
+#'
+#' @param summarize Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)
 diagnostics <- function(summarize = TRUE) {
   private$assert_fit_exists()
 
