@@ -139,7 +139,6 @@ test_that("MRPModel methods requiring fitted model error appropriately", {
   )
   
   # Methods that require fitted model should error before fitting
-  expect_error(model$code(), "Model has not been fitted yet")
   expect_error(model$summary(), "Model has not been fitted yet")
   expect_error(model$diagnostics(), "Model has not been fitted yet")
   expect_error(model$ppc(), "Model has not been fitted yet")

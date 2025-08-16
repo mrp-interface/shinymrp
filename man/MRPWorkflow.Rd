@@ -44,7 +44,6 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Other}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-metadata]{$metadata()}} \tab Return metadata information. \cr
    \code{\link[=MRPWorkflow-method-preprocessed_data]{$preprocessed_data()}} \tab Return preprocessed sample data. \cr
 }
 

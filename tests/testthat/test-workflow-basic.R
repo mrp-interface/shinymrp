@@ -19,8 +19,7 @@ test_that("MRPWorkflow class exists and can be instantiated", {
 test_that("MRPWorkflow has expected public methods", {
   # Check that key methods exist
   expected_methods <- c(
-    "initialize", "preprocess", "link_acs", "load_pstrat", 
-    "metadata", "preprocessed_data"
+    "initialize", "preprocess", "link_acs", "load_pstrat", "preprocessed_data"
   )
   
   actual_methods <- names(MRPWorkflow$public_methods)
@@ -64,24 +63,6 @@ test_that("MRPWorkflow factory function fails without CmdStan", {
       )
     }
   )
-})
-
-test_that("MRPWorkflow metadata method works", {
-  workflow <- MRPWorkflow$new()
-  
-  # Before preprocessing, metadata should be NULL
-  expect_null(workflow$metadata())
-  
-  # After setting some metadata (simulated)
-  workflow$.__enclos_env__$private$metadat_ <- list(
-    family = "binomial",
-    is_timevar = FALSE
-  )
-  
-  metadata <- workflow$metadata()
-  expect_type(metadata, "list")
-  expect_equal(metadata$family, "binomial")
-  expect_equal(metadata$is_timevar, FALSE)
 })
 
 test_that("MRPWorkflow preprocessed_data method works", {

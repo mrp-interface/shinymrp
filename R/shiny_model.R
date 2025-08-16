@@ -4,6 +4,7 @@
 #' This class extends MRPModel with additional functionality for UI integration,
 #' including unique ID generation and name management for Shiny modules.
 #'
+#' @keywords internal
 ShinyMRPModel <- R6::R6Class(
   "ShinyMRPModel",
   inherit = MRPModel,

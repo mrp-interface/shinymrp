@@ -1,7 +1,8 @@
 #' ShinyMRPWorkflow objects
 #'
-#' A sub-class of MRPWorkflow for use with Shiny applications
+#' @description A sub-class of MRPWorkflow for use with Shiny applications
 #'
+#' @keywords internal
 ShinyMRPWorkflow <- R6::R6Class(
   "ShinyMRPWorkflow",
   inherit = MRPWorkflow,

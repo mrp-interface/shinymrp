@@ -7,6 +7,9 @@
 \usage{
 diagnostics(summarize = TRUE)
 }
+\arguments{
+\item{summarize}{Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)}
+}
 \description{
 Retrieves MCMC diagnostics including convergence statistics and sampling efficiency measures.
 }

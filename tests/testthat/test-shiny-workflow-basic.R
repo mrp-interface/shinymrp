@@ -47,7 +47,7 @@ test_that("ShinyMRPWorkflow inherits parent methods", {
   workflow <- ShinyMRPWorkflow$new()
   
   # Test that inherited methods are available on instances
-  inherited_methods <- c("preprocess", "link_acs", "load_pstrat", "metadata", "preprocessed_data")
+  inherited_methods <- c("preprocess", "link_acs", "load_pstrat", "preprocessed_data")
   
   for (method in inherited_methods) {
     expect_true(method %in% names(workflow),
