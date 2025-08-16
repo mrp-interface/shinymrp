@@ -22,9 +22,7 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Model fitting & diagnostics}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-check_effects]{$check_effects()}} \tab Check model specification. \cr
    \code{\link[=MRPWorkflow-method-create_model]{$create_model()}} \tab Create a \code{\link{MRPModel}} object. \cr
-   \code{\link[=MRPWorkflow-method-load_model]{$load_model()}} \tab Load a previously saved model. \cr
    \code{\link[=MRPWorkflow-method-pp_check]{$pp_check()}} \tab Perform posterior predictive check. \cr
    \code{\link[=MRPWorkflow-method-compare_models]{$compare_models()}} \tab Compare models using LOO-CV. \cr
 }

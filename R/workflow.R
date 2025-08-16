@@ -36,9 +36,7 @@ mrp_workflow <- function() {
 #'   ## Model fitting & diagnostics
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
-#'   [`$check_effects()`][MRPWorkflow-method-check_effects] | Check model specification. |
 #'   [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
-#'   [`$load_model()`][MRPWorkflow-method-load_model] | Load a previously saved model. |
 #'   [`$pp_check()`][MRPWorkflow-method-pp_check] | Perform posterior predictive check. |
 #'   [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
 #' 
@@ -535,7 +533,7 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -646,7 +644,7 @@ covar_hist <- function(covar, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -743,7 +741,7 @@ outcome_plot <- function(file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -904,8 +902,8 @@ estimate_plot <- function(
     } else{
       list()
     }
-    dots <- modifyList(GLOBAL$plot$save, settings) %>%
-      modifyList(list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, settings) %>%
+      utils::modifyList(list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }      
 
@@ -1057,7 +1055,7 @@ pp_check <- function(model, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }      
 

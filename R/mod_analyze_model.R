@@ -913,7 +913,7 @@ mod_analyze_model_server <- function(id, global){
       }
 
       # if object contains poststratification results
-      if(model$check_if_poststratified()) {
+      if(model$check_estimate_exists()) {
         shinyjs::delay(
           100,
           shinyjs::click(model$get_id("postprocess_btn"))
