@@ -151,13 +151,34 @@ workflow$outcome_map(summary_type = "max")
 
 ## Model fitting and diagnostics
 
-The `MRPModel` class is designed to represent individual models within the workflow and contains methods for model fitting, diagnostics, and visualization.
+The `MRPModel` class is designed to represent individual models and help mange 
 
 ### Model specification
 
 The `$create_model()` method takes in a nested list that specifies the variables to include in the model,
-whether they are included as fixed or varying effects, selected interactions and the prior distributions assigned to all the effects.
-This is used to generate Stan code for compilation using the `CmdStanR` package.
+whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
+This is used to generate Stan code for compilation using the `CmdStanR` package. The syntax for the prior distributions
+is similar to that of Stan. The following are currently supported:
+
+- normal(mu, sigma)
+- student_t(nu, mu, sigma)
+- structured*
+
+The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
+Effects that are assigned empty characters will use the default prior distribution.
+
+Under the Bayesian framework, the following prior distributions are assigned by default:
+
+- Overall intercept: normal(0,5)
+- Coefficient: normal(0,3)
+
+The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors.
+
+- Standard deviation (main effect): normal<sub>+</sub>(0,3)
+- Standard deviation (interaction): normal<sub>+</sub>(0,1)
+
+The returned `MRPModel` object has  methods for extracting draws from
+the internal `CmdStanMCMC` object and formating them for display.
 
 ```{r}
 model1 <- workflow$create_model(
@@ -194,18 +215,30 @@ model1$fit(
 
 ### Posterior summary & diagnostics
 
+The `$summary()` method returns summary statistics of the posterior samples along with common diagnostic 
+quantities such as effective sample size and R-hat.
+
 ```{r}
 model1$summary()
 ```
 
+The `$diagnostics()` method provides additional diagnostic information about the sampling process. The guide
+to interpreting these convergence metrics can be found in the [Stan documentation](https://mc-stan.org/learn-stan/diagnostics-warnings). 
 
 ```{r}
 model1$diagnostics()
 ```
 
+The `$pp_check()` method extracts the samples from the posterior predictive distribution and generates
+visual checks of the model fit.
+
 ```{r}
 workflow$pp_check(model1)
 ```
+
+It is common to test different model specifications to find one that best captures the relationship
+between the predictors and the outcome. Once you have your roster, you can pass several model objects
+into the `$compare_models()` method to perform model comparison using leave-one-out cross-validation.
 
 ```{r}
 model2 <- workflow$create_model(
@@ -246,25 +279,27 @@ workflow$compare_models(model1, model2)
 
 Once a `MRPModel` object is created, it can be saved to disk at any point using the `$save()` method.
 Under the hood, the method uses the `qs` package to serialize the object to a file with a `.qs` extension.
+The model object can be read back into R using the `qs::qread()` function.
 
 ```{r, save_model, eval=FALSE}
 model1$save(file = "model1.qs")
 
 # load back into workspace
-workflow$load_model("model1.qs")
+model1 <- qs::qread("model1.qs")
 ```
 
 
 ## Visualize estimates
 
-The workflow object provides visualization methods to present the results of the fitted models,
-including overall estimates and estimates for demographic groups or geographic areas. 
+`$estimate_plot()` is the primary method for visualizing estimates from the fitted models. By default,
+it uses a 95% credible interval for uncertainty quantification but users can specify other intervals, including standard deviation
 
 ```{r, estimate_plot, fig.height=10}
 workflow$estimate_plot(model1, group = "sex")
 ```
 
-For geography-based results, users have the option to visualize the values on an interactive choropleth map.
+For geography-based estimates, we recommend using estimate_map, which also takes a similar argument to estimate_plot for uncertainty quantification.
+The selected interval values are shown in the tooltip when users hover over individual tiles on the map.
 
 ```{r, estimate_map}
 workflow$estimate_map(model1, geo = "county")
