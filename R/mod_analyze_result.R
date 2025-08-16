@@ -199,7 +199,7 @@ mod_analyze_result_server <- function(id, global){
           pstrat_models_rv(
             purrr::keep(
               global$models,
-              ~ .x$check_if_poststratified()
+              ~ .x$check_estimate_exists()
             )
           )
 
