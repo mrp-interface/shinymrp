@@ -1,8 +1,8 @@
 ---
-title: "More on data preprocessing"
+title: "More on data preparation"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{More on data preprocessing}
+  %\VignetteIndexEntry{More on data preparation}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -18,36 +18,401 @@ knitr::opts_chunk$set(
 library(shinymrp)
 ```
 
+The input data for MRP consists of two major components: the survey or test data and the corresponding poststratification table.
+The survey/test data contains the geographic-demographic information about participants and their survey responses or test results.
+Inferring the relationship between these variables using multilevel regression (MR) models constitutes the first stage of MRP.
+Additionally, geographic covariates can be included in these models to account for the structured differences among geographic areas such as states and counties.
+The second stage of MRP, poststratification (P), involves adjusting the estimates based on the demographic-geographic composition of the target population,
+which is the US population in the context of this application. Below are details about how these data components are prepared for all use cases of the MRP interface
+and relevant code reference.
 
-### Individual-level vs. Aggregated Data
+### Survey/Test Data Preprocessing
 
-The package accepts data in two formats:
+The preprocessing workflow follows these general steps for both cross-sectional and time-varying data:
 
-- **Individual-level**: Each row contains information for on individual.
-- **Aggregated**: Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.
+- *Data cleaning*: standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes
+- *Conversion to categorical data*: recoding categorical data, converting numeric values to categories using predefined intervals, assigning time indices to dates
+- *Data imputation*: imputing missing data based on frequency distributions of converted categories in the data
+- *Data aggregation*: aggregating individual-level records to create cell counts for each unique combination of relevant demographic-geographic factors
 
-Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure.
+Below is the main function for data preprocessing in `shinymrp`. More preprocessing functions can be found [here](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R).
 
-### Required Columns and Categories
+```{r}
+.preprocess <- function(
+  data,
+  metadata,
+  zip_county_state,
+  freq = NULL,
+  is_sample = TRUE,
+  is_aggregated = TRUE,
+  zip_threshold = 0,
+  state_threshold = 0
+) {
+  
+  is_covid <- !is.null(metadata$special_case) &&
+              metadata$special_case == "covid"
+  levels <- .create_expected_levels(metadata)
+  indiv_vars <- names(levels)
+  if (metadata$is_timevar) {
+    indiv_vars <- c(indiv_vars, "time")
+  }
 
-The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):
+  # Clean data
+  data <- .clean_data(data)
+
+  # Find and rename columns
+  data <- .rename_columns(data, is_covid && !is_aggregated)
+
+  # Check for common dataframe issues
+  types <- .create_expected_types(
+    metadata = metadata,
+    is_sample = is_sample,
+    is_aggregated = is_aggregated
+  )
+  .check_data(data, types)
+
+  # Aggregate if needed
+  if (!is_aggregated) {
+    # remove NAs
+    check_cols <- setdiff(names(data), indiv_vars)
+    data <- data %>% tidyr::drop_na(dplyr::all_of(check_cols))
+
+    # convert date to time indices if necessary
+    if (metadata$is_timevar & !is.null(freq)) {
+      data <- .add_time_indices(data, freq = freq)
+
+      if (dplyr::n_distinct(data$time) == 1) {
+        stop("Time variable has only one unique value. Please use modules for cross-sectional data instead.")
+      }
+    }
+
+    # remove duplicate rows
+    data <- .remove_duplicates(data, is_covid)
+
+    # remove ZIP codes and states with small sample sizes
+    if ("zip" %in% names(data)) {
+      data <- .filter_state_zip(
+        data,
+        zip_county_state,
+        zip_threshold = zip_threshold,
+        state_threshold = state_threshold
+      )
+    }
+
+    # recode values to expected levels
+    data <- .recode_values(data, levels, is_covid)
+
+    # .impute missing demographic data based on frequency
+    data <- data %>% dplyr::mutate(dplyr::across(dplyr::all_of(indiv_vars), .impute))
+
+    if (metadata$family != "normal") {
+      # aggregate test records based on combinations of factors
+      smallest <- .get_smallest_geo(names(data))
+      smallest_geo <- if(!is.null(smallest)) smallest$geo else NULL
+      group_vars <- c(indiv_vars, smallest_geo)
+      geo_covars <- if(!is.null(smallest_geo)) names(.get_geo_predictors(data, smallest_geo)) else NULL
+
+      # cross-tabulate data
+      data <- data %>%
+        dplyr::group_by(!!!rlang::syms(group_vars)) %>%
+        dplyr::summarize(
+          dplyr::across(dplyr::any_of(geo_covars), dplyr::first),
+          date = if("date" %in% names(data)) dplyr::first(.data$date),
+          total = if("weight" %in% names(data)) sum(.data$weight) else dplyr::n(),
+          positive = sum(.data$positive)
+
+        ) %>%
+        dplyr::ungroup()
+    }
+  }
+
+  # append geographic areas at larger scales if missing
+  data <- .append_geo(data, zip_county_state)
+
+  return(data)
+}
+```
+
+The result is a cross tabulation of the following categories:
+
+#### Time-varying
+
+COVID Data
 
 - Sex: male, female
 - Race: Black, White, other
-- Age
-- Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
-- ZIP code [^geo]
-- County [^geo]
-- State [^geo]
-- Time indices (time) [^time]
-- Date
-- Continuous outcome measure (outcome) [^outcome-cont]
-- Positive response indicator or number of positive responses (positive) [^outcome-bin]
-- Cross-tabulation cell counts (total) [^outcome-bin]
-- Survey weights (weight) [^weight]
+- Age: 0-17, 18-34, 35-64, 65-74, 75+
+- ZIP code
+- Time indices
 
-[^geo]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
-[^time]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains time indices. An optional 'date' column containing the date of the first day of each period can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to time indices, but users can also provide the time indices directly. The interface uses time-invariant poststratification data.
-[^outcome-cont]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
-[^outcome-bin]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
-[^weight]: Please name the column containing survey weights in the data 'weight'. If the input poststratification data include survey weights, the interface uses weights to estimate the population counts.
+General
+
+- Sex: male, female
+- Race: Black, White, other
+- Age: 0-17, 18-34, 35-64, 65-74, 75+
+- Time indices
+- User selected geographic levels
+
+#### Cross-sectional
+
+Poll Data
+
+- Sex: male, female
+- Race: Black, White, other
+- Age: 18-29, 30-39, 40-49, 50-59, 60-69, 70+
+- Education level: below high school, high school, some college, 4-year college, post-grad
+- State
+
+General
+
+- Sex: male, female
+- Race: Black, White, other
+- Age: 0-17, 18-34, 35-64, 65-74, 75+
+- User selected geographic levels
+
+### Geographic Identifiers & Covariates
+
+One of the major strengths of MRP is small-area estimation. To leverage this capability, information about geographic areas and their characteristics should be included so that the model can account for related group-level variation in the data. To this end, the interface gathers as much geographic information as possible based on what is provided in the data.
+
+First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that overlaps with each ZIP code the most.
+
+In addition to geographic areas, the application also gathers quantities associated with them either from the data or external sources. For use cases other than COVID data, the app scans the data to find quantities that have a one-to-one relationship with the geographic identifier of interest. For COVID data, we have identified certain ZIP code-level quantities that are informative in modeling COVID test results, such as education level and household income. We obtain these quantities at the tract level from the ACS and other sources, then aggregate over the tracts that overlap with each ZIP code based on the USPS crosswalk table.
+
+We obtain the following tract-level measures from the ACS and other sources:
+
+- Binary indicators of whether tracts are classified as urban or not
+- Population sizes based on levels of education
+- Population sizes based on ratios of income to poverty level in the past 12 months
+- Population sizes based on employment status
+- Median household income in the past 12 months
+- Area Deprivation Index (ADI)
+
+The data is obtained using the function below and formatted for use in the package.
+
+```{r, eval=FALSE}
+# Retrieve ACS data using tidycensus package
+get_tract_data <- function(
+    state_codes = c(state.abb, "DC"),
+    age_bounds = c(0, 18, 35, 65, 75),
+    poverty_bounds = c(0, 1, 2),
+    year = 2021,
+    include_covar = FALSE,
+    chunk_size = 50
+) {
+  
+  gen_vars <- function(str, seq) seq %>% sapply(function(i) sprintf("%s_%03d", str, i))
+  
+  # look-up table
+  # https://www.census.gov/programs-surveys/acs/data/data-tables/table-ids-explained.html
+  lookup_df <- tidycensus::load_variables(year, dataset = "acs5", cache = TRUE)
+  
+  # the indices are chosen based on the look-up table
+  # for extracting table labels from look-up table
+  age_indices_one <- 4:16
+  age_indices_all <- 283:304
+  poverty_indices <- 26397:26402
+  
+  # generate variable names
+  group_names <- c("male_white", "female_white",
+                   "male_black", "female_black",
+                   "male_all", "female_all",
+                   "pop_size")
+  
+  group_prefixes <- c("B01001A", "B01001A",
+                      "B01001B", "B01001B",
+                      "B01001", "B01001",
+                      "B01001")
+  
+  group_table_numbers <- list(3:16, 18:31,
+                              3:16, 18:31,
+                              3:25, 27:49,
+                              1)
+
+  if (include_covar) {
+    group_names <- c(group_names, "education", "poverty", "employment", "income")
+    group_prefixes <- c(group_prefixes, "B15003", "C17002", "B23025", "B19013")
+    group_table_numbers <- c(group_table_numbers, list(2:25), list(2:8), list(2:7), list(1))
+  }
+
+
+  # build the full vector of vars
+  group_vars <- c()
+  for(i in 1:length(group_names)) {
+    group_vars <- group_vars %>% c(gen_vars(group_prefixes[i], group_table_numbers[[i]]))
+  }
+  
+  # retrieve ACS tables
+  all_tables <- tidycensus::get_acs(
+    geography = "tract",
+    variables = group_vars,
+    state = state_codes,
+    output = "wide",
+    year = year
+  )
+  
+  geoID <- all_tables[1]
+  all_tables <- all_tables[seq(3, ncol(all_tables), by = 2)]
+  
+  group_dfs <- list()
+  ind <- 0
+  for(i in 1:length(group_names)) {
+    n_tables <- length(group_table_numbers[[i]])
+    group_dfs[group_names[i]] <- all_tables[(ind+1):(ind+n_tables)] %>% list()
+    ind <- ind + n_tables
+  }
+  
+  
+  df_all <- data.frame(GEOID = geoID)
+  
+  # POPULATION SIZE
+  names(group_dfs$pop_size) <- "pop_size"
+  df_all <- cbind(df_all, group_dfs$pop_size)
+  
+  ### SEX, RACE, AGE
+  # aggregate columns
+  age_bounds_acs_all <- get_bounds(lookup_df$label[age_indices_all])
+  age_bounds_acs_one <- get_bounds(lookup_df$label[age_indices_one])
+  
+  for(name in c("male_all", "female_all")) {
+    group_dfs[name] <- collapse(age_bounds,
+                                age_bounds_acs_all,
+                                group_dfs[[name]],
+                                1) %>% list()
+  }
+  for(name in c("male_white", "female_white",
+                "male_black", "female_black")) {
+    group_dfs[name] <- collapse(age_bounds,
+                                age_bounds_acs_one,
+                                group_dfs[[name]],
+                                1) %>% list()
+  }
+  
+  # subtract white and black from total
+  group_dfs$male_other <- group_dfs$male_all - (group_dfs$male_white + group_dfs$male_black)
+  group_dfs$female_other <- group_dfs$female_all - (group_dfs$female_white + group_dfs$female_black)
+  
+  # rename columns and combine data frames
+  # IMPORTANT: the order of names must follow alphabetical order
+  for(name in c("female_black", "female_other", "female_white",
+                "male_black", "male_other", "male_white")) {
+    names(group_dfs[[name]]) <- paste0(name, '_', names(group_dfs[[name]]))
+    df_all <- cbind(df_all, group_dfs[[name]])
+  }
+  
+  if (include_covar) {
+    # EDUCATION
+    education_levels <- c("below_college", "above_college")
+    education_indices <- list(1:19, 20:24)
+    for(i in 1:length(education_indices)) {
+      name <- education_levels[i]
+      inds <- education_indices[[i]]
+      df_all[[name]] <- group_dfs$education[inds] %>% rowSums()
+    }
+    
+    # POVERTY
+    poverty_bounds_acs <- get_bounds(lookup_df$label[poverty_indices])
+    group_dfs$poverty <- collapse(poverty_bounds,
+                                  poverty_bounds_acs,
+                                  group_dfs$poverty,
+                                  0.01) %>% list()
+    
+    df_all <- cbind(df_all, group_dfs$poverty)
+    
+    # EMPLOYMENT
+    employment_levels <- c("employed", "unemployed", "other")
+    employment_indices <- list(3, 4, 5:6)
+    for(i in 1:length(employment_indices)) {
+      name <- employment_levels[i]
+      inds <- employment_indices[[i]]
+      df_all[[name]] <- group_dfs$employment[inds] %>% rowSums()
+    }
+    
+    # INCOME
+    names(group_dfs$income) <- "household_income"
+    df_all <- cbind(df_all, group_dfs$income)
+    
+    # URBANICITY
+    urbanicity <- haven::read_sas("dev/data/z_us_tract_uac.sas7bdat") %>%
+      rename(
+        "urbanicity" = "uac_yn",
+        "GEOID" = "geocode"
+      ) %>%
+      select(GEOID, urbanicity)
+    df_all <- df_all %>% full_join(urbanicity, by = "GEOID")
+    
+    # ADI
+    adi_data <- haven::read_sas("dev/data/z_adi_bg_v3_2019.sas7bdat") %>%
+      stats::na.omit() %>%
+      group_by(.data$state_cty_tract_cd) %>%
+      summarize(
+        adi = mean(.data$us_adi_rank_num)
+      ) %>%
+      rename("GEOID" = "state_cty_tract_cd")
+    df_all <- df_all %>% full_join(adi_data, by = "GEOID")
+  }
+  
+  return(df_all)
+}
+```
+
+To obtain ZIP code-level estimates, we combine them as follows:
+
+- Urbanicity of a ZIP code is defined as the percentage of covered census tracts classified as urban, weighted by tract population counts.
+- Higher education measure of a ZIP code is defined as the percentage of the residing population who have earned an Associate's degree or higher.
+- Poverty measure of a ZIP code is defined as the percentage of the residing population whose ratio of income to poverty level in the past 12 months is below 100%.
+- Employment rate of a ZIP code is defined as the percentage of the residing population who are employed as a part of the civilian labor force.
+- Income measure of a ZIP code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts.
+- Area Deprivation Index (ADI) of a ZIP code is the average ADI across covered census tracts, weighted by tract population counts.
+
+```{r}
+combine_tracts_covid <- function(
+    tract_data,
+    zip_tract
+) {
+  
+  # join tract-level data with zip-tract conversion table
+  # then group by zip
+  by_zip <- zip_tract %>%
+    select(.data$geoid, .data$zip) %>%
+    rename("GEOID" = "geoid") %>%
+    inner_join(
+      tract_data,
+      by = "GEOID"
+    ) %>%
+    group_by(.data$zip)
+  
+  # compute zip-level population size by aggregating across overlapping tracts
+  all_colnames <- names(tract_data)
+  pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
+  pstrat_data <- by_zip %>%
+    summarise(
+      across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
+    )
+
+  # find most overlapping county for each zip code
+  zip_fips <- major_county(zip_tract) %>%
+    rename("county" = "fips")
+
+  # omit zips with only NA then compute zip-level quantities
+  covar_colnames <- setdiff(all_colnames, pstrat_colnames)
+  covariates <- by_zip %>%
+    filter(if_all(all_of(covar_colnames), ~ !all(is.na(.)))) %>%
+    summarize(
+      urbanicity = 1 - sum((pop_size / sum(pop_size, na.rm = TRUE)) * (urbanicity == "N"), na.rm = TRUE),
+      college = sum(above_college, na.rm = TRUE) / (sum(below_college, na.rm = TRUE) + sum(above_college, na.rm = TRUE)),
+      employment = sum(employed, na.rm = TRUE) / (sum(employed, na.rm = TRUE) + sum(unemployed, na.rm = TRUE) + sum(other, na.rm = TRUE)),
+      poverty = sum(`0-0.99`, na.rm = TRUE) / (sum(`0-0.99`, na.rm = TRUE) + sum(`1-1.99`, na.rm = TRUE) + sum(`2+`, na.rm = TRUE)),
+      income = sum((pop_size / sum(pop_size, na.rm = TRUE)) * household_income, na.rm = TRUE),
+      adi = sum((pop_size / sum(pop_size, na.rm = TRUE)) * adi, na.rm = TRUE)
+    ) %>%
+    left_join(zip_fips, by = "zip")
+  
+  return(list(
+    pstrat = pstrat_data,
+    covar = covariates
+  ))
+}
+```
+
+### Poststratification Table
+We obtain ACS data through the packages tidycensus and IPUMS to compute the poststratification tables, which contain the size of each subpopulation defined by the cross-tabulation of demographic-geographic factors. Each subpopulation consists of individuals corresponding to a unique combination of these factors. We precompute and store the poststratification table at the tract level, then aggregate across tracts to derive counts at larger geographic scales. Census tracts fall perfectly within counties and states but ZIP codes have many-to-many relationships with tracts. We address this by summing over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
