@@ -10,7 +10,6 @@
 #'   methods, many of which have their own (linked) documentation pages:
 #'
 #'   ## Data access
-#'
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
 #'   [`$model_spec()`][MRPModel-method-model_spec] | Return model specification. |
@@ -25,16 +24,19 @@
 #'   [`$check_fit_exists()`][MRPModel-method-check_fit_exists] | Check if model has been fitted. |
 #'   [`$check_estimate_exists()`][MRPModel-method-check_estimate_exists] | Check if post-stratification has been performed. |
 #'
-#'   ## Model diagnostics
+#'   ## Posterior summary & diagnostics
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
 #'   [`$summary()`][MRPModel-method-summary] | Return posterior summary table. |
 #'   [`$diagnostics()`][MRPModel-method-diagnostics] | Return sampling diagnostics. |
+#' 
+#'   ## Post-processing
+#'   |**Method**|**Description**|
 #'   [`$ppc()`][MRPModel-method-ppc] | Run posterior predictive check. |
-#'   [`$loo()`][MRPModel-method-loo] | Create inputs for leave-one-out cross-validation. |
+#'   [`$loo()`][MRPModel-method-loo] | Create input for leave-one-out cross-validation. |
 #'   [`$poststratify()`][MRPModel-method-poststratify] | Run post-stratification to generate population estimates. |
 #'
-#'   ## Other
+#'   ## Saving model object
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
 #'   [`$save()`][MRPModel-method-save] | Save model object to file. |
