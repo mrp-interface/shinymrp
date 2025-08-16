@@ -17,34 +17,20 @@ mod_est_plot_ui <- function(id) {
 #' @noRd 
 #' @importFrom dplyr mutate
 #' @importFrom rlang .data
-mod_est_plot_server <- function(id, model, var) {
+mod_est_plot_server <- function(id, workflow, model, var) {
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
     output$plot <- renderPlot({
       req(model())
-  
-      est_df <- model()$est[[var]] %>%
-        mutate(factor = factor(.data$factor, levels = model()$mrp$levels[[var]]))
 
-      if (model()$metadata$is_timevar) {
-        .plot_est_timevar(
-          plot_df = est_df,
-          dates = model()$plotdata$dates,
-          metadata = model()$metadata
-        )
-      } else {
-        .plot_est_static(
-          plot_df = est_df,
-          metadata = model()$metadata
-        )
-      }
-      
+      workflow()$estimate_plot(model(), var)
+
     }, height = function() {
       req(model())
       
-      if(model()$metadata$is_timevar) {
-        GLOBAL$plot$ui$subplot_height * (length(model()$mrp$levels[[var]]) + 1)
+      if(model()$metadata()$is_timevar) {
+        GLOBAL$plot$ui$subplot_height * (length(model()$mrp_data()$levels[[var]]) + 1)
       } else {
         GLOBAL$plot$ui$plot_height
       }

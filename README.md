@@ -37,8 +37,8 @@ remotes::install_github('mrp-interface/shinymrp')
 
 Vignettes do not come with the installation, but they are always available online at [https://mrp-interface.github.io/shinymrp/articles/](https://mrp-interface.github.io/shinymrp/articles/)
 
-### Installing CmdStan
+### Installing CmdStanR
 
-The package uses [CmdStanR](https://mc-stan.org/cmdstanr/) to handle the statistical modeling step of MRP, so its prerequisite, [CmdStan](https://mc-stan.org), is required. For more details about the setup, refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started) vignette.
+The package uses [CmdStanR](https://mc-stan.org/cmdstanr/) to handle the statistical modeling step of MRP, so its prerequisites are required for proper functioning. For more details about the setup, refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started) vignette.
 
 > *This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.*

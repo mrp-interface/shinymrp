@@ -9,24 +9,30 @@ vignette: >
 
 ## Overview
 
-shinymrp is a two-in-one package that offers both a graphical and a programmatic interface for applications for Multilevel Regression and Post-stratification (MRP). They parallel each other in their implementation of the data analysis [workflow](https://mrp-interface.github.io/shinymrp/articles/getting-started.html#shinymrp-workflow) that the methodology underlies.
+shinymrp is a two-in-one package that offers both a graphical and a programmatic interface for applications for Multilevel Regression and Post-stratification (MRP). They parallel each other in their implementation of the following data analysis workflow that the methodology underlies.
 
-We recommend the graphical interface for new users. You can launch it by running
+![](./figures/workflow.png)
+
+Please follow the instructions below to install the package and its prerequisites. It is important that Stan is configured properly as it is the engine for all Bayesian modeling in shinymrp. Once everything is set up, you can either run the Shiny app with `shinymrp::run_app()` or use the exported classes in your R scripts. Because the app is more user-friendly and has a built-in guide, all the vignettes will focus on the programmatic components. If you are interested in using the R6 classes, we recommend starting with the overview in the ["Using the exported classes"](https://mrp-interface.github.io/shinymrp/articles/getting-started#using-the-exported-classes) section below.
 
 ```{r, eval = FALSE}
 shinymrp::run_app()
 ```
 
-For experienced users, the programmatic interface (API) offers more flexibility in exchange for the visual aids that the GUI provides. Users can lay out the workflow and run it from end to end with a single R script execution. Fitting complex statistical models to large datasets can be memory-intensive. The API allows users to utilize computational resources from high-performance computing clusters, which often offer limited support for graphics.
-
-An example of the API is shown below. For a more detailed walkthrough, see the [workflow vignette](https://mrp-interface.github.io/shinymrp/articles/workflow.html).
-
 ## Installation
+Users can install the package from GitHub by running the following R command:
 
-### Prerequisites:  C++ Toolchain
+```{r, eval = FALSE}
+# install.packages("remotes") # if not already installed
+remotes::install_github("mrp-interface/shinymrp")
+```
 
-shinymrp requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”) for compiling Stan programs. These vary by different operating systems.
+This will install [CmdStanR](https://mc-stan.org/cmdstanr/), a dependency for interfacing with [Stan](https://mc-stan.org/).
+Stan is a C++ library for Bayesian modeling that requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”) for compiling Stan programs.
+If you are not sure whether your machine has the necessary toolchain, please follow the instructions below to set it up.
+Once the toolchain is ready, follow the ["CmdStanR documentation"](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStan and you are all set.
 
+### C++ Toolchain Configuration
 
 #### Linux
 
@@ -76,24 +82,28 @@ For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolc
 
 
 
-## shinymrp Workflow
-![](./figures/workflow.png)
 
-shinymrp is designed to streamline the data analysis workflow common in applications of Multilevel Regression and Post-stratification. The package handles routine but essential tasks such as data cleaning and generating visualizations of descriptive statistics, allowing users to focus on model building.
+## Using the exported classes
 
-We chose an object-oriented design for the programmatic interface rather than the functional programming approach more familiar to R users. This design encapsulates data that needs to be used throughout the entire workflow, eliminating the need for users to manually track multiple objects—similar to how the graphical user interface operates.
+For experienced users, the programmatic components exported by shinymrp offers more flexibility in exchange for the visual aids that the Shiny app provides. Users can lay out the workflow and run it from start to end with a single R script execution. Moreover, fitting complex statistical models to large datasets can be memory-intensive. The classes allow users to utilize computational resources from high-performance computing clusters, which often offer limited support for graphics.
 
-Below is an annotated example of the general workflow. For a more details about each step of the process, refer to the [workflow vignette](https://mrp-interface.github.io/shinymrp/articles/workflow.html).
+Below is a minimal example of the typical workflow using the exported classes. Excluding the setup, the following code blocks correspond the four stages in the MRP workflow illustrated above. For a more details about each step in the workflow and the corresponding methods, refer to the ["Workflow Deep Dive"](https://mrp-interface.github.io/shinymrp/articles/workflow.html) vignette.
+
+The process always starts with importing the package components and create a new workflow object with the `mrp_workflow()` function. This `MRPWorkflow` object will help us manage data throughout the process and provides methods for preprocessing, visualization, and creating models. These methods can be accessed using the `$` operator, as you will see throughout the example.
 
 ```{r eval=FALSE}
 library(shinymrp)
 
-# Load example data
-sample_data <- example_sample_data()
-
 # Initialize the MRP workflow
 workflow <- mrp_workflow()
 
+```
+
+In the first stage, we preprocess an example sample data included in the package, then link to the American Community Survey (ACS) to obtain the poststratification data. The `preprocess()` method takes care of cleaning the sample data and preparing it for modeling, while the `link_acs()` method retrieves the poststratification data based on the specified geographic granularity and ACS year.
+
+```{r eval=FALSE}
+# Load example data
+sample_data <- example_sample_data()
 
 ### DATA PREPARATION
 
@@ -112,8 +122,11 @@ workflow$link_acs(
   link_geo = "zip",
   acs_year = 2021
 )
+```
 
+Before building models, it is important to explore the data to understand its structure and check for potential issues. The workflow object provides methods for visualizing data distributions and summary statistics. Thanks to the object-oriented design, these methods can access the data stored in the workflow object without requiring users to input them again.
 
+```{r eval=FALSE}
 ### DESCRIPTIVE STATISTICS
 
 # Visualize demographic distribution of data
@@ -124,8 +137,12 @@ workflow$sample_size_map()
 
 # Visualize outcome measure
 workflow$outcome_plot()
+```
 
+The `create_model()` method allows users to define and instantiate new model objects within the workflow. The model objects encapsulate the model specification and provide methods for fitting the model, summarizing results, and presenting diagnostics.
+The result from `pp_check()`  serves as a sanity check, showing how well the fitted model can replicate the observed data.
 
+```{r eval=FALSE}
 ### MODEL BUILDING
 
 # Create new model objects
@@ -156,8 +173,11 @@ model$diagnostics()
 
 # Posterior predictive check
 workflow$pp_check(model)
+```
 
+Finally, the workflow object provides visualization methods to present the results of the fitted models, including overall estimates and estimates for demographic groups or geographic areas.
 
+```{r eval=FALSE}
 ### VISUALIZE RESULTS
 
 # Overall estimates and estimates for demographic groups

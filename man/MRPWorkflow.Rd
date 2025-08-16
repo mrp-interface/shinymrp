@@ -3,15 +3,10 @@
 \name{MRPWorkflow}
 \alias{MRPWorkflow}
 \title{MRPWorkflow objects}
-\value{
-A new MRPWorkflow object.
-}
 \description{
 A \code{MRPWorkflow} object is an \link[R6:R6Class]{R6} object created by
 the \code{\link[=mrp_workflow]{mrp_workflow()}} function. This class provides methods for all steps
 in the workflow, from data preparation and visualization to model fittingg.
-
-Initializes the MRPWorkflow object, setting up necessary fields for data processing and model fitting.
 }
 \section{Methods}{
  \code{MRPWorkflow} objects have the following associated
@@ -27,9 +22,7 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Model fitting & diagnostics}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-check_effects]{$check_effects()}} \tab Check model specification. \cr
    \code{\link[=MRPWorkflow-method-create_model]{$create_model()}} \tab Create a \code{\link{MRPModel}} object. \cr
-   \code{\link[=MRPWorkflow-method-load_model]{$load_model()}} \tab Load a previously saved model. \cr
    \code{\link[=MRPWorkflow-method-pp_check]{$pp_check()}} \tab Perform posterior predictive check. \cr
    \code{\link[=MRPWorkflow-method-compare_models]{$compare_models()}} \tab Compare models using LOO-CV. \cr
 }
@@ -51,7 +44,6 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Other}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-metadata]{$metadata()}} \tab Return metadata information. \cr
    \code{\link[=MRPWorkflow-method-preprocessed_data]{$preprocessed_data()}} \tab Return preprocessed sample data. \cr
 }
 

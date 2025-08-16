@@ -125,7 +125,7 @@ GLOBAL <- list(
     )
   ),
   args = list(
-    acs_years = 2019:2023,
+    acs_years = 2018:2023,
     effect_types = c("fixed", "varying", "interaction"),
     family = c("binomial", "normal"),
     summary_types = c("max", "min")

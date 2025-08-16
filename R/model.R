@@ -10,36 +10,33 @@
 #'   methods, many of which have their own (linked) documentation pages:
 #'
 #'   ## Data access
-#'
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
-#'   [`$effects()`][MRPModel-method-effects] | Return model specification. |
+#'   [`$model_spec()`][MRPModel-method-model_spec] | Return model specification. |
 #'   [`$formula()`][MRPModel-method-formula] | Return model formula. |
-#'   [`$mrp()`][MRPModel-method-mrp] | Return data for MRP. |
 #'   [`$metadata()`][MRPModel-method-metadata] | Return model metadata. |
-#'   [`$plotdata()`][MRPModel-method-plotdata] | Return data used for plotting. |
+#'   [`$stan_code()`][MRPModel-method-stan_code] | Return model Stan code. |
 #'
 #'   ## Model fitting
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
-#'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using [cmdstanr][cmdstanr]. |
+#'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using CmdStanR. |
 #'   [`$check_fit_exists()`][MRPModel-method-check_fit_exists] | Check if model has been fitted. |
-#'   [`$code()`][MRPModel-method-code] | Return Stan code. |
+#'   [`$check_estimate_exists()`][MRPModel-method-check_estimate_exists] | Check if post-stratification has been performed. |
 #'
-#'   ## Model diagnostics
+#'   ## Posterior summary & diagnostics
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
 #'   [`$summary()`][MRPModel-method-summary] | Return posterior summary table. |
 #'   [`$diagnostics()`][MRPModel-method-diagnostics] | Return sampling diagnostics. |
-#'   [`$ppc()`][MRPModel-method-ppc] | Run posterior predictive check. |
-#'   [`$loo()`][MRPModel-method-loo] | Create inputs for leave-one-out cross-validation. |
-#'
-#'   ## Post-stratification
+#' 
+#'   ## Post-processing
 #'   |**Method**|**Description**|
-#'   |:----------|:---------------|
+#'   [`$ppc()`][MRPModel-method-ppc] | Run posterior predictive check. |
+#'   [`$loo()`][MRPModel-method-loo] | Create input for leave-one-out cross-validation. |
 #'   [`$poststratify()`][MRPModel-method-poststratify] | Run post-stratification to generate population estimates. |
 #'
-#'   ## Other
+#'   ## Saving model object
 #'   |**Method**|**Description**|
 #'   |:----------|:---------------|
 #'   [`$save()`][MRPModel-method-save] | Save model object to file. |
@@ -50,16 +47,18 @@
 #'   library(shinymrp)
 #'   } 
 #' 
-#' @export 
+#' @export
+#' 
+#' @importFrom R6 R6Class
 MRPModel <- R6::R6Class(
   "MRPModel",
   private = list(
-    effects_ = NULL,
+    model_spec_ = NULL,
     formula_ = NULL,
-    mrp_ = NULL,
-    metadata_ = NULL,
-    linkdata_ = NULL,
-    plotdata_ = NULL,
+    mrpdat_ = NULL,
+    metadat_ = NULL,
+    linkdat_ = NULL,
+    plotdat_ = NULL,
     fit_ = NULL,
     standata_ = NULL,
     stancode_ = NULL,
@@ -68,7 +67,7 @@ MRPModel <- R6::R6Class(
     log_lik_ = NULL,
     yrep_ = NULL,
     est_ = NULL,
-    buffer = NULL,
+    buffer_ = NULL,
 
     assert_fit_exists = function() {
       if (!self$check_fit_exists()) {
@@ -79,76 +78,100 @@ MRPModel <- R6::R6Class(
   public = list(
     #' @description Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
     #'
-    #' @param effects List containing model effects specification including intercept, fixed effects, varying effects, and interactions
-    #' @param mrp List containing the MRP data structure with input sample data and new post-stratification data
+    #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
+    #' @param mrp_data List containing the MRP data structure with input sample data and new post-stratification data
     #' @param metadata List containing metadata about the analysis including family, time variables, and special cases
-    #' @param linkdata List containing information about data linking including geography and ACS year
-    #' @param plotdata List containing data prepared for visualization including dates and geojson objects
+    #' @param link_data List containing information about data linking including geography and ACS year
+    #' @param plot_data List containing data prepared for visualization including dates and geojson objects
     #'
     #' @return A new `MRPModel` object initialized with the provided effects, MRP data, metadata, link data, and plot data.
     initialize = function(
-      effects,
-      mrp,
+      model_spec,
+      mrp_data,
       metadata,
-      linkdata,
-      plotdata
+      link_data,
+      plot_data
     ) {
 
-      private$effects_ <- effects %>%
-        .group_effects(mrp$input) %>%
+      private$model_spec_ <- model_spec %>%
+        .group_effects(mrp_data$input) %>%
         .ungroup_effects()
-      private$formula_ <- .create_formula(private$effects_)
-      private$mrp_ <- mrp
-      private$metadata_ <- metadata
-      private$linkdata_ <- linkdata
-      private$plotdata_ <- plotdata
-      private$buffer <- list(
-        interval = NULL
+      private$formula_ <- .create_formula(private$model_spec_)
+      private$mrpdat_ <- mrp_data
+      private$metadat_ <- metadata
+      private$linkdat_ <- link_data
+      private$plotdat_ <- plot_data
+      private$buffer_ <- list(
+        interval = NULL,
+        summarize = NULL
       )
     },
 
-    #' @description Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
-    effects = function() {
-      return(private$effects_)
+    mrp_data = function() {
+      return(private$mrpdat_)
     },
 
-    #' @description Retrieves the model formula constructed from the effects specification.
-    formula = function() {
-      return(private$formula_)
+    plot_data = function() {
+      return(private$plotdat_)
     },
 
-    #' @description Retrieves the MRP data structure containing input sample data and post-stratification data.
-    mrp = function() {
-      return(private$mrp_)
-    },
-
-    #' @description Retrieves the metadata associated with the model, including information about family, time variables, and fitting parameters.
-    metadata = function() {
-      return(private$metadata_)
-    },
-
-    #' @description Retrieves the data prepared for visualization, including dates and geojson objects.
-    plotdata = function() {
-      return(private$plotdata_)
-    },
-
-    #' @description Retrieves the data linking information including geography and ACS year.
-    linkdata = function() {
-      return(private$linkdata_)
+    link_data = function() {
+      return(private$linkdat_)
     },
     
-    #' @description Retrieves the Stan data structure used for MCMC sampling
-    standata = function() {
+    stan_data = function() {
       return(private$standata_)
-    },
-
-    #' @description Retrieves Stan code.
-    stancode = function() {
-      return(private$stancode_)
     }
   )
 )
 
+#' Return model specification
+#' 
+#' @name MRPModel-method-model_spec
+#' @aliases model_spec
+#' @family MRPModel methods
+#'
+#' @description Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
+model_spec = function() {
+  return(private$model_spec_)
+}
+MRPModel$set("public", "model_spec", model_spec)
+
+#' Return model formula
+#' 
+#' @name MRPModel-method-formula
+#' @aliases formula
+#' @family MRPModel methods
+#'
+#' @description Retrieves the model formula constructed from the effects specification.
+formula = function() {
+  return(private$formula_)
+}
+MRPModel$set("public", "formula", formula)
+
+#' Return model metadata
+#'
+#' @name MRPModel-method-metadata
+#' @aliases metadata
+#' @family MRPModel methods
+#'
+#' @description Retrieves the metadata associated with the model, including information about family, time variables, and fitting parameters.
+metadata = function() {
+  return(private$metadat_)
+}
+MRPModel$set("public", "metadata", metadata)
+
+#' Return Stan code
+#'
+#' @name MRPModel-method-stan_code
+#' @aliases stan_code
+#' @family MRPModel methods
+#'
+#' @description Retrieves Stan code.
+stan_code = function() {
+  return(private$stancode_$mcmc)
+}
+MRPModel$set("public", "stan_code", stan_code)
 
 #' Fit multilevel regression model using cmdstanr
 #'
@@ -171,22 +194,22 @@ fit <- function(
   ...
 ) {
 
-  private$metadata_ <- c(
-    private$metadata_,
+  private$metadat_ <- utils::modifyList(
+    private$metadat_,
     list(
       n_iter = n_iter,
       n_chains = n_chains,
       seed = seed,
       extra = extra,
-      pstrat_vars = intersect(GLOBAL$vars$pstrat, names(private$mrp_$levels))
+      pstrat_vars = intersect(GLOBAL$vars$pstrat, names(private$mrpdat_$levels))
     )
   )
 
   mcmc <- .run_mcmc(
-    input_data  = .stan_factor(private$mrp_$input),
-    new_data = .stan_factor(private$mrp_$new),
-    effects = private$effects_,
-    metadata = private$metadata_,
+    input_data  = .stan_factor(private$mrpdat_$input),
+    new_data = .stan_factor(private$mrpdat_$new),
+    effects = private$model_spec_,
+    metadata = private$metadat_,
     n_iter = n_iter,
     n_chains = n_chains,
     seed = seed,
@@ -212,19 +235,17 @@ check_fit_exists <- function() {
 }
 MRPModel$set("public", "check_fit_exists", check_fit_exists)
 
-#' Return Stan code
+#' Check if poststratification has been performed
 #'
-#' @name MRPModel-method-code
-#' @aliases code
+#' @name MRPModel-method-check_estimate_exists
+#' @aliases check_estimate_exists
 #' @family MRPModel methods
 #'
-#' @description Retrieves the Stan model code used for MCMC fitting.
-code <- function() {
-  private$assert_fit_exists()
-
-  return(private$stancode_$mcmc)
+#' @description Checks whether poststratification has been performed.
+check_estimate_exists <- function() {
+  return(!is.null(private$est_))
 }
-MRPModel$set("public", "code", code)
+MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 
 #' Return posterior summary table
 #'
@@ -239,9 +260,9 @@ summary <- function() {
   if (is.null(private$params_)) {
     private$params_ <- .get_parameters(
       fit = private$fit_,
-      effects = private$effects_,
-      input_data = private$mrp_$input,
-      metadata = private$metadata_
+      effects = private$model_spec_,
+      input_data = private$mrpdat_$input,
+      metadata = private$metadat_
     )
   }
 
@@ -256,18 +277,22 @@ MRPModel$set("public", "summary", summary)
 #' @family MRPModel methods
 #'
 #' @description Retrieves MCMC diagnostics including convergence statistics and sampling efficiency measures.
-diagnostics <- function() {
+#'
+#' @param summarize Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)
+diagnostics <- function(summarize = TRUE) {
   private$assert_fit_exists()
 
-  if (is.null(private$diagnostics_$mcmc)) {
-    out <- .get_diagnostics(
+  if (is.null(private$buffer_$summarize) || private$buffer_$summarize != summarize) {
+    private$diagnostics_ <- .get_diagnostics(
       fit = private$fit_,
-      total_transitions = private$metadata_$n_iter / 2 * private$metadata_$n_chains
+      total_transitions = private$metadat_$n_iter / 2 * private$metadat_$n_chains,
+      summarize = summarize
     )
-    private$diagnostics_$mcmc <- out$summary
   }
 
-  return(private$diagnostics_$mcmc)
+  private$buffer_$summarize <- summarize
+
+  return(private$diagnostics_)
 }
 MRPModel$set("public", "diagnostics", diagnostics)
 
@@ -290,14 +315,14 @@ ppc <- function() {
       fit_mcmc = private$fit_,
       stan_code = private$stancode_$ppc,
       stan_data = private$standata_,
-      n_chains = private$metadata_$n_chains
+      n_chains = private$metadat_$n_chains
     )
 
     # extract draws and create summary table
     private$yrep_ <- .get_replicates(
       fit_ppc,
-      private$mrp_$input,
-      private$metadata_
+      private$mrpdat_$input,
+      private$metadat_
     )
   }
 
@@ -317,14 +342,12 @@ loo <- function() {
   private$assert_fit_exists()
 
   if (is.null(private$log_lik_)) {
-    message("Running leave-one-out cross-validation...")
-
     # run standalone generated quantities for LOO
     fit_loo <- .run_gq(
       fit_mcmc  = private$fit_,
       stan_code = private$stancode_$loo,
       stan_data = private$standata_,
-      n_chains  = private$metadata_$n_chains
+      n_chains  = private$metadat_$n_chains
     )
 
     private$log_lik_ <- fit_loo$draws("log_lik")
@@ -348,7 +371,7 @@ poststratify <- function(interval = 0.95) {
 
   .check_interval(interval)
 
-  if (is.null(private$buffer$interval) || private$buffer$interval != interval) {
+  if (is.null(private$buffer_$interval) || private$buffer_$interval != interval) {
     message("Running post-stratification...")
 
     # run standalone generated quantities for post-stratification
@@ -356,19 +379,19 @@ poststratify <- function(interval = 0.95) {
       fit_mcmc = private$fit_,
       stan_code = private$stancode_$pstrat,
       stan_data = private$standata_,
-      n_chains = private$metadata_$n_chains
+      n_chains = private$metadat_$n_chains
     )
 
     # extract draws and create summary table
     private$est_ <- .get_estimates(
       fit_pstrat,
-      private$mrp_$new,
-      private$metadata_,
+      private$mrpdat_$new,
+      private$metadat_,
       interval = interval
     )
 
-    # store the interval in the buffer
-    private$buffer$interval <- interval
+    # store the interval in the buffer_
+    private$buffer_$interval <- interval
   }
 
   return(private$est_)

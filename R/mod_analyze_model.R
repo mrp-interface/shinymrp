@@ -158,8 +158,8 @@ mod_analyze_model_server <- function(id, global){
     ns <- session$ns
     prior_buffer <- reactiveVal(list())
     model_buffer <- reactiveVal()
-    model_feedback <- reactiveVal()
     pareto_k_dfs <- reactiveVal()
+    model_uploaded <- reactiveVal()
     show_effect_warning <- reactiveVal(FALSE)
 
     observeEvent(input$show_priors, {
@@ -174,13 +174,15 @@ mod_analyze_model_server <- function(id, global){
     #--------------------------------------------------------------------------
     # Set display flag for tooltip if some effects are omitted
     #--------------------------------------------------------------------------
-    observeEvent(global$mrp, {
-      req(global$mrp)
-      show_effect_warning(!is.null(unlist(global$mrp$vars$omit)))
+    observeEvent(global$mrp_ver, {
+      req(global$workflow, global$workflow$mrp_data())
+
+      show_effect_warning(!is.null(unlist(global$workflow$mrp_data()$vars$omit)))
+        
     })
   
     observeEvent(global$input$navbar_analyze, {
-      if(global$input$navbar_analyze == "nav_analyze_model") {  
+      if(global$input$navbar_analyze == "nav_analyze_model") {
         if (show_effect_warning()) {
           bslib::toggle_tooltip("effect_warning_tooltip", show = TRUE)
           show_effect_warning(FALSE)
@@ -197,19 +199,19 @@ mod_analyze_model_server <- function(id, global){
       showModal(modalDialog(
         title = "Omitted Effects",
         tags$p("The following effects are omitted from the list because the corresponding data only has one level:"),
-        if (length(global$mrp$vars$omit$one_level) == 0) {
+        if (length(global$workflow$mrp_data()$vars$omit$one_level) == 0) {
           tags$p("None", class = "fst-italic ml-2")
         } else {
           tags$ul(
-            purrr::map(global$mrp$vars$omit$one_level, ~ tags$li(.x))
+            purrr::map(global$workflow$mrp_data()$vars$omit$one_level, ~ tags$li(.x))
           )
         },
         tags$p("The following interactions are omitted from the list because their main effects are nested:"),
-        if (length(global$mrp$vars$omit$nested) == 0) {
+        if (length(global$workflow$mrp_data()$vars$omit$nested) == 0) {
           tags$p("None", class = "fst-italic ml-2")
         } else {
           tags$ul(
-            purrr::map(global$mrp$vars$omit$nested, ~ tags$li(.x))
+            purrr::map(global$workflow$mrp_data()$vars$omit$nested, ~ tags$li(.x))
           )
         },
         size = "l",
@@ -226,7 +228,7 @@ mod_analyze_model_server <- function(id, global){
       observeEvent(input[[paste0(id, "_open")]], {
         if(input[[paste0(id, "_open")]]) {
           other_id <- setdiff(c("fixed", "varying"), id)
-          choices <- global$mrp$vars[[id]] %>%
+          choices <- global$workflow$mrp_data()$vars[[id]] %>%
             purrr::map(function(l) as.list(setdiff(l, input[[other_id]])))
           selected = setdiff(input[[id]], input[[other_id]])
           
@@ -247,9 +249,9 @@ mod_analyze_model_server <- function(id, global){
         choices <- .create_interactions(
           input$fixed,
           input$varying,
-          global$mrp$input
+          global$workflow$mrp_data()$input
         ) %>% 
-        .pair_setdiff(global$mrp$vars$omit$nested)
+        .pair_setdiff(global$workflow$mrp_data()$vars$omit$nested)
 
         shinyWidgets::updateVirtualSelect(
           inputId = "interaction",
@@ -311,7 +313,7 @@ mod_analyze_model_server <- function(id, global){
               interactions <- list()
               
               if(length(input$interaction) > 0) {
-                interactions <- .filter_interactions(input$interaction, input$fixed, global$mrp$input)
+                interactions <- .filter_interactions(input$interaction, input$fixed, global$workflow$mrp_data()$input)
                 interactions <- stats::setNames(paste0("interaction_", interactions), interactions)
               }
             }
@@ -374,8 +376,8 @@ mod_analyze_model_server <- function(id, global){
     # Render model selection UI
     #--------------------------------------------------------------------------
     output$model_select_ui <- renderUI({
-      model_names <- purrr::map_chr(global$models, ~ .x$name)
-      model_ids <- purrr::map_chr(global$models, ~ .x$IDs$main)
+      model_names <- purrr::map_chr(global$models, ~ .x$name())
+      model_ids <- purrr::map_chr(global$models, ~ .x$get_id())
 
       tags$div(class = "d-flex align-items-end gap-2",
         selectizeInput(
@@ -399,7 +401,7 @@ mod_analyze_model_server <- function(id, global){
     #-----------------------------------------------------------------------
     output$loo_ui <- renderUI({
       req(global$models)
-      global$metadata
+      global$workflow
       input$compare_btn
 
       selected_ids <- isolate(input$model_select)
@@ -437,15 +439,15 @@ mod_analyze_model_server <- function(id, global){
     # Render posterior predictive check UI
     #-----------------------------------------------------------------------
     output$ppc_plots <- renderUI({
-      global$metadata
+      global$workflow
       input$compare_btn
 
       selected_ids <- isolate(input$model_select)
       models <- isolate(global$models)
 
       if(length(selected_ids) > 0 && !is.null(models)) {
-        model_names <- purrr::map_chr(models[selected_ids], ~ .x$name)
-        model_formulas <- purrr::map_chr(models[selected_ids], ~ .x$formula)
+        model_names <- purrr::map_chr(models[selected_ids], ~ .x$name())
+        model_formulas <- purrr::map_chr(models[selected_ids], ~ .x$formula())
 
         tagList(
           bslib::card(
@@ -473,76 +475,45 @@ mod_analyze_model_server <- function(id, global){
           html = .waiter_ui("loo"),
           color = waiter::transparent(0.9)
         )
-
+      
         ### PPC plots
-        inputs <- purrr::map(global$models[selected_ids], function(m) m$mrp$input)
-        yreps <- purrr::map(global$models[selected_ids], function(m) m$yrep)
+        selected_models <- global$models[selected_ids]
 
-        purrr::map(seq_along(yreps), function(i) {
+        purrr::map(seq_along(selected_models), function(i) {
           output[[paste0("compare_ppc", i)]] <- renderPlot({
-            if(global$metadata$is_timevar) {
-              req(global$models)
-
-              .plot_ppc_timevar_subset(
-                yrep = yreps[[i]],
-                raw = inputs[[i]],
-                dates = global$plotdata$dates,
-                metadata = global$metadata
-              )
-            } else {
-              .plot_ppc_static(
-                yrep = yreps[[i]],
-                raw = inputs[[i]],
-                metadata = global$metadata
-              )
-            }
+            global$workflow$pp_check(selected_models[[i]])
           })
         })
 
 
         ### LOO table
         if (length(selected_ids) >= 2) {
-          compare_df <- NULL
+          out <- NULL
           
           tryCatch({
             # Use model names instead of IDs
             selected_models <- global$models[selected_ids]
-            names(selected_models) <- purrr::map_chr(selected_models, ~ .x$name)
+            names(selected_models) <- purrr::map_chr(selected_models, ~ .x$name())
 
-            # Extract log-likelihood from each model
-            loo_list <- purrr::map(selected_models, function(m) {
-              utils::capture.output({
-                loo_output <- loo::loo(m$log_lik, cores = m$metadata$n_chains)
-              }, type = "message")
-
-              return(loo_output)
-            })
-
-
-            # Check for problematic Pareto k values and notify users
-            dfs <- purrr::map(loo_list, function(x) loo::pareto_k_table(x))
-            for (df in dfs) {
-              if (sum(df[2:3, 1]) > 0) {
-                bslib::toggle_tooltip("loo_diagnos_tooltip", show = TRUE)
-                break
-              }
-            }
-            
-            # Store the Pareto k tables
-            pareto_k_dfs(dfs)
-
-            # Compare the models using loo_compare
-            compare_df <- loo_list %>%
-              loo::loo_compare() %>%
-              as.data.frame() %>%
-              select(.data$elpd_diff, .data$se_diff)
+            out <- global$workflow$compare_models(selected_models)
 
           }, error = function(e) {
             message(paste0("Error during LOO-CV: ", e$message))
             .show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
           })
 
-          output$loo_table <- renderTable(compare_df, rownames = TRUE, width = "300px")
+          if (!is.null(out)) {
+            # render LOO table
+            output$loo_table <- renderTable(out$compare_df, rownames = TRUE, width = "300px")
+
+            # store pareto k tables
+            pareto_k_dfs(out$pareto_k_dfs)
+
+            # show tooltip if any Pareto k values are problematic
+            bslib::toggle_tooltip("loo_diagnos_tooltip", show = out$flag)
+          }
+
+          
         }
 
         waiter::waiter_hide()
@@ -595,8 +566,15 @@ mod_analyze_model_server <- function(id, global){
     # Render feedbacl for model upload
     #-----------------------------------------------------------------------
     output$model_feedback <- renderUI({
-      if(!is.null(model_feedback())) {
-        if(model_feedback() == "") {
+      if(model_uploaded()) {
+        model <- isolate(model_buffer())
+        valid <- checkmate::check_class(
+          model,
+          classes = "ShinyMRPModel",
+          null.ok = FALSE
+        )
+
+        if(valid) {
           tags$div(
             tagList(icon("circle-check", "fa"), "Success"),
             tags$p("Estimation result loaded successfully.", class = "small")
@@ -604,7 +582,7 @@ mod_analyze_model_server <- function(id, global){
         } else {
           tags$div(
             tagList(icon("circle-xmark", "fa"), "Error"),
-            tags$p(model_feedback(), class = "small"),
+            tags$p("Invalid. Object must be of class ShinyMRPModel.", class = "small")
           )
         }
       }
@@ -616,7 +594,7 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(input$reset_btn, {
       prior_buffer(list())
 
-      .reset_inputs(global$mpr$vars)
+      .reset_inputs(global$workflow$mrp_data()$vars)
     })
 
     #-----------------------------------------------------------------------
@@ -625,16 +603,21 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(input$add_model, {
       # Check if CmdStan is installed
       if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-        if(.get_config("demo")) {
-          .show_alert(tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+        msg <- if(.get_config("demo")) {
+          tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), ".")
         } else {
-          .show_alert(tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), "."), global$session)
+          tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), ".")
         }
+        .show_alert(msg, global$session)
         return()
       }
       
       # Validate iteration and chain parameters
-      n_iter <- if(input$iter_select == "Custom") input$iter_kb else as.integer(strsplit(input$iter_select, " ")[[1]][1])
+      n_iter <- if(input$iter_select == "Custom") {
+        input$iter_kb
+      } else {
+        as.integer(strsplit(input$iter_select, " ")[[1]][1])
+      }
       n_chains <- input$chain_select
       seed <- input$seed_select
       
@@ -689,10 +672,10 @@ mod_analyze_model_server <- function(id, global){
       # Try to fit the model
       tryCatch({
         # assign default priors to all selected effects
-        effects <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
+        model_spec <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
         for(type in GLOBAL$args$effect_types) {
           for(v in input[[type]]) {
-            effects[[type]][[v]] <- GLOBAL$default_priors[[type]]
+            model_spec[[type]][[v]] <- GLOBAL$default_priors[[type]]
           }
         }
     
@@ -704,49 +687,36 @@ mod_analyze_model_server <- function(id, global){
           if(!is.null(.nullify(dist))) {
             for(s in eff) {
               ss <- strsplit(s, split = "_")[[1]]
-              effects[[ss[1]]][[ss[2]]] <- dist
+              model_spec[[ss[1]]][[ss[2]]] <- dist
             }
           }
         }
-        
-        # Create model object
-        model <- list()
-        model$effects <- effects %>%
-          .group_effects(global$mrp$input) %>%
-          .ungroup_effects()
-        model$formula <- .create_formula(model$effects)
-        model$mrp <- global$mrp
-        model$plotdata <- global$plotdata
-        model$linkdata <- global$linkdata
-        model$metadata <- c(global$metadata, list(
-          n_iter = n_iter,
-          n_chains = n_chains,
-          pstrat_vars = intersect(GLOBAL$vars$pstrat, names(model$mrp$new))
-        ))
 
-        # run MCMC
+        # create model object
+        model <- global$workflow$create_model(model_spec)
+
+        # include sensitivity and specificity for COVID data
         extra <- NULL
-        if (!is.null(global$metadata$special_case) &&
-            global$metadata$special_case == "covid") {
+        if (!is.null(global$workflow$metadata()$special_case) &&
+            global$workflow$metadata()$special_case == "covid") {
           extra <- list(
             sens = input$sens_kb,
             spec = input$spec_kb
           )
         }
 
-        mcmc <- .run_mcmc(
-          input_data = .stan_factor(model$mrp$input),
-          new_data = .stan_factor(model$mrp$new),
-          effects = model$effects,
-          metadata = model$metadata,
-          n_iter = model$metadata$n_iter,
-          n_chains = model$metadata$n_chains,
-          seed = input$seed_select,
+        # run MCMC
+        model$fit(
+          n_iter = n_iter,
+          n_chains = n_chains,
+          seed = seed,
           extra = extra
         )
-        
-        model_buffer(c(model, mcmc))
-        
+
+        model_buffer(model)
+
+        global$trigger_model_change()
+
       }, error = function(e) {
         message(paste0("Error fitting model: ", e$message))
         .show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
@@ -760,14 +730,14 @@ mod_analyze_model_server <- function(id, global){
         color = waiter::transparent(0.9)
       )
 
-      model <- qs::qread(input$fit_upload$datapath)
-      .check_fit_object(model, global$metadata) %>% model_feedback()
+      model_buffer(
+        qs::qread(input$fit_upload$datapath)
+      )
 
-      if(model_feedback() == "") {
-        model_buffer(model)
-      } else {
-        waiter::waiter_hide()
-      }
+      model_uploaded(TRUE)
+      shinyjs::delay(5000, { model_uploaded(FALSE) })
+
+      global$trigger_model_change()
 
     })
 
@@ -778,191 +748,115 @@ mod_analyze_model_server <- function(id, global){
       )
 
       file_name <- .create_example_filename(
-        global$metadata,
+        global$workflow$metadata(),
         suffix = "fit",
         ext = ".qs"
       )
 
-      .fetch_data(file_name, subdir = "example/fit") %>%
-        model_buffer()
+      model_buffer(
+        .fetch_data(file_name, subdir = "example/fit")
+      )
+
+      global$trigger_model_change()
     })
     
     # create new model tab
-    observeEvent(model_buffer(), {
+    observeEvent(global$model_ver, {
+      req(model_buffer())
+
       model <- model_buffer()
+      model$assign_id()
+      model_id <- model$get_id()
 
-      # extract sampler diagnostics
-      show_warnings <- FALSE
-      if (is.null(model$diagnostics$mcmc)) {
-        out <- .get_diagnostics(
-          fit = model$fit,
-          total_transitions = model$metadata$n_iter / 2 * model$metadata$n_chains
-        )
-        model$diagnostics$mcmc <- out$summary
-        show_warnings <- out$show_warnings
-      }
-      
-      # extract posterior summary of coefficients
-      if (is.null(model$params)) {
-        model$params <- .get_parameters(
-          fit = model$fit,
-          effects = model$effects,
-          input_data = model$mrp$input,
-          metadata = model$metadata
-        )
-      }
-      
-      # run standalone generated quantities for LOO
-      if (is.null(model$log_lik)) {
-        fit_loo <- .run_gq(
-          fit_mcmc = model$fit,
-          stan_code = model$stan_code$loo,
-          stan_data = model$stan_data,
-          n_chains = model$metadata$n_chains
-        )
-
-        model$log_lik <- fit_loo$draws("log_lik")
-      }
-      
-      # data for PPC plots
-      if (is.null(model$yrep)) {
-        # run standalone generated quantities for PPC
-        fit_ppc <- .run_gq(
-          fit_mcmc = model$fit,
-          stan_code = model$stan_code$ppc,
-          stan_data = model$stan_data,
-          n_chains = model$metadata$n_chains
-        )
-
-        # extract draws and format PPC draws
-        model$yrep <- .get_replicates(
-          fit_ppc,
-          model$mrp$input,
-          model$metadata
-        )
-      }
-      
-      # UI element IDs
-      model_id <- .generate_id()
-      model$IDs <- list(
-        main = model_id,
-        fixed_tbl = paste0("fixed_tbl_", model_id),
-        varying_tbl = paste0("varying_tbl_", model_id),
-        other_tbl = paste0("other_tbl_", model_id),
-        ppc_plot = paste0("ppc_plot_", model_id),
-        tab = paste0("tab_", model_id),
-        title = paste0("title_", model_id),
-        rm_btn = paste0("rm_btn_", model_id),
-        save_popover_btn = paste0("save_popover_btn_", model_id),
-        save_fit_btn = paste0("save_fit_btn_", model_id),
-        save_code_btn = paste0("save_code_btn_", model_id),
-        diagnos_tooltip = paste0("diagnos_tooltip_", model_id),
-        diagnos_btn = paste0("diagnos_btn_", model_id),
-        diagnos_tbl = paste0("diagnos_tbl_", model_id),
-        postprocess_btn = paste0("postprocess_btn_", model_id)
-      )
+      model$summary()
+      model$loo()
+      model$ppc()
    
       # create new model tab
-      tab_ids <- purrr::map_chr(global$models, function(m) m$IDs$tab)
-      last_tab_id <- if(length(tab_ids) > 0) as.character(tab_ids[length(tab_ids)]) else "nav_compare"
+      tab_ids <- purrr::map_chr(global$models, function(m) m$get_id("tab"))
+      last_tab_id <- if(length(tab_ids) > 0) {
+        as.character(tab_ids[length(tab_ids)])
+      } else {
+        "nav_compare"
+      }
       .create_model_tab(ns, model, last_tab_id)
 
       # changeable tab title
       model_name <- paste0("Model ", length(global$models) + 1)
-      output[[model$IDs$title]] <- renderText(model_name)
-      model$name <- model_name
-      
-      # tab removal
-      observeEvent(input[[model$IDs$rm_btn]], {
-        model <- global$models[[model_id]]
+      output[[model$get_id("title")]] <- renderText(model_name)
+      model$set_name(model_name)
 
+      # tab removal
+      observeEvent(input[[model$get_id("rm_btn")]], {
         # remove model object and tab
+        bslib::nav_remove("navbar_model", global$models[[model_id]]$get_id("tab"), session)
         global$models[[model_id]] <- NULL
-        bslib::nav_remove("navbar_model", model$IDs$tab, session)
 
         # rename tabs
         new_names <- if(length(global$models) > 0) paste0("Model ", seq_along(global$models)) else c()
         purrr::map(seq_along(new_names), function(i) {
-          output[[global$models[[i]]$IDs$title]] <- renderText(new_names[i])
-          global$models[[i]]$name <- new_names[i]
+          output[[global$models[[i]]$get_id("title")]] <- renderText(new_names[i])
+          global$models[[i]]$set_name(new_names[i])
         })
       })
 
       # show sampler diagnostics
-      observeEvent(input[[model$IDs$diagnos_btn]], {
-        bslib::toggle_tooltip(model$IDs$diagnos_tooltip, show = FALSE)
+      observeEvent(input[[model$get_id("diagnos_btn")]], {
+        bslib::toggle_tooltip(model$get_id("diagnos_tooltip"), show = FALSE)
 
         showModal(modalDialog(
           title = "Sampler Diagnostics",
           tags$p("Below is a summary of problems encountered during sampling for the current model. Ideally, the top two quantities are close to 0 and E-BFMI value are above 0.3. For details, see ",
             tags$a("https://mc-stan.org/misc/warnings", href = "https://mc-stan.org/misc/warnings", target = "_blank"), "."),
-          tableOutput(ns(model$IDs$diagnos_tbl)),
+          tableOutput(ns(model$get_id("diagnos_tbl"))),
           easyClose = TRUE,
           size = "l",
           footer = modalButton("Close")
         ))
       })
 
-      # Create the table output to display the diagnostics
-      output[[model$IDs$diagnos_tbl]] <- renderTable(model$diagnostics$mcmc, colnames = FALSE)
-      
+      # render sampling diagnostics table
+      output[[model$get_id("diagnos_tbl")]] <- renderTable(
+        model$diagnostics(),
+        colnames = FALSE
+      )
+
       # render fixed and varying effect tables
-      output[[model$IDs$fixed_tbl]] <- renderTable(model$params$fixed, rownames = TRUE, na = "")
-      output[[model$IDs$varying_tbl]] <- renderTable(model$params$varying, rownames = TRUE, na = "")
-      output[[model$IDs$other_tbl]] <- renderTable(model$params$other, rownames = TRUE, na = "")
-      
+      output[[model$get_id("fixed_tbl")]] <- renderTable(
+        model$summary()$fixed,
+        rownames = TRUE,
+        na = ""
+      )
+      output[[model$get_id("varying_tbl")]] <- renderTable(
+        model$summary()$varying,
+        rownames = TRUE,
+        na = ""
+      )
+      output[[model$get_id("other_tbl")]] <- renderTable(
+        model$summary()$other,
+        rownames = TRUE,
+        na = ""
+      )
+
       # render ppc plot
-      output[[model$IDs$ppc_plot]] <- renderPlot({
-        req(model$yrep)
-        
-        if(global$metadata$is_timevar) {
-          .plot_ppc_timevar_subset(
-            yrep = model$yrep,
-            raw = model$mrp$input,
-            dates = global$plotdata$dates,
-            metadata = global$metadata
-          )
-        } else {
-          .plot_ppc_static(
-            yrep = model$yrep,
-            raw = model$mrp$input,
-            metadata = global$metadata
-          )
-        }
+      output[[model$get_id("ppc_plot")]] <- renderPlot({
+        global$workflow$pp_check(model)
       })
-      
+
       # postprocessing
-      observeEvent(input[[model$IDs$postprocess_btn]], {
+      observeEvent(input[[model$get_id("postprocess_btn")]], {
 
-        if(is.null(global$models[[model_id]]$est)) {
-          waiter::waiter_show(
-            html = .waiter_ui("pstrat"),
-            color = waiter::transparent(0.9)
-          )
-          
-          model <- global$models[[model_id]]
-          
-          fit_pstrat <- .run_gq(
-            fit_mcmc = model$fit,
-            stan_code = model$stan_code$pstrat,
-            stan_data = model$stan_data,
-            n_chains = model$metadata$n_chains
-          )
-          
-          model$est <- .get_estimates(
-            fit_pstrat,
-            model$mrp$new,
-            model$metadata
-          )
+        waiter::waiter_show(
+          html = .waiter_ui("pstrat"),
+          color = waiter::transparent(0.9)
+        )
 
-          # update reactiveValues
-          global$models[[model_id]] <- model
-          
-          waiter::waiter_hide()
-        }
+        global$models[[model_id]]$poststratify()
+
+        waiter::waiter_hide()
         
         # download fit result after postprocessing
-        output[[model$IDs$save_fit_btn]] <- downloadHandler(
+        output[[model$get_id("save_fit_btn")]] <- downloadHandler(
           filename = function() { 
             paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
           },
@@ -972,24 +866,22 @@ mod_analyze_model_server <- function(id, global){
               color = waiter::transparent(0.9)
             )
 
-            model$fit <- NULL  # remove fit object to save space
-
-            qs::qsave(model, file)
+            model$save(file)
             
             waiter::waiter_hide()
           }
         )
         
         # change fit result download button color to indicate inclusion of postprocessing results
-        shinyjs::addClass(model$IDs$save_fit_btn, "btn btn-primary")
+        shinyjs::addClass(model$get_id("save_fit_btn"), "btn btn-primary")
 
         # disable postprocessing button
-        shinyjs::disable(model$IDs$postprocess_btn)
+        shinyjs::disable(model$get_id("postprocess_btn"))
       })
       
       # download fit result before postprocessing
-      output[[model$IDs$save_fit_btn]] <- downloadHandler(
-        filename = function() { 
+      output[[model$get_id("save_fit_btn")]] <- downloadHandler(
+        filename = function() {
           paste0("estimation_wo_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
         },
         content = function(file) {
@@ -997,31 +889,37 @@ mod_analyze_model_server <- function(id, global){
             html = .waiter_ui("wait"),
             color = waiter::transparent(0.9)
           )
-          
-          qs::qsave(model, file)
-          
+
+          model$save(file)
+
           waiter::waiter_hide()
         }
       )
-      
+
       # download Stan code
-      output[[model$IDs$save_code_btn]] <- downloadHandler(
+      output[[model$get_id("save_code_btn")]] <- downloadHandler(
         filename = function() { "model.stan" },
         content = function(file) {
-          writeLines(model$stan_code$mcmc, file)
+          writeLines(model$stan_code(), file)
         }
       )
 
       # trigger diagnostics tooltip
-      if(show_warnings) {
-        bslib::toggle_tooltip(model$IDs$diagnos_tooltip, show = TRUE)
+      if(.check_divergence(model$diagnostics(summarize = FALSE))) {
+        bslib::toggle_tooltip(
+          model$get_id("diagnos_tooltip"),
+          show = TRUE
+        )
       }
-      
-      # if object contains poststratificaiton results
-      if(!is.null(model$est)) {
-        shinyjs::delay(100, shinyjs::click(model$IDs$postprocess_btn))
+
+      # if object contains poststratification results
+      if(model$check_estimate_exists()) {
+        shinyjs::delay(
+          100,
+          shinyjs::click(model$get_id("postprocess_btn"))
+        )
       }
-      
+
       # add to model list
       global$models[[model_id]] <- model
 
@@ -1030,21 +928,22 @@ mod_analyze_model_server <- function(id, global){
 
 
     #------------------------------------------------------------------
-    # reset everything when new data is uploaded or
-    # when user switch interface
+    # reset everything when new data is uploaded,
+    # when poststratification data changes,
+    # or when a new workflow is created
     #------------------------------------------------------------------
     observeEvent(
       eventExpr = list(
-        global$data,
-        global$metadata,
-        global$linkdata
+        global$workflow,
+        global$prep_ver,
+        global$mrp_ver
       ), 
       handlerExpr = {
         # reset input fields
         prior_buffer(list())
         model_buffer(NULL)
-        model_feedback(NULL)
         pareto_k_dfs(NULL)
+        model_uploaded(FALSE)
 
         .reset_inputs(vars = list(
           fixed = list(),
@@ -1052,7 +951,8 @@ mod_analyze_model_server <- function(id, global){
         ))
 
         # delete all model tabs
-        purrr::map(purrr::map(global$models, function(m) m$IDs$tab), function(id) {
+        tab_ids <- purrr::map_chr(global$models, function(m) m$get_id("tab"))
+        purrr::map(tab_ids, function(id) {
           bslib::nav_remove("navbar_model", id, session)
         })
 
@@ -1064,7 +964,6 @@ mod_analyze_model_server <- function(id, global){
 
         # clear model object list
         global$models <- NULL
-        global$poststratified_models <- NULL
 
         # reset the accordion to show the model specification panel
         bslib::accordion_panel_open(

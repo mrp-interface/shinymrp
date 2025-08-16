@@ -4,15 +4,15 @@
 \alias{MRPModel}
 \title{MRPModel objects}
 \arguments{
-\item{effects}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
+\item{model_spec}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
 
-\item{mrp}{List containing the MRP data structure with input sample data and new post-stratification data}
+\item{mrp_data}{List containing the MRP data structure with input sample data and new post-stratification data}
 
 \item{metadata}{List containing metadata about the analysis including family, time variables, and special cases}
 
-\item{linkdata}{List containing information about data linking including geography and ACS year}
+\item{link_data}{List containing information about data linking including geography and ACS year}
 
-\item{plotdata}{List containing data prepared for visualization including dates and geojson objects}
+\item{plot_data}{List containing data prepared for visualization including dates and geojson objects}
 }
 \value{
 A new \code{MRPModel} object initialized with the provided effects, MRP data, metadata, link data, and plot data.
@@ -25,42 +25,25 @@ multilevel regression model with methods for sampling, diagnostics,
 and post-stratification.
 
 Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
-
-Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
-
-Retrieves the model formula constructed from the effects specification.
-
-Retrieves the MRP data structure containing input sample data and post-stratification data.
-
-Retrieves the metadata associated with the model, including information about family, time variables, and fitting parameters.
-
-Retrieves the data prepared for visualization, including dates and geojson objects.
-
-Retrieves the data linking information including geography and ACS year.
-
-Retrieves the Stan data structure used for MCMC sampling
-
-Retrieves Stan code.
 }
 \section{Methods}{
  \code{MRPModel} objects have the following associated
 methods, many of which have their own (linked) documentation pages:
 \subsection{Data access}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-effects]{$effects()}} \tab Return model specification. \cr
+   \code{\link[=MRPModel-method-model_spec]{$model_spec()}} \tab Return model specification. \cr
    \code{\link[=MRPModel-method-formula]{$formula()}} \tab Return model formula. \cr
-   \code{\link[=MRPModel-method-mrp]{$mrp()}} \tab Return data for MRP. \cr
    \code{\link[=MRPModel-method-metadata]{$metadata()}} \tab Return model metadata. \cr
-   \code{\link[=MRPModel-method-plotdata]{$plotdata()}} \tab Return data used for plotting. \cr
+   \code{\link[=MRPModel-method-stan_code]{$stan_code()}} \tab Return model Stan code. \cr
 }
 
 }
 
 \subsection{Model fitting}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-fit]{$fit()}} \tab Fit multilevel regression model using \link{cmdstanr}. \cr
+   \code{\link[=MRPModel-method-fit]{$fit()}} \tab Fit multilevel regression model using CmdStanR. \cr
    \code{\link[=MRPModel-method-check_fit_exists]{$check_fit_exists()}} \tab Check if model has been fitted. \cr
-   \code{\link[=MRPModel-method-code]{$code()}} \tab Return Stan code. \cr
+   \code{\link[=MRPModel-method-check_estimate_exists]{$check_estimate_exists()}} \tab Check if post-stratification has been performed. \cr
 }
 
 }
@@ -71,12 +54,6 @@ methods, many of which have their own (linked) documentation pages:
    \code{\link[=MRPModel-method-diagnostics]{$diagnostics()}} \tab Return sampling diagnostics. \cr
    \code{\link[=MRPModel-method-ppc]{$ppc()}} \tab Run posterior predictive check. \cr
    \code{\link[=MRPModel-method-loo]{$loo()}} \tab Create inputs for leave-one-out cross-validation. \cr
-}
-
-}
-
-\subsection{Post-stratification}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPModel-method-poststratify]{$poststratify()}} \tab Run post-stratification to generate population estimates. \cr
 }
 
