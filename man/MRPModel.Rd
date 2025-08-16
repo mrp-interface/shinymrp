@@ -4,15 +4,15 @@
 \alias{MRPModel}
 \title{MRPModel objects}
 \arguments{
-\item{effects}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
+\item{model_spec}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
 
-\item{mrp}{List containing the MRP data structure with input sample data and new post-stratification data}
+\item{mrp_data}{List containing the MRP data structure with input sample data and new post-stratification data}
 
 \item{metadata}{List containing metadata about the analysis including family, time variables, and special cases}
 
-\item{linkdata}{List containing information about data linking including geography and ACS year}
+\item{link_data}{List containing information about data linking including geography and ACS year}
 
-\item{plotdata}{List containing data prepared for visualization including dates and geojson objects}
+\item{plot_data}{List containing data prepared for visualization including dates and geojson objects}
 }
 \value{
 A new \code{MRPModel} object initialized with the provided effects, MRP data, metadata, link data, and plot data.
@@ -47,11 +47,9 @@ Retrieves Stan code.
 methods, many of which have their own (linked) documentation pages:
 \subsection{Data access}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-effects]{$effects()}} \tab Return model specification. \cr
+   \code{\link[=MRPModel-method-model_spec]{$model_spec()}} \tab Return model specification. \cr
    \code{\link[=MRPModel-method-formula]{$formula()}} \tab Return model formula. \cr
-   \code{\link[=MRPModel-method-mrp]{$mrp()}} \tab Return data for MRP. \cr
    \code{\link[=MRPModel-method-metadata]{$metadata()}} \tab Return model metadata. \cr
-   \code{\link[=MRPModel-method-plotdata]{$plotdata()}} \tab Return data used for plotting. \cr
 }
 
 }

@@ -11,6 +11,7 @@ preprocess(
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
+  freq = NULL,
   zip_threshold = 0,
   state_threshold = 0
 )

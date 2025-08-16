@@ -13,6 +13,7 @@ Retrieves the Stan model code used for MCMC fitting.
 \seealso{
 Other MRPModel methods: 
 \code{\link{MRPModel-method-check_fit_exists}},
+\code{\link{MRPModel-method-check_if_poststratified}},
 \code{\link{MRPModel-method-diagnostics}},
 \code{\link{MRPModel-method-fit}},
 \code{\link{MRPModel-method-loo}},

@@ -110,27 +110,49 @@ mod_analyze_result_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
+    pstrat_models_rv <- reactiveVal()
+
     # Reactive for the selected model.
-    selected_model <- reactive({
+    selected_model_r <- reactive({
       req(input$model_select)
 
-      global$poststratified_models[[input$model_select]]
+      pstrat_models_rv()[[input$model_select]]
     })
     # Buffer to preserve selection.
-    model_select_buffer <- reactive(input$model_select)
+    model_select_buffer_r <- reactive(input$model_select)
 
 
     # --------------------------------------------------------------------------
     # Initialize demographic plot modules (always called so the server is ready)
     # --------------------------------------------------------------------------
-    mod_est_plot_server("est_sex", selected_model, "sex")
-    mod_est_plot_server("est_race", selected_model, "race")
-    mod_est_plot_server("est_age", selected_model, "age")
-    mod_est_plot_server("est_edu", selected_model, "edu")
+    mod_est_plot_server(
+      "est_sex",
+      reactive(global$workflow),
+      selected_model_r,
+      "sex"
+    )
+    mod_est_plot_server(
+      "est_race",
+      reactive(global$workflow),
+      selected_model_r,
+      "race"
+    )
+    mod_est_plot_server(
+      "est_age",
+      reactive(global$workflow),
+      selected_model_r,
+      "age"
+    )
+    mod_est_plot_server(
+      "est_edu",
+      reactive(global$workflow),
+      selected_model_r,
+      "edu"
+    )
     mod_est_map_server(
       "est_geo",
-      selected_model,
-      global,
+      reactive(global$workflow),
+      selected_model_r,
       reactive(tolower(input$geo_scale_select)),
       reactive(input$geo_view_select),
       reactive(input$geo_unit_select)
@@ -140,23 +162,9 @@ mod_analyze_result_server <- function(id, global){
     # Overall plot for Raw vs MRP
     # --------------------------------------------------------------------------
     output$est_overall <- renderPlot({
-      req(selected_model())
-      if(global$metadata$is_timevar) {
-        .plot_outcome_timevar(
-          raw = selected_model()$mrp$input,
-          yrep_est = selected_model()$est$overall,
-          dates = selected_model()$plotdata$dates,
-          metadata = selected_model()$metadata,
-          show_caption = TRUE
-        )
-      } else {
-        .plot_outcome_static(
-          raw = selected_model()$mrp$input,
-          yrep_est = selected_model()$est$overall,
-          metadata = selected_model()$metadata,
-          show_caption = TRUE
-        )
-      }
+      req(selected_model_r())
+
+      global$workflow$estimate_plot(selected_model_r())
     }, height = function() GLOBAL$plot$ui$plot_height)
     
     # --------------------------------------------------------------------------
@@ -186,23 +194,32 @@ mod_analyze_result_server <- function(id, global){
     # --------------------------------------------------------------------------
     observeEvent(global$input$navbar_analyze, {
       if(global$input$navbar_analyze == "nav_analyze_result") {        
-        if (!is.null(global$mrp)) {
+        if (global$workflow$check_mrp_exists()) {
           # Omit pre-poststratification models.
-          models <- purrr::keep(global$models, ~ !is.null(.x$est))
-          global$poststratified_models <- models
-          
-          if(length(models) == 0) {
+          pstrat_models_rv(
+            purrr::keep(
+              global$models,
+              ~ .x$check_if_poststratified()
+            )
+          )
+
+          if(length(pstrat_models_rv()) == 0) {
             showModal(modalDialog(
               title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
               "No model with poststratified estimates found. Make sure to run poststratification after fitting models.",
               footer = actionButton(inputId = ns("to_model"), label = "Go to model page")
             ), session = global$session)
           } else {
-            model_names <- purrr::map_chr(models, ~ .x$name)
-            model_ids <- purrr::map_chr(models, ~ .x$IDs$main)
+            model_names <- purrr::map_chr(pstrat_models_rv(), ~ .x$name())
+            model_ids <- purrr::map_chr(pstrat_models_rv(), ~ .x$get_id())
             choices <- stats::setNames(model_ids, model_names)
-            selected <- if(model_select_buffer() %in% choices) model_select_buffer() else choices[1]
-            updateSelectInput(session, inputId = "model_select", choices = choices, selected = selected)
+            selected <- if(model_select_buffer_r() %in% choices) model_select_buffer_r() else choices[1]
+            updateSelectInput(
+              session,
+              inputId = "model_select",
+              choices = choices,
+              selected = selected
+            )
           }
         }
       }
@@ -211,22 +228,22 @@ mod_analyze_result_server <- function(id, global){
     # --------------------------------------------------------------------------
     # Update subgroup and geographic scale selection when model changes.
     # --------------------------------------------------------------------------
-    observeEvent(selected_model(), {
-      req(selected_model(), input$model_select)
+    observeEvent(selected_model_r(), {
+      req(selected_model_r(), input$model_select)
 
       # Update the subgroup select options.
       choices <- GLOBAL$ui$plot_selection$subgroup
-      if(is.null(selected_model()$metadata$special_case) ||
-         selected_model()$metadata$special_case != "poll") {
+      if(is.null(selected_model_r()$metadata()$special_case) ||
+         selected_model_r()$metadata()$special_case != "poll") {
         choices <- choices[!choices == "edu"]
       }
-      if(is.null(selected_model()$linkdata$link_geo)) {
+      if(is.null(selected_model_r()$link_data()$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
       updateSelectInput(session, inputId = "subgroup_select", choices = choices)
 
       # Update the geographic scale select options.
-      choices <- intersect(names(selected_model()$est), GLOBAL$vars$geo)
+      choices <- intersect(names(selected_model_r()$poststratify()), GLOBAL$vars$geo)
       choices <- stats::setNames(choices, tools::toTitleCase(choices))
       updateSelectInput(session, inputId = "geo_scale_select", choices = choices)
     })
@@ -240,7 +257,7 @@ mod_analyze_result_server <- function(id, global){
       
       geo <- isolate(input$geo_scale_select)
       fips_df <- fips_[[geo]] %>%
-        filter(.data$fips %in% selected_model()$mrp$levels[[geo]]) %>%
+        filter(.data$fips %in% selected_model_r()$mrp_data()$levels[[geo]]) %>%
         .fips_upper()
       choices <- sort(fips_df[[geo]])
       updateSelectInput(session, inputId = "geo_unit_select", choices = choices, selected = choices[1])
@@ -260,9 +277,9 @@ mod_analyze_result_server <- function(id, global){
     # --------------------------------------------------------------------------
     observeEvent(
       eventExpr = list(
-        global$data,
-        global$metadata,
-        global$linkdata
+        global$workflow,
+        global$prep_ver,
+        global$mrp_ver
       ),
       handlerExpr = {
         shinyjs::reset("model_select")
