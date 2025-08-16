@@ -25,14 +25,6 @@ multilevel regression model with methods for sampling, diagnostics,
 and post-stratification.
 
 Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
-
-Retrieves the MRP data structure containing input sample data and post-stratification data.
-
-Retrieves the data prepared for visualization, including dates and geojson objects.
-
-Retrieves the data linking information including geography and ACS year.
-
-Retrieves the Stan data structure used for MCMC sampling
 }
 \section{Methods}{
  \code{MRPModel} objects have the following associated
@@ -49,7 +41,7 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Model fitting}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-fit]{$fit()}} \tab Fit multilevel regression model using \link{cmdstanr}. \cr
+   \code{\link[=MRPModel-method-fit]{$fit()}} \tab Fit multilevel regression model using CmdStanR. \cr
    \code{\link[=MRPModel-method-check_fit_exists]{$check_fit_exists()}} \tab Check if model has been fitted. \cr
    \code{\link[=MRPModel-method-check_estimate_exists]{$check_estimate_exists()}} \tab Check if post-stratification has been performed. \cr
 }
