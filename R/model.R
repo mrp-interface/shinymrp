@@ -105,22 +105,18 @@ MRPModel <- R6::R6Class(
       )
     },
 
-    #' @description Retrieves the MRP data structure containing input sample data and post-stratification data.
     mrp_data = function() {
       return(private$mrpdat_)
     },
 
-    #' @description Retrieves the data prepared for visualization, including dates and geojson objects.
     plot_data = function() {
       return(private$plotdat_)
     },
 
-    #' @description Retrieves the data linking information including geography and ACS year.
     link_data = function() {
       return(private$linkdat_)
     },
     
-    #' @description Retrieves the Stan data structure used for MCMC sampling
     stan_data = function() {
       return(private$standata_)
     }

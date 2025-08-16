@@ -6,3 +6,4 @@
 \description{
 A sub-class of MRPWorkflow for use with Shiny applications
 }
+\keyword{internal}
