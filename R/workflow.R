@@ -69,26 +69,26 @@ mrp_workflow <- function() {
 MRPWorkflow <- R6::R6Class(
   "MRPWorkflow",
   private = list(
-    data_ = NULL,
-    metadata_ = NULL,
-    linkdata_ = NULL,
-    plotdata_ = NULL,
-    mrp_ = NULL,
+    prepdat_ = NULL,
+    metadat_ = NULL,
+    linkdat_ = NULL,
+    plotdat_ = NULL,
+    mrpdat_ = NULL,
 
     assert_metadata_exists = function() {
-      if (is.null(private$metadata_)) {
+      if (is.null(private$metadat_)) {
         stop("Metadata is not available. Please run 'preprocess' first.")
       }
     },
 
     assert_data_exists = function() {
-      if (is.null(private$data_)) {
+      if (is.null(private$prepdat_)) {
         stop("Sample data is not available. Please run 'preprocess' first.")
       }
     },
 
     assert_mrp_exists = function() {
-      if (is.null(private$mrp_)) {
+      if (is.null(private$mrpdat_)) {
         stop("Data for MRP is not available. Please run 'link_acs' or 'load_pstrat' first.")
       }
     },
@@ -114,7 +114,7 @@ MRPWorkflow <- R6::R6Class(
 
       # check if model_spec have corresponding variables in data
       main_vars <- c(names(model_spec$fixed), names(model_spec$varying))
-      vars_in_data <- names(private$mrp_$input)
+      vars_in_data <- names(private$mrpdat_$input)
       invalid_vars <- setdiff(main_vars, vars_in_data)
 
       if (length(invalid_vars) > 0) {
@@ -123,7 +123,7 @@ MRPWorkflow <- R6::R6Class(
       }
 
       # check if any variables are single-level factors
-      omit_vars <- private$mrp_$vars$omit
+      omit_vars <- private$mrpdat_$vars$omit
       if (length(intersect(main_vars, omit_vars$one_level)) > 0) {
         stop(paste0("The following variables have a single level and cannot be used: ",
             paste(omit_vars$one_level, collapse = ", ")))
@@ -140,15 +140,13 @@ MRPWorkflow <- R6::R6Class(
       valid_ints_w_struct <- .filter_interactions(
         interactions = ints_w_struct,
         fixed_effects = names(model_spec$fixed),
-        data = private$mrp_$input
+        data = private$mrpdat_$input
       )
       invalid_ints_w_struct <- setdiff(ints_w_struct, valid_ints_w_struct)
       if (length(invalid_ints_w_struct) > 0) {
         stop(paste0("The following interactions cannot be assigned structured prior: ",
             paste(invalid_ints_w_struct, collapse = ", ")))
       }
-
-      return(TRUE)
     },
 
     assert_model = function(model) {
@@ -157,31 +155,10 @@ MRPWorkflow <- R6::R6Class(
         classes = "MRPModel",
         null.ok = FALSE
       )
-
-      return(TRUE)
     }
   ),
   public = list(
-    #' @description Initializes the MRPWorkflow object, setting up necessary fields for data processing and model fitting.
-    #' 
-    #' @return A new MRPWorkflow object.
-    initialize = function() {},
-
-    check_metadata_exists = function() {
-      return(!is.null(private$metadata_))
-    },
-
-    check_data_exists = function() {
-      return(!is.null(private$data_))
-    },
-
-    check_mrp_exists = function() {
-      return(!is.null(private$mrp_))
-    },
-
-    mrp_data = function() {
-      return(private$mrp_)
-    }
+    initialize = function() {}
   )
 )
 
@@ -194,7 +171,7 @@ MRPWorkflow <- R6::R6Class(
 #' @description Retrieves the metadata associated with the current workflow, including information about time variables, family, and special cases.
 #'
 metadata <- function() {
-  return(private$metadata_)
+  return(private$metadat_)
 }
 MRPWorkflow$set("public", "metadata", metadata)
 
@@ -208,7 +185,7 @@ MRPWorkflow$set("public", "metadata", metadata)
 #' @description Retrieves the preprocessed sample data that has been prepared for MRP analysis.
 #'
 preprocessed_data <- function() {
-  return(private$data_)
+  return(private$prepdat_)
 }
 MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 
@@ -235,7 +212,7 @@ preprocess <- function(
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
-  freq = NULL
+  freq = NULL,
   zip_threshold = 0,
   state_threshold = 0
 ) {
@@ -253,8 +230,8 @@ preprocess <- function(
   if (family == "normal" && is_aggregated) {
     stop("is_aggregated cannot be TRUE for data with continuous outcome (normal family).")
   }
-
-  private$metadata_ <- list(
+  
+  private$metadat_ <- list(
     is_timevar = is_timevar,
     special_case = special_case,
     family = family
@@ -265,9 +242,9 @@ preprocess <- function(
   tryCatch({
     zip_county_state <- .fetch_data("zip_county_state.csv", subdir = "geo")
 
-    private$data_ <- .preprocess(
+    private$prepdat_ <- .preprocess(
       data = data,
-      metadata = private$metadata_,
+      metadata = private$metadat_,
       zip_county_state = zip_county_state,
       freq = freq,
       is_sample = TRUE,
@@ -318,78 +295,78 @@ link_acs <- function(
   message("Linking data to the ACS...")
 
   # store user's selections for data linking
-  private$linkdata_ <- list(
+  private$linkdat_ <- list(
     link_geo = if(link_geo %in% GLOBAL$vars$geo) link_geo else NULL,
     acs_year = acs_year
   )
 
   tryCatch({
-    if (!is.null(private$metadata_$special_case) &&
-        private$metadata_$special_case == "covid") {
+    if (!is.null(private$metadat_$special_case) &&
+        private$metadat_$special_case == "covid") {
 
-      if (is.null(private$linkdata_$link_geo) ||
-          private$linkdata_$link_geo != "zip") {
-        private$linkdata_$link_geo <- "zip"
-        warning(stringr::str_interp("Linking geography is either incorrect or not specified. Using 'zip' as default for COVID data."))
+      if (is.null(private$linkdat_$link_geo) ||
+          private$linkdat_$link_geo != "zip") {
+        private$linkdat_$link_geo <- "zip"
+        warning("Linking geography is either incorrect or not specified. Using 'zip' as default for COVID data.")
       }
 
       pstrat_covid <- .fetch_data("pstrat_covid.csv", subdir = "acs")
       covar_covid <- .fetch_data("covar_covid.csv", subdir = "acs")
 
       # prepare data for MRP
-      private$mrp_ <- .prepare_mrp_covid(
-        input_data = private$data_,
+      private$mrpdat_ <- .prepare_mrp_covid(
+        input_data = private$prepdat_,
         pstrat_data = pstrat_covid,
         covariates = covar_covid,
-        metadata   = private$metadata_
+        metadata   = private$metadat_
       )
 
       # prepare data for plotting
-      private$plotdata_ <- list(
-        dates = if("date" %in% names(private$data_)) .get_dates(private$data_) else NULL,
+      private$plotdat_ <- list(
+        dates = if("date" %in% names(private$prepdat_)) .get_dates(private$prepdat_) else NULL,
         geojson = list(county = .filter_geojson(
           geojson_$county,
-          private$mrp_$levels$county
+          private$mrpdat_$levels$county
         )),
         raw_covariates = covar_covid %>%
-          filter(.data$zip %in% unique(private$mrp_$input$zip))
+          filter(.data$zip %in% unique(private$mrpdat_$input$zip))
       )
 
-    } else if (!is.null(private$metadata_$special_case) &&
-                private$metadata_$special_case == "poll") {
+    } else if (!is.null(private$metadat_$special_case) &&
+                private$metadat_$special_case == "poll") {
 
-      if (is.null(private$linkdata_$link_geo) ||
-          private$linkdata_$link_geo != "state") {
-        private$linkdata_$link_geo <- "state"
+      if (is.null(private$linkdat_$link_geo) ||
+          private$linkdat_$link_geo != "state") {
+        private$linkdat_$link_geo <- "state"
         warning(stringr::str_interp("Linking geography is either incorrect or not specified. Using 'state' as default for polling data."))
       }
 
       new_data <- .fetch_data("pstrat_poll.csv", subdir = "acs") %>%
         mutate(state = .to_fips(.data$state, "state"))
 
-      private$mrp_ <- .prepare_mrp_custom(
-        input_data = private$data_,
+      private$mrpdat_ <- .prepare_mrp_custom(
+        input_data = private$prepdat_,
         new_data = new_data,
-        metadata = private$metadata_,
+        metadata = private$metadat_,
         link_geo = "state"
       )
 
       # prepare data for plotting
-      private$plotdata_ <- list(
+      private$plotdat_ <- list(
         geojson = list(state = .filter_geojson(
           geojson_$state,
-          private$mrp_$levels$state
+          private$mrpdat_$levels$state
         ))
       )
 
     } else {
-      if (is.null(private$linkdata_$acs_year)) {
-        private$linkdata_$acs_year <- GLOBAL$args$acs_years[length(GLOBAL$args$acs_years)]
-        warning(stringr::str_interp("ACS year not specified. Using the latest year: ${private$linkdata_$acs_year}."))
+      if (is.null(private$linkdat_$acs_year)) {
+        private$linkdat_$acs_year <- GLOBAL$args$acs_years[length(GLOBAL$args$acs_years)]
+        warning(stringr::str_interp("ACS year not specified. Using the latest year: ${private$linkdat_$acs_year}."))
       }
 
       # retrieve ACS data based on user's input
-      acs_year <- private$linkdata_$acs_year
+      acs_year <- private$linkdat_$acs_year
       tract_data <- .fetch_data(
         paste0("acs_", acs_year - 4, "-", acs_year, ".csv"),
         subdir = "acs"
@@ -397,25 +374,25 @@ link_acs <- function(
       zip_tract <- .fetch_data("zip_tract.csv", subdir = "geo")
 
       # prepare data for MRP
-      private$mrp_ <- .prepare_mrp_acs(
-        input_data = private$data_,
+      private$mrpdat_ <- .prepare_mrp_acs(
+        input_data = private$prepdat_,
         tract_data = tract_data,
         zip_tract = zip_tract,
-        metadata = private$metadata_,
-        link_geo = private$linkdata_$link_geo
+        metadata = private$metadat_,
+        link_geo = private$linkdat_$link_geo
       )
 
       # prepare data for plotting
       plotdata <- list()
-      plotdata$dates <- if("date" %in% names(private$data_)) .get_dates(private$data_) else NULL
+      plotdata$dates <- if("date" %in% names(private$prepdat_)) .get_dates(private$prepdat_) else NULL
       plotdata$geojson <- names(geojson_) %>%
         stats::setNames(nm = .) %>%
         purrr::map(~.filter_geojson(
           geojson = geojson_[[.x]], 
-          geoids = private$mrp_$levels[[.x]]
+          geoids = private$mrpdat_$levels[[.x]]
         ))
 
-      private$plotdata_ <- .nullify(plotdata)
+      private$plotdat_ <- .nullify(plotdata)
     }
   }, error = function(e) {
     message(paste("Error linking data:\n", e$message))
@@ -435,11 +412,11 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated
 #'
 load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
-  if (!is.null(private$metadata_$special_case)) {
+  if (!is.null(private$metadat_$special_case)) {
     stop("Custom poststratification data is not supported for special cases like COVID or polling data. Please use the `link_acs` method instead.")
   }
 
-  if (is.null(private$data_)) {
+  if (is.null(private$prepdat_)) {
     stop("Sample data is not available. Please provide sample data through the `preprocess` method first.")
   }
 
@@ -455,49 +432,49 @@ load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
     # Process data
     new_data <- .preprocess(
       data = pstrat_data,
-      metadata = private$metadata_,
+      metadata = private$metadat_,
       zip_county_state = zip_county_state,
       is_sample = FALSE,
       is_aggregated = is_aggregated
     )
 
     # Compare to sample data
-    .check_pstrat(new_data, private$data_, .create_expected_levels(private$metadata_))
+    .check_pstrat(new_data, private$prepdat_, .create_expected_levels(private$metadat_))
 
     # Find the smallest common geography
     link_geo <- NULL
-    common <- intersect(names(private$data_), names(new_data))
+    common <- intersect(names(private$prepdat_), names(new_data))
     smallest <- .get_smallest_geo(common)
     if (!is.null(smallest)) {
       link_geo <- smallest$geo
     }
 
     # Store linking geography
-    private$linkdata_ <- list(
+    private$linkdat_ <- list(
       link_geo = link_geo,
       acs_year = NULL
     )
 
     # Prepare data for MRP
-    private$mrp_ <- .prepare_mrp_custom(
-      input_data = private$data_,
+    private$mrpdat_ <- .prepare_mrp_custom(
+      input_data = private$prepdat_,
       new_data = new_data,
-      metadata = private$metadata_,
+      metadata = private$metadat_,
       link_geo = link_geo
     )
 
 
     # prepare data for plotting
     plotdata <- list()
-    plotdata$dates <- if("date" %in% names(private$data_)) .get_dates(private$data_) else NULL
+    plotdata$dates <- if("date" %in% names(private$prepdat_)) .get_dates(private$prepdat_) else NULL
     plotdata$geojson <- names(geojson_) %>%
       stats::setNames(nm = .) %>%
       purrr::map(~.filter_geojson(
         geojson = geojson_[[.x]], 
-        geoids = private$mrp_$levels[[.x]]
+        geoids = private$mrpdat_$levels[[.x]]
       ))
 
-    private$plotdata_ <- .nullify(plotdata)
+    private$plotdat_ <- .nullify(plotdata)
 
   }, error = function(e) {
     # show error message
@@ -505,9 +482,9 @@ load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
     message(error_message)
     
     # reset fields
-    private$linkdata_ <- NULL
-    private$mrp_ <- NULL
-    private$plotdata_ <- NULL
+    private$linkdat_ <- NULL
+    private$mrpdat_ <- NULL
+    private$plotdat_ <- NULL
     
   })
 }
@@ -536,21 +513,21 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   checkmate::assert_choice(
     demo,
-    choices = intersect(GLOBAL$vars$demo, names(private$mrp_$levels)), 
+    choices = intersect(GLOBAL$vars$demo, names(private$mrpdat_$levels)), 
     null.ok = FALSE
   )
 
-  input_data <- private$mrp_$input %>%
-    .as_factor(private$mrp_$levels[demo]) %>%
+  input_data <- private$mrpdat_$input %>%
+    .as_factor(private$mrpdat_$levels[demo]) %>%
     mutate(demo = !!sym(demo)) %>%
     select(.data$demo, .data$total)
 
-  new_data <- private$mrp_$new
+  new_data <- private$mrpdat_$new
   if ("time" %in% names(new_data)) {
     new_data <- new_data %>% filter(.data$time == 1)
   }
   new_data <- new_data %>%
-    .as_factor(private$mrp_$levels[demo]) %>%
+    .as_factor(private$mrpdat_$levels[demo]) %>%
     mutate(demo = !!sym(demo)) %>%
     select(.data$demo, .data$total)
 
@@ -584,7 +561,7 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 covar_hist <- function(covar, file = NULL, ...) {
   private$assert_mrp_exists()
   
-  raw_covariates <- private$plotdata_$raw_covariates
+  raw_covariates <- private$plotdat_$raw_covariates
   if (is.null(raw_covariates)) {
     stop("Covariate data is not available. This method is only available for COVID data.")
   }
@@ -692,21 +669,21 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 sample_size_map <- function(file = NULL) {
   private$assert_mrp_exists()
 
-  geo <- private$linkdata_$link_geo
+  geo <- private$linkdat_$link_geo
   if (geo == "zip") {
     geo <- "county"
   } else if (is.null(geo)) {
     stop("Linking geography is not available.")
   }
   
-  hc <- private$mrp_$input %>%
+  hc <- private$mrpdat_$input %>%
     .prep_sample_size(
       fips_codes = fips_[[geo]],
       geo = geo,
       for_map = TRUE
     ) %>%
     .choro_map(
-      private$plotdata_$geojson[[geo]],
+      private$plotdat_$geojson[[geo]],
       geo = geo,
       config = list(
         main_title = "Sample Size Map",
@@ -747,20 +724,20 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 outcome_plot <- function(file = NULL, ...) {
   private$assert_mrp_exists()
 
-  p <- if (private$metadata_$is_timevar) {
+  p <- if (private$metadat_$is_timevar) {
     .plot_outcome_timevar(
-      raw = private$mrp_$input,
+      raw = private$mrpdat_$input,
       yrep_est = NULL,
-      dates = private$plotdata_$dates,
-      metadata = private$metadata_,
+      dates = private$plotdat_$dates,
+      metadata = private$metadat_,
 
       show_caption = FALSE
     )
   } else {
     .plot_outcome_static(
-      raw = private$mrp_$input,
+      raw = private$mrpdat_$input,
       yrep_est = NULL,
-      metadata = private$metadata_
+      metadata = private$metadat_
     )
   }
 
@@ -796,7 +773,7 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
     null.ok = TRUE
   )
 
-  geo <- private$linkdata_$link_geo
+  geo <- private$linkdat_$link_geo
   if (geo == "zip") {
     geo <- "county"
   } else if (is.null(geo)) {
@@ -804,11 +781,11 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
   }
 
   out <- .prep_raw(
-    private$mrp_$input,
+    private$mrpdat_$input,
     fips_[[geo]],
     geo = geo,
     summary_type = summary_type,
-    metadata = private$metadata_
+    metadata = private$metadat_
   )
 
   config <- list()
@@ -820,7 +797,7 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
 
   hc <- .choro_map(
     out$plot_df,
-    private$plotdata_$geojson[[geo]],
+    private$plotdat_$geojson[[geo]],
     geo = geo,
     config = config
     ) %>%
@@ -859,11 +836,18 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #' @param ... Additional arguments passed to ggsave
 #'
 #' @return A ggplot object showing the group estimates
-estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
+estimate_plot <- function(
+  model,
+  group = NULL,
+  interval = 0.95,
+  show_caption = TRUE,
+  file = NULL,
+  ...
+) {
 
   checkmate::assert_choice(
     group,
-    choices = intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels)),
+    choices = intersect(GLOBAL$vars$pstrat, names(model$mrp_data()$levels)),
     null.ok = TRUE
   )
 
@@ -874,15 +858,15 @@ estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = T
 
     p <- if(model$metadata()$is_timevar) {
       .plot_outcome_timevar(
-        raw = model$mrp()$input,
+        raw = model$mrp_data()$input,
         yrep_est = est_df,
-        dates = model$plotdata()$dates,
+        dates = model$plot_data()$dates,
         metadata = model$metadata(),
         show_caption = show_caption
       )
     } else {
       .plot_outcome_static(
-        raw = model$mrp()$input,
+        raw = model$mrp_data()$input,
         yrep_est = est_df,
         metadata = model$metadata(),
         show_caption = show_caption
@@ -892,13 +876,13 @@ estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = T
     # Convert levels to "factor" type
     est_df <- est_list[[group]] %>%
       rename(!!group := factor) %>%
-      .as_factor(model$mrp()$levels[group]) %>%
+      .as_factor(model$mrp_data()$levels[group]) %>%
       rename(factor := !!sym(group))
 
     p <- if (model$metadata()$is_timevar) {
       .plot_est_timevar(
         plot_df = est_df,
-        dates = model$plotdata()$dates,
+        dates = model$plot_data()$dates,
         metadata = model$metadata(),
         interval = interval,
         show_caption = show_caption
@@ -916,7 +900,7 @@ estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = T
   if (!is.null(file)) {
     # Set default parameters for ggsave
     settings <- if (!is.null(group)) {
-      list(height = 4 * (length(model$mrp()$levels[[group]]) + 1))
+      list(height = 4 * (length(model$mrp_data()$levels[[group]]) + 1))
     } else{
       list()
     }
@@ -954,11 +938,11 @@ estimate_map <- function(
   ...
 ) {
 
-  if (is.null(model$linkdata()$link_geo)) {
+  if (is.null(model$link_data()$link_geo)) {
     stop("Linking geography is not available.")
   }
 
-  choices <- intersect(GLOBAL$vars$geo2, names(model$mrp()$levels))
+  choices <- intersect(GLOBAL$vars$geo2, names(model$mrp_data()$levels))
   checkmate::assert_choice(
     geo,
     choices = choices,
@@ -967,7 +951,7 @@ estimate_map <- function(
   geo <- .replace_null(geo, choices[1])
 
   time_index <- if (model$metadata()$is_timevar) {
-    choices <- model$mrp()$levels$time
+    choices <- model$mrp_data()$levels$time
     checkmate::assert_choice(
       time_index,
       choices = choices,
@@ -988,7 +972,7 @@ estimate_map <- function(
       interval = interval
     ) %>%
     .choro_map(
-      model$plotdata()$geojson[[geo]],
+      model$plot_data()$geojson[[geo]],
       geo = geo,
       config = list(
         minValue = 0,
@@ -1031,14 +1015,14 @@ create_model <- function(model_spec) {
   private$assert_mrp_exists()
   private$assert_model_spec(model_spec)
 
-  effects <- .set_default_priors(model_spec)
+  model_spec <- .set_default_priors(model_spec)
 
   MRPModel$new(
-    effects   = effects,
-    mrp       = private$mrp_,
-    metadata  = private$metadata_,
-    linkdata = private$linkdata_,
-    plotdata = private$plotdata_
+    model_spec = model_spec,
+    mrp_data   = private$mrpdat_,
+    metadata   = private$metadat_,
+    link_data  = private$linkdat_,
+    plot_data  = private$plotdat_
   )
 }
 MRPWorkflow$set("public", "create_model", create_model)
@@ -1059,14 +1043,14 @@ pp_check <- function(model, file = NULL, ...) {
   p <- if (model$metadata()$is_timevar) {
     .plot_ppc_timevar_subset(
       yrep = model$ppc(),
-      raw = model$mrp()$input,
-      dates = model$plotdata()$dates,
+      raw = model$mrp_data()$input,
+      dates = model$plot_data()$dates,
       metadata = model$metadata()
     )
   } else {
     .plot_ppc_static(
       yrep = model$ppc(),
-      raw = model$mrp()$input,
+      raw = model$mrp_data()$input,
       metadata = model$metadata()
     )
   }
@@ -1099,6 +1083,8 @@ compare_models <- function(..., suppress = NULL) {
     stop("At least two models are required for comparison.")
   }
 
+  message("Running leave-one-out cross-validation...")
+  
   models <- list(...)
   lapply(models, private$assert_model)
 

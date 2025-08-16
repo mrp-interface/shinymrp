@@ -1730,9 +1730,18 @@ generated quantities { ${gq_code}
 #'   }
 #'   \item{show_warnings}{Logical indicating whether any diagnostic issues were found}
 #' @noRd
-.get_diagnostics <- function(fit, total_transitions, max_depth = 10) {
+.get_diagnostics <- function(
+  fit,
+  total_transitions,
+  summarize,
+  max_depth = 10
+) {
   # Get diagnostic summary
   diag_summary <- fit$diagnostic_summary(quiet = TRUE)
+
+  if (!summarize) {
+    return(diag_summary)
+  }
   
   # Calculate metrics
   total_divergent <- sum(diag_summary$num_divergent)
@@ -1760,10 +1769,7 @@ generated quantities { ${gq_code}
     stringsAsFactors = FALSE
   )
   
-  return(list(
-    summary = summary,
-    show_warnings = total_divergent > 0
-  ))
+  return(summary)
 }
 
 #' Extract Poststratification Estimates from Generated Quantities
