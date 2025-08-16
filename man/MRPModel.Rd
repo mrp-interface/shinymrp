@@ -48,18 +48,23 @@ methods, many of which have their own (linked) documentation pages:
 
 }
 
-\subsection{Model diagnostics}{\tabular{ll}{
+\subsection{Posterior summary & diagnostics}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPModel-method-summary]{$summary()}} \tab Return posterior summary table. \cr
    \code{\link[=MRPModel-method-diagnostics]{$diagnostics()}} \tab Return sampling diagnostics. \cr
-   \code{\link[=MRPModel-method-ppc]{$ppc()}} \tab Run posterior predictive check. \cr
-   \code{\link[=MRPModel-method-loo]{$loo()}} \tab Create inputs for leave-one-out cross-validation. \cr
-   \code{\link[=MRPModel-method-poststratify]{$poststratify()}} \tab Run post-stratification to generate population estimates. \cr
 }
 
 }
 
-\subsection{Other}{\tabular{ll}{
+\subsection{Post-processing}{
+
+|\strong{Method}|\strong{Description}|
+\code{\link[=MRPModel-method-ppc]{$ppc()}} | Run posterior predictive check. |
+\code{\link[=MRPModel-method-loo]{$loo()}} | Create input for leave-one-out cross-validation. |
+\code{\link[=MRPModel-method-poststratify]{$poststratify()}} | Run post-stratification to generate population estimates. |
+}
+
+\subsection{Saving model object}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPModel-method-save]{$save()}} \tab Save model object to file. \cr
 }

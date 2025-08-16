@@ -157,7 +157,11 @@ MRPWorkflow <- R6::R6Class(
     }
   ),
   public = list(
-    initialize = function() {}
+    initialize = function() {},
+
+    metadata = function() {
+      return(private$metadat_)
+    }
   )
 )
 
