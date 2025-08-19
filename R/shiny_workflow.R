@@ -22,6 +22,64 @@ ShinyMRPWorkflow <- R6::R6Class(
       super$initialize()
     },
 
+    covar_table = function(covar) {
+      private$assert_mrp_exists()
+      
+      raw_covariates <- private$plotdat_$raw_covariates
+      if (is.null(raw_covariates)) {
+        stop("Covariate data is not available. This method is only available for COVID data.")
+      }
+      
+      checkmate::assert_choice(
+        covar,
+        choices = GLOBAL$vars$covar,
+        null.ok = FALSE
+      )
+
+      decimal_places <- if(stats::median(raw_covariates[[covar]]) > 100) 0 else 4
+
+      raw_covariates %>%
+        mutate(measure = round(!!sym(covar), decimal_places)) %>%
+        select(.data$zip, .data$measure) %>%
+        rename("ZIP Code" = "zip") %>%
+        DT::datatable(
+          options = list(
+            lengthChange = FALSE,
+            searching = FALSE,
+            info = FALSE,
+            ordering = FALSE,
+            pagingType = "simple"
+          )
+        )
+    },
+
+    sample_size_table = function() {
+      private$assert_mrp_exists()
+
+      geo <- private$linkdat_$link_geo
+      if (geo == "zip") {
+        geo <- "county"
+      } else if (is.null(geo)) {
+        stop("Linking geography is not available.")
+      }
+      
+      private$mrpdat_$input %>%
+        .prep_sample_size(
+          fips_codes = fips_[[geo]],
+          geo = geo,
+          for_map = FALSE
+        ) %>%
+        DT::datatable(
+          options = list(
+            lengthChange = FALSE,
+            searching = FALSE,
+            info = FALSE,
+            ordering = FALSE,
+            pagingType = "simple"
+          )
+        )
+    },
+
     create_model = function(model_spec) {
       private$assert_mrp_exists()
       private$assert_model_spec(model_spec)

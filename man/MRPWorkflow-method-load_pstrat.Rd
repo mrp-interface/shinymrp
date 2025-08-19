@@ -3,17 +3,18 @@
 \name{MRPWorkflow-method-load_pstrat}
 \alias{MRPWorkflow-method-load_pstrat}
 \alias{load_pstrat}
-\title{Load custom post-stratification data}
+\title{Load custom poststratification data}
 \usage{
 load_pstrat(pstrat_data, is_aggregated = FALSE)
 }
 \arguments{
-\item{pstrat_data}{Custom poststratification data to be loaded}
+\item{pstrat_data}{An object of class \code{data.frame} (or one that can be coerced to that class).}
 
-\item{is_aggregated}{Logical indicating whether the poststratification data is already aggregated}
+\item{is_aggregated}{Logical indicating whether the poststratification data is already aggregated.}
 }
 \description{
-Loads and processes custom poststratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
+The \verb{$load_pstrat()} method processes and stores input poststratification data.
+The object is subject to the same data preprocessing steps as the sample data.
 }
 \seealso{
 Other MRPWorkflow methods: 

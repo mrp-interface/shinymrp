@@ -15,7 +15,7 @@ A highcharter map object showing sample size distribution
 }
 \description{
 Creates interactive choropleth maps showing data distribution
-with respect to geography.
+with respect to geography. Linking geography must not be NULL.
 }
 \seealso{
 Other MRPWorkflow methods: 

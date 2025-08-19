@@ -8,12 +8,14 @@
 link_acs(link_geo = NULL, acs_year = 2023)
 }
 \arguments{
-\item{link_geo}{Character string specifying the geographic level for linking (e.g., "state", "county", "zip")}
+\item{link_geo}{Character string specifying the geographic level for linking. Options are \code{"zip"}, \code{"county"}, and \code{"state"}.}
 
-\item{acs_year}{Numeric value specifying the ACS year to use for poststratification data}
+\item{acs_year}{Numeric value specifying the last year of the 5-year period for the target ACS dataset.}
 }
 \description{
-Links the preprocessed sample data to ACS poststratification data based on geographic and demographic variables.
+The \verb{$link_acs()} method obtains poststratification data by
+linking the preprocessed sample data to the American Community Survey
+based on given geographic granularity and year.
 }
 \seealso{
 Other MRPWorkflow methods: 

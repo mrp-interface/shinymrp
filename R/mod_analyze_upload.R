@@ -627,6 +627,7 @@ mod_analyze_upload_server <- function(id, global){
     observeEvent(
       eventExpr = list(
         global$workflow,
+        global$prep_ver,
         input$link_geo,
         input$acs_year
       ),
