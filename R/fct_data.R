@@ -229,6 +229,11 @@
 #' @param df A data frame to filter
 #' @param threshold Numeric threshold. Values appearing fewer than this many
 #'   times in any column will cause the entire row to be removed
+#' 
+#' @return A data frame with rows containing rare values removed. The returned
+#'   data frame maintains the same structure as the input but with fewer rows.
+#' 
+#' @noRd 
 .omit_rare_rows <- function(df, threshold) {
   # For each column, compute frequencies and flag rare rows
   keep <- rep(TRUE, nrow(df))

@@ -221,25 +221,7 @@
 #' Fetch data files from remote repository with caching
 #'
 #' @description Downloads and caches data files from a GitHub repository,
-#' with support for local caching and remote-change detection. Automatically handles
-#' different file formats (CSV, QS) and manages cache directory creation.
-#'
-#' @param file Character string specifying the filename to fetch (including extension)
-#' @param org Character string specifying the GitHub organization (default: "mrp-interface")
-#' @param repo Character string specifying the repository name (default: "shinymrp-data")
-#' @param branch Character string specifying the git branch (default: "main")
-#' @param subdir Character string specifying subdirectory path within repo (default: "")
-#' @param cache_dir Character string specifying local cache directory path
-#' @param check_remote Logical; if TRUE, perform an HTTP HEAD request to detect remote updates (default: TRUE)
-#'
-#' @return Data frame or object loaded from the specified file, with format
-#'   determined by file extension (CSV files return data frames, QS files
-#'   return the original R object)  
-#'
-#' Fetch data files from remote repository with caching
-#'
-#' @description Downloads and caches data files from a GitHub repository,
-#' with support for local caching and remote-change detection via httr2.
+#' with support for local caching and remote-change detection via GitHub API.
 #' Automatically handles different file formats (CSV, QS, R) and manages cache directory creation.
 #'
 #' @param file Character string specifying the filename to fetch (including extension)
@@ -248,70 +230,92 @@
 #' @param branch Character string specifying the git branch (default: "main")
 #' @param subdir Character string specifying subdirectory path within repo (default: "")
 #' @param cache_dir Character string specifying local cache directory path
-#' @param check_remote Logical; if TRUE, perform an HTTP HEAD request via httr2 to detect remote updates (default: TRUE)
+#' @param check_remote Logical; if TRUE, use GitHub API to detect remote updates (default: TRUE)
 #'
 #' @return Data frame or object loaded from the specified file, with format
-#'   determined by file extension (CSV files return data frames, QS files
-#'   return the original R object, and R files return character lines)
+#' determined by file extension (CSV files return data frames, QS files
+#' return the original R object, and R files return character lines)
 #' @noRd
 .fetch_data <- function(
   file,
-  org          = "mrp-interface",
-  repo         = "shinymrp-data",
-  branch       = "main",
-  subdir       = "",
-  cache_dir    = tools::R_user_dir("shinymrp", which = "cache"),
+  org = "mrp-interface",
+  repo = "shinymrp-data",
+  branch = "main",
+  subdir = "",
+  cache_dir = tools::R_user_dir("shinymrp", which = "cache"),
   check_remote = TRUE
 ) {
   # ensure cache directory exists
   if (!dir.exists(cache_dir)) {
     dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
   }
-
-  # construct local path and raw URL
+  
+  # construct local path and URLs
   dest <- file.path(cache_dir, file)
   file_path <- if (nzchar(subdir)) paste0(subdir, "/", file) else file
   raw_url <- sprintf(
     "https://raw.githubusercontent.com/%s/%s/%s/%s",
     org, repo, branch, file_path
   )
-
+  
   # determine if download is needed
   should_dl <- !file.exists(dest)
-
+  
   if (!should_dl && check_remote) {
-    # perform HEAD request via httr2 to compare Last-Modified
-    resp <- httr2::request(raw_url) %>%
-      httr2::req_method("HEAD") %>%
-      httr2::req_perform()
-
-    if (httr2::resp_status(resp) == 200) {
-      lm <- httr2::resp_header(resp, "last-modified")
-      if (!is.null(lm)) {
-        remote_time <- as.POSIXct(
-          lm,
-          format = "%a, %d %b %Y %H:%M:%S %Z",
-          tz = "GMT"
-        )
-        local_time <- file.info(dest)$mtime
-        if (remote_time > local_time) {
+    # use GitHub API to get file information
+    api_url <- sprintf(
+      "https://api.github.com/repos/%s/%s/contents/%s",
+      org, repo, file_path
+    )
+    
+    tryCatch({
+      # get file info from GitHub API
+      resp <- httr2::request(api_url) %>%
+        httr2::req_url_query(ref = branch) %>%
+        httr2::req_perform()
+      
+      if (httr2::resp_status(resp) == 200) {
+        file_info <- httr2::resp_body_json(resp)
+        
+        # compare SHA hashes (more reliable than timestamps)
+        remote_sha <- file_info$sha
+        
+        # store SHA in a companion file for comparison
+        sha_file <- paste0(dest, ".sha")
+        local_sha <- NULL
+        
+        if (file.exists(sha_file)) {
+          local_sha <- readLines(sha_file, n = 1, warn = FALSE)
+        }
+        
+        if (is.null(local_sha) || remote_sha != local_sha) {
           should_dl <- TRUE
         }
       }
-    }
+    }, error = function(e) {
+      # if API call fails, fall back to downloading
+      warning("GitHub API check failed: ", e$message, ". Proceeding with download.")
+      should_dl <- TRUE
+    })
   }
-
+  
   # download if required
   if (should_dl) {
     utils::download.file(raw_url, destfile = dest, mode = "wb")
+    
+    # if we successfully checked remote, store the SHA for next time
+    if (check_remote && exists("remote_sha")) {
+      sha_file <- paste0(dest, ".sha")
+      writeLines(remote_sha, sha_file)
+    }
   }
-
+  
   # read file based on extension
   ext <- tools::file_ext(file)
   switch(ext,
     csv = readr::read_csv(dest, show_col_types = FALSE),
-    qs  = qs::qread(dest),
-    R   = readLines(dest),
+    qs = qs::qread(dest),
+    R = readLines(dest),
     stop("Unsupported file extension: ", ext)
   )
 }
