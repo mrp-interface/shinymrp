@@ -19,35 +19,19 @@ estimate_plot(
 
 \item{group}{Character string specifying the demographic group for plotting}
 
-\item{interval}{Confidence interval or standard deviation for the estimates (default is 0.95)}
+\item{interval}{Confidence interval (a numeric value between 0 and 1) or
+standard deviation (\code{"1sd"}, \code{"2sd"}, or \code{"3sd"}) for the estimates (default is 0.95).}
 
-\item{show_caption}{Logical indicating whether to show the caption in the plot (default is TRUE)}
+\item{show_caption}{Logical indicating whether to show the caption in the plot (default is TRUE).}
 
-\item{file}{Optional file path to save the plot}
+\item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to ggsave}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
 }
 \value{
-A ggplot object showing the group estimates
+A ggplot object showing MRP estimates.
 }
 \description{
-Creates plots showing MRP estimates for different subgroups, either over time (for time-varying data) or as static estimates (for cross-sectional data).
+The \verb{$estimate_plot()} method creates plots showing overall MRP estimates or
+estimates for different demographic groups.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}

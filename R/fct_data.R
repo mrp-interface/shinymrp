@@ -219,34 +219,33 @@
   return(df)
 }
 
-#' Preprocess example data for demonstration purposes
+
+#' Remove rows with rare values
 #'
-#' @description Applies basic data cleaning and state FIPS code conversion to
-#' example datasets. This is a simplified preprocessing function used specifically
-#' for example data in the shinymrp package demonstrations and tutorials.
+#' @description Filters out rows from a data frame where any column contains values that
+#' appear less frequently than the specified threshold. Columns listed in
+#' GLOBAL$vars$ignore are excluded from this filtering process.
 #'
-#' @param df Data frame containing example data to be preprocessed. Should contain
-#'   standard demographic and geographic columns.
-#'
-#' @return Data frame with cleaned data and state codes converted to FIPS format:
-#' \itemize{
-#'   \item Column names cleaned and standardized
-#'   \item Character columns converted to lowercase and trimmed
-#'   \item Common NA strings converted to actual NA values
-#'   \item Geographic identifiers properly formatted
-#'   \item State names/codes converted to 2-digit FIPS codes
-#' }
-#'
-#' @noRd
-.preprocess_example <- function(df) {
-  df <- df %>% .clean_data()
-  
-  if ("state" %in% names(df)) {
-    df$state <- .to_fips(df$state, "state")
+#' @param df A data frame to filter
+#' @param threshold Numeric threshold. Values appearing fewer than this many
+#'   times in any column will cause the entire row to be removed
+#' 
+#' @return A data frame with rows containing rare values removed. The returned
+#'   data frame maintains the same structure as the input but with fewer rows.
+#' 
+#' @noRd 
+.omit_rare_rows <- function(df, threshold) {
+  # For each column, compute frequencies and flag rare rows
+  keep <- rep(TRUE, nrow(df))
+  for (col in setdiff(names(df), GLOBAL$vars$ignore)) {
+    freqs <- table(df[[col]])
+    rare_values <- names(freqs[freqs < threshold])
+    keep <- keep & !(df[[col]] %in% rare_values)
   }
 
-  return(df)
+  return(df[keep, , drop = FALSE])
 }
+
 
 #' Rename columns based on expected variable names
 #'
@@ -369,25 +368,25 @@
 #' Get period indices and first-of-period dates for week/month/year
 #'
 #' @param date_strings A character vector of dates ("YYYY-MM-DD").
-#' @param freq         One of "week", "month", or "year".
+#' @param time_freq         One of "week", "month", or "year".
 #' @return A list with:
 #'   - indices: integer vector giving the 1-based period index for each input date
 #'   - timeline: Date vector of the first date of every period between the min and max
 #'
 #' @noRd
-.get_time_indices <- function(date_strings, freq = c("week", "month", "year")) {
-  freq <- base::match.arg(freq)
+.get_time_indices <- function(date_strings, time_freq = c("week", "month", "year")) {
+  time_freq <- base::match.arg(time_freq)
   dates <- base::as.Date(date_strings)
   
   # 1) Floor each date to the start of its period
-  period_starts <- switch(freq,
+  period_starts <- switch(time_freq,
                           week  = lubridate::floor_date(dates, unit = "week",  week_start = 1),
                           month = lubridate::floor_date(dates, unit = "month"),
                           year  = lubridate::floor_date(dates, unit = "year")
   )
   
   # 2) Build a complete sequence of period-start dates
-  seq_by <- switch(freq,
+  seq_by <- switch(time_freq,
                    week  = "1 week",
                    month = "1 month",
                    year  = "1 year"
@@ -417,7 +416,7 @@
 #' @param df Data frame containing time-related columns. Must contain either a
 #'   'date' column with date strings or existing time indices matching
 #'   GLOBAL$vars$time specification.
-#' @param freq Character string specifying the frequency of time indices to be
+#' @param time_freq Character string specifying the frequency of time indices to be
 #'  added. Must be one of "week", "month", or "year". Determines how dates are
 #'  grouped into time periods.
 #'
@@ -432,12 +431,12 @@
 #' @noRd
 #'
 #' @importFrom dplyr full_join
-.add_time_indices <- function(df, freq) {
+.add_time_indices <- function(df, time_freq) {
   common <- intersect(names(df), GLOBAL$vars$time)
 
   if (length(common) == 1 && "date" %in% common) {
     # convert date to time indices
-    out <- .get_time_indices(df$date, freq)
+    out <- .get_time_indices(df$date, time_freq)
     df$time <- out$indices
 
     # add the column containing first dates of the periods
@@ -1183,14 +1182,12 @@
 #'     \item special_case: "covid" or "poll" for specialized processing
 #'   }
 #' @param zip_county_state Data frame containing ZIP code to county/state crosswalk.
+#' @param time_freq Character string specifying the time indexing frequency or time length for grouping dates (YYYY-MM-DD) in the data.
+#' @param freq_threshold Numeric. Minimum frequency threshold for omitting rare rows.
 #' @param is_sample Logical. Whether the data represents sample data (TRUE) or
 #'   poststratification data (FALSE). Affects validation and processing steps.
 #' @param is_aggregated Logical. Whether the data is already aggregated (TRUE) or
 #'   individual-level records (FALSE). Determines if aggregation step is needed.
-#' @param zip_threshold Numeric. Minimum number of records required for a ZIP code
-#'  to be included in the analysis. Default is 0.
-#' @param state_threshold Numeric. Minimum proportion of records required for a
-#'  state to be included in the analysis. Default is 0.
 #'
 #' @return Preprocessed data frame ready for MRP analysis with:
 #' \itemize{
@@ -1212,11 +1209,10 @@
   data,
   metadata,
   zip_county_state,
-  freq = NULL,
+  time_freq = NULL,
+  freq_threshold = NULL,
   is_sample = TRUE,
-  is_aggregated = TRUE,
-  zip_threshold = 0,
-  state_threshold = 0
+  is_aggregated = TRUE
 ) {
   
   is_covid <- !is.null(metadata$special_case) &&
@@ -1248,8 +1244,8 @@
     data <- data %>% tidyr::drop_na(dplyr::all_of(check_cols))
 
     # convert date to time indices if necessary
-    if (metadata$is_timevar & !is.null(freq)) {
-      data <- .add_time_indices(data, freq = freq)
+    if (metadata$is_timevar & !is.null(time_freq)) {
+      data <- .add_time_indices(data, time_freq = time_freq)
 
       if (dplyr::n_distinct(data$time) == 1) {
         stop("Time variable has only one unique value. Please use modules for cross-sectional data instead.")
@@ -1259,15 +1255,8 @@
     # remove duplicate rows
     data <- .remove_duplicates(data, is_covid)
 
-    # remove ZIP codes and states with small sample sizes
-    if ("zip" %in% names(data)) {
-      data <- .filter_state_zip(
-        data,
-        zip_county_state,
-        zip_threshold = zip_threshold,
-        state_threshold = state_threshold
-      )
-    }
+    # remove values with low frequency
+    data <- .omit_rare_rows(data, threshold = freq_threshold)
 
     # recode values to expected levels
     data <- .recode_values(data, levels, is_covid)

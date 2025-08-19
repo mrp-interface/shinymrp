@@ -10,44 +10,28 @@ estimate_map(
   geo = NULL,
   time_index = NULL,
   interval = 0.95,
-  file = NULL,
-  ...
+  file = NULL
 )
 }
 \arguments{
 \item{model}{Fitted MRPModel object}
 
-\item{geo}{Character string specifying the geographic level for mapping}
+\item{geo}{Character string specifying the geographic level for mapping.
+Options are geographic level for linking data and greater. Linking geography
+is either specified as \code{geo} in the \verb{$link_acs()} method or the smallest common
+geographic scale between the sample data and the custom poststratification data
+input using \verb{$load_pstrat()}.}
 
-\item{time_index}{Numeric value specifying the time index for time-varying data}
+\item{time_index}{Numeric value specifying the time index for time-varying data.}
 
-\item{interval}{Confidence interval or standard deviation for the estimates (default is 0.95)}
+\item{interval}{Confidence interval (a numeric value between 0 and 1) or
+standard deviation (\code{"1sd"}, \code{"2sd"}, or \code{"3sd"}) for the estimates (default is 0.95).}
 
-\item{file}{Optional file path to save the map}
-
-\item{...}{Additional arguments}
+\item{file}{Optional file path to save the map.}
 }
 \value{
 A highcharter map object showing MRP estimates by geography
 }
 \description{
-Creates interactive choropleth maps showing MRP estimates by geographic regions.
+The \verb{$estimate_map()} method creates interactive choropleth maps showing MRP estimates by geographic regions.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}

@@ -17,7 +17,7 @@ mod_est_map_ui <- function(id) {
 #' @noRd 
 #' @importFrom dplyr rename left_join filter
 #' @importFrom rlang .data
-mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subset){
+mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_subset){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
@@ -25,8 +25,8 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model(), geo_scale(), geo_view())
 
       geo <- geo_scale()
-      time_indices <- model()$est[[geo]][["time"]]
-      dates <- model()$plotdata$dates
+      time_indices <- model()$poststratify()[[geo]][["time"]]
+      dates <- model()$plot_data()$dates
 
       switch(geo_view(),
         "map" = tagList(
@@ -76,33 +76,18 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       req(model(), geo_scale())
 
       geo <- geo_scale()
-      time_indices <- model()$est[[geo]][["time"]]
-      dates <- model()$plotdata$dates
+      time_indices <- model()$poststratify()[[geo]][["time"]]
+      dates <- model()$plot_data()$dates
       
       time_index <- if (!is.null(time_indices) && !is.null(dates)) {
-        which(as.character(format(input$map_slider, GLOBAL$ui$format$date)) == model()$plotdata$dates)
+        which(as.character(format(input$map_slider, GLOBAL$ui$format$date)) == model()$plot_data()$dates)
       } else if (!is.null(time_indices)) {
         input$map_slider
       } else {
         NULL
       }
 
-      model()$est[[geo]] %>% 
-        .prep_est(
-          fips_codes = fips_[[geo]],
-          geo = geo,
-          time_index = time_index
-        ) %>%
-        .choro_map(
-          model()$plotdata$geojson[[geo]],
-          geo = geo,
-          config = list(
-            minValue = 0,
-            maxValue = max(model()$est[[geo]]$est),
-            main_title = "MRP Estimate",
-            hover_title = "Estimate"
-          )
-        )
+      workflow()$estimate_map(model(), geo, time_index)
     })
     
     # --------------------------------------------------------------------------
@@ -114,28 +99,28 @@ mod_est_map_server <- function(id, model, global, geo_scale, geo_view, geo_subse
       geo <- isolate(geo_scale())
       fips_df <- fips_[[geo]] %>% .fips_upper()
 
-      plot_df <- model()$est[[geo]] %>%
+      plot_df <- model()$poststratify()[[geo]] %>%
         rename("fips" = "factor") %>%
         left_join(fips_df, by = "fips") %>%
         rename("factor" = geo) %>%
         filter(factor %in% geo_subset())
 
-      if(model()$metadata$is_timevar) {
+      if(model()$metadata()$is_timevar) {
         .plot_est_timevar(
           plot_df = plot_df,
-          dates = model()$plotdata$dates,
-          metadata = model()$metadata
+          dates = model()$plot_data()$dates,
+          metadata = model()$metadata()
         )
       } else {
         .plot_est_static(
           plot_df = plot_df,
-          metadata = model()$metadata
+          metadata = model()$metadata()
         )
       }
     }, height = function() {
       req(model())
 
-      if(model()$metadata$is_timevar) {
+      if(model()$metadata()$is_timevar) {
         GLOBAL$plot$ui$subplot_height * (length(geo_subset()) + 1)
       } else {
         GLOBAL$plot$ui$plot_height

@@ -162,7 +162,7 @@
       tags$h5("Individual-level vs. Aggregated Data", class = "mt-4"),
       tags$p("The interface accepts data in two formats:",
       tags$ul(
-        tags$li(tags$b("Individual-level:"), " Each row contains information for on individual."),
+        tags$li(tags$b("Individual-level:"), " Each row contains information for one individual."),
         tags$li(tags$b("Aggregated:"), " Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.")
       )),
       tags$p("Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),
@@ -420,11 +420,11 @@
   tab_header <- tags$div(
     class = "model_tab_header",
     textOutput(
-      outputId = ns(model$IDs$title),
+      outputId = ns(model$get_id("title")),
       inline = TRUE
     ),
     actionButton(
-      inputId = ns(model$IDs$rm_btn),
+      inputId = ns(model$get_id("rm_btn")),
       label = NULL,
       icon = icon("remove", lib = "glyphicon"),
       class = "btn-xs remove_model"
@@ -438,41 +438,41 @@
     select = TRUE,
     nav = bslib::nav_panel(
       title = tab_header,
-      value = model$IDs$tab,
+      value = model$get_id("tab"),
       tags$div(
         bslib::layout_columns(
           col_widths = c(11, 1),
           class = "mb-0",
-          HTML(paste0("<h4 class='formula'>", "Formula: ", model$formula, "</h4>")),
+          HTML(paste0("<h4 class='formula'>", "Formula: ", model$formula(), "</h4>")),
           tags$div(class = "d-flex align-items-end gap-2",
             bslib::tooltip(
               actionButton(
-                inputId = ns(model$IDs$diagnos_btn),
+                inputId = ns(model$get_id("diagnos_btn")),
                 label = NULL,
                 icon = icon("sliders-h", lib = "font-awesome"),
                 class = "btn btn-sm btn-secondary"
               ),
               "Please check sampler diagnostics",
-              id = ns(model$IDs$diagnos_tooltip),
+              id = ns(model$get_id("diagnos_tooltip")),
               placement = "left",
               options = list(trigger = "manual")
             ),
             bslib::popover(
               actionButton(
-                inputId = ns(model$IDs$save_popover_btn),
+                inputId = ns(model$get_id("save_popover_btn")),
                 label = NULL,
                 icon = icon("download"),
                 class = "btn btn-sm btn-secondary"
               ),
               title = "Save Options",
               downloadButton(
-                outputId = ns(model$IDs$save_code_btn),
+                outputId = ns(model$get_id("save_code_btn")),
                 label = "Model Code",
                 icon = NULL,
                 style = "width: 100%; margin-bottom: 5px;"
               ),
               downloadButton(
-                outputId = ns(model$IDs$save_fit_btn),
+                outputId = ns(model$get_id("save_fit_btn")),
                 label = "Estimation Result",
                 icon = NULL,
                 style = "width: 100%;"
@@ -481,15 +481,29 @@
             )
           )
         ),
-        if (model$metadata$family == "binomial") {
-          tags$p(paste0("A binomial model with a logit function of the positive response rate. ",
-                        "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small")
+        if (model$metadata()$family == "binomial") {
+          tags$p(
+            paste0(
+              "A binomial model with a logit function of the positive response rate. ",
+              "Samples are generated using ",
+              model$metadata()$n_chains, " chains with ", model$metadata()$n_iter / 2,
+              " post-warmup iterations each."
+            ),
+            class = "fst-italic small"
+          )
         } else {
-          tags$p(paste0("A linear model of the outcome measure. ",
-                        "Samples are generated using ", model$metadata$n_chains, " chains with ", model$metadata$n_iter / 2, " post-warmup iterations each."), class = "fst-italic small")
+          tags$p(
+            paste0(
+              "A linear model of the outcome measure. ",
+              "Samples are generated using ",
+              model$metadata()$n_chains," chains with ", model$metadata()$n_iter / 2,
+              " post-warmup iterations each."
+            ),
+            class = "fst-italic small"
+          )
         },
         actionButton(
-          inputId = ns(model$IDs$postprocess_btn),
+          inputId = ns(model$get_id("postprocess_btn")),
           label = "Run poststratification"
         ),
         tags$div(style = "margin-top: 30px",
@@ -500,25 +514,25 @@
               tags$li("Low values for ", tags$a("Bulk-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " and ", tags$a("Tail-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
             ))
           ),
-          if(nrow(model$params$fixed) > 0) {
+          if(nrow(model$summary()$fixed) > 0) {
             tags$div(
               tags$h4("Fixed Effects", class = "break_title"),
               tags$hr(class = "break_line"),
-              tableOutput(ns(model$IDs$fixed_tbl))
+              tableOutput(ns(model$get_id("fixed_tbl")))
             )
           },
-          if(nrow(model$params$varying) > 0) {
+          if(nrow(model$summary()$varying) > 0) {
             tags$div(
               tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
               tags$hr(class = "break_line"),
-              tableOutput(ns(model$IDs$varying_tbl))  
+              tableOutput(ns(model$get_id("varying_tbl")))  
             )
           },
-          if(nrow(model$params$other) > 0) {
+          if(nrow(model$summary()$other) > 0) {
             tags$div(
               tags$h4("Standard Deviation of Residuals", class = "break_title"),
               tags$hr(class = "break_line"),
-              tableOutput(ns(model$IDs$other_tbl))  
+              tableOutput(ns(model$get_id("other_tbl")))  
             )
           },
           tags$div(
@@ -528,13 +542,12 @@
               bslib::card_header(tags$b("Note")),
               bslib::card_body(tags$p("The plot shows the outcome averages computed from the observed data and 10 sets of replicated data.")) 
             ),
-            plotOutput(outputId = ns(model$IDs$ppc_plot))
+            plotOutput(outputId = ns(model$get_id("ppc_plot")))
           )
         )
       )
     )
   )
-  
 }
 
 #' Reset form inputs
@@ -652,4 +665,8 @@
     selected = "nav_analyze_upload",
     session = session
   )
+}
+
+.check_divergence <- function(diagnostics) {
+  return(sum(diagnostics$num_divergent) > 0)
 }

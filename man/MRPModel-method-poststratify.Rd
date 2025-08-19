@@ -3,25 +3,19 @@
 \name{MRPModel-method-poststratify}
 \alias{MRPModel-method-poststratify}
 \alias{poststratify}
-\title{Run post-stratification to generate population estimates}
+\title{Run poststratification to generate population estimates}
 \usage{
 poststratify(interval = 0.95)
 }
 \arguments{
-\item{interval}{Confidence interval or standard deviation for the estimates (default is 0.95)}
+\item{interval}{Confidence interval (a numeric value between 0 and 1) or
+standard deviation (\code{"1sd"}, \code{"2sd"}, or \code{"3sd"}) for the estimates (default is 0.95).}
+}
+\value{
+A data.frame object containing the poststratified estimates and their
+corresponding uncertainty intervals.
 }
 \description{
-Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
+The \verb{$poststratify()} method runs Stan's standalone generated quantities
+and extracts posterior samples for poststratified estimates.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-check_fit_exists}},
-\code{\link{MRPModel-method-code}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-fit}},
-\code{\link{MRPModel-method-loo}},
-\code{\link{MRPModel-method-ppc}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-summary}}
-}
-\concept{MRPModel methods}

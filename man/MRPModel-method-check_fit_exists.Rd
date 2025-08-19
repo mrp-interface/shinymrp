@@ -7,18 +7,9 @@
 \usage{
 check_fit_exists()
 }
+\value{
+Logical indicating whether the model has been fitted.
+}
 \description{
-Checks whether the model has been fitted and results are available.
+The \verb{$check_fit_exists()} method checks whether the model has been fitted.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-code}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-fit}},
-\code{\link{MRPModel-method-loo}},
-\code{\link{MRPModel-method-poststratify}},
-\code{\link{MRPModel-method-ppc}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-summary}}
-}
-\concept{MRPModel methods}

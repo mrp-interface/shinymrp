@@ -8,28 +8,17 @@
 fit(n_iter = 2000, n_chains = 4, seed = NULL, extra = NULL, ...)
 }
 \arguments{
-\item{n_iter}{Number of MCMC iterations per chain}
+\item{n_iter}{Number of MCMC iterations per chain (including warmup iterations). Default is 2000.}
 
-\item{n_chains}{Number of MCMC chains to run}
+\item{n_chains}{Number of MCMC chains to run. Default is 4.}
 
-\item{seed}{Random seed for reproducibility}
+\item{seed}{Random seed for reproducibility. Default is \code{NULL}.}
 
-\item{extra}{Additional parameters for model fitting}
+\item{extra}{A list of additional parameters for model fitting, such as sensitivity and specificity
+for COVID data. For example, \code{list(sens = 0.7, spec = 0.999)}.}
 
-\item{...}{Additional arguments passed to CmdStanR's \code{sample()} method}
+\item{...}{Additional arguments passed to CmdStanR's \verb{$sample()} method}
 }
 \description{
-Fits the MRP model using Stan for Bayesian estimation with MCMC sampling.
+The \verb{$fit()} method fits the model using Stan.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-check_fit_exists}},
-\code{\link{MRPModel-method-code}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-loo}},
-\code{\link{MRPModel-method-poststratify}},
-\code{\link{MRPModel-method-ppc}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-summary}}
-}
-\concept{MRPModel methods}

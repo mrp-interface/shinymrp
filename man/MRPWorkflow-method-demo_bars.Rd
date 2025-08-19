@@ -8,34 +8,16 @@
 demo_bars(demo, file = NULL, ...)
 }
 \arguments{
-\item{demo}{Character string specifying the demographic variable to plot}
+\item{demo}{Character string specifying the demographic variable to plot.}
 
-\item{file}{Optional file path to save the plot}
+\item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to ggsave}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
 }
 \value{
 A ggplot object or patchwork object showing demographic comparisons
 }
 \description{
-Creates bar plots comparing demographic distributions between
-input survey data and target population data.
+Creates bar plots for comparing demographic distributions between
+sample data and poststratification data.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}
