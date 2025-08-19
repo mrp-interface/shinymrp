@@ -11,7 +11,7 @@ preprocess(
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
-  freq = NULL,
+  time_freq = NULL,
   zip_threshold = 0,
   state_threshold = 0
 )
@@ -27,7 +27,7 @@ preprocess(
 
 \item{family}{Character string specifying the model family (e.g., "binomial", "normal")}
 
-\item{freq}{Character string specifying the time indexing frequency (e.g., "day", "month")}
+\item{time_freq}{Character string specifying the time indexing frequency (e.g., "day", "month")}
 
 \item{zip_threshold}{Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)}
 

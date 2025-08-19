@@ -13,7 +13,11 @@ shinymrp is a two-in-one package that offers both a graphical and a programmatic
 
 ![](./figures/workflow.png)
 
-Please follow the instructions below to install the package and its prerequisites. It is important that Stan is configured properly as it is the engine for all Bayesian modeling in shinymrp. Once everything is set up, you can either run the Shiny app with `shinymrp::run_app()` or use the exported classes in your R scripts. Because the app is more user-friendly and has a built-in guide, all the vignettes will focus on the programmatic components. If you are interested in using the R6 classes, we recommend starting with the overview in the ["Using the exported classes"](https://mrp-interface.github.io/shinymrp/articles/getting-started#using-the-exported-classes) section below.
+Please follow the instructions below to install the package and its prerequisites.
+It is important that Stan is configured properly as it is the engine for all Bayesian modeling in shinymrp.
+Once everything is set up, you can either run the Shiny app with `shinymrp::run_app()` or use the exported classes in your R scripts.
+Because the app is more user-friendly and has a built-in guide, all the vignettes will focus on the programmatic components.
+If you are interested in using the R6 classes, we recommend starting with the overview in the ["Using the exported classes"](https://mrp-interface.github.io/shinymrp/articles/getting-started#using-the-exported-classes) section below.
 
 ```{r, eval = FALSE}
 shinymrp::run_app()
@@ -81,13 +85,11 @@ xcode-select --install
 For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Install the appropriate version based on the version of R on your machine.
 
 
-
-
 ## Using the exported classes
 
 For experienced users, the programmatic components exported by shinymrp offers more flexibility in exchange for the visual aids that the Shiny app provides. Users can lay out the workflow and run it from start to end with a single R script execution. Moreover, fitting complex statistical models to large datasets can be memory-intensive. The classes allow users to utilize computational resources from high-performance computing clusters, which often offer limited support for graphics.
 
-Below is a minimal example of the typical workflow using the exported classes. Excluding the setup, the following code blocks correspond the four stages in the MRP workflow illustrated above. For a more details about each step in the workflow and the corresponding methods, refer to the ["Workflow Deep Dive"](https://mrp-interface.github.io/shinymrp/articles/workflow.html) vignette.
+Below is a minimal example of the typical workflow using the exported classes. Excluding the setup, the following code blocks correspond the four stages in the MRP workflow illustrated above. For a more details about each step in the workflow and the corresponding methods, refer to the ["Programmatic workflow walkthrough"](https://mrp-interface.github.io/shinymrp/articles/workflow.html) vignette.
 
 The process always starts with importing the package components and create a new workflow object with the `mrp_workflow()` function. This `MRPWorkflow` object will help us manage data throughout the process and provides methods for preprocessing, visualization, and creating models. These methods can be accessed using the `$` operator, as you will see throughout the example.
 
@@ -99,7 +101,7 @@ workflow <- mrp_workflow()
 
 ```
 
-In the first stage, we preprocess an example sample data included in the package, then link to the American Community Survey (ACS) to obtain the poststratification data. The `preprocess()` method takes care of cleaning the sample data and preparing it for modeling, while the `link_acs()` method retrieves the poststratification data based on the specified geographic granularity and ACS year.
+In the first stage, we preprocess an example sample data included in the package, then link to the American Community Survey (ACS) to obtain the poststratification data.
 
 ```{r eval=FALSE}
 # Load example data
@@ -124,7 +126,9 @@ workflow$link_acs(
 )
 ```
 
-Before building models, it is important to explore the data to understand its structure and check for potential issues. The workflow object provides methods for visualizing data distributions and summary statistics. Thanks to the object-oriented design, these methods can access the data stored in the workflow object without requiring users to input them again.
+Before building models, it is important to explore the data to understand its structure and check for potential issues.
+The workflow object provides methods for visualizing data distributions and summary statistics.
+Thanks to the object-oriented design, these methods can access the data stored in the workflow object without requiring users to input them again.
 
 ```{r eval=FALSE}
 ### DESCRIPTIVE STATISTICS
@@ -139,8 +143,9 @@ workflow$sample_size_map()
 workflow$outcome_plot()
 ```
 
-The `create_model()` method allows users to define and instantiate new model objects within the workflow. The model objects encapsulate the model specification and provide methods for fitting the model, summarizing results, and presenting diagnostics.
-The result from `pp_check()`  serves as a sanity check, showing how well the fitted model can replicate the observed data.
+The `$create_model()` method allows users to define and instantiate new model objects within the workflow.
+These `MRPModel` objects encapsulate the model specification and provide methods for fitting the model, summarizing results, and presenting diagnostics.
+We can use the `$pp_check()` method from the workflow object to assess how well the fitted model can replicate the observed data.
 
 ```{r eval=FALSE}
 ### MODEL BUILDING
@@ -175,15 +180,17 @@ model$diagnostics()
 workflow$pp_check(model)
 ```
 
-Finally, the workflow object provides visualization methods to present the results of the fitted models, including overall estimates and estimates for demographic groups or geographic areas.
+Finally, the workflow object provides visualization methods to present the results of the fitted models,
+including overall estimates and estimates for demographic groups or geographic areas. For geography-based results,
+users have the option to visualize the values on an interactive choropleth map.
 
 ```{r eval=FALSE}
 ### VISUALIZE RESULTS
 
-# Overall estimates and estimates for demographic groups
+# Plots of overall estimates, estimates for demographic groups and geographic areas
 workflow$estimate_plot(model, group = "sex")
 
-# Geographic estimates
+# Choropleth map of estimates for geographic areas
 workflow$estimate_map(model, geo = "county")
 
 ```

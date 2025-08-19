@@ -426,9 +426,9 @@ mod_analyze_upload_server <- function(id, global){
         is_aggregated <- FALSE
       }
 
-      freq <- input$freq_select
+      time_freq <- input$freq_select
       if (!global$metadata$is_timevar) {
-        freq <- NULL
+        time_freq <- NULL
       }
 
       global$workflow$preprocess(
@@ -437,7 +437,7 @@ mod_analyze_upload_server <- function(id, global){
         is_aggregated = is_aggregated,
         special_case = global$metadata$special_case,
         family = global$metadata$family,
-        freq = input$freq_select
+        time_freq = time_freq
       )
 
       global$trigger_prep_change()
@@ -464,7 +464,7 @@ mod_analyze_upload_server <- function(id, global){
         is_aggregated = FALSE,
         special_case = global$metadata$special_case,
         family = global$metadata$family,
-        freq = if(global$metadata$is_timevar) "week" else NULL
+        time_freq = if(global$metadata$is_timevar) "week" else NULL
       )
 
       global$trigger_prep_change()
@@ -490,7 +490,7 @@ mod_analyze_upload_server <- function(id, global){
         is_aggregated = TRUE,
         special_case = global$metadata$special_case,
         family = global$metadata$family,
-        freq = NULL
+        time_freq = NULL
       )
 
       global$trigger_prep_change()

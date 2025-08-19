@@ -43,7 +43,7 @@ mod_learn_interface_ui <- function(id){
       tags$h5("Individual-level vs. Aggregated Data", class = "mt-4"),
       tags$p("The interface accepts data in two formats:",
       tags$ul(
-        tags$li(tags$b("Individual-level:"), " Each row contains information for on individual."),
+        tags$li(tags$b("Individual-level:"), " Each row contains information for one individual."),
         tags$li(tags$b("Aggregated:"), " Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.")
       )),
       tags$p("Aggregated data are preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure."),

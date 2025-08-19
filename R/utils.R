@@ -260,7 +260,7 @@
   repo         = "shinymrp-data",
   branch       = "main",
   subdir       = "",
-  cache_dir    = tools::R_user_dir("shinymirp", which = "cache"),
+  cache_dir    = tools::R_user_dir("shinymrp", which = "cache"),
   check_remote = TRUE
 ) {
   # ensure cache directory exists

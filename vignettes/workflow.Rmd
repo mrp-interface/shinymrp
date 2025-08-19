@@ -1,27 +1,21 @@
 ---
-title: "Walkthrough of shinymrp workflow"
+title: "Programmatic workflow walkthrough"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Workflow Deep Dive}
+  %\VignetteIndexEntry{Programmatic workflow walkthrough}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 
-This vignette provides more details about the individual methods of the [`MRPWorkflow`](https://mrp-interface.github.io/shinymrp/reference/MRPWorkflow.html) objects and [`MRPModel`](https://mrp-interface.github.io/shinymrp/reference/MRPModel.html) objects, including their purposes, arguments, and caveats. For a more general overview of the classes, please refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
+This vignette provides more details about the individual methods of the `MRPWorkflow` objects
+and `MRPModel` objects, including their purposes, arguments, and caveats.
+For a more general overview of the classes, please refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
-)
-```
-
-```{r setup, include=FALSE}
-
-ggplot2::theme_update(
-  text = ggplot2::element_text(size = 10),
-  plot.margin = ggplot2::margin(0, 0, 0, 0)
 )
 ```
 
@@ -35,6 +29,14 @@ library(shinymrp)
 workflow <- mrp_workflow()
 ```
 
+```{r theme_update, include=FALSE}
+
+ggplot2::theme_update(
+  text = ggplot2::element_text(size = 12),
+  plot.margin = ggplot2::margin(0, 0, 0, 0)
+)
+```
+
 ## Data preparation
 
 The goal of this stage is to produce two essential pieces of data:
@@ -42,7 +44,20 @@ The goal of this stage is to produce two essential pieces of data:
 - **Sample data**: The analysis sample that includes the outcome of interest (either binary or continuous ) and predictors, such as the COVID test records and survey sample results.
 - **Poststratification data**: The table containing sizes of groups in the target population defined by the demographic and geographic factors.
 
-### Use cases
+### Preprocessing sample data
+
+Generally, the package expects tabular data with demographic-geographic predictors and an outcome measure.
+It also supports specific use cases, such as COVID-19 hospital test records which follows the Epic system standards.
+If included, dates or indices of week/month/year will be incorporated to produce time-varying summary statistics and estimates.
+
+The `example_sample_data()` function returns examples of the data formats accepted by shinymrp based on several key characteristics.
+
+- whether a time variable is included
+- whether the data is aggregated
+- whether the data follows a specific standard (e.g. Epic system) or contains additional demographic variables
+- whether the outcome measure is binary (modeled with binomial distributions) or continuous (modeled with Gaussian/normal distributions)
+
+For more details about data requirements and preprocessing steps, please refer to the ["More on data preprocessing"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
 
 ```{r}
 sample_data <- example_sample_data(
@@ -51,39 +66,15 @@ sample_data <- example_sample_data(
   special_case = NULL,
   family = "binomial"
 )
+
+head(sample_data)
 ```
 
-### Individual-level vs. Aggregated Data
-
-The interface accepts data in two formats:
-
-- **Individual-level**: Each row contains information for on individual.
-- **Aggregated**: Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.
-
-Data with continuous outcome measures are expected only at individual-level. For data with binary outcome measures, the aggregated format is preferred for computational benefits. Individual-level data will be automatically aggregated upon upload. Data requirements vary slightly between formats, mainly regarding the outcome measure.
-
-Required Columns and Categories
-The application screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):
-
-- Sex: male, female
-- Race: Black, White, other
-- Age
-- Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
-- ZIP code [^geo]
-- County [^geo]
-- State [^geo]
-- Time indices (time) [^time]
-- Date
-- Continuous outcome measure (outcome) [^outcome-cont]
-- Positive response indicator or number of positive responses (positive) [^outcome-bin]
-- Cross-tabulation cell counts (total) [^outcome-bin]
-- Survey weights (weight) [^weight]
-
-[^geo]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
-[^time]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains time indices. An optional 'date' column containing the date of the first day of each period can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to time indices, but users can also provide the time indices directly. The interface uses time-invariant poststratification data.
-[^outcome-cont]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
-[^outcome-bin]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
-[^weight]: Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.
+The `$preprocess()` method performs several preprocessing steps to prepare the data for MRP,
+such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to time index), etc.
+However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand.
+The detailed description and link to the source code of the preprocessing pipeline can be found
+in the ["More on data preprocessing"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
 
 ```{r}
 workflow$preprocess(
@@ -96,11 +87,21 @@ workflow$preprocess(
 ```
 
 ### Linking data to the ACS
+
+The `$link_acs()` method retrieves poststratification data from a 5-year ACS dataset based on the specified geographic granularity and
+the last year of the collection period. The current supported geographic levels are ZIP code, county, and state. If not provided, the
+poststratification data will result from a cross-tabulation of the demographic variables.
+
 ```{r}
 workflow$link_acs(link_geo = "zip", acs_year = 2021)
 ```
 
 ### Load custom poststratification data
+
+Users can also load their own poststratification data using the `$load_pstrat()` method.
+The input is subject to similar [requirements](https://mrp-interface.github.io/shinymrp/articles/data-prep#required-columns-and-categories)
+and preprocessing steps to those of the sample data.
+
 ```{r}
 pstrat_data <- example_pstrat_data()
 workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
@@ -108,26 +109,76 @@ workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
 
 ## Visualizing descriptive statistics
 
+The `MRPWorkflow` class provides several methods for visualizing descriptive statistics that are useful for
+interpreting MRP estimates and diagnosing problems during the modeling stage.
+
+The `$demo_bars()` method creates bar plots for comparison of demographic distributions between the sample data and the poststratification data.
+
 ```{r}
 workflow$demo_bars(demo = "sex")
 ```
+
+The `$covar_hist()` method creates a histogram of the geographic covariates that can help models capture
+the structured difference between geographic areas. This method currently only supports COVID data and
+will throw the following error if it is called with incompatible data.
+
+```{r, error = TRUE}
+workflow$covar_hist()
+```
+
+The `$sample_size_map()` method visualizes the geographic distribution of the sample size
+with an interactive choropleth map. The map is created using the
+[`highcharter`](https://cran.r-project.org/web/packages/highcharter/index.html)
+package and has useful features such as tooltips and download options.
 
 ```{r}
 workflow$sample_size_map()
 ```
 
+The `$outcome_plot()` method create an average line or scatter plot of the outcome measure
+depending whether the data is time-varying or not.
+
 ```{r}
 workflow$outcome_plot()
 ```
 
+The `$outcome_map()` method visualizes the geography-based summary statistics such as
+the highest weekly positive response rates for the geographic areas in the sample data.
+
 ```{r}
-workflow$outcome_map()
+workflow$outcome_map(summary_type = "max")
 ```
 
 ## Model fitting and diagnostics
 
+The `MRPModel` class is designed to represent individual models and help mange 
 
 ### Model specification
+
+The `$create_model()` method takes in a nested list that specifies the variables to include in the model,
+whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
+This is used to generate Stan code for compilation using the `CmdStanR` package. The syntax for the prior distributions
+is similar to that of Stan. The following are currently supported:
+
+- normal(mu, sigma)
+- student_t(nu, mu, sigma)
+- structured*
+
+The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
+Effects that are assigned empty characters will use the default prior distribution.
+
+Under the Bayesian framework, the following prior distributions are assigned by default:
+
+- Overall intercept: normal(0,5)
+- Coefficient: normal(0,3)
+
+The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors.
+
+- Standard deviation (main effect): normal<sub>+</sub>(0,3)
+- Standard deviation (interaction): normal<sub>+</sub>(0,1)
+
+The returned `MRPModel` object has  methods for extracting draws from
+the internal `CmdStanMCMC` object and formating them for display.
 
 ```{r}
 model1 <- workflow$create_model(
@@ -146,6 +197,48 @@ model1 <- workflow$create_model(
   )
 )
 ```
+
+### Running MCMC
+
+
+
+```{r}
+model1$fit(
+  n_iter = 500,
+  n_chains = 2,
+  seed = 123,
+  show_messages = FALSE,
+  show_exceptions = FALSE
+)
+
+```
+
+### Posterior summary & diagnostics
+
+The `$summary()` method returns summary statistics of the posterior samples along with common diagnostic 
+quantities such as effective sample size and R-hat.
+
+```{r}
+model1$summary()
+```
+
+The `$diagnostics()` method provides additional diagnostic information about the sampling process. The guide
+to interpreting these convergence metrics can be found in the [Stan documentation](https://mc-stan.org/learn-stan/diagnostics-warnings). 
+
+```{r}
+model1$diagnostics()
+```
+
+The `$pp_check()` method extracts the samples from the posterior predictive distribution and generates
+visual checks of the model fit.
+
+```{r}
+workflow$pp_check(model1)
+```
+
+It is common to test different model specifications to find one that best captures the relationship
+between the predictors and the outcome. Once you have your roster, you can pass several model objects
+into the `$compare_models()` method to perform model comparison using leave-one-out cross-validation.
 
 ```{r}
 model2 <- workflow$create_model(
@@ -168,39 +261,14 @@ model2 <- workflow$create_model(
     )
   )
 )
-```
 
-### Run MCMC
-
-```{r}
-model1$fit(n_iter = 500, n_chains = 2, seed = 123)
-model2$fit(n_iter = 500, n_chains = 2, seed = 123)
-```
-
-### Diagnostics
-
-```{r}
-model1$diagnostics()
-```
-
-```{r}
-model1$summary()
-```
-
-```{r}
-workflow$pp_check(model1)
-```
-
-```{r}
-model2$diagnostics()
-```
-
-```{r}
-model2$summary()
-```
-
-```{r}
-workflow$pp_check(model2)
+model2$fit(
+  n_iter = 500,
+  n_chains = 2,
+  seed = 123,
+  show_messages = FALSE,
+  show_exceptions = FALSE
+)
 ```
 
 ```{r, compare_models}
@@ -209,20 +277,29 @@ workflow$compare_models(model1, model2)
 
 ### Saving and loading models
 
-```{r, save_model, eval=FALSE}
-workflow$save_model(model1, file = "model1.qs")
-```
+Once a `MRPModel` object is created, it can be saved to disk at any point using the `$save()` method.
+Under the hood, the method uses the `qs` package to serialize the object to a file with a `.qs` extension.
+The model object can be read back into R using the `qs::qread()` function.
 
-```{r, load_model, eval=FALSE}
-model1 <- workflow$load_model("model1.qs")
+```{r, save_model, eval=FALSE}
+model1$save(file = "model1.qs")
+
+# load back into workspace
+model1 <- qs::qread("model1.qs")
 ```
 
 
 ## Visualize estimates
 
+`$estimate_plot()` is the primary method for visualizing estimates from the fitted models. By default,
+it uses a 95% credible interval for uncertainty quantification but users can specify other intervals, including standard deviation
+
 ```{r, estimate_plot, fig.height=10}
 workflow$estimate_plot(model1, group = "sex")
 ```
+
+For geography-based estimates, we recommend using estimate_map, which also takes a similar argument to estimate_plot for uncertainty quantification.
+The selected interval values are shown in the tooltip when users hover over individual tiles on the map.
 
 ```{r, estimate_map}
 workflow$estimate_map(model1, geo = "county")
