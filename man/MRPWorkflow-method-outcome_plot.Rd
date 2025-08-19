@@ -8,30 +8,13 @@
 outcome_plot(file = NULL, ...)
 }
 \arguments{
-\item{file}{Optional file path to save the plot}
+\item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to ggsave}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
 }
 \value{
-A ggplot object showing the outcome measure distribution
+A ggplot object showing the outcome measure distribution.
 }
 \description{
-Creates plots showing the distribution of outcome measures over time (for time-varying data) or as static distributions (for cross-sectional data).
+The \verb{$outcome_plot()} method creates average plots of the outcome measure.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}

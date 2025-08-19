@@ -7,22 +7,9 @@
 \usage{
 summary()
 }
+\value{
+A data frame containing the summary statistics for the posterior samples and diagnostics.
+}
 \description{
-Retrieves a summary of the fitted model parameters including posterior means, credible intervals, and diagnostics.
+The \verb{$summary()} method returns a summary of posterior samples for the model parameters and diagnostics.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-check_estimate_exists}},
-\code{\link{MRPModel-method-check_fit_exists}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-fit}},
-\code{\link{MRPModel-method-formula}},
-\code{\link{MRPModel-method-loo}},
-\code{\link{MRPModel-method-metadata}},
-\code{\link{MRPModel-method-model_spec}},
-\code{\link{MRPModel-method-poststratify}},
-\code{\link{MRPModel-method-ppc}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-stan_code}}
-}
-\concept{MRPModel methods}

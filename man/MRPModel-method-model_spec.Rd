@@ -7,22 +7,9 @@
 \usage{
 model_spec()
 }
+\value{
+A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
+}
 \description{
-Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
+The \verb{$model_spec()} method returns the model specification list.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-check_estimate_exists}},
-\code{\link{MRPModel-method-check_fit_exists}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-fit}},
-\code{\link{MRPModel-method-formula}},
-\code{\link{MRPModel-method-loo}},
-\code{\link{MRPModel-method-metadata}},
-\code{\link{MRPModel-method-poststratify}},
-\code{\link{MRPModel-method-ppc}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-stan_code}},
-\code{\link{MRPModel-method-summary}}
-}
-\concept{MRPModel methods}
