@@ -8,7 +8,7 @@
 preprocessed_data()
 }
 \description{
-Retrieves the preprocessed sample data that has been prepared for MRP analysis.
+The \verb{$preprocessed_data()} method returns the preprocessed sample data.
 }
 \seealso{
 Other MRPWorkflow methods: 

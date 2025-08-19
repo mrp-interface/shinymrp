@@ -8,18 +8,18 @@
 demo_bars(demo, file = NULL, ...)
 }
 \arguments{
-\item{demo}{Character string specifying the demographic variable to plot}
+\item{demo}{Character string specifying the demographic variable to plot.}
 
-\item{file}{Optional file path to save the plot}
+\item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to ggsave}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
 }
 \value{
 A ggplot object or patchwork object showing demographic comparisons
 }
 \description{
 Creates bar plots comparing demographic distributions between
-input survey data and target population data.
+sample data and poststratification data.
 }
 \seealso{
 Other MRPWorkflow methods: 

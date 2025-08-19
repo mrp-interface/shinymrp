@@ -8,19 +8,20 @@
 covar_hist(covar, file = NULL, ...)
 }
 \arguments{
-\item{covar}{Character string specifying the covariate. Options: "edu",
+\item{covar}{Character string specifying the geographic covariate. Options are "edu" (education),
 "poverty", "employ", "income", "urban", "adi"}
 
-\item{file}{Optional file path to save the plot}
+\item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to ggsave}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
 }
 \value{
 A ggplot object showing the covariate distribution histogram
 }
 \description{
-Creates histogram plots showing the distribution of geographic
-covariates across zip codes. Only available for COVID data.
+The \code{covar_hist()} method creates histogram plots
+showing the distribution of geographic covariates across ZIP codes.
+\emph{This method is only available for COVID data}.
 }
 \seealso{
 Other MRPWorkflow methods: 

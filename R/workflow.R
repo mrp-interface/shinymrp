@@ -361,7 +361,7 @@ link_acs <- function(
 
   # store user's selections for data linking
   private$linkdat_ <- list(
-    link_geo = if(link_geo %in% GLOBAL$vars$geo) link_geo else NULL,
+    link_geo = link_geo,
     acs_year = acs_year
   )
 
@@ -615,13 +615,14 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #' @aliases covar_hist
 #' @family MRPWorkflow methods
 #'
-#' @description Creates histogram plots showing the distribution of geographic
-#' covariates across zip codes. Only available for COVID data.
+#' @description The `covar_hist()` method creates histogram plots
+#' showing the distribution of geographic covariates across ZIP codes.
+#' *This method is only available for COVID data*.
 #'
-#' @param covar Character string specifying the covariate. Options: "edu",
+#' @param covar Character string specifying the geographic covariate. Options are "edu" (education),
 #'   "poverty", "employ", "income", "urban", "adi"
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object showing the covariate distribution histogram
 covar_hist <- function(covar, file = NULL, ...) {
@@ -727,7 +728,7 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #' @family MRPWorkflow methods
 #'
 #' @description Creates interactive choropleth maps showing data distribution
-#' with respect to geography.
+#' with respect to geography. Linking geography must not be NULL.
 #'
 #' @param file Optional file path to save the plot
 #'

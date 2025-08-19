@@ -11,6 +11,6 @@ A \code{MRPWorkflow} object.
 }
 \description{
 Create a new \code{\link{MRPWorkflow}} object that implements
-the Bayesian data analysis workflow that underpins the application of
+the Bayesian data analysis workflow common in applications of
 Multilevel Regression and Post-stratification (MRP).
 }

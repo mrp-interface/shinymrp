@@ -179,92 +179,125 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     # Module Server Calls for Individual-level Plots
     # --------------------------------------------------------------------------
-    mod_indiv_plot_server("indiv_sex", reactive(global$workflow$mrp_data()), "sex")
-    mod_indiv_plot_server("indiv_race", reactive(global$workflow$mrp_data()), "race")
-    mod_indiv_plot_server("indiv_age", reactive(global$workflow$mrp_data()), "age")
-    mod_indiv_plot_server("indiv_edu", reactive(global$workflow$mrp_data()), "edu")
+    mod_indiv_plot_server(
+      "indiv_sex",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }), 
+      "sex"
+    )
+    mod_indiv_plot_server(
+      "indiv_race",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "race"
+    )
+    mod_indiv_plot_server(
+      "indiv_age",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "age"
+    )
+    mod_indiv_plot_server(
+      "indiv_edu",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "edu"
+    )
 
-  
     # --------------------------------------------------------------------------
     # Sample Size Map and Table
     # --------------------------------------------------------------------------
     mod_indiv_map_server(
       "geo_sample",
-      reactive(global$workflow$mrp_data()$input),
-      reactive(global$workflow$link_data()$link_geo),
-      reactive(global$workflow$plot_data()$geojson),
-      fips_
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      })
     )
 
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_college", reactive(global$workflow$plot_data()$raw_covariates), "college", list(
-      threshold   = 0.5,
-      operation   = ">=",
-      breaks      = seq(0, 1, 0.05),
-      description = "\n%d ZIP codes out of %d (%d%%) have %d%% or more people who have earned an Associate's degree or higher.",
-      definition  = "Higher education measure of a zip code is defined as the percentage of the residing population\nwho have earned an Associate's degree or higher.",
-      name        = "Higher education measure"
-    ))
+    mod_geo_plot_server(
+      "geo_college",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "college"
+    )
     
-    mod_geo_plot_server("geo_poverty", reactive(global$workflow$plot_data()$raw_covariates), "poverty", list(
-      threshold   = 0.2,
-      operation   = "<=",
-      breaks      = seq(0, 1, 0.05),
-      description = "%d zip codes out of %d (%d%%) have %d%% or less people whose ratio of income to poverty level in the past 12 months\nis below 100%%.",
-      definition  = "Poverty measure of a zip code is defined as the percentage of the residing population\nwhose ratio of income to poverty level in the past 12 months is below 100%%.",
-      name        = "Poverty measure"
-    ))
+    mod_geo_plot_server(
+      "geo_poverty",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "poverty"
+    )
 
-    mod_geo_plot_server("geo_employment", reactive(global$workflow$plot_data()$raw_covariates), "employment", list(
-      threshold   = 0.5,
-      operation   = ">=",
-      breaks      = seq(0, 1, 0.05),
-      description = "\n%d zip codes out of %d (%d%%) have %d%% or more people who is employed as a part of the civilian labor force.",
-      definition  = "Employment rate of a zip code is defined as the percentage of the residing population\nwho are employed as a part of the civilian labor force.",
-      name        = "Employment rate"
-    ))
-    
-    mod_geo_plot_server("geo_income", reactive(global$workflow$plot_data()$raw_covariates), "income", list(
-      threshold   = 70784,
-      operation   = ">",
-      breaks      = seq(0, 150000, 5000),
-      description = "%d zip codes out of %d (%d%%) have average value of tract-level median household income in the past 12 months\ngreater than %d dollars (2021 US median income according to the ACS).",
-      definition  = "Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months\nweighted by tract population counts.",
-      name        = "Average of median household income"
-    ))
+    mod_geo_plot_server(
+      "geo_employment",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "employment"
+    )
 
-    mod_geo_plot_server("geo_urbanicity", reactive(global$workflow$plot_data()$raw_covariates), "urbanicity", list(
-      threshold   = 0.95,
-      operation   = ">=",
-      breaks      = seq(0, 1, 0.05),
-      description = "\n%d zip codes out of %d (%d%%) have %d%% or more tracts classified as urban.",
-      definition  = "Urbanicity of a zip code is defined as the percentage of covered census tracts classified as urban\nweighted by tract population counts.",
-      name        = "Urbanicity"
-    ))
-    
-    mod_geo_plot_server("geo_adi", reactive(global$workflow$plot_data()$raw_covariates), "adi", list(
-      threshold   = 80,
-      operation   = ">",
-      breaks      = seq(0, 100, 5),
-      description = "\n%d zip codes out of %d (%d%%) have ADI over %d.",
-      definition  = "Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts\nweighted by tract population counts (refer to Learn > Preprocess page for the definition of ADI).",
-      name        = "Area Deprivation Index"
-    ))
+    mod_geo_plot_server(
+      "geo_income",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "income"
+    )
+
+    mod_geo_plot_server(
+      "geo_urbanicity",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "urbanicity"
+    )
+
+    mod_geo_plot_server(
+      "geo_adi",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "adi"
+    )
 
 
     # --------------------------------------------------------------------------
     # Plot for Outcome Measure over Time
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
-      req(input$plot_subcategory == "overall")
-
-      .plot_outcome_timevar(
-        raw = global$workflow$mrp_data()$input,
-        dates = global$workflow$plot_data()$dates,
-        metadata = global$workflow$metadata()
-      )
+      req(global$workflow)
+      global$workflow$outcome_plot()
     })
 
     # --------------------------------------------------------------------------
@@ -273,32 +306,7 @@ mod_analyze_visualize_server <- function(id, global){
     output$positive_map <- highcharter::renderHighchart({
       req(global$workflow, global$workflow$link_data()$link_geo)
 
-      geo <- global$workflow$link_data()$link_geo
-      if (geo == "zip") {
-        geo <- "county"  # Plot county-level map for ZIP codes
-      }
-
-      out <- .prep_raw(
-        global$workflow$mrp_data()$input,
-        fips_[[geo]],
-        geo = geo,
-        summary_type = input$summary_slt,
-        metadata = global$workflow$metadata()
-      )
-
-      config <- list()
-      if (n_distinct(out$plot_df$value) == 1 &&
-          out$plot_df$value[1] == 0) {
-        config <- list(minValue = 0, maxValue = 1)
-      }
-      config <- c(config, out$title)
-
-      .choro_map(
-        out$plot_df,
-        global$workflow$plot_data()$geojson[[geo]],
-        geo = geo,
-        config = config
-      )
+      global$workflow$outcome_map(summary_type = input$summary_slt)
     })
     
   })
