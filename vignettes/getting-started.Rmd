@@ -19,10 +19,6 @@ Once everything is set up, you can either run the Shiny app with `shinymrp::run_
 Because the app is more user-friendly and has a built-in guide, all the vignettes will focus on the programmatic components.
 If you are interested in using the R6 classes, we recommend starting with the overview in the ["Using the exported classes"](https://mrp-interface.github.io/shinymrp/articles/getting-started#using-the-exported-classes) section below.
 
-```{r, eval = FALSE}
-shinymrp::run_app()
-```
-
 ## Installation
 Users can install the package from GitHub by running the following R command:
 
@@ -83,8 +79,6 @@ xcode-select --install
 #### Windows
 
 For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Install the appropriate version based on the version of R on your machine.
-
-
 
 
 ## Using the exported classes
