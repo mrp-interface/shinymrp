@@ -75,6 +75,80 @@ methods, many of which have their own (linked) documentation pages:
 \examples{
   \dontrun{
   library(shinymrp)
+
+  # Initialize the MRP workflow
+  workflow <- mrp_workflow()
+
+  # Load example data
+  sample_data <- example_sample_data()
+
+  ### DATA PREPARATION
+
+  # Preprocess sample data
+  workflow$preprocess(
+    sample_data,
+    is_timevar = TRUE,
+    is_aggregated = FALSE,
+    special_case = NULL,
+    family = "binomial"
+  )
+
+  # Link data to the ACS
+  # and obtain poststratification data
+  workflow$link_acs(
+    link_geo = "zip",
+    acs_year = 2021
+  )
+
+  ### DESCRIPTIVE STATISTICS
+
+  # Visualize demographic distribution of data
+  workflow$demo_bars(demo = "sex")
+
+  # Visualize geographic distribution of data
+  workflow$sample_size_map()
+
+  # Visualize outcome measure
+  workflow$outcome_plot()
+
+  ### MODEL BUILDING
+
+  # Create new model objects
+  model <- workflow$create_model(
+    model_spec = list(
+      Intercept = list(
+        Intercept = ""
+      ),
+      fixed = list(
+        sex = "",
+        race = ""
+      ),
+      varying = list(
+        age = "",
+        time = ""
+      )
+    )
+  )
+
+  # Run MCMC
+  model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+
+  # Estimates summary and diagnostics
+  model$summary()
+
+  # Sampling diagnostics
+  model$diagnostics()
+
+  # Posterior predictive check
+  workflow$pp_check(model)
+
+  ### VISUALIZE RESULTS
+
+  # Plots of overall estimates, estimates for demographic groups and geographic areas
+  workflow$estimate_plot(model, group = "sex")
+
+  # Choropleth map of estimates for geographic areas
+  workflow$estimate_map(model, geo = "county")
   } 
 
 }

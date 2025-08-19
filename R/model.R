@@ -32,6 +32,7 @@
 #' 
 #'   ## Post-processing
 #'   |**Method**|**Description**|
+#'   |:----------|:---------------|
 #'   [`$ppc()`][MRPModel-method-ppc] | Run posterior predictive check. |
 #'   [`$loo()`][MRPModel-method-loo] | Create input for leave-one-out cross-validation. |
 #'   [`$poststratify()`][MRPModel-method-poststratify] | Run post-stratification to generate population estimates. |
@@ -43,9 +44,81 @@
 #'
 #'
 #' @examples
-#'   \dontrun{
 #'   library(shinymrp)
-#'   } 
+#'
+#'   # Initialize the MRP workflow
+#'   workflow <- mrp_workflow()
+#'
+#'   # Load example data
+#'   sample_data <- example_sample_data()
+#'
+#'   ### DATA PREPARATION
+#'
+#'   # Preprocess sample data
+#'   workflow$preprocess(
+#'     sample_data,
+#'     is_timevar = TRUE,
+#'     is_aggregated = FALSE,
+#'     special_case = NULL,
+#'     family = "binomial"
+#'   )
+#'
+#'   # Link data to the ACS
+#'   # and obtain poststratification data
+#'   workflow$link_acs(
+#'     link_geo = "zip",
+#'     acs_year = 2021
+#'   )
+#'
+#'   ### DESCRIPTIVE STATISTICS
+#'
+#'   # Visualize demographic distribution of data
+#'   workflow$demo_bars(demo = "sex")
+#'
+#'   # Visualize geographic distribution of data
+#'   workflow$sample_size_map()
+#'
+#'   # Visualize outcome measure
+#'   workflow$outcome_plot()
+#'
+#'   ### MODEL BUILDING
+#'
+#'   # Create new model objects
+#'   model <- workflow$create_model(
+#'     model_spec = list(
+#'       Intercept = list(
+#'         Intercept = ""
+#'       ),
+#'       fixed = list(
+#'         sex = "",
+#'         race = ""
+#'       ),
+#'       varying = list(
+#'         age = "",
+#'         time = ""
+#'       )
+#'     )
+#'   )
+#'
+#'   # Run MCMC
+#'   model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+#'
+#'   # Estimates summary and diagnostics
+#'   model$summary()
+#'
+#'   # Sampling diagnostics
+#'   model$diagnostics()
+#'
+#'   # Posterior predictive check
+#'   workflow$pp_check(model)
+#'
+#'   ### VISUALIZE RESULTS
+#'
+#'   # Plots of overall estimates, estimates for demographic groups and geographic areas
+#'   workflow$estimate_plot(model, group = "sex")
+#'
+#'   # Choropleth map of estimates for geographic areas
+#'   workflow$estimate_map(model, geo = "county")
 #' 
 #' @export
 #' 
@@ -129,9 +202,11 @@ MRPModel <- R6::R6Class(
 #' 
 #' @name MRPModel-method-model_spec
 #' @aliases model_spec
-#' @family MRPModel methods
 #'
-#' @description Retrieves the effects specification used in the model, including intercept, fixed effects, varying effects, and interactions.
+#'
+#' @description The `$model_spec()` method returns the model specification list.
+#' 
+#' @return A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
 model_spec = function() {
   return(private$model_spec_)
 }
@@ -141,9 +216,9 @@ MRPModel$set("public", "model_spec", model_spec)
 #' 
 #' @name MRPModel-method-formula
 #' @aliases formula
-#' @family MRPModel methods
 #'
-#' @description Retrieves the model formula constructed from the effects specification.
+#'
+#' @description The `$formula()` method returns the lme4-style formula constructed from the model specification list.
 formula = function() {
   return(private$formula_)
 }
@@ -153,9 +228,10 @@ MRPModel$set("public", "formula", formula)
 #'
 #' @name MRPModel-method-metadata
 #' @aliases metadata
-#' @family MRPModel methods
 #'
-#' @description Retrieves the metadata associated with the model, including information about family, time variables, and fitting parameters.
+#'
+#' @description The `$metadata()` method returns the metadata associated with the model,
+#' including metadata inherited from a workflow object and model fitting parameters.
 metadata = function() {
   return(private$metadat_)
 }
@@ -165,9 +241,9 @@ MRPModel$set("public", "metadata", metadata)
 #'
 #' @name MRPModel-method-stan_code
 #' @aliases stan_code
-#' @family MRPModel methods
 #'
-#' @description Retrieves Stan code.
+#'
+#' @description The `$stan_code()` method return Stan code.
 stan_code = function() {
   return(private$stancode_$mcmc)
 }
@@ -177,15 +253,16 @@ MRPModel$set("public", "stan_code", stan_code)
 #'
 #' @name MRPModel-method-fit
 #' @aliases fit
-#' @family MRPModel methods
 #'
-#' @description Fits the MRP model using Stan for Bayesian estimation with MCMC sampling.
 #'
-#' @param n_iter Number of MCMC iterations per chain
-#' @param n_chains Number of MCMC chains to run
-#' @param seed Random seed for reproducibility
-#' @param extra Additional parameters for model fitting
-#' @param ... Additional arguments passed to CmdStanR's `sample()` method
+#' @description The `$fit()` method fits the model using Stan.
+#'
+#' @param n_iter Number of MCMC iterations per chain (including warmup iterations). Default is 2000.
+#' @param n_chains Number of MCMC chains to run. Default is 4.
+#' @param seed Random seed for reproducibility. Default is `NULL`.
+#' @param extra A list of additional parameters for model fitting, such as sensitivity and specificity
+#' for COVID data. For example, `list(sens = 0.7, spec = 0.999)`.
+#' @param ... Additional arguments passed to CmdStanR's `$sample()` method
 fit <- function(
   n_iter = 2000,
   n_chains = 4,
@@ -227,9 +304,11 @@ MRPModel$set("public", "fit", fit)
 #'
 #' @name MRPModel-method-check_fit_exists
 #' @aliases check_fit_exists
-#' @family MRPModel methods
 #'
-#' @description Checks whether the model has been fitted and results are available.
+#'
+#' @description The `$check_fit_exists()` method checks whether the model has been fitted.
+#' 
+#' @return Logical indicating whether the model has been fitted.
 check_fit_exists <- function() {
   return(!is.null(private$fit_))
 }
@@ -239,9 +318,11 @@ MRPModel$set("public", "check_fit_exists", check_fit_exists)
 #'
 #' @name MRPModel-method-check_estimate_exists
 #' @aliases check_estimate_exists
-#' @family MRPModel methods
 #'
-#' @description Checks whether poststratification has been performed.
+#'
+#' @description The `$check_estimate_exists()` method checks whether poststratification has been performed.
+#'
+#' @return Logical indicating whether poststratification has been performed.
 check_estimate_exists <- function() {
   return(!is.null(private$est_))
 }
@@ -251,9 +332,11 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #'
 #' @name MRPModel-method-summary
 #' @aliases summary
-#' @family MRPModel methods
 #'
-#' @description Retrieves a summary of the fitted model parameters including posterior means, credible intervals, and diagnostics.
+#'
+#' @description The `$summary()` method returns a summary of posterior samples for the model parameters and diagnostics.
+#'
+#' @return A data frame containing the summary statistics for the posterior samples and diagnostics.
 summary <- function() {
   private$assert_fit_exists()
 
@@ -274,11 +357,14 @@ MRPModel$set("public", "summary", summary)
 #'
 #' @name MRPModel-method-diagnostics
 #' @aliases diagnostics
-#' @family MRPModel methods
 #'
-#' @description Retrieves MCMC diagnostics including convergence statistics and sampling efficiency measures.
+#'
+#' @description The `$diagnostics()` method returns MCMC diagnostics including
+#' convergence statistics and sampling efficiency measures.
 #'
 #' @param summarize Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)
+#'
+#' @return A data.frame object if `summarize` is TRUE, otherwise a list of raw diagnostics
 diagnostics <- function(summarize = TRUE) {
   private$assert_fit_exists()
 
@@ -300,9 +386,11 @@ MRPModel$set("public", "diagnostics", diagnostics)
 #'
 #' @name MRPModel-method-ppc
 #' @aliases ppc
-#' @family MRPModel methods
-#'
-#' @description Runs posterior predictive checks to assess model fit by generating replicated data from the posterior predictive distribution.
+
+
+
+#' @description The `$ppc()` method runs Stan's standalone generated quantities
+#' for posterior predictive checks.
 #'
 ppc <- function() {
   private$assert_fit_exists()
@@ -334,9 +422,10 @@ MRPModel$set("public", "ppc", ppc)
 #'
 #' @name MRPModel-method-loo
 #' @aliases loo
-#' @family MRPModel methods
 #'
-#' @description Runs leave-one-out cross-validation to assess model predictive performance and enable model comparison.
+#'
+#' @description The `$loo()` method runs Stan's standalone generated quantities
+#' and extracts log-likelihood values for leave-one-out cross-validation.
 #'
 loo <- function() {
   private$assert_fit_exists()
@@ -357,15 +446,20 @@ loo <- function() {
 }
 MRPModel$set("public", "loo", loo)
 
-#' Run post-stratification to generate population estimates
+#' Run poststratification to generate population estimates
 #'
 #' @name MRPModel-method-poststratify
 #' @aliases poststratify
-#' @family MRPModel methods
 #'
-#' @description Runs post-stratification using the fitted model to generate population-level estimates across different subgroups and geographies.
 #'
-#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
+#' @description The `$poststratify()` method runs Stan's standalone generated quantities
+#' and extracts posterior samples for poststratified estimates.
+#'
+#' @param interval Confidence interval (a numeric value between 0 and 1) or
+#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#'
+#' @return A data.frame object containing the poststratified estimates and their
+#' corresponding uncertainty intervals.
 poststratify <- function(interval = 0.95) {
   private$assert_fit_exists()
 
@@ -402,11 +496,11 @@ MRPModel$set("public", "poststratify", poststratify)
 #'
 #' @name MRPModel-method-save
 #' @aliases save
-#' @family MRPModel methods
 #'
-#' @description Saves a fitted MRPModel object to a file for later use.
 #'
-#' @param file File path where the model should be saved
+#' @description The `$save()` method saves a fitted MRPModel object to a file for later use.
+#'
+#' @param file File path where the model should be saved.
 save <- function(file) {
   checkmate::assert_path_for_output(
     file,

@@ -54,7 +54,6 @@ mrp_workflow <- function() {
 #' 
 #'
 #' @examples
-#'   \dontrun{
 #'   library(shinymrp)
 #'
 #'   # Initialize the MRP workflow
@@ -130,7 +129,6 @@ mrp_workflow <- function() {
 #'
 #'   # Choropleth map of estimates for geographic areas
 #'   workflow$estimate_map(model, geo = "county")
-#'   } 
 #' 
 #' @export
 #' 
@@ -239,7 +237,7 @@ MRPWorkflow <- R6::R6Class(
 #' 
 #' @name MRPWorkflow-method-preprocessed_data
 #' @aliases preprocessed_data
-#' @family MRPWorkflow methods
+#'
 #' 
 #' @description The `$preprocessed_data()` method returns the preprocessed sample data.
 #'
@@ -253,7 +251,7 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #'
 #' @name MRPWorkflow-method-preprocess
 #' @aliases preprocess
-#' @family MRPWorkflow methods
+#'
 #'
 #' @description The `$preprocess()` method runs the preprocessing pipeline
 #' that includes data standardization, filtering, imputation, and aggregation.
@@ -329,7 +327,7 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #'
 #' @name MRPWorkflow-method-link_acs
 #' @aliases link_acs
-#' @family MRPWorkflow methods
+#'
 #'
 #' @description The `$link_acs()` method obtains poststratification data by
 #' linking the preprocessed sample data to the American Community Survey
@@ -469,7 +467,7 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #'
 #' @name MRPWorkflow-method-load_pstrat
 #' @aliases load_pstrat
-#' @family MRPWorkflow methods
+#'
 #'
 #' @description The `$load_pstrat()` method processes and stores input poststratification data.
 #' The object is subject to the same data preprocessing steps as the sample data.
@@ -564,9 +562,9 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #'
 #' @name MRPWorkflow-method-demo_bars
 #' @aliases demo_bars
-#' @family MRPWorkflow methods
 #'
-#' @description Creates bar plots comparing demographic distributions between
+#'
+#' @description Creates bar plots for comparing demographic distributions between
 #' sample data and poststratification data.
 #'
 #' @param demo Character string specifying the demographic variable to plot.
@@ -613,18 +611,19 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #'
 #' @name MRPWorkflow-method-covar_hist
 #' @aliases covar_hist
-#' @family MRPWorkflow methods
+#'
 #'
 #' @description The `covar_hist()` method creates histogram plots
-#' showing the distribution of geographic covariates across ZIP codes.
-#' *This method is only available for COVID data*.
+#' showing the distribution of geographic covariates across ZIP codes. Refer to the
+#' ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-covariates) for their definitions.
+#' *This method is only available for [COVID data](https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules)*.
 #'
-#' @param covar Character string specifying the geographic covariate. Options are "edu" (education),
-#'   "poverty", "employ", "income", "urban", "adi"
+#' @param covar Character string specifying the geographic covariate. Options are
+#' `"college"`, `"poverty"`, `"employment"`, `"income"`, `"urbanicity"`, and `"adi"`
 #' @param file Optional file path to save the plot.
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
-#' @return A ggplot object showing the covariate distribution histogram
+#' @return A ggplot object showing the covariate distribution histogram.
 covar_hist <- function(covar, file = NULL, ...) {
   private$assert_mrp_exists()
   
@@ -725,14 +724,15 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #'
 #' @name MRPWorkflow-method-sample_size_map
 #' @aliases sample_size_map
-#' @family MRPWorkflow methods
 #'
-#' @description Creates interactive choropleth maps showing data distribution
-#' with respect to geography. Linking geography must not be NULL.
 #'
-#' @param file Optional file path to save the plot
+#' @description The `$sample_size_map()` method creates interactive choropleth maps 
+#' showing data distribution with respect to geography. This method cannot be used
+#' if there is no geographic information in either the sample or poststratification data.
 #'
-#' @return A highcharter map object showing sample size distribution
+#' @param file Optional file path to save the plot.
+#'
+#' @return A highcharter map object showing sample size distribution.
 sample_size_map <- function(file = NULL) {
   private$assert_mrp_exists()
 
@@ -780,14 +780,14 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #'
 #' @name MRPWorkflow-method-outcome_plot
 #' @aliases outcome_plot
-#' @family MRPWorkflow methods
 #'
-#' @description Creates plots showing the distribution of outcome measures over time (for time-varying data) or as static distributions (for cross-sectional data).
 #'
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @description The `$outcome_plot()` method creates average plots of the outcome measure.
 #'
-#' @return A ggplot object showing the outcome measure distribution
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#'
+#' @return A ggplot object showing the outcome measure distribution.
 outcome_plot <- function(file = NULL, ...) {
   private$assert_mrp_exists()
 
@@ -822,15 +822,16 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #'
 #' @name MRPWorkflow-method-outcome_map
 #' @aliases outcome_map
-#' @family MRPWorkflow methods
 #'
-#' @description Creates maps showing average outcome measure by geography for
+#'
+#' @description The `$outcome_map()` method creates maps showing average outcome measure by geography for
 #' cross-sectional data, or highest/lowest temporal average for time-varying data.
 #'
-#' @param summary_type Character string for time-varying data: "max" or "min"
-#' @param file Optional file path to save the map
+#' @param summary_type Character string for time-varying data, indicating whether to display the
+#' highest (`"max"`) or lowest (`"min"`) temporal average.
+#' @param file Optional file path to save the map.
 #'
-#' @return A highcharter map object showing outcome measures by geography
+#' @return A highcharter map object showing outcome measures by geography.
 outcome_map <- function(summary_type = NULL, file = NULL) {
   private$assert_mrp_exists()
 
@@ -891,18 +892,20 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #'
 #' @name MRPWorkflow-method-estimate_plot
 #' @aliases estimate_plot
-#' @family MRPWorkflow methods
 #'
-#' @description Creates plots showing MRP estimates for different subgroups, either over time (for time-varying data) or as static estimates (for cross-sectional data).
+#'
+#' @description The `$estimate_plot()` method creates plots showing overall MRP estimates or
+#' estimates for different demographic groups.
 #'
 #' @param model Fitted MRPModel object
 #' @param group Character string specifying the demographic group for plotting
-#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
-#' @param file Optional file path to save the plot
-#' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE)
-#' @param ... Additional arguments passed to ggsave
+#' @param interval Confidence interval (a numeric value between 0 and 1) or
+#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#' @param file Optional file path to save the plot.
+#' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE).
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
-#' @return A ggplot object showing the group estimates
+#' @return A ggplot object showing MRP estimates.
 estimate_plot <- function(
   model,
   group = NULL,
@@ -984,16 +987,20 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' 
 #' @name MRPWorkflow-method-estimate_map
 #' @aliases estimate_map
-#' @family MRPWorkflow methods
-#' 
-#' @description Creates interactive choropleth maps showing MRP estimates by geographic regions.
+#'
+#' @description The `$estimate_map()` method creates interactive choropleth maps showing MRP estimates by geographic regions.
 #'
 #' @param model Fitted MRPModel object
-#' @param geo Character string specifying the geographic level for mapping
-#' @param time_index Numeric value specifying the time index for time-varying data
-#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
-#' @param file Optional file path to save the map
-#' @param ... Additional arguments
+#' @param geo Character string specifying the geographic level for mapping.
+#' Options are geographic level for linking data and greater. Linking geography
+#' is either specified as `geo` in the `$link_acs()` method or the smallest common
+#' geographic scale between the sample data and the custom poststratification data
+#' input using `$load_pstrat()`.
+#'
+#' @param time_index Numeric value specifying the time index for time-varying data.
+#' @param interval Confidence interval (a numeric value between 0 and 1) or
+#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#' @param file Optional file path to save the map.
 #' 
 #' @return A highcharter map object showing MRP estimates by geography
 estimate_map <- function(
@@ -1001,8 +1008,7 @@ estimate_map <- function(
   geo = NULL,
   time_index = NULL,
   interval = 0.95,
-  file = NULL,
-  ...
+  file = NULL
 ) {
 
   if (is.null(model$link_data()$link_geo)) {
@@ -1071,9 +1077,10 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #'
 #' @name MRPWorkflow-method-create_model
 #' @aliases create_model
-#' @family MRPWorkflow methods
 #'
-#' @description Creates a new MRPModel object with validated effects specification and prepared data for Bayesian model fitting.
+#' @description The `$create_model()` method creates a new MRPModel object
+#' with Stan code generated from the model specification list.
+#' `CmdStanR` objects are used internally for model fitting.
 #'
 #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
 #'
@@ -1098,13 +1105,16 @@ MRPWorkflow$set("public", "create_model", create_model)
 #'
 #' @name MRPWorkflow-method-pp_check
 #' @aliases pp_check
-#' @family MRPWorkflow methods
+
+
+
+#' @description The `$pp_check()` method creates posterior predictive check plots
+#' to assess model fit by comparing observed data to replicated data from
+#' the posterior predictive distribution.
 #'
-#' @description Creates posterior predictive check plots to assess model fit by comparing observed data to replicated data from the posterior predictive distribution.
-#'
-#' @param model Fitted MRPModel object
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @param model Fitted MRPModel object.
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 pp_check <- function(model, file = NULL, ...) {
 
   p <- if (model$metadata()$is_timevar) {
@@ -1136,12 +1146,13 @@ MRPWorkflow$set("public", "pp_check", pp_check)
 #'
 #' @name MRPWorkflow-method-compare_models
 #' @aliases compare_models
-#' @family MRPWorkflow methods
 #'
-#' @description Compares multiple fitted MRP models using leave-one-out cross-validation to assess relative model performance.
 #'
-#' @param ... Multiple MRPModel objects to compare
-#' @param suppress Character string specifying output to suppress during comparison
+#' @description The `$compare_models()` method compares multiple fitted `MRPModel` objects
+#' using leave-one-out cross-validation to assess relative model performance.
+#'
+#' @param ... Multiple MRPModel objects to compare.
+#' @param suppress Character string specifying output to suppress during comparison.
 #'
 #' @return A data frame summarizing the comparison results
 compare_models <- function(..., suppress = NULL) {

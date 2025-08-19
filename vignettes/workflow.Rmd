@@ -151,7 +151,9 @@ workflow$outcome_map(summary_type = "max")
 
 ## Model fitting and diagnostics
 
-The `MRPModel` class is designed to represent individual models and help mange 
+The `MRPModel` class is designed to represent individual models and provides methods for
+interacting with the `CmdStanR` objects under the hood, from running MCMC to extracting
+posterior samples and processing them into a format suitable for visualization.
 
 ### Model specification
 

@@ -8,31 +8,15 @@
 outcome_map(summary_type = NULL, file = NULL)
 }
 \arguments{
-\item{summary_type}{Character string for time-varying data: "max" or "min"}
+\item{summary_type}{Character string for time-varying data, indicating whether to display the
+highest (\code{"max"}) or lowest (\code{"min"}) temporal average.}
 
-\item{file}{Optional file path to save the map}
+\item{file}{Optional file path to save the map.}
 }
 \value{
-A highcharter map object showing outcome measures by geography
+A highcharter map object showing outcome measures by geography.
 }
 \description{
-Creates maps showing average outcome measure by geography for
+The \verb{$outcome_map()} method creates maps showing average outcome measure by geography for
 cross-sectional data, or highest/lowest temporal average for time-varying data.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}
