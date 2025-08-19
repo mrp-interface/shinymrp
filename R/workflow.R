@@ -1,7 +1,7 @@
 #' Create a new MRPWorkflow object
 #' 
 #' @description Create a new [`MRPWorkflow`][MRPWorkflow] object that implements
-#' the Bayesian data analysis workflow that underpins the application of
+#' the Bayesian data analysis workflow common in applications of
 #' Multilevel Regression and Post-stratification (MRP).
 #'
 #' @return A `MRPWorkflow` object.
@@ -19,47 +19,117 @@ mrp_workflow <- function() {
 #'
 #' @description A `MRPWorkflow` object is an [R6][R6::R6Class] object created by
 #' the [`mrp_workflow()`][mrp_workflow] function. This class provides methods for all steps
-#' in the workflow, from data preparation and visualization to model fittingg.
+#' in the workflow, from data preparation and visualization to model fitting.
 #'
 #'
 #' @section Methods: `MRPWorkflow` objects have the following associated
-#'   methods, many of which have their own (linked) documentation pages:
+#' methods with their own (linked) documentation pages:
 #' 
-#'   ## Data preparation
+#'  ## Data preparation
 #' 
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
-#'   [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
-#'   [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
+#'  |**Method**|**Description**|
+#'  |:----------|:---------------|
+#'  [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
+#'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
+#'  [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
+#'  [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
 #'
-#'   ## Model fitting & diagnostics
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
-#'   [`$pp_check()`][MRPWorkflow-method-pp_check] | Perform posterior predictive check. |
-#'   [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
+#'  ## Model fitting & diagnostics
+#'  |**Method**|**Description**|
+#'  |:----------|:---------------|
+#'  [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
+#'  [`$pp_check()`][MRPWorkflow-method-pp_check] | Perform posterior predictive check. |
+#'  [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
 #' 
 #'   ## Visualization
 #'  |**Method**|**Description**|
 #'  |:----------|:---------------|
 #'  [`$demo_bars()`][MRPWorkflow-method-demo_bars] | Create demographic comparison bar plots. |
-#'  [`$covar_hist()`][MRPWorkflow-method-covar_hist] | Create geographic covariate distribution histogram. |
+#'  [`$covar_hist()`][MRPWorkflow-method-covar_hist] | Create geographic covariate distribution histograms. |
 #'  [`$sample_size_map()`][MRPWorkflow-method-sample_size_map] | Create sample size map. |
-#'  [`$outcome_plot()`][MRPWorkflow-method-outcome_plot] | Create summary plots of the outcome measure. |
+#'  [`$outcome_plot()`][MRPWorkflow-method-outcome_plot] | Create summary plots of raw outcome measure. |
 #'  [`$outcome_map()`][MRPWorkflow-method-outcome_map] | Visualize raw outcome measure by geography. |
 #'  [`$estimate_plot()`][MRPWorkflow-method-estimate_plot] | Visualize estimates for demographic groups. |
-#'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic units. |
+#'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic areas. |
 #' 
-#'  ## Other
-#'  |**Method**|**Description**|
-#'  |:----------|:---------------|
-#'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
 #'
-#' 
 #' @examples
 #'   \dontrun{
 #'   library(shinymrp)
+#'
+#'   # Initialize the MRP workflow
+#'   workflow <- mrp_workflow()
+#'
+#'   # Load example data
+#'   sample_data <- example_sample_data()
+#'
+#'   ### DATA PREPARATION
+#'
+#'   # Preprocess sample data
+#'   workflow$preprocess(
+#'     sample_data,
+#'     is_timevar = TRUE,
+#'     is_aggregated = FALSE,
+#'     special_case = NULL,
+#'     family = "binomial"
+#'   )
+#'
+#'   # Link data to the ACS
+#'   # and obtain poststratification data
+#'   workflow$link_acs(
+#'     link_geo = "zip",
+#'     acs_year = 2021
+#'   )
+#'
+#'   ### DESCRIPTIVE STATISTICS
+#'
+#'   # Visualize demographic distribution of data
+#'   workflow$demo_bars(demo = "sex")
+#'
+#'   # Visualize geographic distribution of data
+#'   workflow$sample_size_map()
+#'
+#'   # Visualize outcome measure
+#'   workflow$outcome_plot()
+#'
+#'   ### MODEL BUILDING
+#'
+#'   # Create new model objects
+#'   model <- workflow$create_model(
+#'     model_spec = list(
+#'       Intercept = list(
+#'         Intercept = ""
+#'       ),
+#'       fixed = list(
+#'         sex = "",
+#'         race = ""
+#'       ),
+#'       varying = list(
+#'         age = "",
+#'         time = ""
+#'       )
+#'     )
+#'   )
+#'
+#'   # Run MCMC
+#'   model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+#'
+#'   # Estimates summary and diagnostics
+#'   model$summary()
+#'
+#'   # Sampling diagnostics
+#'   model$diagnostics()
+#'
+#'   # Posterior predictive check
+#'   workflow$pp_check(model)
+#'
+#'   ### VISUALIZE RESULTS
+#'
+#'   # Plots of overall estimates, estimates for demographic groups and geographic areas
+#'   workflow$estimate_plot(model, group = "sex")
+#'
+#'   # Choropleth map of estimates for geographic areas
+#'   workflow$estimate_map(model, geo = "county")
 #'   } 
 #' 
 #' @export
@@ -171,7 +241,7 @@ MRPWorkflow <- R6::R6Class(
 #' @aliases preprocessed_data
 #' @family MRPWorkflow methods
 #' 
-#' @description Retrieves the preprocessed sample data that has been prepared for MRP analysis.
+#' @description The `$preprocessed_data()` method returns the preprocessed sample data.
 #'
 preprocessed_data <- function() {
   return(private$prepdat_)
@@ -185,26 +255,30 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' @aliases preprocess
 #' @family MRPWorkflow methods
 #'
-#' @description Preprocesses the input sample data by cleaning, validating, and preparing it for MRP analysis. This includes handling time-varying data, aggregated data, and special cases.
+#' @description The `$preprocess()` method runs the preprocessing pipeline
+#' that includes data standardization, filtering, imputation, and aggregation.
 #'
-#' @param data Input sample data to be preprocessed
-#' @param is_timevar Logical indicating whether the data contains time-varying components
-#' @param is_aggregated Logical indicating whether the data is already aggregated
-#' @param special_case Character string specifying special case handling (e.g., "covid", "poll")
-#' @param family Character string specifying the model family (e.g., "binomial", "normal")
-#' @param freq Character string specifying the time indexing frequency (e.g., "day", "month")
-#' @param zip_threshold Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)
-#' @param state_threshold Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)
-#'
+#' @param data An object of class `data.frame` (or one that can be coerced to that class).
+#' @param is_timevar Logical indicating whether the data contains time-varying components.
+#' @param is_aggregated Logical indicating whether the data is already aggregated.
+#' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
+#' @param special_case Character string specifying special case handling. Options are `NULL` (the default), `"covid"`, and `"poll"`.
+#' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
+#' @param family Character string specifying the distribution family for the outcome variable. Options are `"binomial"` for binary outcome measures and `"normal"` for continuous outcome measures.
+#' @param time_freq Character string specifying the time indexing frequency or time length for grouping dates (YYYY-MM-DD) in the data.
+#' Options are `NULL` (the default), `"week"`, `"month"`, and `"year"`. This parameter must be `NULL` for cross-sectional data
+#' or time-varying data that already has time indices.
+#' @param freq_threshold Numeric value specifying the minimum frequency threshold for including observations.
+#' Values with lower frequency will cause the entire row to be removed. The default value is 0.
+#' 
 preprocess <- function(
   data,
   is_timevar = FALSE,
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
-  freq = NULL,
-  zip_threshold = 0,
-  state_threshold = 0
+  time_freq = NULL,
+  freq_threshold = 0
 ) {
 
   checkmate::assert_choice(
@@ -213,7 +287,7 @@ preprocess <- function(
     null.ok = TRUE
   )
 
-  if (!is_timevar && !is.null(freq)) {
+  if (!is_timevar && !is.null(time_freq)) {
     stop("Time indexing frequency cannot be specified for static data.")
   }
 
@@ -236,11 +310,10 @@ preprocess <- function(
       data = data,
       metadata = private$metadat_,
       zip_county_state = zip_county_state,
-      freq = freq,
+      time_freq = time_freq,
+      freq_threshold = freq_threshold,
       is_sample = TRUE,
-      is_aggregated = is_aggregated,
-      zip_threshold = zip_threshold,
-      state_threshold = state_threshold
+      is_aggregated = is_aggregated
     )
   
   }, error = function(e) {
@@ -258,10 +331,12 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #' @aliases link_acs
 #' @family MRPWorkflow methods
 #'
-#' @description Links the preprocessed sample data to ACS poststratification data based on geographic and demographic variables.
+#' @description The `$link_acs()` method obtains poststratification data by
+#' linking the preprocessed sample data to the American Community Survey
+#' based on given geographic granularity and year.
 #'
-#' @param link_geo Character string specifying the geographic level for linking (e.g., "state", "county", "zip")
-#' @param acs_year Numeric value specifying the ACS year to use for poststratification data
+#' @param link_geo Character string specifying the geographic level for linking. Options are `"zip"`, `"county"`, and `"state"`.
+#' @param acs_year Numeric value specifying the last year of the 5-year period for the target ACS dataset.
 #'
 link_acs <- function(
   link_geo = NULL,
@@ -390,16 +465,17 @@ link_acs <- function(
 }
 MRPWorkflow$set("public", "link_acs", link_acs)
 
-#' Load custom post-stratification data
+#' Load custom poststratification data
 #'
 #' @name MRPWorkflow-method-load_pstrat
 #' @aliases load_pstrat
 #' @family MRPWorkflow methods
 #'
-#' @description Loads and processes custom poststratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
+#' @description The `$load_pstrat()` method processes and stores input poststratification data.
+#' The object is subject to the same data preprocessing steps as the sample data.
 #'
-#' @param pstrat_data Custom poststratification data to be loaded
-#' @param is_aggregated Logical indicating whether the poststratification data is already aggregated
+#' @param pstrat_data An object of class `data.frame` (or one that can be coerced to that class).
+#' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
 #'
 load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
   if (!is.null(private$metadat_$special_case)) {
@@ -491,11 +567,11 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #' @family MRPWorkflow methods
 #'
 #' @description Creates bar plots comparing demographic distributions between
-#' input survey data and target population data.
+#' sample data and poststratification data.
 #'
-#' @param demo Character string specifying the demographic variable to plot
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @param demo Character string specifying the demographic variable to plot.
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object or patchwork object showing demographic comparisons
 demo_bars <- function(demo, file = NULL, ...) {
