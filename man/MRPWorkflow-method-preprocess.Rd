@@ -11,43 +11,31 @@ preprocess(
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
-  zip_threshold = 0,
-  state_threshold = 0
+  time_freq = NULL,
+  freq_threshold = 0
 )
 }
 \arguments{
-\item{data}{Input sample data to be preprocessed}
+\item{data}{An object of class \code{data.frame} (or one that can be coerced to that class).}
 
-\item{is_timevar}{Logical indicating whether the data contains time-varying components}
+\item{is_timevar}{Logical indicating whether the data contains time-varying components.}
 
-\item{is_aggregated}{Logical indicating whether the data is already aggregated}
+\item{is_aggregated}{Logical indicating whether the data is already aggregated.
+See the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{"More on data preparation"} vignette for more information.}
 
-\item{special_case}{Character string specifying special case handling (e.g., "covid", "poll")}
+\item{special_case}{Character string specifying special case handling. Options are \code{NULL} (the default), \code{"covid"}, and \code{"poll"}.
+See the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{"More on data preparation"} vignette for more information.}
 
-\item{family}{Character string specifying the model family (e.g., "binomial", "normal")}
+\item{family}{Character string specifying the distribution family for the outcome variable. Options are \code{"binomial"} for binary outcome measures and \code{"normal"} for continuous outcome measures.}
 
-\item{zip_threshold}{Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)}
+\item{time_freq}{Character string specifying the time indexing frequency or time length for grouping dates (YYYY-MM-DD) in the data.
+Options are \code{NULL} (the default), \code{"week"}, \code{"month"}, and \code{"year"}. This parameter must be \code{NULL} for cross-sectional data
+or time-varying data that already has time indices.}
 
-\item{state_threshold}{Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)}
+\item{freq_threshold}{Numeric value specifying the minimum frequency threshold for including observations.
+Values with lower frequency will cause the entire row to be removed. The default value is 0.}
 }
 \description{
-Preprocesses the input sample data by cleaning, validating, and preparing it for MRP analysis. This includes handling time-varying data, aggregated data, and special cases.
+The \verb{$preprocess()} method runs the preprocessing pipeline
+that includes data standardization, filtering, imputation, and aggregation.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}

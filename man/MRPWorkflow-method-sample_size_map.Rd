@@ -8,30 +8,13 @@
 sample_size_map(file = NULL)
 }
 \arguments{
-\item{file}{Optional file path to save the plot}
+\item{file}{Optional file path to save the plot.}
 }
 \value{
-A highcharter map object showing sample size distribution
+A highcharter map object showing sample size distribution.
 }
 \description{
-Creates interactive choropleth maps showing data distribution
-with respect to geography.
+The \verb{$sample_size_map()} method creates interactive choropleth maps
+showing data distribution with respect to geography. This method cannot be used
+if there is no geographic information in either the sample or poststratification data.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-compare_models}},
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}}
-}
-\concept{MRPWorkflow methods}

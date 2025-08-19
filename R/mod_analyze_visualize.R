@@ -85,19 +85,20 @@ mod_analyze_visualize_server <- function(id, global){
     ns <- session$ns
 
     # Update the plot category selectInput based on the linking geography.
-    observeEvent(global$linkdata, {
+    observeEvent(global$mrp_ver, {
+      req(global$workflow)
+
       # Reset the select inputs
       shinyjs::reset("summary_slt")
 
-      choices <- GLOBAL$ui$plot_selection$vis_main[[global$metadata$family]]
-      global$metadata$family
+      choices <- GLOBAL$ui$plot_selection$vis_main[[global$workflow$metadata()$family]]
 
-      if (is.null(global$linkdata$link_geo)) {
+      if (is.null(global$workflow$link_data()$link_geo)) {
         choices <- choices[!choices == "geo"]
       }
 
       # Update the plot category selectInput with the new choices.
-      updateSelectInput(session, "plot_category", choices = c("foo")) # Placeholder to trigger update
+      updateSelectInput(session, "plot_category", choices = c("foo")) # trigger update
       updateSelectInput(session, "plot_category", choices = choices)
     })
 
@@ -108,26 +109,26 @@ mod_analyze_visualize_server <- function(id, global){
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$indiv
-        if(is.null(global$metadata$special_case) ||
-           global$metadata$special_case != "poll") {
+        if(is.null(global$workflow$metadata()$special_case) ||
+           global$workflow$metadata()$special_case != "poll") {
           choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {
         label <- "2. Select characteristic"
         choices <- GLOBAL$ui$plot_selection$geo
-        if (!is.null(global$metadata$special_case) &&
-            global$metadata$special_case == "covid") {
+        if (!is.null(global$workflow$metadata()$special_case) &&
+            global$workflow$metadata()$special_case == "covid") {
           choices <- c(choices, GLOBAL$ui$plot_selection$geo_covar)
         }
       } else if (input$plot_category == "outcome") {
         label <- "2. Select plot type"
         choices <- GLOBAL$ui$plot_selection$outcome
 
-        if (!global$metadata$is_timevar) {
+        if (!global$workflow$metadata()$is_timevar) {
           choices <- choices[!choices == "overall"]
         }
 
-        if (is.null(global$linkdata$link_geo)) {
+        if (is.null(global$workflow$link_data()$link_geo)) {
           choices <- choices[!choices == "by_geo"]
         }
       } else {
@@ -178,126 +179,134 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     # Module Server Calls for Individual-level Plots
     # --------------------------------------------------------------------------
-    mod_indiv_plot_server("indiv_sex", reactive(global$mrp), "sex")
-    mod_indiv_plot_server("indiv_race", reactive(global$mrp), "race")
-    mod_indiv_plot_server("indiv_age", reactive(global$mrp), "age")
-    mod_indiv_plot_server("indiv_edu", reactive(global$mrp), "edu")
+    mod_indiv_plot_server(
+      "indiv_sex",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }), 
+      "sex"
+    )
+    mod_indiv_plot_server(
+      "indiv_race",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "race"
+    )
+    mod_indiv_plot_server(
+      "indiv_age",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "age"
+    )
+    mod_indiv_plot_server(
+      "indiv_edu",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "edu"
+    )
 
-  
     # --------------------------------------------------------------------------
     # Sample Size Map and Table
     # --------------------------------------------------------------------------
     mod_indiv_map_server(
       "geo_sample",
-      reactive(global$mrp$input),
-      reactive(global$linkdata$link_geo),
-      reactive(global$plotdata$geojson),
-      fips_
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      })
     )
 
     # --------------------------------------------------------------------------
     # Module Server Calls for Geographic-level Plots
     # --------------------------------------------------------------------------
-    mod_geo_plot_server("geo_college", reactive(global$plotdata$raw_covariates), "college", list(
-      threshold   = 0.5,
-      operation   = ">=",
-      breaks      = seq(0, 1, 0.05),
-      description = "\n%d ZIP codes out of %d (%d%%) have %d%% or more people who have earned an Associate's degree or higher.",
-      definition  = "Higher education measure of a zip code is defined as the percentage of the residing population\nwho have earned an Associate's degree or higher.",
-      name        = "Higher education measure"
-    ))
+    mod_geo_plot_server(
+      "geo_college",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "college"
+    )
     
-    mod_geo_plot_server("geo_poverty", reactive(global$plotdata$raw_covariates), "poverty", list(
-      threshold   = 0.2,
-      operation   = "<=",
-      breaks      = seq(0, 1, 0.05),
-      description = "%d zip codes out of %d (%d%%) have %d%% or less people whose ratio of income to poverty level in the past 12 months\nis below 100%%.",
-      definition  = "Poverty measure of a zip code is defined as the percentage of the residing population\nwhose ratio of income to poverty level in the past 12 months is below 100%%.",
-      name        = "Poverty measure"
-    ))
+    mod_geo_plot_server(
+      "geo_poverty",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "poverty"
+    )
 
-    mod_geo_plot_server("geo_employment", reactive(global$plotdata$raw_covariates), "employment", list(
-      threshold   = 0.5,
-      operation   = ">=",
-      breaks      = seq(0, 1, 0.05),
-      description = "\n%d zip codes out of %d (%d%%) have %d%% or more people who is employed as a part of the civilian labor force.",
-      definition  = "Employment rate of a zip code is defined as the percentage of the residing population\nwho are employed as a part of the civilian labor force.",
-      name        = "Employment rate"
-    ))
-    
-    mod_geo_plot_server("geo_income", reactive(global$plotdata$raw_covariates), "income", list(
-      threshold   = 70784,
-      operation   = ">",
-      breaks      = seq(0, 150000, 5000),
-      description = "%d zip codes out of %d (%d%%) have average value of tract-level median household income in the past 12 months\ngreater than %d dollars (2021 US median income according to the ACS).",
-      definition  = "Income measure of a zip code is defined as the average value of tract-level median household income in the past 12 months\nweighted by tract population counts.",
-      name        = "Average of median household income"
-    ))
+    mod_geo_plot_server(
+      "geo_employment",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "employment"
+    )
 
-    mod_geo_plot_server("geo_urbanicity", reactive(global$plotdata$raw_covariates), "urbanicity", list(
-      threshold   = 0.95,
-      operation   = ">=",
-      breaks      = seq(0, 1, 0.05),
-      description = "\n%d zip codes out of %d (%d%%) have %d%% or more tracts classified as urban.",
-      definition  = "Urbanicity of a zip code is defined as the percentage of covered census tracts classified as urban\nweighted by tract population counts.",
-      name        = "Urbanicity"
-    ))
-    
-    mod_geo_plot_server("geo_adi", reactive(global$plotdata$raw_covariates), "adi", list(
-      threshold   = 80,
-      operation   = ">",
-      breaks      = seq(0, 100, 5),
-      description = "\n%d zip codes out of %d (%d%%) have ADI over %d.",
-      definition  = "Area Deprivation Index (ADI) of a zip code is the average ADI across covered census tracts\nweighted by tract population counts (refer to Learn > Preprocess page for the definition of ADI).",
-      name        = "Area Deprivation Index"
-    ))
+    mod_geo_plot_server(
+      "geo_income",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "income"
+    )
+
+    mod_geo_plot_server(
+      "geo_urbanicity",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "urbanicity"
+    )
+
+    mod_geo_plot_server(
+      "geo_adi",
+      reactive({
+        global$prep_ver
+        global$mrp_ver
+        global$workflow
+      }),
+      "adi"
+    )
 
 
     # --------------------------------------------------------------------------
     # Plot for Outcome Measure over Time
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
-      req(input$plot_subcategory == "overall")
-
-      .plot_outcome_timevar(
-        raw = global$mrp$input,
-        dates = global$plotdata$dates,
-        metadata = global$metadata
-      )
+      req(global$workflow)
+      global$workflow$outcome_plot()
     })
 
     # --------------------------------------------------------------------------
     # Map for Outcome Measure
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
-      req(global$linkdata$link_geo)
+      req(global$workflow, global$workflow$link_data()$link_geo)
 
-      geo <- global$linkdata$link_geo
-      if (geo == "zip") {
-        geo <- "county"  # Plot county-level map for ZIP codes
-      }
-
-      out <- .prep_raw(
-        global$mrp$input,
-        fips_[[geo]],
-        geo = geo,
-        summary_type = input$summary_slt,
-        metadata = global$metadata
-      )
-
-      config <- list()
-      if (n_distinct(out$plot_df$value) == 1 &&
-          out$plot_df$value[1] == 0) {
-        config <- list(minValue = 0, maxValue = 1)
-      }
-      config <- c(config, out$title)
-
-      .choro_map(
-        out$plot_df,
-        global$plotdata$geojson[[geo]],
-        geo = geo,
-        config = config
-      )
+      global$workflow$outcome_map(summary_type = input$summary_slt)
     })
     
   })

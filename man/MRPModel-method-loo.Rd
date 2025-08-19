@@ -8,17 +8,6 @@
 loo()
 }
 \description{
-Runs leave-one-out cross-validation to assess model predictive performance and enable model comparison.
+The \verb{$loo()} method runs Stan's standalone generated quantities
+and extracts log-likelihood values for leave-one-out cross-validation.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-check_fit_exists}},
-\code{\link{MRPModel-method-code}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-fit}},
-\code{\link{MRPModel-method-poststratify}},
-\code{\link{MRPModel-method-ppc}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-summary}}
-}
-\concept{MRPModel methods}

@@ -100,8 +100,8 @@ mod_home_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
-    panel_group <- reactiveVal("main")
-    output$panel_group <- reactive(panel_group())
+    panel_group_rv <- reactiveVal("main")
+    output$panel_group <- reactive(panel_group_rv())
     outputOptions(output, "panel_group", suspendWhenHidden = FALSE)
     
     if (.get_config("demo")) {
@@ -128,9 +128,9 @@ mod_home_server <- function(id, global){
     }
 
     output$left_panel_title <- renderText({
-      req(panel_group())
+      req(panel_group_rv())
       
-      switch(panel_group(),
+      switch(panel_group_rv(),
         "main" = "Time-varying Data",
         "timevar" = "COVID Data",
         "static" = "Polling Data",
@@ -140,9 +140,9 @@ mod_home_server <- function(id, global){
     })
     
     output$left_panel_text <- renderText({
-      req(panel_group())
+      req(panel_group_rv())
       
-      switch(panel_group(),
+      switch(panel_group_rv(),
         "main" = "Collected over time",
         "timevar" = "Data linking for ZIP-code-level covariates and poststratification",
         "static" = "Data linking for poststratification at state level",
@@ -152,9 +152,9 @@ mod_home_server <- function(id, global){
     })
     
     output$right_panel_title <- renderText({
-      req(panel_group())
+      req(panel_group_rv())
       
-      switch(panel_group(),
+      switch(panel_group_rv(),
         "main" = "Cross-sectional Data",
         "timevar" = "General Time-varying Data",
         "static" = "General Cross-sectional Data",
@@ -164,9 +164,9 @@ mod_home_server <- function(id, global){
     })
 
     output$right_panel_text <- renderText({
-      req(panel_group())
+      req(panel_group_rv())
       
-      switch(panel_group(),
+      switch(panel_group_rv(),
         "main" = "Collected at a single time point",
         "timevar" = "Data linking for poststratification at state, county, or ZIP-code level",
         "static" = "Data linking for poststratification at state, county, or ZIP-code level",
@@ -176,69 +176,65 @@ mod_home_server <- function(id, global){
     })
 
     observeEvent(input$left_panel_btn, {
-      req(panel_group())
+      req(panel_group_rv())
 
-      if (panel_group() == "main") {
-        panel_group("timevar")
-      } else if (panel_group() == "timevar") {
-        global$metadata <- list(
-          is_timevar = TRUE,
-          special_case = "covid",
-          family = "binomial"
+      if (panel_group_rv() == "main") {
+        panel_group_rv("timevar")
+      } else {
+        global$metadata <- switch(panel_group_rv(),
+          "timevar" = list(
+            is_timevar = TRUE,
+            special_case = "covid",
+            family = "binomial"
+          ),
+          "static" = list(
+            is_timevar = FALSE,
+            special_case = "poll",
+            family = "binomial"
+          ),
+          "timevar_general" = list(
+            is_timevar = TRUE,
+            special_case = NULL,
+            family = "binomial"
+          ),
+          "static_general" = list(
+            is_timevar = FALSE,
+            special_case = NULL,
+            family = "binomial"
+          )
         )
 
-        .to_analyze(global$session)
-      } else if (panel_group() == "static") {
-        global$metadata <- list(
-          is_timevar = FALSE,
-          special_case = "poll",
-          family = "binomial"
-        )
-
-        .to_analyze(global$session)
-      } else if (panel_group() == "timevar_general") {
-        global$metadata <- list(
-          is_timevar = TRUE,
-          special_case = NULL,
-          family = "binomial"
-        )
-
-        .to_analyze(global$session)
-      } else if (panel_group() == "static_general") {
-        global$metadata <- list(
-          is_timevar = FALSE,
-          special_case = NULL,
-          family = "binomial"
-        )
-
+        global$workflow <- ShinyMRPWorkflow$new()
         .to_analyze(global$session)
       }
     })
 
     observeEvent(input$right_panel_btn, {
-      req(panel_group())
+      req(panel_group_rv())
 
-      if (panel_group() == "main") {
-        panel_group("static")
-      } else if (panel_group() == "timevar") {
-        panel_group("timevar_general")
-      } else if (panel_group() == "static") {
-        panel_group("static_general")
-      } else if (panel_group() == "timevar_general") {
+      if (panel_group_rv() == "main") {
+        panel_group_rv("static")
+      } else if (panel_group_rv() == "timevar") {
+        panel_group_rv("timevar_general")
+      } else if (panel_group_rv() == "static") {
+        panel_group_rv("static_general")
+      } else if (panel_group_rv() == "timevar_general") {
         global$metadata <- list(
           is_timevar = TRUE,
           special_case = NULL,
           family = "normal"
         )
 
+        global$workflow <- ShinyMRPWorkflow$new()
         .to_analyze(global$session)
-      } else if (panel_group() == "static_general") {
+      } else if (panel_group_rv() == "static_general") {
         global$metadata <- list(
           is_timevar = FALSE,
           special_case = NULL,
           family = "normal"
         )
 
+        global$workflow <- ShinyMRPWorkflow$new()
         .to_analyze(global$session)
       }
     })
@@ -249,7 +245,7 @@ mod_home_server <- function(id, global){
     #------------------------------------------------------------------
     observeEvent(global$input$navbar, {
       if(global$input$navbar == "nav_home") {
-        panel_group("main")
+        panel_group_rv("main")
       }
     })
 
@@ -257,16 +253,16 @@ mod_home_server <- function(id, global){
     # Event handlers for back button
     #------------------------------------------------------------------
     observeEvent(input$back_btn, {
-      req(panel_group())
+      req(panel_group_rv())
 
-      if (panel_group() == "timevar") {
-        panel_group("main")
-      } else if (panel_group() == "static") {
-        panel_group("main")
-      } else if (panel_group() == "timevar_general") {
-        panel_group("timevar")
-      } else if (panel_group() == "static_general") {
-        panel_group("static")
+      if (panel_group_rv() == "timevar") {
+        panel_group_rv("main")
+      } else if (panel_group_rv() == "static") {
+        panel_group_rv("main")
+      } else if (panel_group_rv() == "timevar_general") {
+        panel_group_rv("timevar")
+      } else if (panel_group_rv() == "static_general") {
+        panel_group_rv("static")
       }
     })
   })

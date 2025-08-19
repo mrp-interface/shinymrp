@@ -3,22 +3,18 @@
 \name{MRPWorkflow}
 \alias{MRPWorkflow}
 \title{MRPWorkflow objects}
-\value{
-A new MRPWorkflow object.
-}
 \description{
 A \code{MRPWorkflow} object is an \link[R6:R6Class]{R6} object created by
 the \code{\link[=mrp_workflow]{mrp_workflow()}} function. This class provides methods for all steps
-in the workflow, from data preparation and visualization to model fittingg.
-
-Initializes the MRPWorkflow object, setting up necessary fields for data processing and model fitting.
+in the workflow, from data preparation and visualization to model fitting.
 }
 \section{Methods}{
  \code{MRPWorkflow} objects have the following associated
-methods, many of which have their own (linked) documentation pages:
+methods with their own (linked) documentation pages:
 \subsection{Data preparation}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPWorkflow-method-preprocess]{$preprocess()}} \tab Preprocess sample data. \cr
+   \code{\link[=MRPWorkflow-method-preprocessed_data]{$preprocessed_data()}} \tab Return preprocessed sample data. \cr
    \code{\link[=MRPWorkflow-method-link_acs]{$link_acs()}} \tab Link sample data to ACS data. \cr
    \code{\link[=MRPWorkflow-method-load_pstrat]{$load_pstrat()}} \tab Load custom post-stratification data. \cr
 }
@@ -27,9 +23,7 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Model fitting & diagnostics}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-check_effects]{$check_effects()}} \tab Check model specification. \cr
    \code{\link[=MRPWorkflow-method-create_model]{$create_model()}} \tab Create a \code{\link{MRPModel}} object. \cr
-   \code{\link[=MRPWorkflow-method-load_model]{$load_model()}} \tab Load a previously saved model. \cr
    \code{\link[=MRPWorkflow-method-pp_check]{$pp_check()}} \tab Perform posterior predictive check. \cr
    \code{\link[=MRPWorkflow-method-compare_models]{$compare_models()}} \tab Compare models using LOO-CV. \cr
 }
@@ -39,20 +33,12 @@ methods, many of which have their own (linked) documentation pages:
 \subsection{Visualization}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPWorkflow-method-demo_bars]{$demo_bars()}} \tab Create demographic comparison bar plots. \cr
-   \code{\link[=MRPWorkflow-method-covar_hist]{$covar_hist()}} \tab Create geographic covariate distribution histogram. \cr
+   \code{\link[=MRPWorkflow-method-covar_hist]{$covar_hist()}} \tab Create geographic covariate distribution histograms. \cr
    \code{\link[=MRPWorkflow-method-sample_size_map]{$sample_size_map()}} \tab Create sample size map. \cr
-   \code{\link[=MRPWorkflow-method-outcome_plot]{$outcome_plot()}} \tab Create summary plots of the outcome measure. \cr
+   \code{\link[=MRPWorkflow-method-outcome_plot]{$outcome_plot()}} \tab Create summary plots of raw outcome measure. \cr
    \code{\link[=MRPWorkflow-method-outcome_map]{$outcome_map()}} \tab Visualize raw outcome measure by geography. \cr
    \code{\link[=MRPWorkflow-method-estimate_plot]{$estimate_plot()}} \tab Visualize estimates for demographic groups. \cr
-   \code{\link[=MRPWorkflow-method-estimate_map]{$estimate_map()}} \tab Visualize estimates for geographic units. \cr
-}
-
-}
-
-\subsection{Other}{\tabular{ll}{
-   \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPWorkflow-method-metadata]{$metadata()}} \tab Return metadata information. \cr
-   \code{\link[=MRPWorkflow-method-preprocessed_data]{$preprocessed_data()}} \tab Return preprocessed sample data. \cr
+   \code{\link[=MRPWorkflow-method-estimate_map]{$estimate_map()}} \tab Visualize estimates for geographic areas. \cr
 }
 
 }
@@ -61,6 +47,80 @@ methods, many of which have their own (linked) documentation pages:
 \examples{
   \dontrun{
   library(shinymrp)
+
+  # Initialize the MRP workflow
+  workflow <- mrp_workflow()
+
+  # Load example data
+  sample_data <- example_sample_data()
+
+  ### DATA PREPARATION
+
+  # Preprocess sample data
+  workflow$preprocess(
+    sample_data,
+    is_timevar = TRUE,
+    is_aggregated = FALSE,
+    special_case = NULL,
+    family = "binomial"
+  )
+
+  # Link data to the ACS
+  # and obtain poststratification data
+  workflow$link_acs(
+    link_geo = "zip",
+    acs_year = 2021
+  )
+
+  ### DESCRIPTIVE STATISTICS
+
+  # Visualize demographic distribution of data
+  workflow$demo_bars(demo = "sex")
+
+  # Visualize geographic distribution of data
+  workflow$sample_size_map()
+
+  # Visualize outcome measure
+  workflow$outcome_plot()
+
+  ### MODEL BUILDING
+
+  # Create new model objects
+  model <- workflow$create_model(
+    model_spec = list(
+      Intercept = list(
+        Intercept = ""
+      ),
+      fixed = list(
+        sex = "",
+        race = ""
+      ),
+      varying = list(
+        age = "",
+        time = ""
+      )
+    )
+  )
+
+  # Run MCMC
+  model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+
+  # Estimates summary and diagnostics
+  model$summary()
+
+  # Sampling diagnostics
+  model$diagnostics()
+
+  # Posterior predictive check
+  workflow$pp_check(model)
+
+  ### VISUALIZE RESULTS
+
+  # Plots of overall estimates, estimates for demographic groups and geographic areas
+  workflow$estimate_plot(model, group = "sex")
+
+  # Choropleth map of estimates for geographic areas
+  workflow$estimate_map(model, geo = "county")
   } 
 
 }

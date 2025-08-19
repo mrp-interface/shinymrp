@@ -32,53 +32,22 @@ mod_indiv_map_ui <- function(id) {
 #' @noRd 
 #' @importFrom dplyr mutate
 #' @importFrom rlang .data
-mod_indiv_map_server <- function(id, mrp_input, link_geo, geojson, fips_codes){
+mod_indiv_map_server <- function(id, workflow, fips_codes){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
     
     # Render the sample size map
     output$sample_size_map <- highcharter::renderHighchart({
-      req(link_geo())
+      req(workflow()$link_data()$link_geo)
 
-      geo <- if(link_geo() == "zip") "county" else link_geo()
-
-      mrp_input() %>%
-        .prep_sample_size(
-          fips_codes = fips_codes[[geo]],
-          geo = geo,
-          for_map = TRUE
-        ) %>%
-        .choro_map(
-          geojson()[[geo]],
-          geo = geo,
-          config = list(
-            main_title = "Sample Size Map",
-            hover_title = "Sample Size"
-          )
-        )
+      workflow()$sample_size_map()
     })
 
     # Render the sample size table
     output$sample_size_table <- DT::renderDataTable({
-      req(link_geo())
+      req(workflow()$link_data()$link_geo)
 
-      geo <- if(link_geo() == "zip") "county" else link_geo()
-
-      mrp_input() %>%
-        .prep_sample_size(
-          fips_codes = fips_codes[[geo]],
-          geo = geo,
-          for_map = FALSE
-        ) %>%
-        DT::datatable(
-          options = list(
-            lengthChange = FALSE,
-            searching = FALSE,
-            info = FALSE,
-            ordering = FALSE,
-            pagingType = "simple"
-          )
-        )
+      workflow()$sample_size_table()
     })
   })
 }

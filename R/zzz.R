@@ -1,5 +1,7 @@
 # in R/zzz.R or similar
-if (getRversion() >= "2.15.1") utils::globalVariables(".")
+if (getRversion() >= "2.15.1") utils::globalVariables(
+  c(".", ":=", "private", "self")
+)
 
 .onLoad <- function(libname, pkgname) {
   ggplot2::theme_set(

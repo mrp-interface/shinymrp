@@ -8,17 +8,6 @@
 ppc()
 }
 \description{
-Runs posterior predictive checks to assess model fit by generating replicated data from the posterior predictive distribution.
+The \verb{$ppc()} method runs Stan's standalone generated quantities
+for posterior predictive checks.
 }
-\seealso{
-Other MRPModel methods: 
-\code{\link{MRPModel-method-check_fit_exists}},
-\code{\link{MRPModel-method-code}},
-\code{\link{MRPModel-method-diagnostics}},
-\code{\link{MRPModel-method-fit}},
-\code{\link{MRPModel-method-loo}},
-\code{\link{MRPModel-method-poststratify}},
-\code{\link{MRPModel-method-save}},
-\code{\link{MRPModel-method-summary}}
-}
-\concept{MRPModel methods}

@@ -8,31 +8,14 @@
 compare_models(..., suppress = NULL)
 }
 \arguments{
-\item{...}{Multiple MRPModel objects to compare}
+\item{...}{Multiple MRPModel objects to compare.}
 
-\item{suppress}{Character string specifying output to suppress during comparison}
+\item{suppress}{Character string specifying output to suppress during comparison.}
 }
 \value{
 A data frame summarizing the comparison results
 }
 \description{
-Compares multiple fitted MRP models using leave-one-out cross-validation to assess relative model performance.
+The \verb{$compare_models()} method compares multiple fitted \code{MRPModel} objects
+using leave-one-out cross-validation to assess relative model performance.
 }
-\seealso{
-Other MRPWorkflow methods: 
-\code{\link{MRPWorkflow-method-covar_hist}},
-\code{\link{MRPWorkflow-method-create_model}},
-\code{\link{MRPWorkflow-method-demo_bars}},
-\code{\link{MRPWorkflow-method-estimate_map}},
-\code{\link{MRPWorkflow-method-estimate_plot}},
-\code{\link{MRPWorkflow-method-link_acs}},
-\code{\link{MRPWorkflow-method-load_pstrat}},
-\code{\link{MRPWorkflow-method-metadata}},
-\code{\link{MRPWorkflow-method-outcome_map}},
-\code{\link{MRPWorkflow-method-outcome_plot}},
-\code{\link{MRPWorkflow-method-pp_check}},
-\code{\link{MRPWorkflow-method-preprocess}},
-\code{\link{MRPWorkflow-method-preprocessed_data}},
-\code{\link{MRPWorkflow-method-sample_size_map}}
-}
-\concept{MRPWorkflow methods}

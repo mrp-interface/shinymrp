@@ -1,7 +1,7 @@
 #' Create a new MRPWorkflow object
 #' 
 #' @description Create a new [`MRPWorkflow`][MRPWorkflow] object that implements
-#' the Bayesian data analysis workflow that underpins the application of
+#' the Bayesian data analysis workflow common in applications of
 #' Multilevel Regression and Post-stratification (MRP).
 #'
 #' @return A `MRPWorkflow` object.
@@ -19,77 +19,144 @@ mrp_workflow <- function() {
 #'
 #' @description A `MRPWorkflow` object is an [R6][R6::R6Class] object created by
 #' the [`mrp_workflow()`][mrp_workflow] function. This class provides methods for all steps
-#' in the workflow, from data preparation and visualization to model fittingg.
+#' in the workflow, from data preparation and visualization to model fitting.
 #'
 #'
 #' @section Methods: `MRPWorkflow` objects have the following associated
-#'   methods, many of which have their own (linked) documentation pages:
+#' methods with their own (linked) documentation pages:
 #' 
-#'   ## Data preparation
+#'  ## Data preparation
 #' 
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
-#'   [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
-#'   [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
+#'  |**Method**|**Description**|
+#'  |:----------|:---------------|
+#'  [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
+#'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
+#'  [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
+#'  [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
 #'
-#'   ## Model fitting & diagnostics
-#'   |**Method**|**Description**|
-#'   |:----------|:---------------|
-#'   [`$check_effects()`][MRPWorkflow-method-check_effects] | Check model specification. |
-#'   [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
-#'   [`$load_model()`][MRPWorkflow-method-load_model] | Load a previously saved model. |
-#'   [`$pp_check()`][MRPWorkflow-method-pp_check] | Perform posterior predictive check. |
-#'   [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
+#'  ## Model fitting & diagnostics
+#'  |**Method**|**Description**|
+#'  |:----------|:---------------|
+#'  [`$create_model()`][MRPWorkflow-method-create_model] | Create a [`MRPModel`][MRPModel] object. |
+#'  [`$pp_check()`][MRPWorkflow-method-pp_check] | Perform posterior predictive check. |
+#'  [`$compare_models()`][MRPWorkflow-method-compare_models] | Compare models using LOO-CV. |
 #' 
 #'   ## Visualization
 #'  |**Method**|**Description**|
 #'  |:----------|:---------------|
 #'  [`$demo_bars()`][MRPWorkflow-method-demo_bars] | Create demographic comparison bar plots. |
-#'  [`$covar_hist()`][MRPWorkflow-method-covar_hist] | Create geographic covariate distribution histogram. |
+#'  [`$covar_hist()`][MRPWorkflow-method-covar_hist] | Create geographic covariate distribution histograms. |
 #'  [`$sample_size_map()`][MRPWorkflow-method-sample_size_map] | Create sample size map. |
-#'  [`$outcome_plot()`][MRPWorkflow-method-outcome_plot] | Create summary plots of the outcome measure. |
+#'  [`$outcome_plot()`][MRPWorkflow-method-outcome_plot] | Create summary plots of raw outcome measure. |
 #'  [`$outcome_map()`][MRPWorkflow-method-outcome_map] | Visualize raw outcome measure by geography. |
 #'  [`$estimate_plot()`][MRPWorkflow-method-estimate_plot] | Visualize estimates for demographic groups. |
-#'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic units. |
+#'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic areas. |
 #' 
-#'  ## Other
-#'  |**Method**|**Description**|
-#'  |:----------|:---------------|
-#'  [`$metadata()`][MRPWorkflow-method-metadata] | Return metadata information. |
-#'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
 #'
-#' 
 #' @examples
-#'   \dontrun{
 #'   library(shinymrp)
-#'   } 
+#'
+#'   # Initialize the MRP workflow
+#'   workflow <- mrp_workflow()
+#'
+#'   # Load example data
+#'   sample_data <- example_sample_data()
+#'
+#'   ### DATA PREPARATION
+#'
+#'   # Preprocess sample data
+#'   workflow$preprocess(
+#'     sample_data,
+#'     is_timevar = TRUE,
+#'     is_aggregated = FALSE,
+#'     special_case = NULL,
+#'     family = "binomial"
+#'   )
+#'
+#'   # Link data to the ACS
+#'   # and obtain poststratification data
+#'   workflow$link_acs(
+#'     link_geo = "zip",
+#'     acs_year = 2021
+#'   )
+#'
+#'   ### DESCRIPTIVE STATISTICS
+#'
+#'   # Visualize demographic distribution of data
+#'   workflow$demo_bars(demo = "sex")
+#'
+#'   # Visualize geographic distribution of data
+#'   workflow$sample_size_map()
+#'
+#'   # Visualize outcome measure
+#'   workflow$outcome_plot()
+#'
+#'   ### MODEL BUILDING
+#'
+#'   # Create new model objects
+#'   model <- workflow$create_model(
+#'     model_spec = list(
+#'       Intercept = list(
+#'         Intercept = ""
+#'       ),
+#'       fixed = list(
+#'         sex = "",
+#'         race = ""
+#'       ),
+#'       varying = list(
+#'         age = "",
+#'         time = ""
+#'       )
+#'     )
+#'   )
+#'
+#'   # Run MCMC
+#'   model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+#'
+#'   # Estimates summary and diagnostics
+#'   model$summary()
+#'
+#'   # Sampling diagnostics
+#'   model$diagnostics()
+#'
+#'   # Posterior predictive check
+#'   workflow$pp_check(model)
+#'
+#'   ### VISUALIZE RESULTS
+#'
+#'   # Plots of overall estimates, estimates for demographic groups and geographic areas
+#'   workflow$estimate_plot(model, group = "sex")
+#'
+#'   # Choropleth map of estimates for geographic areas
+#'   workflow$estimate_map(model, geo = "county")
 #' 
 #' @export
+#' 
+#' @importFrom R6 R6Class
 MRPWorkflow <- R6::R6Class(
   "MRPWorkflow",
   private = list(
-    data_ = NULL,
-    metadata_ = NULL,
-    linkdata_ = NULL,
-    plotdata_ = NULL,
-    mrp_ = NULL,
+    prepdat_ = NULL,
+    metadat_ = NULL,
+    linkdat_ = NULL,
+    plotdat_ = NULL,
+    mrpdat_ = NULL,
 
     assert_metadata_exists = function() {
-      if (is.null(private$metadata_)) {
+      if (is.null(private$metadat_)) {
         stop("Metadata is not available. Please run 'preprocess' first.")
       }
     },
 
     assert_data_exists = function() {
-      if (is.null(private$data_)) {
-        stop("Sample data is not available. Please run data preparation steps first.")
+      if (is.null(private$prepdat_)) {
+        stop("Sample data is not available. Please run 'preprocess' first.")
       }
     },
 
     assert_mrp_exists = function() {
-      if (is.null(private$mrp_)) {
-        stop("Data for MRP is not available. Please run data preparation steps first.")
+      if (is.null(private$mrpdat_)) {
+        stop("Data for MRP is not available. Please run 'link_acs' or 'load_pstrat' first.")
       }
     },
 
@@ -114,7 +181,7 @@ MRPWorkflow <- R6::R6Class(
 
       # check if model_spec have corresponding variables in data
       main_vars <- c(names(model_spec$fixed), names(model_spec$varying))
-      vars_in_data <- names(private$mrp_$input)
+      vars_in_data <- names(private$mrpdat_$input)
       invalid_vars <- setdiff(main_vars, vars_in_data)
 
       if (length(invalid_vars) > 0) {
@@ -123,7 +190,7 @@ MRPWorkflow <- R6::R6Class(
       }
 
       # check if any variables are single-level factors
-      omit_vars <- private$mrp_$vars$omit
+      omit_vars <- private$mrpdat_$vars$omit
       if (length(intersect(main_vars, omit_vars$one_level)) > 0) {
         stop(paste0("The following variables have a single level and cannot be used: ",
             paste(omit_vars$one_level, collapse = ", ")))
@@ -140,15 +207,13 @@ MRPWorkflow <- R6::R6Class(
       valid_ints_w_struct <- .filter_interactions(
         interactions = ints_w_struct,
         fixed_effects = names(model_spec$fixed),
-        data = private$mrp_$input
+        data = private$mrpdat_$input
       )
       invalid_ints_w_struct <- setdiff(ints_w_struct, valid_ints_w_struct)
       if (length(invalid_ints_w_struct) > 0) {
         stop(paste0("The following interactions cannot be assigned structured prior: ",
             paste(invalid_ints_w_struct, collapse = ", ")))
       }
-
-      return(TRUE)
     },
 
     assert_model = function(model) {
@@ -157,70 +222,61 @@ MRPWorkflow <- R6::R6Class(
         classes = "MRPModel",
         null.ok = FALSE
       )
-
-      return(TRUE)
     }
   ),
   public = list(
-    #' @description Initializes the MRPWorkflow object, setting up necessary fields for data processing and model fitting.
-    #' 
-    #' @return A new MRPWorkflow object.
-    initialize = function() {}
+    initialize = function() {},
+
+    metadata = function() {
+      return(private$metadat_)
+    }
   )
 )
-#' Return workflow metadata
-#' 
-#' @name MRPWorkflow-method-metadata
-#' @aliases metadata
-#' @family MRPWorkflow methods
-#' 
-#' @description Retrieves the metadata associated with the current workflow, including information about time variables, family, and special cases.
-#'
-metadata <- function() {
-  private$assert_metadata_exists()
-  return(private$metadata_)
-}
-MRPWorkflow$set("public", "metadata", metadata)
-
 
 #' Return preprocessed sample data
 #' 
 #' @name MRPWorkflow-method-preprocessed_data
 #' @aliases preprocessed_data
-#' @family MRPWorkflow methods
+#'
 #' 
-#' @description Retrieves the preprocessed sample data that has been prepared for MRP analysis.
+#' @description The `$preprocessed_data()` method returns the preprocessed sample data.
 #'
 preprocessed_data <- function() {
-  private$assert_data_exists()
-  return(private$data_)
+  return(private$prepdat_)
 }
 MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
+
 
 #' Preprocess sample data
 #'
 #' @name MRPWorkflow-method-preprocess
 #' @aliases preprocess
-#' @family MRPWorkflow methods
 #'
-#' @description Preprocesses the input sample data by cleaning, validating, and preparing it for MRP analysis. This includes handling time-varying data, aggregated data, and special cases.
 #'
-#' @param data Input sample data to be preprocessed
-#' @param is_timevar Logical indicating whether the data contains time-varying components
-#' @param is_aggregated Logical indicating whether the data is already aggregated
-#' @param special_case Character string specifying special case handling (e.g., "covid", "poll")
-#' @param family Character string specifying the model family (e.g., "binomial", "normal")
-#' @param zip_threshold Numeric value specifying the minimum number of records required for a ZIP code to be included in the analysis (default is 0)
-#' @param state_threshold Numeric value specifying the minimum number of records required for a state to be included in the analysis (default is 0)
+#' @description The `$preprocess()` method runs the preprocessing pipeline
+#' that includes data standardization, filtering, imputation, and aggregation.
 #'
+#' @param data An object of class `data.frame` (or one that can be coerced to that class).
+#' @param is_timevar Logical indicating whether the data contains time-varying components.
+#' @param is_aggregated Logical indicating whether the data is already aggregated.
+#' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
+#' @param special_case Character string specifying special case handling. Options are `NULL` (the default), `"covid"`, and `"poll"`.
+#' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
+#' @param family Character string specifying the distribution family for the outcome variable. Options are `"binomial"` for binary outcome measures and `"normal"` for continuous outcome measures.
+#' @param time_freq Character string specifying the time indexing frequency or time length for grouping dates (YYYY-MM-DD) in the data.
+#' Options are `NULL` (the default), `"week"`, `"month"`, and `"year"`. This parameter must be `NULL` for cross-sectional data
+#' or time-varying data that already has time indices.
+#' @param freq_threshold Numeric value specifying the minimum frequency threshold for including observations.
+#' Values with lower frequency will cause the entire row to be removed. The default value is 0.
+#' 
 preprocess <- function(
   data,
   is_timevar = FALSE,
   is_aggregated = FALSE,
   special_case = NULL,
   family = NULL,
-  zip_threshold = 0,
-  state_threshold = 0
+  time_freq = NULL,
+  freq_threshold = 0
 ) {
 
   checkmate::assert_choice(
@@ -229,7 +285,15 @@ preprocess <- function(
     null.ok = TRUE
   )
 
-  private$metadata_ <- list(
+  if (!is_timevar && !is.null(time_freq)) {
+    stop("Time indexing frequency cannot be specified for static data.")
+  }
+
+  if (family == "normal" && is_aggregated) {
+    stop("is_aggregated cannot be TRUE for data with continuous outcome (normal family).")
+  }
+  
+  private$metadat_ <- list(
     is_timevar = is_timevar,
     special_case = special_case,
     family = family
@@ -240,14 +304,14 @@ preprocess <- function(
   tryCatch({
     zip_county_state <- .fetch_data("zip_county_state.csv", subdir = "geo")
 
-    private$data_ <- .preprocess(
+    private$prepdat_ <- .preprocess(
       data = data,
-      metadata = private$metadata_,
+      metadata = private$metadat_,
       zip_county_state = zip_county_state,
+      time_freq = time_freq,
+      freq_threshold = freq_threshold,
       is_sample = TRUE,
-      is_aggregated = is_aggregated,
-      zip_threshold = zip_threshold,
-      state_threshold = state_threshold
+      is_aggregated = is_aggregated
     )
   
   }, error = function(e) {
@@ -263,12 +327,14 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #'
 #' @name MRPWorkflow-method-link_acs
 #' @aliases link_acs
-#' @family MRPWorkflow methods
 #'
-#' @description Links the preprocessed sample data to ACS poststratification data based on geographic and demographic variables.
 #'
-#' @param link_geo Character string specifying the geographic level for linking (e.g., "state", "county", "zip")
-#' @param acs_year Numeric value specifying the ACS year to use for poststratification data
+#' @description The `$link_acs()` method obtains poststratification data by
+#' linking the preprocessed sample data to the American Community Survey
+#' based on given geographic granularity and year.
+#'
+#' @param link_geo Character string specifying the geographic level for linking. Options are `"zip"`, `"county"`, and `"state"`.
+#' @param acs_year Numeric value specifying the last year of the 5-year period for the target ACS dataset.
 #'
 link_acs <- function(
   link_geo = NULL,
@@ -292,78 +358,78 @@ link_acs <- function(
   message("Linking data to the ACS...")
 
   # store user's selections for data linking
-  private$linkdata_ <- list(
-    link_geo = if(link_geo %in% GLOBAL$vars$geo) link_geo else NULL,
+  private$linkdat_ <- list(
+    link_geo = link_geo,
     acs_year = acs_year
   )
 
   tryCatch({
-    if (!is.null(private$metadata_$special_case) &&
-        private$metadata_$special_case == "covid") {
+    if (!is.null(private$metadat_$special_case) &&
+        private$metadat_$special_case == "covid") {
 
-      if (is.null(private$linkdata_$link_geo) ||
-          private$linkdata_$link_geo != "zip") {
-        private$linkdata_$link_geo <- "zip"
-        warning(stringr::str_interp("Linking geography is either incorrect or not specified. Using 'zip' as default for COVID data."))
+      if (is.null(private$linkdat_$link_geo) ||
+          private$linkdat_$link_geo != "zip") {
+        private$linkdat_$link_geo <- "zip"
+        warning("Linking geography is either incorrect or not specified. Using 'zip' as default for COVID data.")
       }
 
       pstrat_covid <- .fetch_data("pstrat_covid.csv", subdir = "acs")
       covar_covid <- .fetch_data("covar_covid.csv", subdir = "acs")
 
       # prepare data for MRP
-      private$mrp_ <- .prepare_mrp_covid(
-        input_data = private$data_,
+      private$mrpdat_ <- .prepare_mrp_covid(
+        input_data = private$prepdat_,
         pstrat_data = pstrat_covid,
         covariates = covar_covid,
-        metadata   = private$metadata_
+        metadata   = private$metadat_
       )
 
       # prepare data for plotting
-      private$plotdata_ <- list(
-        dates = if("date" %in% names(private$data_)) .get_dates(private$data_) else NULL,
+      private$plotdat_ <- list(
+        dates = if("date" %in% names(private$prepdat_)) .get_dates(private$prepdat_) else NULL,
         geojson = list(county = .filter_geojson(
           geojson_$county,
-          private$mrp_$levels$county
+          private$mrpdat_$levels$county
         )),
         raw_covariates = covar_covid %>%
-          filter(.data$zip %in% unique(private$mrp_$input$zip))
+          filter(.data$zip %in% unique(private$mrpdat_$input$zip))
       )
 
-    } else if (!is.null(private$metadata_$special_case) &&
-                private$metadata_$special_case == "poll") {
+    } else if (!is.null(private$metadat_$special_case) &&
+                private$metadat_$special_case == "poll") {
 
-      if (is.null(private$linkdata_$link_geo) ||
-          private$linkdata_$link_geo != "state") {
-        private$linkdata_$link_geo <- "state"
+      if (is.null(private$linkdat_$link_geo) ||
+          private$linkdat_$link_geo != "state") {
+        private$linkdat_$link_geo <- "state"
         warning(stringr::str_interp("Linking geography is either incorrect or not specified. Using 'state' as default for polling data."))
       }
 
       new_data <- .fetch_data("pstrat_poll.csv", subdir = "acs") %>%
         mutate(state = .to_fips(.data$state, "state"))
 
-      private$mrp_ <- .prepare_mrp_custom(
-        input_data = private$data_,
+      private$mrpdat_ <- .prepare_mrp_custom(
+        input_data = private$prepdat_,
         new_data = new_data,
-        metadata = private$metadata_,
+        metadata = private$metadat_,
         link_geo = "state"
       )
 
       # prepare data for plotting
-      private$plotdata_ <- list(
+      private$plotdat_ <- list(
         geojson = list(state = .filter_geojson(
           geojson_$state,
-          private$mrp_$levels$state
+          private$mrpdat_$levels$state
         ))
       )
 
     } else {
-      if (is.null(private$linkdata_$acs_year)) {
-        private$linkdata_$acs_year <- GLOBAL$args$acs_years[length(GLOBAL$args$acs_years)]
-        warning(stringr::str_interp("ACS year not specified. Using the latest year: ${private$linkdata_$acs_year}."))
+      if (is.null(private$linkdat_$acs_year)) {
+        private$linkdat_$acs_year <- GLOBAL$args$acs_years[length(GLOBAL$args$acs_years)]
+        warning(stringr::str_interp("ACS year not specified. Using the latest year: ${private$linkdat_$acs_year}."))
       }
 
       # retrieve ACS data based on user's input
-      acs_year <- private$linkdata_$acs_year
+      acs_year <- private$linkdat_$acs_year
       tract_data <- .fetch_data(
         paste0("acs_", acs_year - 4, "-", acs_year, ".csv"),
         subdir = "acs"
@@ -371,25 +437,25 @@ link_acs <- function(
       zip_tract <- .fetch_data("zip_tract.csv", subdir = "geo")
 
       # prepare data for MRP
-      private$mrp_ <- .prepare_mrp_acs(
-        input_data = private$data_,
+      private$mrpdat_ <- .prepare_mrp_acs(
+        input_data = private$prepdat_,
         tract_data = tract_data,
         zip_tract = zip_tract,
-        metadata = private$metadata_,
-        link_geo = private$linkdata_$link_geo
+        metadata = private$metadat_,
+        link_geo = private$linkdat_$link_geo
       )
 
       # prepare data for plotting
       plotdata <- list()
-      plotdata$dates <- if("date" %in% names(private$data_)) .get_dates(private$data_) else NULL
+      plotdata$dates <- if("date" %in% names(private$prepdat_)) .get_dates(private$prepdat_) else NULL
       plotdata$geojson <- names(geojson_) %>%
         stats::setNames(nm = .) %>%
         purrr::map(~.filter_geojson(
           geojson = geojson_[[.x]], 
-          geoids = private$mrp_$levels[[.x]]
+          geoids = private$mrpdat_$levels[[.x]]
         ))
 
-      private$plotdata_ <- .nullify(plotdata)
+      private$plotdat_ <- .nullify(plotdata)
     }
   }, error = function(e) {
     message(paste("Error linking data:\n", e$message))
@@ -397,23 +463,24 @@ link_acs <- function(
 }
 MRPWorkflow$set("public", "link_acs", link_acs)
 
-#' Load custom post-stratification data
+#' Load custom poststratification data
 #'
 #' @name MRPWorkflow-method-load_pstrat
 #' @aliases load_pstrat
-#' @family MRPWorkflow methods
 #'
-#' @description Loads and processes custom poststratification data instead of using ACS data. This method validates the data and prepares it for MRP analysis.
 #'
-#' @param pstrat_data Custom poststratification data to be loaded
-#' @param is_aggregated Logical indicating whether the poststratification data is already aggregated
+#' @description The `$load_pstrat()` method processes and stores input poststratification data.
+#' The object is subject to the same data preprocessing steps as the sample data.
+#'
+#' @param pstrat_data An object of class `data.frame` (or one that can be coerced to that class).
+#' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
 #'
 load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
-  if (!is.null(private$metadata_$special_case)) {
+  if (!is.null(private$metadat_$special_case)) {
     stop("Custom poststratification data is not supported for special cases like COVID or polling data. Please use the `link_acs` method instead.")
   }
 
-  if (is.null(private$data_)) {
+  if (is.null(private$prepdat_)) {
     stop("Sample data is not available. Please provide sample data through the `preprocess` method first.")
   }
 
@@ -429,49 +496,49 @@ load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
     # Process data
     new_data <- .preprocess(
       data = pstrat_data,
-      metadata = private$metadata_,
+      metadata = private$metadat_,
       zip_county_state = zip_county_state,
       is_sample = FALSE,
       is_aggregated = is_aggregated
     )
 
     # Compare to sample data
-    .check_pstrat(new_data, private$data_, .create_expected_levels(private$metadata_))
+    .check_pstrat(new_data, private$prepdat_, .create_expected_levels(private$metadat_))
 
     # Find the smallest common geography
     link_geo <- NULL
-    common <- intersect(names(private$data_), names(new_data))
+    common <- intersect(names(private$prepdat_), names(new_data))
     smallest <- .get_smallest_geo(common)
     if (!is.null(smallest)) {
       link_geo <- smallest$geo
     }
 
     # Store linking geography
-    private$linkdata_ <- list(
+    private$linkdat_ <- list(
       link_geo = link_geo,
       acs_year = NULL
     )
 
     # Prepare data for MRP
-    private$mrp_ <- .prepare_mrp_custom(
-      input_data = private$data_,
+    private$mrpdat_ <- .prepare_mrp_custom(
+      input_data = private$prepdat_,
       new_data = new_data,
-      metadata = private$metadata_,
+      metadata = private$metadat_,
       link_geo = link_geo
     )
 
 
     # prepare data for plotting
     plotdata <- list()
-    plotdata$dates <- if("date" %in% names(private$data_)) .get_dates(private$data_) else NULL
+    plotdata$dates <- if("date" %in% names(private$prepdat_)) .get_dates(private$prepdat_) else NULL
     plotdata$geojson <- names(geojson_) %>%
       stats::setNames(nm = .) %>%
       purrr::map(~.filter_geojson(
         geojson = geojson_[[.x]], 
-        geoids = private$mrp_$levels[[.x]]
+        geoids = private$mrpdat_$levels[[.x]]
       ))
 
-    private$plotdata_ <- .nullify(plotdata)
+    private$plotdat_ <- .nullify(plotdata)
 
   }, error = function(e) {
     # show error message
@@ -479,9 +546,9 @@ load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
     message(error_message)
     
     # reset fields
-    private$linkdata_ <- NULL
-    private$mrp_ <- NULL
-    private$plotdata_ <- NULL
+    private$linkdat_ <- NULL
+    private$mrpdat_ <- NULL
+    private$plotdat_ <- NULL
     
   })
 }
@@ -495,14 +562,14 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #'
 #' @name MRPWorkflow-method-demo_bars
 #' @aliases demo_bars
-#' @family MRPWorkflow methods
 #'
-#' @description Creates bar plots comparing demographic distributions between
-#' input survey data and target population data.
 #'
-#' @param demo Character string specifying the demographic variable to plot
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @description Creates bar plots for comparing demographic distributions between
+#' sample data and poststratification data.
+#'
+#' @param demo Character string specifying the demographic variable to plot.
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object or patchwork object showing demographic comparisons
 demo_bars <- function(demo, file = NULL, ...) {
@@ -510,21 +577,21 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   checkmate::assert_choice(
     demo,
-    choices = intersect(GLOBAL$vars$demo, names(private$mrp_$levels)), 
+    choices = intersect(GLOBAL$vars$demo, names(private$mrpdat_$levels)), 
     null.ok = FALSE
   )
 
-  input_data <- private$mrp_$input %>%
-    .as_factor(private$mrp_$levels[demo]) %>%
+  input_data <- private$mrpdat_$input %>%
+    .as_factor(private$mrpdat_$levels[demo]) %>%
     mutate(demo = !!sym(demo)) %>%
     select(.data$demo, .data$total)
 
-  new_data <- private$mrp_$new
+  new_data <- private$mrpdat_$new
   if ("time" %in% names(new_data)) {
     new_data <- new_data %>% filter(.data$time == 1)
   }
   new_data <- new_data %>%
-    .as_factor(private$mrp_$levels[demo]) %>%
+    .as_factor(private$mrpdat_$levels[demo]) %>%
     mutate(demo = !!sym(demo)) %>%
     select(.data$demo, .data$total)
 
@@ -532,7 +599,7 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -544,21 +611,23 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #'
 #' @name MRPWorkflow-method-covar_hist
 #' @aliases covar_hist
-#' @family MRPWorkflow methods
 #'
-#' @description Creates histogram plots showing the distribution of geographic
-#' covariates across zip codes. Only available for COVID data.
 #'
-#' @param covar Character string specifying the covariate. Options: "edu",
-#'   "poverty", "employ", "income", "urban", "adi"
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @description The `covar_hist()` method creates histogram plots
+#' showing the distribution of geographic covariates across ZIP codes. Refer to the
+#' ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-covariates) for their definitions.
+#' *This method is only available for [COVID data](https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules)*.
 #'
-#' @return A ggplot object showing the covariate distribution histogram
+#' @param covar Character string specifying the geographic covariate. Options are
+#' `"college"`, `"poverty"`, `"employment"`, `"income"`, `"urbanicity"`, and `"adi"`
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#'
+#' @return A ggplot object showing the covariate distribution histogram.
 covar_hist <- function(covar, file = NULL, ...) {
   private$assert_mrp_exists()
   
-  raw_covariates <- private$plotdata_$raw_covariates
+  raw_covariates <- private$plotdat_$raw_covariates
   if (is.null(raw_covariates)) {
     stop("Covariate data is not available. This method is only available for COVID data.")
   }
@@ -643,7 +712,7 @@ covar_hist <- function(covar, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -655,32 +724,33 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #'
 #' @name MRPWorkflow-method-sample_size_map
 #' @aliases sample_size_map
-#' @family MRPWorkflow methods
 #'
-#' @description Creates interactive choropleth maps showing data distribution
-#' with respect to geography.
 #'
-#' @param file Optional file path to save the plot
+#' @description The `$sample_size_map()` method creates interactive choropleth maps 
+#' showing data distribution with respect to geography. This method cannot be used
+#' if there is no geographic information in either the sample or poststratification data.
 #'
-#' @return A highcharter map object showing sample size distribution
+#' @param file Optional file path to save the plot.
+#'
+#' @return A highcharter map object showing sample size distribution.
 sample_size_map <- function(file = NULL) {
   private$assert_mrp_exists()
 
-  geo <- private$linkdata_$link_geo
+  geo <- private$linkdat_$link_geo
   if (geo == "zip") {
     geo <- "county"
   } else if (is.null(geo)) {
     stop("Linking geography is not available.")
   }
   
-  hc <- private$mrp_$input %>%
+  hc <- private$mrpdat_$input %>%
     .prep_sample_size(
       fips_codes = fips_[[geo]],
       geo = geo,
       for_map = TRUE
     ) %>%
     .choro_map(
-      private$plotdata_$geojson[[geo]],
+      private$plotdat_$geojson[[geo]],
       geo = geo,
       config = list(
         main_title = "Sample Size Map",
@@ -710,37 +780,37 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #'
 #' @name MRPWorkflow-method-outcome_plot
 #' @aliases outcome_plot
-#' @family MRPWorkflow methods
 #'
-#' @description Creates plots showing the distribution of outcome measures over time (for time-varying data) or as static distributions (for cross-sectional data).
 #'
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @description The `$outcome_plot()` method creates average plots of the outcome measure.
 #'
-#' @return A ggplot object showing the outcome measure distribution
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#'
+#' @return A ggplot object showing the outcome measure distribution.
 outcome_plot <- function(file = NULL, ...) {
   private$assert_mrp_exists()
 
-  p <- if (private$metadata_$is_timevar) {
+  p <- if (private$metadat_$is_timevar) {
     .plot_outcome_timevar(
-      raw = private$mrp_$input,
+      raw = private$mrpdat_$input,
       yrep_est = NULL,
-      dates = private$plotdata_$dates,
-      metadata = private$metadata_,
+      dates = private$plotdat_$dates,
+      metadata = private$metadat_,
 
       show_caption = FALSE
     )
   } else {
     .plot_outcome_static(
-      raw = private$mrp_$input,
+      raw = private$mrpdat_$input,
       yrep_est = NULL,
-      metadata = private$metadata_
+      metadata = private$metadat_
     )
   }
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -752,15 +822,16 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #'
 #' @name MRPWorkflow-method-outcome_map
 #' @aliases outcome_map
-#' @family MRPWorkflow methods
 #'
-#' @description Creates maps showing average outcome measure by geography for
+#'
+#' @description The `$outcome_map()` method creates maps showing average outcome measure by geography for
 #' cross-sectional data, or highest/lowest temporal average for time-varying data.
 #'
-#' @param summary_type Character string for time-varying data: "max" or "min"
-#' @param file Optional file path to save the map
+#' @param summary_type Character string for time-varying data, indicating whether to display the
+#' highest (`"max"`) or lowest (`"min"`) temporal average.
+#' @param file Optional file path to save the map.
 #'
-#' @return A highcharter map object showing outcome measures by geography
+#' @return A highcharter map object showing outcome measures by geography.
 outcome_map <- function(summary_type = NULL, file = NULL) {
   private$assert_mrp_exists()
 
@@ -770,7 +841,7 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
     null.ok = TRUE
   )
 
-  geo <- private$linkdata_$link_geo
+  geo <- private$linkdat_$link_geo
   if (geo == "zip") {
     geo <- "county"
   } else if (is.null(geo)) {
@@ -778,11 +849,11 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
   }
 
   out <- .prep_raw(
-    private$mrp_$input,
+    private$mrpdat_$input,
     fips_[[geo]],
     geo = geo,
     summary_type = summary_type,
-    metadata = private$metadata_
+    metadata = private$metadat_
   )
 
   config <- list()
@@ -794,7 +865,7 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
 
   hc <- .choro_map(
     out$plot_df,
-    private$plotdata_$geojson[[geo]],
+    private$plotdat_$geojson[[geo]],
     geo = geo,
     config = config
     ) %>%
@@ -821,23 +892,32 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #'
 #' @name MRPWorkflow-method-estimate_plot
 #' @aliases estimate_plot
-#' @family MRPWorkflow methods
 #'
-#' @description Creates plots showing MRP estimates for different subgroups, either over time (for time-varying data) or as static estimates (for cross-sectional data).
+#'
+#' @description The `$estimate_plot()` method creates plots showing overall MRP estimates or
+#' estimates for different demographic groups.
 #'
 #' @param model Fitted MRPModel object
 #' @param group Character string specifying the demographic group for plotting
-#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
-#' @param file Optional file path to save the plot
-#' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE)
-#' @param ... Additional arguments passed to ggsave
+#' @param interval Confidence interval (a numeric value between 0 and 1) or
+#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#' @param file Optional file path to save the plot.
+#' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE).
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
-#' @return A ggplot object showing the group estimates
-estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = TRUE, file = NULL, ...) {
+#' @return A ggplot object showing MRP estimates.
+estimate_plot <- function(
+  model,
+  group = NULL,
+  interval = 0.95,
+  show_caption = TRUE,
+  file = NULL,
+  ...
+) {
 
   checkmate::assert_choice(
     group,
-    choices = intersect(GLOBAL$vars$pstrat, names(model$mrp()$levels)),
+    choices = intersect(GLOBAL$vars$pstrat, names(model$mrp_data()$levels)),
     null.ok = TRUE
   )
 
@@ -848,15 +928,15 @@ estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = T
 
     p <- if(model$metadata()$is_timevar) {
       .plot_outcome_timevar(
-        raw = model$mrp()$input,
+        raw = model$mrp_data()$input,
         yrep_est = est_df,
-        dates = model$plotdata()$dates,
+        dates = model$plot_data()$dates,
         metadata = model$metadata(),
         show_caption = show_caption
       )
     } else {
       .plot_outcome_static(
-        raw = model$mrp()$input,
+        raw = model$mrp_data()$input,
         yrep_est = est_df,
         metadata = model$metadata(),
         show_caption = show_caption
@@ -866,13 +946,13 @@ estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = T
     # Convert levels to "factor" type
     est_df <- est_list[[group]] %>%
       rename(!!group := factor) %>%
-      .as_factor(model$mrp()$levels[group]) %>%
+      .as_factor(model$mrp_data()$levels[group]) %>%
       rename(factor := !!sym(group))
 
     p <- if (model$metadata()$is_timevar) {
       .plot_est_timevar(
         plot_df = est_df,
-        dates = model$plotdata()$dates,
+        dates = model$plot_data()$dates,
         metadata = model$metadata(),
         interval = interval,
         show_caption = show_caption
@@ -890,12 +970,12 @@ estimate_plot <- function(model, group = NULL, interval = 0.95, show_caption = T
   if (!is.null(file)) {
     # Set default parameters for ggsave
     settings <- if (!is.null(group)) {
-      list(height = 4 * (length(model$mrp()$levels[[group]]) + 1))
+      list(height = 4 * (length(model$mrp_data()$levels[[group]]) + 1))
     } else{
       list()
     }
-    dots <- modifyList(GLOBAL$plot$save, settings) %>%
-      modifyList(list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, settings) %>%
+      utils::modifyList(list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }      
 
@@ -907,16 +987,20 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' 
 #' @name MRPWorkflow-method-estimate_map
 #' @aliases estimate_map
-#' @family MRPWorkflow methods
-#' 
-#' @description Creates interactive choropleth maps showing MRP estimates by geographic regions.
+#'
+#' @description The `$estimate_map()` method creates interactive choropleth maps showing MRP estimates by geographic regions.
 #'
 #' @param model Fitted MRPModel object
-#' @param geo Character string specifying the geographic level for mapping
-#' @param time_index Numeric value specifying the time index for time-varying data
-#' @param interval Confidence interval or standard deviation for the estimates (default is 0.95)
-#' @param file Optional file path to save the map
-#' @param ... Additional arguments
+#' @param geo Character string specifying the geographic level for mapping.
+#' Options are geographic level for linking data and greater. Linking geography
+#' is either specified as `geo` in the `$link_acs()` method or the smallest common
+#' geographic scale between the sample data and the custom poststratification data
+#' input using `$load_pstrat()`.
+#'
+#' @param time_index Numeric value specifying the time index for time-varying data.
+#' @param interval Confidence interval (a numeric value between 0 and 1) or
+#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#' @param file Optional file path to save the map.
 #' 
 #' @return A highcharter map object showing MRP estimates by geography
 estimate_map <- function(
@@ -924,15 +1008,14 @@ estimate_map <- function(
   geo = NULL,
   time_index = NULL,
   interval = 0.95,
-  file = NULL,
-  ...
+  file = NULL
 ) {
 
-  if (is.null(model$linkdata()$link_geo)) {
+  if (is.null(model$link_data()$link_geo)) {
     stop("Linking geography is not available.")
   }
 
-  choices <- intersect(GLOBAL$vars$geo2, names(model$mrp()$levels))
+  choices <- intersect(GLOBAL$vars$geo2, names(model$mrp_data()$levels))
   checkmate::assert_choice(
     geo,
     choices = choices,
@@ -941,7 +1024,7 @@ estimate_map <- function(
   geo <- .replace_null(geo, choices[1])
 
   time_index <- if (model$metadata()$is_timevar) {
-    choices <- model$mrp()$levels$time
+    choices <- model$mrp_data()$levels$time
     checkmate::assert_choice(
       time_index,
       choices = choices,
@@ -962,7 +1045,7 @@ estimate_map <- function(
       interval = interval
     ) %>%
     .choro_map(
-      model$plotdata()$geojson[[geo]],
+      model$plot_data()$geojson[[geo]],
       geo = geo,
       config = list(
         minValue = 0,
@@ -994,9 +1077,10 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #'
 #' @name MRPWorkflow-method-create_model
 #' @aliases create_model
-#' @family MRPWorkflow methods
 #'
-#' @description Creates a new MRPModel object with validated effects specification and prepared data for Bayesian model fitting.
+#' @description The `$create_model()` method creates a new MRPModel object
+#' with Stan code generated from the model specification list.
+#' `CmdStanR` objects are used internally for model fitting.
 #'
 #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
 #'
@@ -1005,14 +1089,14 @@ create_model <- function(model_spec) {
   private$assert_mrp_exists()
   private$assert_model_spec(model_spec)
 
-  effects <- .set_default_priors(model_spec)
+  model_spec <- .set_default_priors(model_spec)
 
   MRPModel$new(
-    effects   = effects,
-    mrp       = private$mrp_,
-    metadata  = private$metadata_,
-    linkdata = private$linkdata_,
-    plotdata = private$plotdata_
+    model_spec = model_spec,
+    mrp_data   = private$mrpdat_,
+    metadata   = private$metadat_,
+    link_data  = private$linkdat_,
+    plot_data  = private$plotdat_
   )
 }
 MRPWorkflow$set("public", "create_model", create_model)
@@ -1021,33 +1105,36 @@ MRPWorkflow$set("public", "create_model", create_model)
 #'
 #' @name MRPWorkflow-method-pp_check
 #' @aliases pp_check
-#' @family MRPWorkflow methods
+
+
+
+#' @description The `$pp_check()` method creates posterior predictive check plots
+#' to assess model fit by comparing observed data to replicated data from
+#' the posterior predictive distribution.
 #'
-#' @description Creates posterior predictive check plots to assess model fit by comparing observed data to replicated data from the posterior predictive distribution.
-#'
-#' @param model Fitted MRPModel object
-#' @param file Optional file path to save the plot
-#' @param ... Additional arguments passed to ggsave
+#' @param model Fitted MRPModel object.
+#' @param file Optional file path to save the plot.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 pp_check <- function(model, file = NULL, ...) {
 
   p <- if (model$metadata()$is_timevar) {
     .plot_ppc_timevar_subset(
       yrep = model$ppc(),
-      raw = model$mrp()$input,
-      dates = model$plotdata()$dates,
+      raw = model$mrp_data()$input,
+      dates = model$plot_data()$dates,
       metadata = model$metadata()
     )
   } else {
     .plot_ppc_static(
       yrep = model$ppc(),
-      raw = model$mrp()$input,
+      raw = model$mrp_data()$input,
       metadata = model$metadata()
     )
   }
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }      
 
@@ -1059,12 +1146,13 @@ MRPWorkflow$set("public", "pp_check", pp_check)
 #'
 #' @name MRPWorkflow-method-compare_models
 #' @aliases compare_models
-#' @family MRPWorkflow methods
 #'
-#' @description Compares multiple fitted MRP models using leave-one-out cross-validation to assess relative model performance.
 #'
-#' @param ... Multiple MRPModel objects to compare
-#' @param suppress Character string specifying output to suppress during comparison
+#' @description The `$compare_models()` method compares multiple fitted `MRPModel` objects
+#' using leave-one-out cross-validation to assess relative model performance.
+#'
+#' @param ... Multiple MRPModel objects to compare.
+#' @param suppress Character string specifying output to suppress during comparison.
 #'
 #' @return A data frame summarizing the comparison results
 compare_models <- function(..., suppress = NULL) {
@@ -1073,6 +1161,8 @@ compare_models <- function(..., suppress = NULL) {
     stop("At least two models are required for comparison.")
   }
 
+  message("Running leave-one-out cross-validation...")
+  
   models <- list(...)
   lapply(models, private$assert_model)
 
