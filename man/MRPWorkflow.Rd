@@ -45,7 +45,6 @@ methods with their own (linked) documentation pages:
 }
 
 \examples{
-  \dontrun{
   library(shinymrp)
 
   # Initialize the MRP workflow
@@ -121,6 +120,5 @@ methods with their own (linked) documentation pages:
 
   # Choropleth map of estimates for geographic areas
   workflow$estimate_map(model, geo = "county")
-  } 
 
 }

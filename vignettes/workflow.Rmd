@@ -152,14 +152,14 @@ workflow$outcome_map(summary_type = "max")
 ## Model fitting and diagnostics
 
 The `MRPModel` class is designed to represent individual models and provides methods for
-interacting with the `CmdStanR` objects under the hood, from running MCMC to extracting
+interacting with the CmdStanR objects under the hood, from running MCMC to extracting
 posterior samples and processing them into a format suitable for visualization.
 
 ### Model specification
 
 The `$create_model()` method takes in a nested list that specifies the variables to include in the model,
 whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
-This is used to generate Stan code for compilation using the `CmdStanR` package. The syntax for the prior distributions
+This is used to generate Stan code for compilation using the CmdStanR package. The syntax for the prior distributions
 is similar to that of Stan. The following are currently supported:
 
 - normal(mu, sigma)
@@ -167,9 +167,9 @@ is similar to that of Stan. The following are currently supported:
 - structured*
 
 The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
-Effects that are assigned empty characters will use the default prior distribution.
 
-Under the Bayesian framework, the following prior distributions are assigned by default:
+The following default prior distributions are assigned to effects with empty strings (`""`)
+in the model specification list:
 
 - Overall intercept: normal(0,5)
 - Coefficient: normal(0,3)
@@ -249,17 +249,17 @@ model2 <- workflow$create_model(
       Intercept = ""
     ),
     fixed = list(
-      sex = "",
-      race = ""
+      sex = "normal(0, 2)",
+      race = "normal(0, 2)"
     ),
     varying = list(
-      age = "",
-      time = ""
+      age = "normal(0, 2)",
+      time = "normal(0, 2)"
     ),
     interaction = list(
-      `age:time` = "",
-      `race:time` = "",
-      `sex:time` = ""
+      `age:time` = "normal(0, 2)",
+      `race:time` = "normal(0, 2)",
+      `sex:time` = "normal(0, 2)"
     )
   )
 )
@@ -294,15 +294,15 @@ model1 <- qs::qread("model1.qs")
 ## Visualize estimates
 
 `$estimate_plot()` is the primary method for visualizing estimates from the fitted models. By default,
-it uses a 95% credible interval for uncertainty quantification but users can specify other intervals, including standard deviation
+it uses a 95% credible interval for uncertainty quantification but users can specify other intervals.
 
 ```{r, estimate_plot, fig.height=10}
-workflow$estimate_plot(model1, group = "sex")
+workflow$estimate_plot(model1, group = "sex", interval = 0.95)
 ```
 
 For geography-based estimates, we recommend using estimate_map, which also takes a similar argument to estimate_plot for uncertainty quantification.
 The selected interval values are shown in the tooltip when users hover over individual tiles on the map.
 
 ```{r, estimate_map}
-workflow$estimate_map(model1, geo = "county")
+workflow$estimate_map(model1, geo = "county", interval = 0.95)
 ```
