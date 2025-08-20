@@ -68,7 +68,7 @@ mrp_workflow <- function() {
 #'   workflow$preprocess(
 #'     sample_data,
 #'     is_timevar = TRUE,
-#'     is_aggregated = FALSE,
+#'     is_aggregated = TRUE,
 #'     special_case = NULL,
 #'     family = "binomial"
 #'   )
@@ -97,15 +97,15 @@ mrp_workflow <- function() {
 #'   model <- workflow$create_model(
 #'     model_spec = list(
 #'       Intercept = list(
-#'         Intercept = ""
+#'         Intercept = "normal(0, 5)"
 #'       ),
 #'       fixed = list(
-#'         sex = "",
-#'         race = ""
+#'         sex = "normal(0, 2)",
+#'         race = "normal(0, 2)"
 #'       ),
 #'       varying = list(
-#'         age = "",
-#'         time = ""
+#'         age = "normal(0, 2)",
+#'         time = "normal(0, 2)"
 #'       )
 #'     )
 #'   )
@@ -1080,12 +1080,12 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #'
 #' @description The `$create_model()` method creates a new MRPModel object
 #' with Stan code generated from the model specification list.
-#' `CmdStanR` objects are used internally to interface with Stan to
+#' CmdStanR objects are used internally to interface with Stan to
 #' compile the code and run its MCMC algorithm.
 #'
-#' @param model_spec a nested list that specifies the variables to include in the model,
+#' @param model_spec Nested list that specifies the variables to include in the model,
 #' whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
-#' This is used to generate Stan code for compilation using the `CmdStanR` package. The syntax for the prior distributions
+#' This is used to generate Stan code for compilation using the CmdStanR package. The syntax for the prior distributions
 #' is similar to that of Stan. The following are currently supported:
 #'
 #' - normal(mu, sigma)

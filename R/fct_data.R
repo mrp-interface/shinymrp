@@ -998,7 +998,7 @@
     race = "cat",
     age  = "cat"
   )
-  
+
   if (!is.null(metadata$special_case) &&
       metadata$special_case == "covid") types$zip <- "cat"
   if (!is.null(metadata$special_case) &&
@@ -1079,7 +1079,7 @@
 #'
 #' @noRd
 #'
-.check_data <- function(df, expected_types, na_threshold = 0.5) {
+.check_data <- function(df, expected_types, is_aggregated, na_threshold = 0.5) {
   expected_columns <- names(expected_types)
 
   # Check for missing columns
@@ -1121,6 +1121,11 @@
     } else {
       warning("Dates are not provided. Plots will use time indices instead.")
     }
+  }
+
+  # Check if aggregated data misspecified as individual-level
+  if ("total" %in% names(df) && !is_aggregated) {
+    stop("Input data may be aggregated but is specified as individual-level.")
   }
 }
 
@@ -1235,7 +1240,7 @@
     is_sample = is_sample,
     is_aggregated = is_aggregated
   )
-  .check_data(data, types)
+  .check_data(data, types, is_aggregated)
 
   # Aggregate if needed
   if (!is_aggregated) {
