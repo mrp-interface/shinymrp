@@ -88,7 +88,7 @@ methods, many of which have their own (linked) documentation pages:
   workflow$preprocess(
     sample_data,
     is_timevar = TRUE,
-    is_aggregated = FALSE,
+    is_aggregated = TRUE,
     special_case = NULL,
     family = "binomial"
   )
@@ -117,15 +117,15 @@ methods, many of which have their own (linked) documentation pages:
   model <- workflow$create_model(
     model_spec = list(
       Intercept = list(
-        Intercept = ""
+        Intercept = "normal(0, 5)"
       ),
       fixed = list(
-        sex = "",
-        race = ""
+        sex = "normal(0, 2)",
+        race = "normal(0, 2)"
       ),
       varying = list(
-        age = "",
-        time = ""
+        age = "normal(0, 2)",
+        time = "normal(0, 2)"
       )
     )
   )
