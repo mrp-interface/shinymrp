@@ -66,7 +66,7 @@ sample_data <- example_sample_data()
 workflow$preprocess(
   sample_data,
   is_timevar = TRUE,
-  is_aggregated = FALSE,
+  is_aggregated = TRUE,
   special_case = NULL,
   family = "binomial"
 )
