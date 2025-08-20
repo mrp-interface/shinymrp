@@ -56,12 +56,13 @@ methods, many of which have their own (linked) documentation pages:
 
 }
 
-\subsection{Post-processing}{
+\subsection{Post-processing}{\tabular{ll}{
+   \strong{Method} \tab \strong{Description} \cr
+   \code{\link[=MRPModel-method-ppc]{$ppc()}} \tab Run posterior predictive check. \cr
+   \code{\link[=MRPModel-method-loo]{$loo()}} \tab Create input for leave-one-out cross-validation. \cr
+   \code{\link[=MRPModel-method-poststratify]{$poststratify()}} \tab Run post-stratification to generate population estimates. \cr
+}
 
-|\strong{Method}|\strong{Description}|
-\code{\link[=MRPModel-method-ppc]{$ppc()}} | Run posterior predictive check. |
-\code{\link[=MRPModel-method-loo]{$loo()}} | Create input for leave-one-out cross-validation. |
-\code{\link[=MRPModel-method-poststratify]{$poststratify()}} | Run post-stratification to generate population estimates. |
 }
 
 \subsection{Saving model object}{\tabular{ll}{
@@ -73,7 +74,6 @@ methods, many of which have their own (linked) documentation pages:
 }
 
 \examples{
-  \dontrun{
   library(shinymrp)
 
   # Initialize the MRP workflow
@@ -149,6 +149,5 @@ methods, many of which have their own (linked) documentation pages:
 
   # Choropleth map of estimates for geographic areas
   workflow$estimate_map(model, geo = "county")
-  } 
 
 }

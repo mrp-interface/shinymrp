@@ -8,7 +8,30 @@
 create_model(model_spec)
 }
 \arguments{
-\item{model_spec}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
+\item{model_spec}{a nested list that specifies the variables to include in the model,
+whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
+This is used to generate Stan code for compilation using the \code{CmdStanR} package. The syntax for the prior distributions
+is similar to that of Stan. The following are currently supported:
+\itemize{
+\item normal(mu, sigma)
+\item student_t(nu, mu, sigma)
+\item structured*
+}
+
+The last one is a custom prior syntax for the structured prior distribution developed by \href{https://arxiv.org/abs/1707.08220}{Si et al. (2020)}.
+
+The following default prior distributions are assigned to effects with empty strings (\code{""})
+in the model specification list:
+\itemize{
+\item Overall intercept: normal(0,5)
+\item Coefficient: normal(0,3)
+}
+
+The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors.
+\itemize{
+\item Standard deviation (main effect): normal\if{html}{\out{<sub>}}+\if{html}{\out{</sub>}}(0,3)
+\item Standard deviation (interaction): normal\if{html}{\out{<sub>}}+\if{html}{\out{</sub>}}(0,1)
+}}
 }
 \value{
 A new MRPModel object
@@ -16,5 +39,6 @@ A new MRPModel object
 \description{
 The \verb{$create_model()} method creates a new MRPModel object
 with Stan code generated from the model specification list.
-\code{CmdStanR} objects are used internally for model fitting.
+\code{CmdStanR} objects are used internally to interface with Stan to
+compile the code and run its MCMC algorithm.
 }

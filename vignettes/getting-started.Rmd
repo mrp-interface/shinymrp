@@ -9,7 +9,9 @@ vignette: >
 
 ## Overview
 
-shinymrp is a two-in-one package that offers both a graphical and a programmatic interface for applications for Multilevel Regression and Post-stratification (MRP). They parallel each other in their implementation of the following data analysis workflow that the methodology underlies.
+shinymrp is a two-in-one package that offers both a graphical and a programmatic interface
+for applications for Multilevel Regression and Post-stratification (MRP). They parallel
+each other in their implementation of the following data analysis workflow that the methodology underlies.
 
 ![](./figures/workflow.png)
 
@@ -17,7 +19,8 @@ Please follow the instructions below to install the package and its prerequisite
 It is important that Stan is configured properly as it is the engine for all Bayesian modeling in shinymrp.
 Once everything is set up, you can either run the Shiny app with `shinymrp::run_app()` or use the exported classes in your R scripts.
 Because the app is more user-friendly and has a built-in guide, all the vignettes will focus on the programmatic components.
-If you are interested in using the R6 classes, we recommend starting with the overview in the ["Using the exported classes"](https://mrp-interface.github.io/shinymrp/articles/getting-started#using-the-exported-classes) section below.
+If you are interested in using the R6 classes, we recommend starting with the overview in the
+["Using the exported classes"](https://mrp-interface.github.io/shinymrp/articles/getting-started#using-the-exported-classes) section below.
 
 ## Installation
 Users can install the package from GitHub by running the following R command:
@@ -28,58 +31,11 @@ remotes::install_github("mrp-interface/shinymrp")
 ```
 
 This will install [CmdStanR](https://mc-stan.org/cmdstanr/), a dependency for interfacing with [Stan](https://mc-stan.org/).
-Stan is a C++ library for Bayesian modeling that requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”) for compiling Stan programs.
-If you are not sure whether your machine has the necessary toolchain, please follow the instructions below to set it up.
-Once the toolchain is ready, follow the ["CmdStanR documentation"](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStan and you are all set.
-
-### C++ Toolchain Configuration
-
-#### Linux
-
-On most systems, the GNU Make utility is pre-installed and is the default `make` utility.
-There is usually a pre-installed C++ compiler as well, however, it may not be new enough.
-To check your machine, run the commands:
-
-```bash
-g++ --version
-make --version
-```
-
-If these are at least at `g++` version 4.9.3 or later and
-`make` version 3.81 or later, no additional installations are
-necessary. It may still be desirable to update the C++ compiler `g++` because later versions are faster.
-
-A modern C++ compiler and GNU make are bundled into the meta-package `build-essential`,
-and can be installed via the command:
-
-```bash
-sudo apt-get install build-essential
-
-# then rerun checks
-g++ --version
-make --version
-```
-
-#### Mac
-
-On Mac, the C++ compiler and GNU Make are included with Xcode, the Apple toolset for software developers.
-To check if you have the Clang C++ compiler:
-
-```bash
-clang --version
-```
-
-If this command fails, then install Xcode via the following command
-
-```bash
-xcode-select --install
-```
-
-
-#### Windows
-
-For Windows, [RTools](https://cran.r-project.org/bin/windows/Rtools/) is a toolchain bundle that includes the necessary C++ toolchain for compiling Stan programs. Install the appropriate version based on the version of R on your machine.
-
+Stan is a C++ library for Bayesian modeling that requires a modern C++ compiler and the GNU Make build utility (a.k.a. “gmake”)
+for compiling Stan programs. If you are not sure whether your machine has the necessary toolchain, please follow the
+instructions from [Stan documentation](https://mc-stan.org/docs/cmdstan-guide/installation.html#cpp-toolchain) to set it up.
+Once the toolchain is ready, follow the ["CmdStanR documentation"](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan)
+to install CmdStan and you are all set.
 
 ## Using the exported classes
 
@@ -97,7 +53,8 @@ workflow <- mrp_workflow()
 
 ```
 
-In the first stage, we preprocess an example sample data included in the package, then link to the American Community Survey (ACS) to obtain the poststratification data.
+In the first stage, we preprocess an example sample data included in the package,
+then link to the American Community Survey (ACS) to obtain the poststratification data.
 
 ```{r eval=FALSE}
 # Load example data
@@ -122,7 +79,7 @@ workflow$link_acs(
 )
 ```
 
-Before building models, it is important to explore the data to understand its structure and check for potential issues.
+Before building models, it is important to explore the data to understand its distribution and check for potential issues.
 The workflow object provides methods for visualizing data distributions and summary statistics.
 Thanks to the object-oriented design, these methods can access the data stored in the workflow object without requiring users to input them again.
 
@@ -150,15 +107,15 @@ We can use the `$pp_check()` method from the workflow object to assess how well 
 model <- workflow$create_model(
   model_spec = list(
     Intercept = list(
-      Intercept = ""
+      Intercept = "normal(0, 5)"
     ),
     fixed = list(
-      sex = "",
-      race = ""
+      sex = "normal(0, 2)",
+      race = "normal(0, 2)"
     ),
     varying = list(
-      age = "",
-      time = ""
+      age = "normal(0, 2)",
+      time = "normal(0, 2)"
     )
   )
 )

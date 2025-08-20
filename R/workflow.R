@@ -1080,9 +1080,30 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #'
 #' @description The `$create_model()` method creates a new MRPModel object
 #' with Stan code generated from the model specification list.
-#' `CmdStanR` objects are used internally for model fitting.
+#' `CmdStanR` objects are used internally to interface with Stan to
+#' compile the code and run its MCMC algorithm.
 #'
-#' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
+#' @param model_spec a nested list that specifies the variables to include in the model,
+#' whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
+#' This is used to generate Stan code for compilation using the `CmdStanR` package. The syntax for the prior distributions
+#' is similar to that of Stan. The following are currently supported:
+#'
+#' - normal(mu, sigma)
+#' - student_t(nu, mu, sigma)
+#' - structured*
+#'
+#' The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
+#'
+#' The following default prior distributions are assigned to effects with empty strings (`""`)
+#' in the model specification list:
+#'
+#' - Overall intercept: normal(0,5)
+#' - Coefficient: normal(0,3)
+#'
+#' The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors.
+#'
+#' - Standard deviation (main effect): normal<sub>+</sub>(0,3)
+#' - Standard deviation (interaction): normal<sub>+</sub>(0,1)
 #'
 #' @return A new MRPModel object
 create_model <- function(model_spec) {
