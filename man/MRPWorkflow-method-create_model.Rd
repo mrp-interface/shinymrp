@@ -8,9 +8,9 @@
 create_model(model_spec)
 }
 \arguments{
-\item{model_spec}{a nested list that specifies the variables to include in the model,
+\item{model_spec}{Nested list that specifies the variables to include in the model,
 whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
-This is used to generate Stan code for compilation using the \code{CmdStanR} package. The syntax for the prior distributions
+This is used to generate Stan code for compilation using the CmdStanR package. The syntax for the prior distributions
 is similar to that of Stan. The following are currently supported:
 \itemize{
 \item normal(mu, sigma)
@@ -39,6 +39,6 @@ A new MRPModel object
 \description{
 The \verb{$create_model()} method creates a new MRPModel object
 with Stan code generated from the model specification list.
-\code{CmdStanR} objects are used internally to interface with Stan to
+CmdStanR objects are used internally to interface with Stan to
 compile the code and run its MCMC algorithm.
 }
