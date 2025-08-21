@@ -622,8 +622,8 @@ mod_analyze_model_server <- function(id, global){
       seed <- input$seed_select
       
       check <- .check_iter_chain(
-        n_iter, GLOBAL$ui$model$iter_range,
-        n_chains, GLOBAL$ui$model$chain_range,
+        n_iter, .const()$ui$model$iter_range,
+        n_chains, .const()$ui$model$chain_range,
         seed
       )
       
@@ -640,7 +640,7 @@ mod_analyze_model_server <- function(id, global){
       }
       
       # Check if maximum number of models is reached
-      if(length(global$models) + 1 > GLOBAL$ui$model$max_models) {
+      if(length(global$models) + 1 > .const()$ui$model$max_models) {
         .show_alert("Maximum number of models reached. Please remove existing models to add more.", global$session)
         return()
       }
@@ -672,10 +672,10 @@ mod_analyze_model_server <- function(id, global){
       # Try to fit the model
       tryCatch({
         # assign default priors to all selected effects
-        model_spec <- list(Intercept = list(Intercept = GLOBAL$default_priors$Intercept))
-        for(type in GLOBAL$args$effect_types) {
+        model_spec <- list(Intercept = list(Intercept = .const()$default_priors$Intercept))
+        for(type in .const()$args$effect_types) {
           for(v in input[[type]]) {
-            model_spec[[type]][[v]] <- GLOBAL$default_priors[[type]]
+            model_spec[[type]][[v]] <- .const()$default_priors[[type]]
           }
         }
     

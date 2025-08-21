@@ -224,7 +224,7 @@
 #'
 #' @description Filters out rows from a data frame where any column contains values that
 #' appear less frequently than the specified threshold. Columns listed in
-#' GLOBAL$vars$ignore are excluded from this filtering process.
+#' .const()$vars$ignore are excluded from this filtering process.
 #'
 #' @param df A data frame to filter
 #' @param threshold Numeric threshold. Values appearing fewer than this many
@@ -237,7 +237,7 @@
 .omit_rare_rows <- function(df, threshold) {
   # For each column, compute frequencies and flag rare rows
   keep <- rep(TRUE, nrow(df))
-  for (col in setdiff(names(df), GLOBAL$vars$ignore)) {
+  for (col in setdiff(names(df), .const()$vars$ignore)) {
     freqs <- table(df[[col]])
     rare_values <- names(freqs[freqs < threshold])
     keep <- keep & !(df[[col]] %in% rare_values)
@@ -278,9 +278,9 @@
   }
 
   target_names <- c(
-    GLOBAL$vars$indiv,
-    GLOBAL$vars$geo,
-    GLOBAL$vars$ignore
+    .const()$vars$indiv,
+    .const()$vars$geo,
+    .const()$vars$ignore
   )
 
   current_names <- names(df)
@@ -415,7 +415,7 @@
 #'
 #' @param df Data frame containing time-related columns. Must contain either a
 #'   'date' column with date strings or existing time indices matching
-#'   GLOBAL$vars$time specification.
+#'   .const()$vars$time specification.
 #' @param time_freq Character string specifying the frequency of time indices to be
 #'  added. Must be one of "week", "month", or "year". Determines how dates are
 #'  grouped into time periods.
@@ -432,7 +432,7 @@
 #'
 #' @importFrom dplyr full_join
 .add_time_indices <- function(df, time_freq) {
-  common <- intersect(names(df), GLOBAL$vars$time)
+  common <- intersect(names(df), .const()$vars$time)
 
   if (length(common) == 1 && "date" %in% common) {
     # convert date to time indices
@@ -473,7 +473,7 @@
     unique() %>%
     as.Date() %>%
     sort() %>%
-    format(GLOBAL$ui$format$date) %>%
+    format(.const()$ui$format$date) %>%
     as.character()
 }
 
@@ -656,7 +656,7 @@
 #'     \item Mixed formats within the same vector
 #'   }
 #' @param link_geo Character string specifying geographic level. Must be either
-#'   "county" or "state" as defined in GLOBAL$vars$geo2. Determines the lookup
+#'   "county" or "state" as defined in .const()$vars$geo2. Determines the lookup
 #'   table and formatting used.
 #'
 #' @return Character vector of FIPS codes with proper formatting:
@@ -670,7 +670,7 @@
 .to_fips <- function(vec, link_geo) {
   checkmate::assert_choice(
     link_geo,
-    choices = GLOBAL$vars$geo2,
+    choices = .const()$vars$geo2,
     null.ok = FALSE
   )
 
@@ -729,7 +729,7 @@
 #' Find the smallest geographic scale in data
 #'
 #' @description Identifies the smallest (most granular) geographic scale
-#' present in the data based on the hierarchy defined in GLOBAL$vars$geo.
+#' present in the data based on the hierarchy defined in .const()$vars$geo.
 #'
 #' @param col_names Character vector of column names in the data.
 #'
@@ -741,7 +741,7 @@
 #' @noRd
 #'
 .get_smallest_geo <- function(col_names) {
-  geo_all <- GLOBAL$vars$geo
+  geo_all <- .const()$vars$geo
 
   # Find the smallest geographic index
   idx <- match(col_names, geo_all) %>% stats::na.omit()
@@ -763,7 +763,7 @@
 #' @description Determines all possible geographic scales that can be used with
 #' the data based on the smallest geographic scale present. Returns geographic
 #' variables from the smallest scale up to the largest (national) scale according
-#' to the geographic hierarchy defined in GLOBAL$vars$geo.
+#' to the geographic hierarchy defined in .const()$vars$geo.
 #'
 #' @param col_names Character vector of column names in the data frame to check
 #'   for geographic variables.
@@ -780,7 +780,7 @@
   }
 
   # Return all geographic variables from the smallest to the largest scale
-  return(GLOBAL$vars$geo[smallest$idx:length(GLOBAL$vars$geo)])
+  return(.const()$vars$geo[smallest$idx:length(.const()$vars$geo)])
 }
 
 #' Append geographic variables at larger scales
@@ -1354,7 +1354,7 @@
   }
 
   # Process individual-level predictors
-  indiv_vars <- setdiff(names(input_data), c(GLOBAL$vars$geo, GLOBAL$vars$ignore, names(covariates)))
+  indiv_vars <- setdiff(names(input_data), c(.const()$vars$geo, .const()$vars$ignore, names(covariates)))
   vars <- add_variables("Individual-level Predictor", indiv_vars, input_data, vars)
 
   # Process geographic predictors
@@ -1381,7 +1381,7 @@
 #' @param tract_data Data frame containing tract-level demographic data with
 #'   GEOID column (11-digit tract codes) and demographic cross-tabulation columns.
 #' @param link_geo Character string specifying target geographic scale. Must be
-#'   one of the values in GLOBAL$vars$geo: "zip", "county", "state", or NULL for national.
+#'   one of the values in .const()$vars$geo: "zip", "county", "state", or NULL for national.
 #'
 #' @return Data frame with demographic data aggregated to the specified
 #'   geographic scale:
@@ -1402,7 +1402,7 @@
 
   checkmate::assert_choice(
     link_geo,
-    choices = GLOBAL$vars$geo,
+    choices = .const()$vars$geo,
     null.ok = TRUE
   )
 
@@ -1534,7 +1534,7 @@
   # append levels for other geographic predictors
   # NOTE: this must be done after new_data is created
   # as these levels are not used in the poststratification table
-  for(v in intersect(names(new_data), GLOBAL$vars$geo)) {
+  for(v in intersect(names(new_data), .const()$vars$geo)) {
     levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 
@@ -1616,7 +1616,7 @@
   }
 
   # append levels for other geographic predictors
-  for(v in intersect(names(new_data), GLOBAL$vars$geo)) {
+  for(v in intersect(names(new_data), .const()$vars$geo)) {
     levels[[v]] <- unique(new_data[[v]]) %>% sort()
   }
 

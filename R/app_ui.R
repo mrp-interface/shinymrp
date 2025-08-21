@@ -24,7 +24,7 @@ app_ui <- function(request) {
       window_title = "shinymrp",
       id = "navbar",
       theme = bslib::bs_theme(version = 5) %>% 
-        bslib::bs_add_rules(GLOBAL$ui$style$global),
+        bslib::bs_add_rules(.const()$ui$style$global),
       bslib::nav_panel(
         title = "Home",
         value = "nav_home",
@@ -64,19 +64,19 @@ app_ui <- function(request) {
                 style = "font-size: 1.05rem;",
                 conditionalPanel(
                   condition = "output.special_case == 'covid'",
-                  GLOBAL$ui$use_case_labels$covid
+                  .const()$ui$use_case_labels$covid
                 ),
                 conditionalPanel(
                   condition = "output.special_case == 'poll'",
-                  GLOBAL$ui$use_case_labels$poll
+                  .const()$ui$use_case_labels$poll
                 ),
                 conditionalPanel(
                   condition = "output.special_case === null && output.is_timevar",
-                  GLOBAL$ui$use_case_labels$timevar_general
+                  .const()$ui$use_case_labels$timevar_general
                 ),
                 conditionalPanel(
                   condition = "output.special_case === null && !output.is_timevar",
-                  GLOBAL$ui$use_case_labels$static_general
+                  .const()$ui$use_case_labels$static_general
                 )
               ),
               actionLink(

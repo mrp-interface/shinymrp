@@ -44,7 +44,7 @@
   
   checkmate::assert_choice(
     geo,
-    choices = GLOBAL$vars$geo2,
+    choices = .const()$vars$geo2,
     null.ok = FALSE
   )
 
@@ -130,13 +130,13 @@
 
   checkmate::assert_choice(
     geo,
-    choices = GLOBAL$vars$geo2,
+    choices = .const()$vars$geo2,
     null.ok = FALSE
   )
   
   checkmate::assert_choice(
     summary_type,
-    choices = GLOBAL$args$summary_types,
+    choices = .const()$args$summary_types,
     null.ok = TRUE
   )
   
@@ -247,7 +247,7 @@
   
   checkmate::assert_choice(
     geo,
-    choices = GLOBAL$vars$geo2,
+    choices = .const()$vars$geo2,
     null.ok = FALSE
   )
 
@@ -477,7 +477,7 @@
   metadata = NULL,
   interval = 0.95,
   show_caption = FALSE,
-  config = GLOBAL$plot
+  config = .const()$plot
 ) {
 
   if(is.null(raw)) {
@@ -651,12 +651,12 @@
   p <- ggplot2::ggplot(data = plot_df) +
     ggplot2::geom_point(
       ggplot2::aes(x = .data$data, y = .data$median),
-      size = GLOBAL$plot$point_size
+      size = .const()$plot$point_size
     ) +
     ggplot2::geom_errorbar(
       ggplot2::aes(x = .data$data, ymin = .data$lower, ymax = .data$upper),
-      size = GLOBAL$plot$errorbar_size,
-      width = GLOBAL$plot$errorbar_width
+      size = .const()$plot$errorbar_size,
+      width = .const()$plot$errorbar_width
     ) +
     ggplot2::labs(
       x = "",
@@ -697,7 +697,7 @@
     raw,
     dates,
     metadata,
-    config = GLOBAL$plot
+    config = .const()$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -789,7 +789,7 @@
     raw,
     dates,
     metadata,
-    config = GLOBAL$plot
+    config = .const()$plot
 ) {
 
   if(is.null(yrep) || is.null(raw)) {
@@ -882,7 +882,7 @@
     yrep,
     raw,
     metadata = NULL,
-    config = GLOBAL$plot
+    config = .const()$plot
 ) {
   if(is.null(yrep) || is.null(raw)) {
     return(NULL)
@@ -910,7 +910,7 @@
         color = .data$name,
         shape = .data$name
       ),
-      size = GLOBAL$plot$point_size
+      size = .const()$plot$point_size
     ) +
     ggplot2::labs(
       x = "",
@@ -1097,7 +1097,7 @@
         x = .data$factor,
         y = .data$est
       ),
-      size = GLOBAL$plot$point_size
+      size = .const()$plot$point_size
     ) +
     ggplot2::geom_errorbar(
       ggplot2::aes(
@@ -1105,8 +1105,8 @@
         ymin = .data$lower,
         ymax = .data$upper
       ),
-      size = GLOBAL$plot$errorbar_size,
-      width = GLOBAL$plot$errorbar_width
+      size = .const()$plot$errorbar_size,
+      width = .const()$plot$errorbar_width
     ) +
     ggplot2::scale_x_discrete(
       labels = tools::toTitleCase

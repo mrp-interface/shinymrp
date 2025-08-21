@@ -57,7 +57,7 @@
 #'   or "Unknown Data Format" if the format is not recognized
 #'
 #' @noRd
-.use_case_label <- function(metadata, labels = GLOBAL$ui$use_case_labels) {
+.use_case_label <- function(metadata, labels = .const()$ui$use_case_labels) {
   if (!is.null(metadata$special_case)) {
     switch(metadata$special_case,
       poll = labels$poll,
@@ -137,7 +137,7 @@
   suffix = c("raw", "prep", "fit"),
   ext = ".csv",
   sep = "_",
-  valid_families = GLOBAL$args$family
+  valid_families = .const()$args$family
 ) {
   # Validate inputs
   suffix <- match.arg(suffix)

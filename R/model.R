@@ -278,7 +278,7 @@ fit <- function(
       n_chains = n_chains,
       seed = seed,
       extra = extra,
-      pstrat_vars = intersect(GLOBAL$vars$pstrat, names(private$mrpdat_$levels))
+      pstrat_vars = intersect(.const()$vars$pstrat, names(private$mrpdat_$levels))
     )
   )
 

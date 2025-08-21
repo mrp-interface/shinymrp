@@ -173,7 +173,7 @@
 #'
 #' @description Replaces NULL prior specifications with default priors from the
 #' global configuration. Ensures all model effects have valid prior distributions
-#' before Stan code generation. Uses GLOBAL$default_priors to provide sensible
+#' before Stan code generation. Uses .const()$default_priors to provide sensible
 #' defaults for different effect types.
 #'
 #' @param effects List containing model effects with potentially NULL prior specifications:
@@ -185,12 +185,12 @@
 #'   }
 #'
 #' @return List with same structure as input but with NULL priors replaced by
-#'   appropriate defaults from GLOBAL$default_priors. Each effect type gets its
+#'   appropriate defaults from .const()$default_priors. Each effect type gets its
 #'   corresponding default prior distribution.
 #' @noRd
 .set_default_priors <- function(effects) {
-  for (type in c("Intercept", GLOBAL$args$effect_types)) {
-    effects[[type]] <- purrr::map(effects[[type]], ~ .replace_null(.nullify(.x), GLOBAL$default_priors[[type]]))
+  for (type in c("Intercept", .const()$args$effect_types)) {
+    effects[[type]] <- purrr::map(effects[[type]], ~ .replace_null(.nullify(.x), .const()$default_priors[[type]]))
   }
 
   return(effects)
@@ -863,8 +863,8 @@
   int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
   if(length(int_struct) > 0) {
     scode <- paste0(scode, stringr::str_interp("
-  tau ~ ${GLOBAL$default_priors$global_scale};
-  delta ~ ${GLOBAL$default_priors$local_scale};"))
+  tau ~ ${.const()$default_priors$global_scale};
+  delta ~ ${.const()$default_priors$local_scale};"))
   }
   
   return(scode)
@@ -1127,7 +1127,7 @@ generated quantities { ${gq_code}
 #' @description Transforms variables in a data frame to formats suitable for Stan
 #' modeling. Binary and categorical variables are converted to integer factors,
 #' continuous variables are standardized, and original values are preserved with "_raw" suffix.
-#' Uses GLOBAL$vars$ignore to determine which columns to exclude from transformation.
+#' Uses .const()$vars$ignore to determine which columns to exclude from transformation.
 #'
 #' @param df Data frame to transform with variables of different types.
 #'
@@ -1142,7 +1142,7 @@ generated quantities { ${gq_code}
 #' @noRd
 .stan_factor <- function(df) {
   # find the columns to mutate
-  col_names <- setdiff(names(df), GLOBAL$vars$ignore)
+  col_names <- setdiff(names(df), .const()$vars$ignore)
   
   # save the “raw” columns
   df_raw <- df %>%

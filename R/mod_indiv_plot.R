@@ -9,7 +9,7 @@
 #' @importFrom shiny NS tagList 
 mod_indiv_plot_ui <- function(id) {
   ns <- NS(id)
-  plotOutput(outputId = ns("plot"), width = "100%", height = GLOBAL$plot$ui$plot_height)
+  plotOutput(outputId = ns("plot"), width = "100%", height = .const()$plot$ui$plot_height)
 }
     
 #' indiv_plot Server Functions

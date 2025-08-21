@@ -165,7 +165,7 @@ mod_analyze_result_server <- function(id, global){
       req(selected_model_r())
 
       global$workflow$estimate_plot(selected_model_r())
-    }, height = function() GLOBAL$plot$ui$plot_height)
+    }, height = function() .const()$plot$ui$plot_height)
     
     # --------------------------------------------------------------------------
     # Render UI dynamically based on the user's selection.
@@ -177,7 +177,7 @@ mod_analyze_result_server <- function(id, global){
       subgroup_select <- isolate(input$subgroup_select)
 
       if (result_category == "overall") {
-        plotOutput(ns("est_overall"), height = GLOBAL$plot$ui$plot_height)
+        plotOutput(ns("est_overall"), height = .const()$plot$ui$plot_height)
       } else if (result_category == "subgroup") {
         switch(subgroup_select,
           "sex" = mod_est_plot_ui(ns("est_sex")),
@@ -232,7 +232,7 @@ mod_analyze_result_server <- function(id, global){
       req(selected_model_r(), input$model_select)
 
       # Update the subgroup select options.
-      choices <- GLOBAL$ui$plot_selection$subgroup
+      choices <- .const()$ui$plot_selection$subgroup
       if(is.null(selected_model_r()$metadata()$special_case) ||
          selected_model_r()$metadata()$special_case != "poll") {
         choices <- choices[!choices == "edu"]
@@ -243,7 +243,7 @@ mod_analyze_result_server <- function(id, global){
       updateSelectInput(session, inputId = "subgroup_select", choices = choices)
 
       # Update the geographic scale select options.
-      choices <- intersect(names(selected_model_r()$poststratify()), GLOBAL$vars$geo)
+      choices <- intersect(names(selected_model_r()$poststratify()), .const()$vars$geo)
       choices <- stats::setNames(choices, tools::toTitleCase(choices))
       updateSelectInput(session, inputId = "geo_scale_select", choices = choices)
     })

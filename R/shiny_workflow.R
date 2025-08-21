@@ -32,7 +32,7 @@ ShinyMRPWorkflow <- R6::R6Class(
       
       checkmate::assert_choice(
         covar,
-        choices = GLOBAL$vars$covar,
+        choices = .const()$vars$covar,
         null.ok = FALSE
       )
 

@@ -48,7 +48,7 @@ mod_analyze_visualize_ui <- function(id){
           selectizeInput(
             inputId = ns("summary_slt"),
             label = "Select summary statistic",
-            choices = GLOBAL$ui$plot_selection$summary,
+            choices = .const()$ui$plot_selection$summary,
             options = list(dropdownParent = "body")
           )
         )
@@ -91,7 +91,7 @@ mod_analyze_visualize_server <- function(id, global){
       # Reset the select inputs
       shinyjs::reset("summary_slt")
 
-      choices <- GLOBAL$ui$plot_selection$vis_main[[global$workflow$metadata()$family]]
+      choices <- .const()$ui$plot_selection$vis_main[[global$workflow$metadata()$family]]
 
       if (is.null(global$workflow$link_data()$link_geo)) {
         choices <- choices[!choices == "geo"]
@@ -108,21 +108,21 @@ mod_analyze_visualize_server <- function(id, global){
       # Define the subcategory choices for each category.
       if (input$plot_category == "indiv") {
         label <- "2. Select characteristic"
-        choices <- GLOBAL$ui$plot_selection$indiv
+        choices <- .const()$ui$plot_selection$indiv
         if(is.null(global$workflow$metadata()$special_case) ||
            global$workflow$metadata()$special_case != "poll") {
           choices <- choices[!choices == "edu"]
         }
       } else if (input$plot_category == "geo") {
         label <- "2. Select characteristic"
-        choices <- GLOBAL$ui$plot_selection$geo
+        choices <- .const()$ui$plot_selection$geo
         if (!is.null(global$workflow$metadata()$special_case) &&
             global$workflow$metadata()$special_case == "covid") {
-          choices <- c(choices, GLOBAL$ui$plot_selection$geo_covar)
+          choices <- c(choices, .const()$ui$plot_selection$geo_covar)
         }
       } else if (input$plot_category == "outcome") {
         label <- "2. Select plot type"
-        choices <- GLOBAL$ui$plot_selection$outcome
+        choices <- .const()$ui$plot_selection$outcome
 
         if (!global$workflow$metadata()$is_timevar) {
           choices <- choices[!choices == "overall"]
@@ -170,8 +170,8 @@ mod_analyze_visualize_server <- function(id, global){
         )
       } else if (category == "outcome") {
         switch(subcategory,
-          "overall" = plotOutput(ns("positive_plot"), height = GLOBAL$plot$ui$plot_height),
-          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = GLOBAL$plot$ui$map_height)
+          "overall" = plotOutput(ns("positive_plot"), height = .const()$plot$ui$plot_height),
+          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = .const()$plot$ui$map_height)
         )
       }
     })

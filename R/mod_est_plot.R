@@ -30,9 +30,9 @@ mod_est_plot_server <- function(id, workflow, model, var) {
       req(model())
       
       if(model()$metadata()$is_timevar) {
-        GLOBAL$plot$ui$subplot_height * (length(model()$mrp_data()$levels[[var]]) + 1)
+        .const()$plot$ui$subplot_height * (length(model()$mrp_data()$levels[[var]]) + 1)
       } else {
-        GLOBAL$plot$ui$plot_height
+        .const()$plot$ui$plot_height
       }
     })
   })
