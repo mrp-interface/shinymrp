@@ -32,7 +32,7 @@ mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_sub
         "map" = tagList(
           highcharter::highchartOutput(
             outputId = ns("map"),
-            height = GLOBAL$plot$ui$map_height
+            height = .const()$plot$ui$map_height
           ),
           # Only show slider if we have time-varying data
           if (!is.null(time_indices)) {
@@ -42,12 +42,12 @@ mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_sub
                 sliderInput(
                 inputId = ns("map_slider"),
                   label = NULL,
-                  min = as.Date(dates[1], format = GLOBAL$ui$format$date),
-                  max = as.Date(dates[length(dates)], format = GLOBAL$ui$format$date),
+                  min = as.Date(dates[1], format = .const()$ui$format$date),
+                  max = as.Date(dates[length(dates)], format = .const()$ui$format$date),
                   step = 7,
-                  value = as.Date(dates[1], format = GLOBAL$ui$format$date),
+                  value = as.Date(dates[1], format = .const()$ui$format$date),
                   width = "100%",
-                  animate = GLOBAL$ui$animation
+                  animate = .const()$ui$animation
                 )
               )
             } else {
@@ -61,7 +61,7 @@ mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_sub
                   step = 1,
                   value = 1,
                   width = "100%",
-                  animate = GLOBAL$ui$animation
+                  animate = .const()$ui$animation
                 )
               )
             }
@@ -80,7 +80,7 @@ mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_sub
       dates <- model()$plot_data()$dates
       
       time_index <- if (!is.null(time_indices) && !is.null(dates)) {
-        which(as.character(format(input$map_slider, GLOBAL$ui$format$date)) == model()$plot_data()$dates)
+        which(as.character(format(input$map_slider, .const()$ui$format$date)) == model()$plot_data()$dates)
       } else if (!is.null(time_indices)) {
         input$map_slider
       } else {
@@ -121,9 +121,9 @@ mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_sub
       req(model())
 
       if(model()$metadata()$is_timevar) {
-        GLOBAL$plot$ui$subplot_height * (length(geo_subset()) + 1)
+        .const()$plot$ui$subplot_height * (length(geo_subset()) + 1)
       } else {
-        GLOBAL$plot$ui$plot_height
+        .const()$plot$ui$plot_height
       }
     })
     

@@ -301,13 +301,13 @@
       tags$h5("Default Priors", class = "mt-4"),
       tags$p("Under the Bayesian framework, the following prior distributions are assigned by default:"),
       tags$ul(
-        tags$li("Overall intercept: ", withMathJax(sprintf("\\(%s\\)", GLOBAL$default_priors$Intercept))),
-        tags$li("Coefficient: ", withMathJax(sprintf("\\(%s\\)", GLOBAL$default_priors$fixed)))
+        tags$li("Overall intercept: ", withMathJax(sprintf("\\(%s\\)", .const()$default_priors$Intercept))),
+        tags$li("Coefficient: ", withMathJax(sprintf("\\(%s\\)", .const()$default_priors$fixed)))
       ),
       tags$p("The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors."),
       tags$ul(
-        tags$li("Standard deviation (main effect): ", withMathJax(sprintf("\\(%s\\)", gsub("\\(", "_+(", GLOBAL$default_priors$varying))), "*"),
-        tags$li("Standard deviation (interaction): ", withMathJax(sprintf("\\(%s\\)", gsub("\\(", "_+(", GLOBAL$default_priors$interaction))), "*")
+        tags$li("Standard deviation (main effect): ", withMathJax(sprintf("\\(%s\\)", gsub("\\(", "_+(", .const()$default_priors$varying))), "*"),
+        tags$li("Standard deviation (interaction): ", withMathJax(sprintf("\\(%s\\)", gsub("\\(", "_+(", .const()$default_priors$interaction))), "*")
       ),
       
       tags$h5("Available Priors", class = "mt-4"),
@@ -350,8 +350,8 @@
       
       tags$div(class = "small mt-2",
               withMathJax(sprintf("**The default priors for the global scale and local scale are \\(%s\\) and \\(%s\\) respectively. These cannot be changed at the moment.",
-                                  gsub("\\(", "_+(", GLOBAL$default_priors$global_scale),
-                                  gsub("\\(", "_+(", GLOBAL$default_priors$local_scale))))
+                                  gsub("\\(", "_+(", .const()$default_priors$global_scale),
+                                  gsub("\\(", "_+(", .const()$default_priors$local_scale))))
     ),
     
     # Model Fitting panel

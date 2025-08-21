@@ -21,7 +21,7 @@ mod_indiv_map_ui <- function(id) {
     ),
     highcharter::highchartOutput(
       outputId = ns("sample_size_map"), 
-      height = GLOBAL$plot$ui$map_height,
+      height = .const()$plot$ui$map_height,
       width = "100%"
     )
   )

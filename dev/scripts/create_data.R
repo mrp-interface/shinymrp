@@ -147,7 +147,7 @@ create_pstrat <- function(
     zip_tract,
     metadata,
     link_geo = NULL,
-    vars_global = GLOBAL$vars
+    vars_global = .const()$vars
 ) {
   
   # compute cell counts based on given geographic scale

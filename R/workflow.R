@@ -281,7 +281,7 @@ preprocess <- function(
 
   checkmate::assert_choice(
     family,
-    choices = GLOBAL$args$family,
+    choices = .const()$args$family,
     null.ok = TRUE
   )
 
@@ -343,13 +343,13 @@ link_acs <- function(
 
   checkmate::assert_choice(
     link_geo,
-    choices = GLOBAL$vars$geo,
+    choices = .const()$vars$geo,
     null.ok = TRUE
   )
 
   checkmate::assert_choice(
     acs_year,
-    choices = GLOBAL$args$acs_years,
+    choices = .const()$args$acs_years,
     null.ok = TRUE
   )
 
@@ -424,7 +424,7 @@ link_acs <- function(
 
     } else {
       if (is.null(private$linkdat_$acs_year)) {
-        private$linkdat_$acs_year <- GLOBAL$args$acs_years[length(GLOBAL$args$acs_years)]
+        private$linkdat_$acs_year <- .const()$args$acs_years[length(.const()$args$acs_years)]
         warning(stringr::str_interp("ACS year not specified. Using the latest year: ${private$linkdat_$acs_year}."))
       }
 
@@ -577,7 +577,7 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   checkmate::assert_choice(
     demo,
-    choices = intersect(GLOBAL$vars$demo, names(private$mrpdat_$levels)), 
+    choices = intersect(.const()$vars$demo, names(private$mrpdat_$levels)), 
     null.ok = FALSE
   )
 
@@ -599,7 +599,7 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(.const()$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -634,7 +634,7 @@ covar_hist <- function(covar, file = NULL, ...) {
   
   checkmate::assert_choice(
     covar,
-    choices = GLOBAL$vars$covar,
+    choices = .const()$vars$covar,
     null.ok = FALSE
   )
   
@@ -712,7 +712,7 @@ covar_hist <- function(covar, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(.const()$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -810,7 +810,7 @@ outcome_plot <- function(file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(.const()$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }
 
@@ -837,7 +837,7 @@ outcome_map <- function(summary_type = NULL, file = NULL) {
 
   checkmate::assert_choice(
     summary_type,
-    choices = GLOBAL$args$summary_types,
+    choices = .const()$args$summary_types,
     null.ok = TRUE
   )
 
@@ -917,7 +917,7 @@ estimate_plot <- function(
 
   checkmate::assert_choice(
     group,
-    choices = intersect(GLOBAL$vars$pstrat, names(model$mrp_data()$levels)),
+    choices = intersect(.const()$vars$pstrat, names(model$mrp_data()$levels)),
     null.ok = TRUE
   )
 
@@ -974,7 +974,7 @@ estimate_plot <- function(
     } else{
       list()
     }
-    dots <- utils::modifyList(GLOBAL$plot$save, settings) %>%
+    dots <- utils::modifyList(.const()$plot$save, settings) %>%
       utils::modifyList(list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }      
@@ -1015,7 +1015,7 @@ estimate_map <- function(
     stop("Linking geography is not available.")
   }
 
-  choices <- intersect(GLOBAL$vars$geo2, names(model$mrp_data()$levels))
+  choices <- intersect(.const()$vars$geo2, names(model$mrp_data()$levels))
   checkmate::assert_choice(
     geo,
     choices = choices,
@@ -1155,7 +1155,7 @@ pp_check <- function(model, file = NULL, ...) {
 
   if (!is.null(file)) {
     # Set default parameters for ggsave
-    dots <- utils::modifyList(GLOBAL$plot$save, list(...))
+    dots <- utils::modifyList(.const()$plot$save, list(...))
     do.call(ggplot2::ggsave, c(list(filename = file, plot = p), dots))
   }      
 

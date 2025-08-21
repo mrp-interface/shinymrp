@@ -78,7 +78,7 @@ mod_analyze_upload_ui <- function(id) {
             fileInput(
               inputId = ns("sample_upload"),
               label = NULL,
-              accept = GLOBAL$ui$format$data
+              accept = .const()$ui$format$data
             )
           ),
           uiOutput(ns("sample_feedback")),
@@ -186,7 +186,7 @@ mod_analyze_upload_ui <- function(id) {
                     fileInput(
                       inputId = ns("pstrat_upload"),
                       label = NULL,
-                      accept = GLOBAL$ui$format$data
+                      accept = .const()$ui$format$data
                     ),
                     uiOutput(ns("pstrat_feedback")),
                     tags$p(class = "mt-0", tags$u("Example data")),
@@ -234,7 +234,7 @@ mod_analyze_upload_ui <- function(id) {
         # Info text
         tags$p(
           sprintf("*The preview only includes the first %d rows of the data", 
-                 GLOBAL$ui$preview_size), 
+                 .const()$ui$preview_size), 
           class = "small text-muted text-end"
         )
       ),
@@ -366,7 +366,7 @@ mod_analyze_upload_server <- function(id, global){
       }
       
       df <- df %>%
-        utils::head(GLOBAL$ui$preview_size) %>%
+        utils::head(.const()$ui$preview_size) %>%
         DT::datatable(
           options = list(
             columnDefs = list(
@@ -558,7 +558,7 @@ mod_analyze_upload_server <- function(id, global){
       shinyjs::delay(10, {
 
         global$workflow$link_acs(
-          link_geo = if(input$link_geo %in% GLOBAL$vars$geo) input$link_geo else NULL,
+          link_geo = if(input$link_geo %in% .const()$vars$geo) input$link_geo else NULL,
           acs_year = strsplit(input$acs_year, "-")[[1]][2] %>% as.numeric()
         )
 
