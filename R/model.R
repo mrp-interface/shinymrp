@@ -86,8 +86,8 @@
 #'   # Create new model objects
 #'   model <- workflow$create_model(
 #'     model_spec = list(
-#'       Intercept = list(
-#'         Intercept = "normal(0, 5)"
+#'       intercept = list(
+#'         intercept = "normal(0, 5)"
 #'       ),
 #'       fixed = list(
 #'         sex = "normal(0, 2)",
@@ -167,6 +167,7 @@ MRPModel <- R6::R6Class(
     ) {
 
       private$model_spec_ <- model_spec %>%
+        .set_default_priors() %>%
         .group_effects(mrp_data$input) %>%
         .ungroup_effects()
       private$formula_ <- .create_formula(private$model_spec_)

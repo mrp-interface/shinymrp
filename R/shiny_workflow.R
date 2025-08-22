@@ -80,18 +80,29 @@ ShinyMRPWorkflow <- R6::R6Class(
         )
     },
 
-    create_model = function(model_spec) {
-      private$assert_mrp_exists()
-      private$assert_model_spec(model_spec)
+    create_model = function(
+      intercept_prior = NULL,
+      fixed = NULL,
+      varying = NULL,
+      interaction = NULL
+    ) {
 
-      model_spec <- .set_default_priors(model_spec)
+      intercept_prior <- .replace_null(intercept_prior, "")
+      model_spec <- list(
+        intercept = list(intercept = intercept_prior),
+        fixed = fixed,
+        varying = varying,
+        interaction = interaction
+      )
+
+      private$assert_model_spec(model_spec)
 
       ShinyMRPModel$new(
         model_spec = model_spec,
-        mrp_data   = private$mrpdat_,
-        metadata   = private$metadat_,
-        link_data  = private$linkdat_,
-        plot_data  = private$plotdat_
+        mrp_data = private$mrpdat_,
+        metadata = private$metadat_,
+        link_data = private$linkdat_,
+        plot_data = private$plotdat_
       )
     },
 

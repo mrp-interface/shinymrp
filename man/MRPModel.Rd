@@ -116,8 +116,8 @@ methods, many of which have their own (linked) documentation pages:
   # Create new model objects
   model <- workflow$create_model(
     model_spec = list(
-      Intercept = list(
-        Intercept = "normal(0, 5)"
+      intercept = list(
+        intercept = "normal(0, 5)"
       ),
       fixed = list(
         sex = "normal(0, 2)",

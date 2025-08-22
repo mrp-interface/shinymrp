@@ -95,23 +95,19 @@ mrp_workflow <- function() {
 #'
 #'   # Create new model objects
 #'   model <- workflow$create_model(
-#'     model_spec = list(
-#'       Intercept = list(
-#'         Intercept = "normal(0, 5)"
-#'       ),
-#'       fixed = list(
-#'         sex = "normal(0, 2)",
-#'         race = "normal(0, 2)"
-#'       ),
-#'       varying = list(
-#'         age = "normal(0, 2)",
-#'         time = "normal(0, 2)"
-#'       )
+#'     intercept_prior = "normal(0, 4)",
+#'     fixed = list(
+#'       sex = "normal(0, 2)",
+#'       race = "normal(0, 2)"
+#'     ),
+#'     varying = list(
+#'       age = "",
+#'       time = ""
 #'     )
 #'   )
 #'
 #'   # Run MCMC
-#'   model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+#'   model$fit(n_iter = 500, n_chains = 2, seed = 123)
 #'
 #'   # Estimates summary and diagnostics
 #'   model$summary()
@@ -163,9 +159,9 @@ MRPWorkflow <- R6::R6Class(
     assert_model_spec = function(model_spec) {
       private$assert_mrp_exists()
 
-      # check if model_spec$Intercept is a list with a single element
-      if (!is.list(model_spec$Intercept) || names(model_spec$Intercept) != "Intercept") {
-        stop("model_spec$Intercept must be a list with a single element named 'Intercept'.")
+      # check if model_spec$intercept is a list with a single element
+      if (!is.list(model_spec$intercept) || names(model_spec$intercept) != "intercept") {
+        stop("model_spec$intercept must be a list with a single element named 'intercept'.")
       }
 
 
@@ -1083,9 +1079,18 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' CmdStanR objects are used internally to interface with Stan to
 #' compile the code and run its MCMC algorithm.
 #'
-#' @param model_spec Nested list that specifies the variables to include in the model,
-#' whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
-#' This is used to generate Stan code for compilation using the CmdStanR package. The syntax for the prior distributions
+#' @param intercept_prior Character string specifying the prior distribution for the overall intercept.
+#' Check *Details* for more information about prior specification.
+#' @param fixed List of the fixed effects in the model and their prior distributions.
+#' Check *Details* for more information about prior specification.
+#' @param varying List of the varying effects in the model and the prior distributions of their standard deviations.
+#' Check *Details* for more information about prior specification.
+#' @param interaction List of the interactions in the model and their prior distributions. Interaction names are
+#' created by concatenating the names of the interacting variables with a colon (e.g., "sex:age"). Currently,
+#' only two-way interactions are supported.
+#' Check *Details* for more information about prior specification.
+#'
+#' @details The syntax for the prior distributions
 #' is similar to that of Stan. The following are currently supported:
 #'
 #' - normal(mu, sigma)
@@ -1106,18 +1111,29 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' - Standard deviation (interaction): normal<sub>+</sub>(0,1)
 #'
 #' @return A new MRPModel object
-create_model <- function(model_spec) {
-  private$assert_mrp_exists()
-  private$assert_model_spec(model_spec)
+create_model <- function(
+  intercept_prior = NULL,
+  fixed = NULL,
+  varying = NULL,
+  interaction = NULL
+) {
 
-  model_spec <- .set_default_priors(model_spec)
+  intercept_prior <- .replace_null(intercept_prior, "")
+  model_spec <- list(
+    intercept = list(intercept = intercept_prior),
+    fixed = fixed,
+    varying = varying,
+    interaction = interaction
+  )
+
+  private$assert_model_spec(model_spec)
 
   MRPModel$new(
     model_spec = model_spec,
-    mrp_data   = private$mrpdat_,
-    metadata   = private$metadat_,
-    link_data  = private$linkdat_,
-    plot_data  = private$plotdat_
+    mrp_data = private$mrpdat_,
+    metadata = private$metadat_,
+    link_data = private$linkdat_,
+    plot_data = private$plotdat_
   )
 }
 MRPWorkflow$set("public", "create_model", create_model)

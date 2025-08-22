@@ -184,18 +184,14 @@ the internal `CmdStanMCMC` object and formating them for display.
 
 ```{r}
 model1 <- workflow$create_model(
-  model_spec = list(
-    Intercept = list(
-      Intercept = ""
-    ),
-    fixed = list(
-      sex = "",
-      race = ""
-    ),
-    varying = list(
-      age = "",
-      time = ""
-    )
+  intercept_prior = "normal(0, 4)",
+  fixed = list(
+    sex = "normal(0, 2)",
+    race = "normal(0, 2)"
+  ),
+  varying = list(
+    age = "",
+    time = ""
   )
 )
 ```
@@ -244,23 +240,19 @@ into the `$compare_models()` method to perform model comparison using leave-one-
 
 ```{r}
 model2 <- workflow$create_model(
-  model_spec = list(
-    Intercept = list(
-      Intercept = ""
-    ),
-    fixed = list(
-      sex = "normal(0, 2)",
-      race = "normal(0, 2)"
-    ),
-    varying = list(
-      age = "normal(0, 2)",
-      time = "normal(0, 2)"
-    ),
-    interaction = list(
-      `age:time` = "normal(0, 2)",
-      `race:time` = "normal(0, 2)",
-      `sex:time` = "normal(0, 2)"
-    )
+  intercept_prior = "normal(0, 4)",
+  fixed = list(
+    sex = "normal(0, 2)",
+    race = "normal(0, 2)"
+  ),
+  varying = list(
+    age = "",
+    time = ""
+  ),
+  interaction = list(
+    `age:time` = "normal(0, 1)",
+    `race:time` = "normal(0, 1)",
+    `sex:time` = "normal(0, 1)"
   )
 )
 

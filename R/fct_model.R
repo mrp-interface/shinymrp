@@ -178,7 +178,7 @@
 #'
 #' @param effects List containing model effects with potentially NULL prior specifications:
 #'   \itemize{
-#'     \item Intercept: Global intercept prior
+#'     \item intercept: Global intercept prior
 #'     \item fixed: Fixed effects priors
 #'     \item varying: Varying effects priors
 #'     \item interaction: Interaction effects priors
@@ -189,7 +189,7 @@
 #'   corresponding default prior distribution.
 #' @noRd
 .set_default_priors <- function(effects) {
-  for (type in c("Intercept", .const()$args$effect_types)) {
+  for (type in c("intercept", .const()$args$effect_types)) {
     effects[[type]] <- purrr::map(effects[[type]], ~ .replace_null(.nullify(.x), .const()$default_priors[[type]]))
   }
 
@@ -485,7 +485,7 @@
 #'
 #' @param effects List containing all model effects:
 #'   \itemize{
-#'     \item Intercept: Global intercept prior
+#'     \item intercept: Global intercept prior
 #'     \item fixed: Fixed effects specifications
 #'     \item varying: Varying effects specifications
 #'     \item interaction: Interaction effects specifications
@@ -494,7 +494,7 @@
 #'
 #' @return Structured list with components:
 #'   \itemize{
-#'     \item Intercept: Global intercept specification
+#'     \item intercept: Global intercept specification
 #'     \item fixed: Grouped fixed effects (categorical vs binary/continuous)
 #'     \item varying: Varying main effects
 #'     \item interaction: Grouped interactions without structured priors
@@ -505,7 +505,7 @@
   out <- list()
   
   # global intercept
-  out$Intercept <- effects$Intercept
+  out$intercept <- effects$intercept
   
   # fixed main effects
   out$fixed <- .group_fixed(effects$fixed, dat)
@@ -539,7 +539,7 @@
 #'
 #' @return List with flattened effect components:
 #'   \itemize{
-#'     \item Intercept: Global intercept
+#'     \item intercept: Global intercept
 #'     \item m_fix_bc: Binary/continuous fixed main effects
 #'     \item m_fix_c: Categorical fixed main effects
 #'     \item m_var: Varying main effects
@@ -555,7 +555,7 @@
 .ungroup_effects <- function(effects) {
   # for cleaner code
   out <- list(
-    Intercept = effects$Intercept,
+    intercept = effects$intercept,
     m_fix_bc = effects$fixed$bincont,
     m_fix_c = effects$fixed$cat,
     m_var = effects$varying,
@@ -652,7 +652,7 @@
 
 .parameters_stan <- function(effects, metadata) {
   scode <- "
-  real Intercept;"
+  real intercept;"
   
   if(length(c(effects$m_fix_bc, effects$m_fix_c)) > 0) {
     scode <- paste0(scode, "\n  vector[K] beta;")
@@ -788,11 +788,11 @@
   int_varsl <- c(effects$i_varsl, effects$s_varsl)
   s_formula <- if (metadata$family == "binomial") {
     "
-  vector<lower=0, upper=1>[N] p = inv_logit(Intercept%s%s%s%s);
+  vector<lower=0, upper=1>[N] p = inv_logit(intercept%s%s%s%s);
   vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);"
   } else if (metadata$family == "normal") {
     "
-  vector[N] mu = Intercept%s%s%s%s;"
+  vector[N] mu = intercept%s%s%s%s;"
   }
   s_fixed <- if(length(fixed) > 0) " + X * beta" else ""
   s_mvar <- paste(purrr::map(names(effects$m_var), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
@@ -822,7 +822,7 @@
 #' @return Character string containing Stan model block code with:
 #'   \itemize{
 #'     \item Likelihood: Outcome distribution (binomial or normal)
-#'     \item Intercept prior: Global intercept distribution
+#'     \item intercept prior: Global intercept distribution
 #'     \item Fixed effects priors: Individual coefficient priors
 #'     \item Varying effects priors: Hierarchical structure with scale parameters
 #'     \item Standardized effects: Standard normal priors for z parameters
@@ -849,7 +849,7 @@
   
   scode <- paste0(
     scode, 
-    stringr::str_interp("\n  Intercept ~ ${effects$Intercept$Intercept};"),
+    stringr::str_interp("\n  intercept ~ ${effects$intercept$intercept};"),
     if(length(fixed) > 0) paste(purrr::map(1:length(fixed), ~ stringr::str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(int_varit), ~ stringr::str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
@@ -969,10 +969,10 @@
 
   if (metadata$family == "binomial") {
     est_cell <- paste0(est_cell, "
-    vector[N_pop] theta_pop = inv_logit(Intercept%s%s%s%s);")
+    vector[N_pop] theta_pop = inv_logit(intercept%s%s%s%s);")
   } else if (metadata$family == "normal") {
     est_cell <- paste0(est_cell, "
-    vector[N_pop] theta_pop = Intercept%s%s%s%s;")
+    vector[N_pop] theta_pop = intercept%s%s%s%s;")
   }
 
   s_fixed <- if(length(fixed) > 0) " + X_pop * beta" else ""
@@ -1491,7 +1491,7 @@ generated quantities { ${gq_code}
       }
     })
 
-  row.names(df_fixed) <- c("Intercept", c(m_fix_bc_names, names(effects$m_fix_c), names(effects$i_fixsl)))
+  row.names(df_fixed) <- c("intercept", c(m_fix_bc_names, names(effects$m_fix_c), names(effects$i_fixsl)))
 
   ### include reference levels for categorical variables
   # get variable names
@@ -1507,7 +1507,7 @@ generated quantities { ${gq_code}
     }) %>%
     unlist(use.names = FALSE)
 
-  row_names <- c("Intercept", m_fix_bc_names, m_fix_c_names, names(effects$i_fixsl))
+  row_names <- c("intercept", m_fix_bc_names, m_fix_c_names, names(effects$i_fixsl))
   idx <- match(row_names, row.names(df_fixed))
   df_fixed <- df_fixed[idx, ] # NA indices are given rows with NA values
   row.names(df_fixed) <- row_names
@@ -1610,7 +1610,7 @@ generated quantities { ${gq_code}
 #' @return List containing formatted parameter summary tables:
 #'   \item{fixed}{Data frame with fixed effects estimates including:
 #'     \itemize{
-#'       \item Intercept and main effects
+#'       \item intercept and main effects
 #'       \item Reference levels for categorical variables
 #'       \item Fixed-slope interactions
 #'       \item Columns: Estimate, Est.Error, credible intervals, R-hat, ESS
@@ -1644,7 +1644,7 @@ generated quantities { ${gq_code}
   df_fixed <- data.frame()
   if(length(fixed) > 0) {
     # extract summary table
-    df_fixed <- .get_params_summary(fit, variables = c("Intercept", "beta"))
+    df_fixed <- .get_params_summary(fit, variables = c("intercept", "beta"))
 
     # format the summary table
     df_fixed <- .format_params_summary(df_fixed)

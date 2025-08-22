@@ -5,12 +5,39 @@
 \alias{create_model}
 \title{Create a MRPModel object}
 \usage{
-create_model(model_spec)
+create_model(
+  intercept_prior = NULL,
+  fixed = NULL,
+  varying = NULL,
+  interaction = NULL
+)
 }
 \arguments{
-\item{model_spec}{Nested list that specifies the variables to include in the model,
-whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
-This is used to generate Stan code for compilation using the CmdStanR package. The syntax for the prior distributions
+\item{intercept_prior}{Character string specifying the prior distribution for the overall intercept.
+Check \emph{Details} for more information about prior specification.}
+
+\item{fixed}{List of the fixed effects in the model and their prior distributions.
+Check \emph{Details} for more information about prior specification.}
+
+\item{varying}{List of the varying effects in the model and the prior distributions of their standard deviations.
+Check \emph{Details} for more information about prior specification.}
+
+\item{interaction}{List of the interactions in the model and their prior distributions. Interaction names are
+created by concatenating the names of the interacting variables with a colon (e.g., "sex:age"). Currently,
+only two-way interactions are supported.
+Check \emph{Details} for more information about prior specification.}
+}
+\value{
+A new MRPModel object
+}
+\description{
+The \verb{$create_model()} method creates a new MRPModel object
+with Stan code generated from the model specification list.
+CmdStanR objects are used internally to interface with Stan to
+compile the code and run its MCMC algorithm.
+}
+\details{
+The syntax for the prior distributions
 is similar to that of Stan. The following are currently supported:
 \itemize{
 \item normal(mu, sigma)
@@ -31,14 +58,5 @@ The model assumes varying effects follow a normal distribution with an unknown s
 \itemize{
 \item Standard deviation (main effect): normal\if{html}{\out{<sub>}}+\if{html}{\out{</sub>}}(0,3)
 \item Standard deviation (interaction): normal\if{html}{\out{<sub>}}+\if{html}{\out{</sub>}}(0,1)
-}}
 }
-\value{
-A new MRPModel object
-}
-\description{
-The \verb{$create_model()} method creates a new MRPModel object
-with Stan code generated from the model specification list.
-CmdStanR objects are used internally to interface with Stan to
-compile the code and run its MCMC algorithm.
 }
