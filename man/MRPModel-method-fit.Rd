@@ -5,7 +5,7 @@
 \alias{fit}
 \title{Fit multilevel regression model using cmdstanr}
 \usage{
-fit(n_iter = 2000, n_chains = 4, seed = NULL, extra = NULL, ...)
+fit(n_iter = 2000, n_chains = 4, seed = NULL, ...)
 }
 \arguments{
 \item{n_iter}{Number of MCMC iterations per chain (including warmup iterations). Default is 2000.}
@@ -14,10 +14,7 @@ fit(n_iter = 2000, n_chains = 4, seed = NULL, extra = NULL, ...)
 
 \item{seed}{Random seed for reproducibility. Default is \code{NULL}.}
 
-\item{extra}{A list of additional parameters for model fitting, such as sensitivity and specificity
-for COVID data. For example, \code{list(sens = 0.7, spec = 0.999)}.}
-
-\item{...}{Additional arguments passed to CmdStanR's \verb{$sample()} method}
+\item{...}{Additional arguments passed to CmdStanR \verb{$sample()} method}
 }
 \description{
 The \verb{$fit()} method fits the model using Stan.

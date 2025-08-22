@@ -692,30 +692,35 @@ mod_analyze_model_server <- function(id, global){
           }
         }
 
+        # include sensitivity and specificity for COVID data
+        extra <- if (!is.null(global$workflow$metadata()$special_case) &&
+            global$workflow$metadata()$special_case == "covid") {
+          list(
+            sens = input$sens_kb,
+            spec = input$spec_kb
+          )
+        } else {
+          list(
+            sens = 1,
+            spec = 1
+          )
+        }
+
         # create model object
         model <- global$workflow$create_model(
           intercept_prior = model_spec$intercept$intercept,
           fixed = model_spec$fixed,
           varying = model_spec$varying,
-          interaction = model_spec$interaction
+          interaction = model_spec$interaction,
+          sens = extra$sens,
+          spec = extra$spec
         )
-
-        # include sensitivity and specificity for COVID data
-        extra <- NULL
-        if (!is.null(global$workflow$metadata()$special_case) &&
-            global$workflow$metadata()$special_case == "covid") {
-          extra <- list(
-            sens = input$sens_kb,
-            spec = input$spec_kb
-          )
-        }
 
         # run MCMC
         model$fit(
           n_iter = n_iter,
           n_chains = n_chains,
-          seed = seed,
-          extra = extra
+          seed = seed
         )
 
         model_buffer(model)

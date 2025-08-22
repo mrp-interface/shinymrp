@@ -149,30 +149,36 @@ MRPModel <- R6::R6Class(
     }
   ),
   public = list(
-    #' @description Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
+    #' @description Creates a new instance of the `MRPModel` class. This method is called by the `$create_model()`
+    #' method from `MRPWorkflow` and should not be called directly by users.
     #'
     #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
     #' @param mrp_data List containing the MRP data structure with input sample data and new post-stratification data
     #' @param metadata List containing metadata about the analysis including family, time variables, and special cases
     #' @param link_data List containing information about data linking including geography and ACS year
     #' @param plot_data List containing data prepared for visualization including dates and geojson objects
+    #' @param extra List containing COVID test sensitivity and specificity
     #'
-    #' @return A new `MRPModel` object initialized with the provided effects, MRP data, metadata, link data, and plot data.
+    #' @return A new `MRPModel` object initialized with the provided model specification and relevant data.
     initialize = function(
       model_spec,
       mrp_data,
       metadata,
       link_data,
-      plot_data
+      plot_data,
+      extra
     ) {
 
       private$model_spec_ <- model_spec %>%
         .set_default_priors() %>%
         .group_effects(mrp_data$input) %>%
         .ungroup_effects()
+
       private$formula_ <- .create_formula(private$model_spec_)
+
+      private$metadat_ <- utils::modifyList(metadata, list(extra = extra))
+
       private$mrpdat_ <- mrp_data
-      private$metadat_ <- metadata
       private$linkdat_ <- link_data
       private$plotdat_ <- plot_data
       private$buffer_ <- list(
@@ -261,14 +267,11 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @param n_iter Number of MCMC iterations per chain (including warmup iterations). Default is 2000.
 #' @param n_chains Number of MCMC chains to run. Default is 4.
 #' @param seed Random seed for reproducibility. Default is `NULL`.
-#' @param extra A list of additional parameters for model fitting, such as sensitivity and specificity
-#' for COVID data. For example, `list(sens = 0.7, spec = 0.999)`.
-#' @param ... Additional arguments passed to CmdStanR's `$sample()` method
+#' @param ... Additional arguments passed to CmdStanR `$sample()` method
 fit <- function(
   n_iter = 2000,
   n_chains = 4,
   seed = NULL,
-  extra = NULL,
   ...
 ) {
 
@@ -278,7 +281,6 @@ fit <- function(
       n_iter = n_iter,
       n_chains = n_chains,
       seed = seed,
-      extra = extra,
       pstrat_vars = intersect(.const()$vars$pstrat, names(private$mrpdat_$levels))
     )
   )
@@ -291,7 +293,6 @@ fit <- function(
     n_iter = n_iter,
     n_chains = n_chains,
     seed = seed,
-    extra = extra,
     ...
   )
 

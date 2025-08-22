@@ -20,6 +20,7 @@ ShinyMRPWorkflow <- R6::R6Class(
   public = list(
     initialize = function() {
       super$initialize()
+      private$model_class_ <- ShinyMRPModel
     },
 
     covar_table = function(covar) {
@@ -78,32 +79,6 @@ ShinyMRPWorkflow <- R6::R6Class(
             pagingType = "simple"
           )
         )
-    },
-
-    create_model = function(
-      intercept_prior = NULL,
-      fixed = NULL,
-      varying = NULL,
-      interaction = NULL
-    ) {
-
-      intercept_prior <- .replace_null(intercept_prior, "")
-      model_spec <- list(
-        intercept = list(intercept = intercept_prior),
-        fixed = fixed,
-        varying = varying,
-        interaction = interaction
-      )
-
-      private$assert_model_spec(model_spec)
-
-      ShinyMRPModel$new(
-        model_spec = model_spec,
-        mrp_data = private$mrpdat_,
-        metadata = private$metadat_,
-        link_data = private$linkdat_,
-        plot_data = private$plotdat_
-      )
     },
 
     compare_models = function(models, suppress = "message") {

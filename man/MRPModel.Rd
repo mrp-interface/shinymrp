@@ -13,9 +13,11 @@
 \item{link_data}{List containing information about data linking including geography and ACS year}
 
 \item{plot_data}{List containing data prepared for visualization including dates and geojson objects}
+
+\item{extra}{List containing COVID test sensitivity and specificity}
 }
 \value{
-A new \code{MRPModel} object initialized with the provided effects, MRP data, metadata, link data, and plot data.
+A new \code{MRPModel} object initialized with the provided model specification and relevant data.
 }
 \description{
 A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
@@ -24,7 +26,8 @@ A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
 multilevel regression model with methods for sampling, diagnostics,
 and post-stratification.
 
-Creates a new instance of the MRPModel class with specified effects, data, and metadata for Bayesian model fitting.
+Creates a new instance of the \code{MRPModel} class. This method is called by the \verb{$create_model()}
+method from \code{MRPWorkflow} and should not be called directly by users.
 }
 \section{Methods}{
  \code{MRPModel} objects have the following associated
