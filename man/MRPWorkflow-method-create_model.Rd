@@ -9,7 +9,9 @@ create_model(
   intercept_prior = NULL,
   fixed = NULL,
   varying = NULL,
-  interaction = NULL
+  interaction = NULL,
+  sens = 1,
+  spec = 1
 )
 }
 \arguments{
@@ -24,8 +26,11 @@ Check \emph{Details} for more information about prior specification.}
 
 \item{interaction}{List of the interactions in the model and their prior distributions. Interaction names are
 created by concatenating the names of the interacting variables with a colon (e.g., "sex:age"). Currently,
-only two-way interactions are supported.
-Check \emph{Details} for more information about prior specification.}
+only two-way interactions are supported. Check \emph{Details} for more information about prior specification.}
+
+\item{sens}{Sensitivity adjustment in the COVID test results. Check \emph{Details} for more information.}
+
+\item{spec}{Specificity adjustment in the COVID test results. Check \emph{Details} for more information.}
 }
 \value{
 A new MRPModel object
@@ -37,8 +42,9 @@ CmdStanR objects are used internally to interface with Stan to
 compile the code and run its MCMC algorithm.
 }
 \details{
-The syntax for the prior distributions
-is similar to that of Stan. The following are currently supported:
+\subsection{Prior specification}{
+
+The syntax for the prior distributions is similar to that of Stan. The following are currently supported:
 \itemize{
 \item normal(mu, sigma)
 \item student_t(nu, mu, sigma)
@@ -58,5 +64,14 @@ The model assumes varying effects follow a normal distribution with an unknown s
 \itemize{
 \item Standard deviation (main effect): normal\if{html}{\out{<sub>}}+\if{html}{\out{</sub>}}(0,3)
 \item Standard deviation (interaction): normal\if{html}{\out{<sub>}}+\if{html}{\out{</sub>}}(0,1)
+}
+}
+
+\subsection{Testing sensitivity and specificity}{
+
+For COVID data, we allow users to specify the PCR testing sensitivity and specificity. Let \eqn{p_k} be the probability
+that person \eqn{i} in group \eqn{k} tests positive. The analytic incidence \eqn{p_k} is a function of the test sensitivity \eqn{\delta},
+specificity \eqn{\gamma}, and the true incidence \eqn{\pi_k} for individuals in group \eqn{k}:
+\deqn{p_k=(1-\gamma)(1-\pi_k )+\delta \pi_k.}
 }
 }

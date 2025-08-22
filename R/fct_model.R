@@ -1201,9 +1201,7 @@ generated quantities { ${gq_code}
 #' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   all model components (fixed, varying, interactions).
 #' @param metadata List containing model specifications including family, pstrat_vars,
-#'   and is_timevar flags.
-#' @param extra Optional list containing sensitivity and specificity parameters
-#'   for COVID models (sens, spec). Defaults to perfect sensitivity/specificity.
+#'   and is_timevar flag.
 #'
 #' @return Named list containing all data elements required by Stan:
 #'   \itemize{
@@ -1220,15 +1218,14 @@ generated quantities { ${gq_code}
     input_data,
     new_data,
     effects,
-    metadata,
-    extra = NULL
+    metadata
 ) {
 
   stan_data <- list(
     N = nrow(input_data),
     N_pop = nrow(new_data),
-    sens = if(!is.null(extra$sens)) extra$sens else 1,
-    spec = if(!is.null(extra$spec)) extra$spec else 1
+    sens = if(!is.null(metadata$extra$sens)) metadata$extra$sens else 1,
+    spec = if(!is.null(metadata$extra$spec)) metadata$extra$spec else 1
   )
 
   # outcome variable
@@ -1352,7 +1349,6 @@ generated quantities { ${gq_code}
 #' @param n_iter Integer. Total number of MCMC iterations per chain (default: 1000).
 #'   Half are used for warmup, half for sampling.
 #' @param n_chains Integer. Number of MCMC chains to run (default: 4).
-#' @param extra Optional list containing sensitivity and specificity parameters
 #'   for COVID models (sens, spec).
 #' @param seed Integer. Random seed for reproducible results (default: NULL).
 #' @param code_fout Character. File path to save generated Stan code (default: NULL).
@@ -1370,7 +1366,6 @@ generated quantities { ${gq_code}
     metadata,
     n_iter = 1000,
     n_chains = 4,
-    extra = NULL,
     seed = NULL,
     code_fout = NULL,
     ...
@@ -1382,7 +1377,7 @@ generated quantities { ${gq_code}
   stan_code$loo <- .make_stancode_gq(effects, metadata, "loo")
   stan_code$pstrat <- .make_stancode_gq(effects, metadata, "pstrat")
 
-  stan_data <- .make_standata(input_data, new_data, effects, metadata, extra)
+  stan_data <- .make_standata(input_data, new_data, effects, metadata)
 
   if(!is.null(code_fout)) {
     writeLines(stan_code$mcmc, code_fout)

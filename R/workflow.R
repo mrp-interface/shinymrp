@@ -132,6 +132,7 @@ mrp_workflow <- function() {
 MRPWorkflow <- R6::R6Class(
   "MRPWorkflow",
   private = list(
+    model_class_ = MRPModel,
     prepdat_ = NULL,
     metadat_ = NULL,
     linkdat_ = NULL,
@@ -1087,11 +1088,13 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' Check *Details* for more information about prior specification.
 #' @param interaction List of the interactions in the model and their prior distributions. Interaction names are
 #' created by concatenating the names of the interacting variables with a colon (e.g., "sex:age"). Currently,
-#' only two-way interactions are supported.
-#' Check *Details* for more information about prior specification.
+#' only two-way interactions are supported. Check *Details* for more information about prior specification.
+#' @param sens Sensitivity adjustment in the COVID test results. Check *Details* for more information.
+#' @param spec Specificity adjustment in the COVID test results. Check *Details* for more information.
 #'
-#' @details The syntax for the prior distributions
-#' is similar to that of Stan. The following are currently supported:
+#' @details 
+#' #### Prior specification
+#' The syntax for the prior distributions is similar to that of Stan. The following are currently supported:
 #'
 #' - normal(mu, sigma)
 #' - student_t(nu, mu, sigma)
@@ -1110,12 +1113,20 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' - Standard deviation (main effect): normal<sub>+</sub>(0,3)
 #' - Standard deviation (interaction): normal<sub>+</sub>(0,1)
 #'
+#' #### Testing sensitivity and specificity
+#' For COVID data, we allow users to specify the PCR testing sensitivity and specificity. Let \eqn{p_k} be the probability
+#' that person \eqn{i} in group \eqn{k} tests positive. The analytic incidence \eqn{p_k} is a function of the test sensitivity \eqn{\delta},
+#' specificity \eqn{\gamma}, and the true incidence \eqn{\pi_k} for individuals in group \eqn{k}:
+#' \deqn{p_k=(1-\gamma)(1-\pi_k )+\delta \pi_k.}
+#'
 #' @return A new MRPModel object
 create_model <- function(
   intercept_prior = NULL,
   fixed = NULL,
   varying = NULL,
-  interaction = NULL
+  interaction = NULL,
+  sens = 1,
+  spec = 1
 ) {
 
   intercept_prior <- .replace_null(intercept_prior, "")
@@ -1128,12 +1139,16 @@ create_model <- function(
 
   private$assert_model_spec(model_spec)
 
-  MRPModel$new(
+  private$model_class_$new(
     model_spec = model_spec,
     mrp_data = private$mrpdat_,
     metadata = private$metadat_,
     link_data = private$linkdat_,
-    plot_data = private$plotdat_
+    plot_data = private$plotdat_,
+    extra = list(
+      sens = sens,
+      spec = spec
+    )
   )
 }
 MRPWorkflow$set("public", "create_model", create_model)

@@ -97,7 +97,7 @@ mod_learn_interface_ui <- function(id){
             tags$ul(
               tags$li("ACS linking: sex * race * age * zip")
             ),
-            tags$p("3. Sensitivity and specification adjustment in the COVID test results (Check ", tags$b("Learn > MRP"), " for details)."),
+            tags$p("3. Sensitivity and specificity adjustment in the COVID test results (Check ", tags$b("Learn > MRP"), " for details)."),
             
             tags$h5("General", class = "mt-3"),
             tags$p("1. Sample data"),
