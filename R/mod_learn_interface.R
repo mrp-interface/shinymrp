@@ -170,7 +170,7 @@ mod_learn_interface_ui <- function(id){
       tags$h5("Default Priors", class = "mt-4"),
       tags$p("Under the Bayesian framework, the following prior distributions are assigned by default:"),
       tags$ul(
-        tags$li("Overall intercept: ", withMathJax(sprintf("\\(%s\\)", .const()$default_priors$Intercept))),
+        tags$li("Overall intercept: ", withMathJax(sprintf("\\(%s\\)", .const()$default_priors$intercept))),
         tags$li("Coefficient: ", withMathJax(sprintf("\\(%s\\)", .const()$default_priors$fixed)))
       ),
       tags$p("The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors."),

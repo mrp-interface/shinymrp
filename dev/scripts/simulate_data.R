@@ -196,7 +196,7 @@ simulate_data <- function(
   }
   
   # Build formula terms
-  formula_terms <- "params$Intercept"
+  formula_terms <- "params$intercept"
   for(effect in names(effects$fixed)) {
     if(paste0("beta_", effect) %in% names(params)) {
       formula_terms <- paste0(formula_terms, " + params$beta_", effect, " * ", effect)
@@ -321,9 +321,9 @@ check_simulation_input <- function(effects, params, family, covar_geo, include_d
   # Check family argument
   family <- match.arg(family, c("binomial", "normal"))
 
-  # Check for Intercept
-  if (!"Intercept" %in% names(params)) {
-    stop("Intercept parameter missing from params")
+  # Check for intercept
+  if (!"intercept" %in% names(params)) {
+    stop("intercept parameter missing from params")
   }
   
   # Check for covariates and covar_geo relationship
@@ -349,7 +349,7 @@ check_simulation_input <- function(effects, params, family, covar_geo, include_d
   }
   
   # Check for unused parameters
-  used_params <- c("Intercept")
+  used_params <- c("intercept")
   if (length(effects$fixed) > 0) {
     used_params <- c(used_params, paste0("beta_", names(effects$fixed)))
   }
@@ -497,8 +497,8 @@ check_simulation_result <- function(
 ) {
 
   # Extract parameter names from effects
-  variables_true <- "Intercept"
-  variables_draws <- "Intercept"
+  variables_true <- "intercept"
+  variables_draws <- "intercept"
   if(length(effects$fixed) > 0) {
     variables_true <- c(variables_true, paste0("beta_", names(effects$fixed)))
     variables_draws <- c(variables_draws, "beta")

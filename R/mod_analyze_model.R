@@ -277,7 +277,7 @@ mod_analyze_model_server <- function(id, global){
           shinyWidgets::updateVirtualSelect(
             inputId = paste0("prior_eff_", i),
             choices = list(
-              "Intercept" = stats::setNames(c("Intercept_Intercept"), c("Intercept")),
+              "intercept" = stats::setNames(c("Intercept_Intercept"), c("intercept")),
               "Fixed Effect" = if(length(input$fixed) > 0)  stats::setNames(paste0("fixed_", input$fixed), input$fixed),
               "Varying Effect" = if(length(input$varying) > 0)  stats::setNames(paste0("varying_", input$varying), input$varying),
               "Interaction" = if(length(input$interaction) > 0)  stats::setNames(paste0("interaction_", input$interaction), input$interaction)
@@ -300,7 +300,7 @@ mod_analyze_model_server <- function(id, global){
         # update select inputs for prior assignment
         observeEvent(input[[eff_id_open]], {
           if(input[[eff_id_open]]) {
-            intercept <- stats::setNames(c("Intercept_Intercept"), c("Intercept"))
+            intercept <- stats::setNames(c("Intercept_Intercept"), c("intercept"))
             fixed_effects <- if(length(input$fixed) > 0) stats::setNames(paste0("fixed_", input$fixed), input$fixed)
             varying_effects <- if(length(input$varying) > 0) stats::setNames(paste0("varying_", input$varying), input$varying)
             interactions <- if(length(input$interaction) > 0) stats::setNames(paste0("interaction_", input$interaction), input$interaction)
@@ -322,7 +322,7 @@ mod_analyze_model_server <- function(id, global){
             shinyWidgets::updateVirtualSelect(
               inputId = eff_id,
               choices = list(
-                "Intercept" = intercept,
+                "intercept" = intercept,
                 "Fixed Effect" = fixed_effects,
                 "Varying Effect" = varying_effects,
                 "Interaction" = interactions
@@ -357,7 +357,7 @@ mod_analyze_model_server <- function(id, global){
             inputId = ns(paste0("prior_eff_", .x)),
             label = NULL,
             choices = list(
-              "Intercept" = NULL,
+              "intercept" = NULL,
               "Fixed Effects" = NULL,
               "Varying Effects" = NULL,
               "Interaction" = NULL
@@ -672,7 +672,7 @@ mod_analyze_model_server <- function(id, global){
       # Try to fit the model
       tryCatch({
         # assign default priors to all selected effects
-        model_spec <- list(Intercept = list(Intercept = .const()$default_priors$Intercept))
+        model_spec <- list(intercept = list(intercept = .const()$default_priors$intercept))
         for(type in .const()$args$effect_types) {
           for(v in input[[type]]) {
             model_spec[[type]][[v]] <- .const()$default_priors[[type]]
@@ -693,7 +693,12 @@ mod_analyze_model_server <- function(id, global){
         }
 
         # create model object
-        model <- global$workflow$create_model(model_spec)
+        model <- global$workflow$create_model(
+          intercept_prior = model_spec$intercept$intercept,
+          fixed = model_spec$fixed,
+          varying = model_spec$varying,
+          interaction = model_spec$interaction
+        )
 
         # include sensitivity and specificity for COVID data
         extra <- NULL

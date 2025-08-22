@@ -142,7 +142,7 @@ module_ids <- list(
       ignore = c("date", "total", "positive", "outcome")
     ),
     default_priors = list(
-      Intercept = "normal(0, 5)",
+      intercept = "normal(0, 5)",
       fixed = "normal(0, 3)",
       varying = "normal(0, 3)",
       interaction = "normal(0, 1)",
