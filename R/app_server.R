@@ -141,6 +141,13 @@ app_server <- function(input, output, session) {
     removeModal()
   })
 
+  # --------------------------------------------------------------------------
+  # Show user guide modal
+  # --------------------------------------------------------------------------
+  observeEvent(input$show_guide, {
+    .show_guide()
+  })
+
   # close loading spinner
   Sys.sleep(1) # prevent flashing
   waiter::waiter_hide()

@@ -80,7 +80,7 @@ app_ui <- function(request) {
                 )
               ),
               actionLink(
-                inputId = ".show_guide",
+                inputId = "show_guide",
                 label = bsicons::bs_icon("question-circle", size = "1.5em"),
                 class = "btn btn-link p-0"  # Remove padding from the button for tighter layout
               )
