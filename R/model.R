@@ -201,6 +201,10 @@ MRPModel <- R6::R6Class(
     
     stan_data = function() {
       return(private$standata_)
+    },
+
+    fit_object = function() {
+      return(private$fit_)
     }
   )
 )
