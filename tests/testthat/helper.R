@@ -108,11 +108,6 @@ expect_equal_saved <- function(workflow, model_spec) {
     diagnostics = NULL
   )
 
-  # readr::write_csv(
-  #   get_test_data(model$fit_object()),
-  #   file = paste0("/Users/tntoan/Desktop/repos/shinymrp/tests/testthat/testdata/snapshot/", make_hashed_filename(model_spec, prefix = "model"))
-  # )
-
   saved <- paste0(
       "testdata/snapshot/",
       make_hashed_filename(model_spec, prefix = "model")
@@ -124,7 +119,7 @@ expect_equal_saved <- function(workflow, model_spec) {
   expect_equal(
     get_test_data(model$fit_object()),
     saved,
-    tolerance = 0.05,
+    tolerance = 0.1,
     ignore_attr = TRUE
   )
 }

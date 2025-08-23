@@ -118,23 +118,19 @@ methods, many of which have their own (linked) documentation pages:
 
   # Create new model objects
   model <- workflow$create_model(
-    model_spec = list(
-      intercept = list(
-        intercept = "normal(0, 5)"
-      ),
-      fixed = list(
-        sex = "normal(0, 2)",
-        race = "normal(0, 2)"
-      ),
-      varying = list(
-        age = "normal(0, 2)",
-        time = "normal(0, 2)"
-      )
+    intercept_prior = "normal(0, 4)",
+    fixed = list(
+      sex = "normal(0, 2)",
+      race = "normal(0, 2)"
+    ),
+    varying = list(
+      age = "",
+      time = ""
     )
   )
 
   # Run MCMC
-  model$fit(n_iter = 1000, n_chains = 2, seed = 123)
+  model$fit(n_iter = 500, n_chains = 2, seed = 123)
 
   # Estimates summary and diagnostics
   model$summary()

@@ -5,11 +5,11 @@
 \alias{outcome_map}
 \title{Visualize raw outcome measure by geography}
 \usage{
-outcome_map(summary_type = NULL, file = NULL)
+outcome_map(summary_type = "max", file = NULL)
 }
 \arguments{
 \item{summary_type}{Character string for time-varying data, indicating whether to display the
-highest (\code{"max"}) or lowest (\code{"min"}) temporal average.}
+highest (\code{"max"}) or lowest (\code{"min"}) temporal average. Default is \code{"max"}.}
 
 \item{file}{Optional file path to save the map.}
 }
