@@ -137,7 +137,7 @@
   checkmate::assert_choice(
     summary_type,
     choices = .const()$args$summary_types,
-    null.ok = TRUE
+    null.ok = FALSE
   )
   
   if(is.null(input_data)) {
@@ -159,8 +159,6 @@
     )
 
   if (metadata$is_timevar) {
-    summary_type <- .replace_null(summary_type, "max")
-
     summary_fn <- switch(summary_type,
       "max" = max,
       "min" = min

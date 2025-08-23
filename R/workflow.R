@@ -737,12 +737,12 @@ sample_size_map <- function(file = NULL) {
   private$assert_mrp_exists()
 
   geo <- private$linkdat_$link_geo
-  if (geo == "zip") {
-    geo <- "county"
-  } else if (is.null(geo)) {
+  if (is.null(geo)) {
     stop("Linking geography is not available.")
+  } else if (geo == "zip") {
+    geo <- "county"
   }
-  
+
   hc <- private$mrpdat_$input %>%
     .prep_sample_size(
       fips_codes = fips_[[geo]],
@@ -828,24 +828,24 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #' cross-sectional data, or highest/lowest temporal average for time-varying data.
 #'
 #' @param summary_type Character string for time-varying data, indicating whether to display the
-#' highest (`"max"`) or lowest (`"min"`) temporal average.
+#' highest (`"max"`) or lowest (`"min"`) temporal average. Default is `"max"`.
 #' @param file Optional file path to save the map.
 #'
 #' @return A highcharter map object showing outcome measures by geography.
-outcome_map <- function(summary_type = NULL, file = NULL) {
+outcome_map <- function(summary_type = "max", file = NULL) {
   private$assert_mrp_exists()
 
   checkmate::assert_choice(
     summary_type,
     choices = .const()$args$summary_types,
-    null.ok = TRUE
+    null.ok = FALSE
   )
 
   geo <- private$linkdat_$link_geo
-  if (geo == "zip") {
-    geo <- "county"
-  } else if (is.null(geo)) {
+  if (is.null(geo)) {
     stop("Linking geography is not available.")
+  } else if (geo == "zip") {
+    geo <- "county"
   }
 
   out <- .prep_raw(
