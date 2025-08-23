@@ -574,7 +574,10 @@ demo_bars <- function(demo, file = NULL, ...) {
 
   checkmate::assert_choice(
     demo,
-    choices = intersect(.const()$vars$demo, names(private$mrpdat_$levels)), 
+    choices = intersect(
+      .const()$vars$demo,
+      names(private$mrpdat_$levels)
+    ), 
     null.ok = FALSE
   )
 
