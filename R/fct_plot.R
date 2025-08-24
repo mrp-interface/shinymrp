@@ -304,8 +304,7 @@
 .plot_demographic <- function(
     input_data,
     new_data,
-    levels,
-    separate = TRUE
+    levels
 ) {
 
   if(is.null(input_data) || is.null(new_data)) {
@@ -327,52 +326,35 @@
     dataset = rep(datasets, each = nrow(input))
   )
 
-  if(separate) {
-    p1 <- ggplot2::ggplot(
-      data = plot_df %>% dplyr::filter(.data$dataset == datasets[1]),
-      ggplot2::aes(x = .data$demo, y = .data$perc)
+
+  p1 <- ggplot2::ggplot(
+    data = plot_df %>% dplyr::filter(.data$dataset == datasets[1]),
+    ggplot2::aes(x = .data$demo, y = .data$perc)
+  ) +
+    ggplot2::geom_bar(
+      stat = "identity",
+      position = "dodge"
     ) +
-      ggplot2::geom_bar(
-        stat = "identity",
-        position = "dodge"
-      ) +
-      ggplot2::labs(
-        title = datasets[1],
-        caption = sprintf("Sample size: %s", format(total_input, big.mark = ","))
-      )
+    ggplot2::labs(
+      title = datasets[1],
+      caption = sprintf("Sample size: %s", format(total_input, big.mark = ","))
+    )
 
-    p2 <- ggplot2::ggplot(
-      data = plot_df %>% dplyr::filter(.data$dataset == datasets[2]),
-      ggplot2::aes(x = .data$demo,
-          y = .data$perc)
+  p2 <- ggplot2::ggplot(
+    data = plot_df %>% dplyr::filter(.data$dataset == datasets[2]),
+    ggplot2::aes(x = .data$demo,
+        y = .data$perc)
+  ) +
+    ggplot2::geom_bar(
+      stat = "identity",
+      position = "dodge"
     ) +
-      ggplot2::geom_bar(
-        stat = "identity",
-        position = "dodge"
-      ) +
-      ggplot2::labs(
-        title = datasets[2],
-        caption = sprintf("Sample size: %s", format(total_new, big.mark = ","))
-      )
+    ggplot2::labs(
+      title = datasets[2],
+      caption = sprintf("Sample size: %s", format(total_new, big.mark = ","))
+    )
 
-    p <- patchwork::wrap_plots(p1, p2)
-
-  } else {
-    p <- ggplot2::ggplot(
-      data = plot_df,
-      ggplot2::aes(
-        x = .data$demo,
-        y = .data$perc,
-        fill = .data$dataset
-      )
-    ) +
-      ggplot2::geom_bar(
-        stat = "identity",
-        position = "dodge"
-      )
-  }
-
-  p <- p &
+  p <- patchwork::wrap_plots(p1, p2) &
     ggplot2::scale_x_discrete(
       labels = tools::toTitleCase
     ) &
@@ -766,103 +748,6 @@
       legend.title = ggplot2::element_blank()
     )
 
-}
-
-#' Create COVID posterior predictive check aggregate plots
-#'
-#' @description Creates line plots comparing raw COVID data with aggregated
-#' posterior predictive statistics (median and uncertainty bands) over time.
-#' Shows summary of model fit quality.
-#'
-#' @param yrep A data frame containing posterior predictive summary statistics
-#'   with time, median, lower, and upper columns
-#' @param raw A data frame containing raw survey data with time, positive, and total columns
-#' @param dates Optional character vector of date labels for x-axis
-#' @param metadata A list containing metadata
-#'
-#' @return A ggplot object showing posterior predictive check with summary statistics
-#' @noRd
-.plot_ppc_timevar_all <- function(
-    yrep,
-    raw,
-    dates,
-    metadata,
-    config = .const()$plot
-) {
-
-  if(is.null(yrep) || is.null(raw)) {
-    return(NULL)
-  }
-
-  plot_df <- raw %>%
-    dplyr::group_by(.data$time) %>%
-    dplyr::summarise(
-      prev = sum(.data$positive) / sum(.data$total)
-    ) %>%
-    dplyr::right_join(
-      data.frame(time = 1:max(raw$time, na.rm = TRUE)),
-      by = "time"
-    ) %>%
-    dplyr::left_join(yrep, by = "time")
-
-  plot_df$lower[plot_df$lower < 0] <- 0
-
-
-  step <- max(1, floor(max(raw$time, na.rm = TRUE) / 15))
-  xticks <- seq(1, max(raw$time, na.rm = TRUE), step)
-  xticklabels <- if(!is.null(dates)) dates[xticks] else xticks
-
-  p <- ggplot2::ggplot(
-    data = plot_df,
-    ggplot2::aes(x = .data$time)
-  ) +
-    ggplot2::geom_line(
-      ggplot2::aes(
-        y = .data$prev,
-        color = "Raw"
-      ),
-      linewidth = 1.5
-    ) +
-    ggplot2::geom_line(
-      ggplot2::aes(
-        y = .data$median,
-        color = "Replicated"
-      ),
-      linewidth = 1.5
-    ) +
-    ggplot2::geom_ribbon(
-      ggplot2::aes(
-        y = .data$median,
-        ymin = .data$lower,
-        ymax = .data$upper
-      ),
-      fill = config$yrep_color,
-      alpha = 0.5
-    ) +
-    ggplot2::labs(
-      title = "",
-      x = if(is.null(dates)) "Time index" else "",
-      y = switch(metadata$family,
-        "binomial" = "Positive response rate",
-        "normal" = "Outcome average"
-      )
-    ) +
-    ggplot2::scale_x_continuous(
-      breaks = xticks,
-      labels = xticklabels,
-      expand = c(0, 0.1)
-    ) +
-    ggplot2::scale_y_continuous(
-      expand = ggplot2::expansion(mult = c(5e-3, 0.1))
-    ) +
-    ggplot2::scale_color_manual(
-      values = c("Raw" = config$raw_color, "Replicated" = config$yrep_color)
-    ) +
-    ggplot2::theme(
-      legend.title = ggplot2::element_blank()
-    )
-
-  return(p)
 }
 
 #' Create poll posterior predictive check plots
