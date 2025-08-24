@@ -61,7 +61,7 @@ setup_test_workflow <- function(link_geo = NULL, ...) {
   return(workflow)
 }
 
-setup_test_model <- function(workflow, model_spec = NULL) {
+setup_test_model <- function(workflow, model_spec = NULL, fit_model = TRUE) {
   model_spec <- .replace_null(
     model_spec,
     list(
@@ -81,13 +81,15 @@ setup_test_model <- function(workflow, model_spec = NULL) {
     interaction = model_spec$interaction
   )
 
-  model$fit(
-    n_iter = 100,
-    n_chains = 2,
-    show_messages = FALSE,
-    show_exceptions = FALSE,
-    diagnostics = NULL
-  )
+  if (fit_model) {
+    model$fit(
+      n_iter = 100,
+      n_chains = 1,
+      show_messages = FALSE,
+      show_exceptions = FALSE,
+      diagnostics = NULL
+    )
+  }
 
   return(model)
 }
