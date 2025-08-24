@@ -100,11 +100,25 @@ test_that("covar_hist fails appropriately for non-COVID data", {
 })
 
 test_that("sample_size_map method works correctly", {
+  # Linking through ZIP code
   workflow <- setup_test_workflow(
     link_geo = "zip",
     is_timevar = TRUE,
     is_aggregated = TRUE,
     special_case = NULL,
+    family = "binomial"
+  )
+  
+  # Test basic functionality
+  hc <- workflow$sample_size_map()
+  expect_s3_class(hc, "highchart")
+
+  # Linking through state
+  workflow <- setup_test_workflow(
+    link_geo = "state",
+    is_timevar = FALSE,
+    is_aggregated = TRUE,
+    special_case = "poll",
     family = "binomial"
   )
   
