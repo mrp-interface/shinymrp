@@ -1,19 +1,3 @@
-#' Check Model Fit Object
-#'
-#' Validates if the model's data format matches the expected format.
-#'
-#' @param model The model object to check
-#' @param expected_format The expected data format (e.g., "temporal_covid", "crosssectional")
-#'
-#' @return A list with two elements:
-#'   \item{valid}{Logical indicating if the format is valid}
-#'   \item{message}{Warning message if invalid, or NULL if valid}
-#' @noRd
-.check_fit_object <- function(model, expected_metadata) {
-
-  return("")
-}
-
 #' Create loading UI elements
 #'
 #' @description Creates different types of loading spinners and messages for

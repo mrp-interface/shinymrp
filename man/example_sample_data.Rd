@@ -12,17 +12,20 @@ example_sample_data(
 )
 }
 \arguments{
-\item{is_timevar}{Logical indicating whether the data is time-varying}
+\item{is_timevar}{Logical indicating whether the data is time-varying.}
 
-\item{is_aggregated}{Logical indicating whether the data is aggregated}
+\item{is_aggregated}{Logical indicating whether the data is aggregated.}
 
-\item{special_case}{Optional character string for special cases (e.g., "covid", "poll")}
+\item{special_case}{Optional character string for specific use cases such as COVID data.
+Options are \code{NULL}, \code{"covid"} and \code{"poll"}. The default is \code{NULL} which indicates the
+data is not specific to any supported use case.}
 
-\item{family}{Character string specifying the distribution family for outcome measures (e.g., "binomial", "normal")}
+\item{family}{Character string specifying the distribution family for outcome measures.
+Options are \code{"binomial"} and \code{"normal"}.}
 }
 \value{
-A data frame containing example data for the specified use case.
+A \code{data.frame} object.
 }
 \description{
-Return different .
+Return example data based on the specified characteristics.
 }

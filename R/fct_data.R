@@ -405,6 +405,25 @@
 }
 
 
+#' Convert Date Column to Character
+#'
+#' A helper function that converts a 'date' column in a data frame to character type
+#' if the column exists. This is useful for ensuring consistent data types when
+#' working with date columns that need to be treated as strings.
+#'
+#' @param df A data frame that may contain a column named 'date'
+#'
+#' @return A data frame with the 'date' column converted to character type if it exists,
+#'   otherwise returns the original data frame unchanged
+#'
+#' @noRd
+.convert_date_to_character <- function(df) {
+  if ("date" %in% names(df)) {
+    df <- df %>% dplyr::mutate(date = as.character(.data$date))
+  }
+  return(df)
+}
+
 #' Add time indices to time-varying data
 #'
 #' @title Add time indices to data frame
@@ -1241,6 +1260,9 @@
     is_aggregated = is_aggregated
   )
   .check_data(data, types, is_aggregated)
+
+  # Convert date column to character
+  data <- .convert_date_to_character(data)
 
   # Aggregate if needed
   if (!is_aggregated) {

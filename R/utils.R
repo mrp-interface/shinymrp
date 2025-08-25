@@ -136,12 +136,11 @@
   metadata,
   suffix = c("raw", "prep", "fit"),
   ext = ".csv",
-  sep = "_",
-  valid_families = .const()$args$family
+  sep = "_"
 ) {
   # Validate inputs
   suffix <- match.arg(suffix)
-  if (!metadata$family %in% valid_families) {
+  if (!metadata$family %in% .const()$args$family) {
     stop("Invalid family specified in metadata")
   }
 

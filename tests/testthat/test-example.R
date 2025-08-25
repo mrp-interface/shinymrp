@@ -1,3 +1,13 @@
+read_qs_github <- function(url) {
+  # Create temporary file
+  temp_file <- tempfile(fileext = ".qs")
+  on.exit(unlink(temp_file))
+  
+  # Download and read
+  utils::download.file(url, destfile = temp_file, mode = "wb", quiet = TRUE)
+  qs::qread(temp_file)
+}
+
 test_that("example_sample_data retrieves the correct files", {
   expect_equal(
     example_sample_data(
@@ -125,5 +135,12 @@ test_that("example_pstrat_data retrieves the correct files", {
   expect_equal(
     example_pstrat_data(),
     readr::read_csv("https://raw.githubusercontent.com/mrp-interface/shinymrp-data/refs/heads/main/example/data/pstrat.csv", show_col_types = FALSE)
+  )
+})
+
+test_that("example_mrp_model retrieves the correct files", {
+  expect_s3_class(
+    example_mrp_model(),
+    "MRPModel"
   )
 })

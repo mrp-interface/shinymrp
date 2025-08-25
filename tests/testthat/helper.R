@@ -1,13 +1,3 @@
-read_qs_github <- function(url) {
-  # Create temporary file
-  temp_file <- tempfile(fileext = ".qs")
-  on.exit(unlink(temp_file))
-  
-  # Download and read
-  utils::download.file(url, destfile = temp_file, mode = "wb", quiet = TRUE)
-  qs::qread(temp_file)
-}
-
 make_hashed_filename <- function(
   x,
   prefix = NULL,
@@ -38,24 +28,35 @@ make_hashed_filename <- function(
   paste0(prefix, "_", short_hash, ext)
 }
 
-get_test_data <- function(fit) {
-  variables <- setdiff(fit$metadata()$variables, "lp__")
-  fit$summary(variables = variables) %>% select(mean, sd)
-}
-
-
-setup_test_workflow <- function(link_geo = NULL, ...) {
-  data <- example_sample_data(...)
-
+setup_test_workflow <- function(
+  metadata,
+  is_aggregated = TRUE,
+  time_freq = NULL,
+  link_geo = NULL,
+  link = TRUE
+) {
+  
+  data <- example_sample_data(
+    is_timevar = metadata$is_timevar,
+    is_aggregated = is_aggregated,
+    special_case = metadata$special_case,
+    family = metadata$family
+  )
   workflow <- mrp_workflow()
 
   capture.output({
     workflow$preprocess(
       data,
-      ...
+      is_timevar = metadata$is_timevar,
+      is_aggregated = is_aggregated,
+      special_case = metadata$special_case,
+      family = metadata$family,
+      time_freq = time_freq
     )
 
-    workflow$link_acs(link_geo = link_geo)
+    if (link) {
+      workflow$link_acs(link_geo = link_geo)
+    }
   }, type = "message")
 
   return(workflow)
@@ -92,36 +93,4 @@ setup_test_model <- function(workflow, model_spec = NULL, fit_model = TRUE) {
   }
 
   return(model)
-}
-
-expect_equal_saved <- function(workflow, model_spec) {
-  model <- workflow$create_model(
-    intercept_prior = model_spec$intercept$intercept,
-    fixed = model_spec$fixed,
-    varying = model_spec$varying,
-    interaction = model_spec$interaction
-  )
-
-  model$fit(
-    n_iter = 1000,
-    n_chains = 2,
-    show_messages = FALSE,
-    show_exceptions = FALSE,
-    diagnostics = NULL
-  )
-
-  saved <- paste0(
-      "testdata/snapshot/",
-      make_hashed_filename(model_spec, prefix = "model")
-    ) %>%
-    testthat::test_path() %>%
-    readr::read_csv(show_col_types = FALSE)
-
-
-  expect_equal(
-    get_test_data(model$fit_object()),
-    saved,
-    tolerance = 0.1,
-    ignore_attr = TRUE
-  )
 }
