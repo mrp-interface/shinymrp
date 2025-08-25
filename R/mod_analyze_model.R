@@ -277,7 +277,7 @@ mod_analyze_model_server <- function(id, global){
           shinyWidgets::updateVirtualSelect(
             inputId = paste0("prior_eff_", i),
             choices = list(
-              "intercept" = stats::setNames(c("Intercept_Intercept"), c("intercept")),
+              "Intercept" = stats::setNames(c("intercept_intercept"), c("Intercept")),
               "Fixed Effect" = if(length(input$fixed) > 0)  stats::setNames(paste0("fixed_", input$fixed), input$fixed),
               "Varying Effect" = if(length(input$varying) > 0)  stats::setNames(paste0("varying_", input$varying), input$varying),
               "Interaction" = if(length(input$interaction) > 0)  stats::setNames(paste0("interaction_", input$interaction), input$interaction)
@@ -300,7 +300,7 @@ mod_analyze_model_server <- function(id, global){
         # update select inputs for prior assignment
         observeEvent(input[[eff_id_open]], {
           if(input[[eff_id_open]]) {
-            intercept <- stats::setNames(c("Intercept_Intercept"), c("intercept"))
+            intercept <- stats::setNames(c("intercept_intercept"), c("Intercept"))
             fixed_effects <- if(length(input$fixed) > 0) stats::setNames(paste0("fixed_", input$fixed), input$fixed)
             varying_effects <- if(length(input$varying) > 0) stats::setNames(paste0("varying_", input$varying), input$varying)
             interactions <- if(length(input$interaction) > 0) stats::setNames(paste0("interaction_", input$interaction), input$interaction)
@@ -322,7 +322,7 @@ mod_analyze_model_server <- function(id, global){
             shinyWidgets::updateVirtualSelect(
               inputId = eff_id,
               choices = list(
-                "intercept" = intercept,
+                "Intercept" = intercept,
                 "Fixed Effect" = fixed_effects,
                 "Varying Effect" = varying_effects,
                 "Interaction" = interactions
@@ -357,7 +357,7 @@ mod_analyze_model_server <- function(id, global){
             inputId = ns(paste0("prior_eff_", .x)),
             label = NULL,
             choices = list(
-              "intercept" = NULL,
+              "Intercept" = NULL,
               "Fixed Effects" = NULL,
               "Varying Effects" = NULL,
               "Interaction" = NULL
@@ -779,7 +779,7 @@ mod_analyze_model_server <- function(id, global){
       model_id <- model$get_id()
 
       model$summary()
-      model$loo()
+      model$log_lik()
       model$ppc()
    
       # create new model tab
