@@ -1,14 +1,52 @@
+get_test_data <- function(fit) {
+  variables <- setdiff(fit$metadata()$variables, "lp__")
+  fit$summary(variables = variables) %>% select(mean, sd)
+}
+
+expect_equal_saved_estimates <- function(workflow, model_spec) {
+  model <- workflow$create_model(
+    intercept_prior = model_spec$intercept$intercept,
+    fixed = model_spec$fixed,
+    varying = model_spec$varying,
+    interaction = model_spec$interaction
+  )
+
+  model$fit(
+    n_iter = 1000,
+    n_chains = 2,
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    diagnostics = NULL
+  )
+
+  saved <- paste0(
+      "snapshots/model_fitting/",
+      make_hashed_filename(model_spec, prefix = "model")
+    ) %>%
+    testthat::test_path() %>%
+    readr::read_csv(show_col_types = FALSE)
+
+
+  expect_equal(
+    get_test_data(model$fit_object()),
+    saved,
+    tolerance = 0.1,
+    ignore_attr = TRUE
+  )
+}
+
 test_that("estimated parameters match saved values", {
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
 
   # fixed effects of binary variables
-  expect_equal_saved(
+  expect_equal_saved_estimates(
     workflow, 
     list(
       intercept = list(
@@ -21,7 +59,7 @@ test_that("estimated parameters match saved values", {
   )
 
   # fixed effects of categorical variables
-  expect_equal_saved(
+  expect_equal_saved_estimates(
     workflow,
     list(
       intercept = list(
@@ -34,7 +72,7 @@ test_that("estimated parameters match saved values", {
   )
 
   # varying effects of categorical variables
-  expect_equal_saved(
+  expect_equal_saved_estimates(
     workflow,
     list(
       intercept = list(
@@ -48,7 +86,7 @@ test_that("estimated parameters match saved values", {
 
   # varying effects of categorical variables
   # and interactions
-  expect_equal_saved(
+  expect_equal_saved_estimates(
     workflow,
     list(
       intercept = list(
@@ -67,7 +105,7 @@ test_that("estimated parameters match saved values", {
   # fixed effects of binary variables,
   # varying effects of categorical variables,
   # and interactions
-  expect_equal_saved(
+  expect_equal_saved_estimates(
     workflow,
     list(
       intercept = list(
@@ -88,7 +126,7 @@ test_that("estimated parameters match saved values", {
   # fixed effects of categorical variables,
   # varying effects of categorical variables,
   # and interactions
-  expect_equal_saved(
+  expect_equal_saved_estimates(
     workflow,
     list(
       intercept = list(

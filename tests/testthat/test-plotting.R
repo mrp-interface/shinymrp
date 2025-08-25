@@ -5,11 +5,12 @@
 
 test_that("demo_bars method works correctly for general data", {
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
 
   # Test with valid demographic variable
@@ -41,11 +42,12 @@ test_that("demo_bars method works correctly for general data", {
 
 test_that("demo_bars method works correctly for polling data", {
   workflow <- setup_test_workflow(
-    link_geo = "state",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = "poll",
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = "poll",
+      family = "binomial"
+    ),
+    link_geo = "state"
   )
 
   # Test with "edu"
@@ -56,11 +58,12 @@ test_that("demo_bars method works correctly for polling data", {
 
 test_that("covar_hist method works correctly for COVID data", {
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = "covid",
-    family = "binomial"
+    metadata = list(
+      is_timevar = TRUE,
+      special_case = "covid",
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   
   # Test with valid covariates
@@ -86,11 +89,12 @@ test_that("covar_hist method works correctly for COVID data", {
 test_that("covar_hist fails appropriately for non-COVID data", {
   # Test error handling for non-COVID data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   
   expect_error(
@@ -102,11 +106,12 @@ test_that("covar_hist fails appropriately for non-COVID data", {
 test_that("sample_size_map method works correctly", {
   # Linking through ZIP code
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   
   # Test basic functionality
@@ -115,11 +120,12 @@ test_that("sample_size_map method works correctly", {
 
   # Linking through state
   workflow <- setup_test_workflow(
-    link_geo = "state",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = "poll",
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = "poll",
+      family = "binomial"
+    ),
+    link_geo = "state"
   )
   
   # Test basic functionality
@@ -139,11 +145,12 @@ test_that("sample_size_map method works correctly", {
 test_that("outcome_plot method works correctly", {
   # For time-varying data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = TRUE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   
   # Test basic functionality
@@ -152,11 +159,12 @@ test_that("outcome_plot method works correctly", {
 
   # For cross-sectional data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   
   # Test basic functionality
@@ -175,11 +183,12 @@ test_that("outcome_plot method works correctly", {
 test_that("outcome_map method works correctly", {
   # For time-varying data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = TRUE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
 
   # Test basic functionality
@@ -190,11 +199,12 @@ test_that("outcome_map method works correctly", {
 
   # For cross-sectional data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
 
   # Test basic functionality
@@ -219,56 +229,60 @@ test_that("outcome_map method works correctly", {
 
 # Test pp_check method
 test_that("pp_check method works correctly", {
-  capture.output({
-    # For time-varying data
-    workflow <- setup_test_workflow(
-      link_geo = NULL,
+  # For time-varying data
+  workflow <- setup_test_workflow(
+    metadata = list(
       is_timevar = TRUE,
-      is_aggregated = TRUE,
       special_case = NULL,
       family = "binomial"
-    )
-    model <- setup_test_model(workflow)
-  
+    ),
+    link_geo = "zip"
+  )
+  model <- setup_test_model(workflow)
+
+  capture.output({
     # Test basic functionality
     p <- workflow$pp_check(model)
     expect_s3_class(p, "ggplot")
-
-    # For time-varying data
-    workflow <- setup_test_workflow(
-      link_geo = NULL,
-      is_timevar = FALSE,
-      is_aggregated = TRUE,
-      special_case = NULL,
-      family = "binomial"
-    )
-    model <- setup_test_model(workflow)
-  
-    # Test basic functionality
-    p <- workflow$pp_check(model)
-    expect_s3_class(p, "ggplot")
-    
-    # Test file saving functionality
-    temp_file <- tempfile(fileext = ".png")
-    p <- workflow$pp_check(model, file = temp_file)
-    expect_s3_class(p, "ggplot")
-    expect_true(file.exists(temp_file))
-    unlink(temp_file)
-
   }, type = "message")
+
+  # For cross-sectional data
+  workflow <- setup_test_workflow(
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
+  )
+  model <- setup_test_model(workflow)
+  
+  capture.output({
+    # Test basic functionality
+    p <- workflow$pp_check(model)
+    expect_s3_class(p, "ggplot")
+  }, type = "message")
+    
+  # Test file saving functionality
+  temp_file <- tempfile(fileext = ".png")
+  p <- workflow$pp_check(model, file = temp_file)
+  expect_s3_class(p, "ggplot")
+  expect_true(file.exists(temp_file))
+  unlink(temp_file)
 })
 
 # Test estimate_plot method
 test_that("estimate_plot method works correctly", {
-    ### For time-varying data
-    workflow <- setup_test_workflow(
-      link_geo = NULL,
+  ### For time-varying data
+  workflow <- setup_test_workflow(
+    metadata = list(
       is_timevar = TRUE,
-      is_aggregated = TRUE,
       special_case = NULL,
       family = "binomial"
-    )
-    model <- setup_test_model(workflow)
+    ),
+    link_geo = "zip"
+  )
+  model <- setup_test_model(workflow)
     
   capture.output({
     # Test overall estimates plot
@@ -293,15 +307,16 @@ test_that("estimate_plot method works correctly", {
     }
   }, type = "message")
 
-    ### For cross-sectional data
-    workflow <- setup_test_workflow(
-      link_geo = NULL,
+  ### For cross-sectional data
+  workflow <- setup_test_workflow(
+    metadata = list(
       is_timevar = FALSE,
-      is_aggregated = TRUE,
       special_case = NULL,
       family = "binomial"
-    )
-    model <- setup_test_model(workflow)
+    ),
+    link_geo = "zip"
+  )
+  model <- setup_test_model(workflow)
     
   capture.output({
     # Test overall estimates plot
@@ -344,11 +359,12 @@ test_that("estimate_plot method works correctly", {
 test_that("estimate_map method works correctly", {
   ### For time-varying data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = TRUE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   model <- setup_test_model(workflow)
   
@@ -370,11 +386,12 @@ test_that("estimate_map method works correctly", {
 
   ### For cross-sectional data
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   model <- setup_test_model(workflow)
   
@@ -431,11 +448,12 @@ test_that("methods fail appropriately without preprocessed data", {
 # Test error handling for methods requiring fitted models
 test_that("model-dependent methods fail appropriately without fitted models", {
   workflow <- setup_test_workflow(
-    link_geo = "zip",
-    is_timevar = FALSE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = "zip"
   )
   model <- setup_test_model(workflow, fit_model = FALSE)
 
@@ -456,11 +474,12 @@ test_that("model-dependent methods fail appropriately without fitted models", {
 
 test_that("map-generating methods fail without linking geography", {
   workflow <- setup_test_workflow(
-    link_geo = NULL,
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    ),
+    link_geo = NULL
   )
 
   model <- setup_test_model(workflow)

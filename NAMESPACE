@@ -2,6 +2,7 @@
 
 export(MRPModel)
 export(MRPWorkflow)
+export(example_mrp_model)
 export(example_pstrat_data)
 export(example_sample_data)
 export(mrp_workflow)

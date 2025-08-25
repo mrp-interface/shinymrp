@@ -2,15 +2,14 @@
 % Please edit documentation in R/example.R
 \name{example_pstrat_data}
 \alias{example_pstrat_data}
-\title{Create example poststratification data
-#' @description Generates example poststratification data for MRP analysis.}
+\title{Return example poststratification data}
 \usage{
 example_pstrat_data()
 }
 \value{
-An example poststratification table.
+A \code{data.frame} object.
 }
 \description{
-Create example poststratification data
-#' @description Generates example poststratification data for MRP analysis.
+Return example poststratification data accepted by
+the \verb{$load_pstrat()} method of a \code{MRPWorkflow} object.
 }
