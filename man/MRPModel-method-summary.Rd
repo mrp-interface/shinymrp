@@ -21,3 +21,24 @@ The \verb{$summary()} method of a \code{MRPModel} object
 returns tables containing summary of posterior samples
 for the model parameters and diagnostics.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Load example data
+ example_model <- example_model()
+
+ # Get parameter summaries
+ parameter_summary <- model$summary()
+
+ # Fixed effects
+ parameter_summary$fixed
+
+ # Standard deviation of varying effects
+ parameter_summary$varying
+
+ # Standard deviation of residuals
+ parameter_summary$other
+}
+
+}

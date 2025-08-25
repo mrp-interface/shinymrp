@@ -18,3 +18,18 @@ The \verb{$diagnostics()} method of a \code{MRPModel} object
 returns MCMC diagnostics including
 convergence statistics and sampling efficiency measures.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Load example data
+ example_model <- example_model()
+
+ # Get diagnostics summary
+ diagnostics_summary <- example_model$diagnostics(summarize = TRUE)
+
+ # Get raw diagnostics of individual chains
+ diagnostics_detailed <- example_model$diagnostics(summarize = FALSE)
+}
+
+}

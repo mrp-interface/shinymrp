@@ -45,76 +45,78 @@ methods with their own (linked) documentation pages:
 }
 
 \examples{
-  library(shinymrp)
+ \dontrun{
+ library(shinymrp)
 
-  # Initialize the MRP workflow
-  workflow <- mrp_workflow()
+ # Initialize the MRP workflow
+ workflow <- mrp_workflow()
 
-  # Load example data
-  sample_data <- example_sample_data()
+ # Load example data
+ sample_data <- example_sample_data()
 
-  ### DATA PREPARATION
+ ### DATA PREPARATION
 
-  # Preprocess sample data
-  workflow$preprocess(
-    sample_data,
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
-  )
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
 
-  # Link data to the ACS
-  # and obtain poststratification data
-  workflow$link_acs(
-    link_geo = "zip",
-    acs_year = 2021
-  )
+ # Link data to the ACS
+ # and obtain poststratification data
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
 
-  ### DESCRIPTIVE STATISTICS
+ ### DESCRIPTIVE STATISTICS
 
-  # Visualize demographic distribution of data
-  workflow$demo_bars(demo = "sex")
+ # Visualize demographic distribution of data
+ workflow$demo_bars(demo = "sex")
 
-  # Visualize geographic distribution of data
-  workflow$sample_size_map()
+ # Visualize geographic distribution of data
+ workflow$sample_size_map()
 
-  # Visualize outcome measure
-  workflow$outcome_plot()
+ # Visualize outcome measure
+ workflow$outcome_plot()
 
-  ### MODEL BUILDING
+ ### MODEL BUILDING
 
-  # Create new model objects
-  model <- workflow$create_model(
-    intercept_prior = "normal(0, 4)",
-    fixed = list(
-      sex = "normal(0, 2)",
-      race = "normal(0, 2)"
-    ),
-    varying = list(
-      age = "",
-      time = ""
-    )
-  )
+ # Create new model objects
+ model <- workflow$create_model(
+   intercept_prior = "normal(0, 4)",
+   fixed = list(
+     sex = "normal(0, 2)",
+     race = "normal(0, 2)"
+   ),
+   varying = list(
+     age = "",
+     time = ""
+   )
+ )
 
-  # Run MCMC
-  model$fit(n_iter = 500, n_chains = 2, seed = 123)
+ # Run MCMC
+ model$fit(n_iter = 500, n_chains = 2, seed = 123)
 
-  # Estimates summary and diagnostics
-  model$summary()
+ # Estimates summary and diagnostics
+ model$summary()
 
-  # Sampling diagnostics
-  model$diagnostics()
+ # Sampling diagnostics
+ model$diagnostics()
 
-  # Posterior predictive check
-  workflow$pp_check(model)
+ # Posterior predictive check
+ workflow$pp_check(model)
 
-  ### VISUALIZE RESULTS
+ ### VISUALIZE RESULTS
 
-  # Plots of overall estimates, estimates for demographic groups and geographic areas
-  workflow$estimate_plot(model, group = "sex")
+ # Plots of overall estimates, estimates for demographic groups and geographic areas
+ workflow$estimate_plot(model, group = "sex")
 
-  # Choropleth map of estimates for geographic areas
-  workflow$estimate_map(model, geo = "county")
+ # Choropleth map of estimates for geographic areas
+ workflow$estimate_map(model, geo = "county")
+ }
 
 }

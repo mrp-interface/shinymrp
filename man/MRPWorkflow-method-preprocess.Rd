@@ -16,7 +16,8 @@ preprocess(
 )
 }
 \arguments{
-\item{data}{An object of class \code{data.frame} (or one that can be coerced to that class).}
+\item{data}{An object of class \code{data.frame} (or one that can be coerced to that class) that satisfies
+the requirements specified in the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{"More on data preparation"} vignette.}
 
 \item{is_timevar}{Logical indicating whether the data contains time-varying components.}
 
@@ -38,4 +39,25 @@ Values with lower frequency will cause the entire row to be removed. The default
 \description{
 The \verb{$preprocess()} method runs the preprocessing pipeline
 that includes data standardization, filtering, imputation, and aggregation.
+}
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+}
+
 }

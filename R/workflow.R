@@ -51,81 +51,82 @@ mrp_workflow <- function() {
 #'  [`$outcome_map()`][MRPWorkflow-method-outcome_map] | Visualize raw outcome measure by geography. |
 #'  [`$estimate_plot()`][MRPWorkflow-method-estimate_plot] | Visualize estimates for demographic groups. |
 #'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic areas. |
-#' 
 #'
 #' @examples
-#'   library(shinymrp)
+#'  \dontrun{
+#'  library(shinymrp)
 #'
-#'   # Initialize the MRP workflow
-#'   workflow <- mrp_workflow()
+#'  # Initialize the MRP workflow
+#'  workflow <- mrp_workflow()
 #'
-#'   # Load example data
-#'   sample_data <- example_sample_data()
+#'  # Load example data
+#'  sample_data <- example_sample_data()
 #'
-#'   ### DATA PREPARATION
+#'  ### DATA PREPARATION
 #'
-#'   # Preprocess sample data
-#'   workflow$preprocess(
-#'     sample_data,
-#'     is_timevar = TRUE,
-#'     is_aggregated = TRUE,
-#'     special_case = NULL,
-#'     family = "binomial"
-#'   )
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
 #'
-#'   # Link data to the ACS
-#'   # and obtain poststratification data
-#'   workflow$link_acs(
-#'     link_geo = "zip",
-#'     acs_year = 2021
-#'   )
+#'  # Link data to the ACS
+#'  # and obtain poststratification data
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
 #'
-#'   ### DESCRIPTIVE STATISTICS
+#'  ### DESCRIPTIVE STATISTICS
 #'
-#'   # Visualize demographic distribution of data
-#'   workflow$demo_bars(demo = "sex")
+#'  # Visualize demographic distribution of data
+#'  workflow$demo_bars(demo = "sex")
 #'
-#'   # Visualize geographic distribution of data
-#'   workflow$sample_size_map()
+#'  # Visualize geographic distribution of data
+#'  workflow$sample_size_map()
 #'
-#'   # Visualize outcome measure
-#'   workflow$outcome_plot()
+#'  # Visualize outcome measure
+#'  workflow$outcome_plot()
 #'
-#'   ### MODEL BUILDING
+#'  ### MODEL BUILDING
 #'
-#'   # Create new model objects
-#'   model <- workflow$create_model(
-#'     intercept_prior = "normal(0, 4)",
-#'     fixed = list(
-#'       sex = "normal(0, 2)",
-#'       race = "normal(0, 2)"
-#'     ),
-#'     varying = list(
-#'       age = "",
-#'       time = ""
-#'     )
-#'   )
+#'  # Create new model objects
+#'  model <- workflow$create_model(
+#'    intercept_prior = "normal(0, 4)",
+#'    fixed = list(
+#'      sex = "normal(0, 2)",
+#'      race = "normal(0, 2)"
+#'    ),
+#'    varying = list(
+#'      age = "",
+#'      time = ""
+#'    )
+#'  )
 #'
-#'   # Run MCMC
-#'   model$fit(n_iter = 500, n_chains = 2, seed = 123)
+#'  # Run MCMC
+#'  model$fit(n_iter = 500, n_chains = 2, seed = 123)
 #'
-#'   # Estimates summary and diagnostics
-#'   model$summary()
+#'  # Estimates summary and diagnostics
+#'  model$summary()
 #'
-#'   # Sampling diagnostics
-#'   model$diagnostics()
+#'  # Sampling diagnostics
+#'  model$diagnostics()
 #'
-#'   # Posterior predictive check
-#'   workflow$pp_check(model)
+#'  # Posterior predictive check
+#'  workflow$pp_check(model)
 #'
-#'   ### VISUALIZE RESULTS
+#'  ### VISUALIZE RESULTS
 #'
-#'   # Plots of overall estimates, estimates for demographic groups and geographic areas
-#'   workflow$estimate_plot(model, group = "sex")
+#'  # Plots of overall estimates, estimates for demographic groups and geographic areas
+#'  workflow$estimate_plot(model, group = "sex")
 #'
-#'   # Choropleth map of estimates for geographic areas
-#'   workflow$estimate_map(model, geo = "county")
-#' 
+#'  # Choropleth map of estimates for geographic areas
+#'  workflow$estimate_map(model, geo = "county")
+#'  }
+#'
 #' @export
 #' 
 #' @importFrom R6 R6Class
@@ -231,12 +232,35 @@ MRPWorkflow <- R6::R6Class(
 )
 
 #' Return preprocessed sample data
-#' 
+#'
 #' @name MRPWorkflow-method-preprocessed_data
 #' @aliases preprocessed_data
 #'
-#' 
+#'
 #' @description The `$preprocessed_data()` method returns the preprocessed sample data.
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Get the preprocessed data
+#'  preprocessed <- workflow$preprocessed_data()
+#' }
 #'
 preprocessed_data <- function() {
   return(private$prepdat_)
@@ -253,7 +277,8 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' @description The `$preprocess()` method runs the preprocessing pipeline
 #' that includes data standardization, filtering, imputation, and aggregation.
 #'
-#' @param data An object of class `data.frame` (or one that can be coerced to that class).
+#' @param data An object of class `data.frame` (or one that can be coerced to that class) that satisfies
+#' the requirements specified in the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
 #' @param is_timevar Logical indicating whether the data contains time-varying components.
 #' @param is_aggregated Logical indicating whether the data is already aggregated.
 #' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
@@ -265,7 +290,27 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' or time-varying data that already has time indices.
 #' @param freq_threshold Numeric value specifying the minimum frequency threshold for including observations.
 #' Values with lower frequency will cause the entire row to be removed. The default value is 0.
-#' 
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#' }
+#'
 preprocess <- function(
   data,
   is_timevar = FALSE,
@@ -332,6 +377,32 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #'
 #' @param link_geo Character string specifying the geographic level for linking. Options are `"zip"`, `"county"`, and `"state"`.
 #' @param acs_year Numeric value specifying the last year of the 5-year period for the target ACS dataset.
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#' }
 #'
 link_acs <- function(
   link_geo = NULL,
@@ -472,6 +543,34 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #' @param pstrat_data An object of class `data.frame` (or one that can be coerced to that class).
 #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
 #'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example sample data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Load example poststratification data
+#'  pstrat_data <- example_pstrat_data()
+#'
+#'  # Read in poststratification data
+#'  workflow$load_pstrat(
+#'    pstrat_data = pstrat_data,
+#'    is_aggregated = TRUE
+#'  )
+#' }
 load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
   if (!is.null(private$metadat_$special_case)) {
     stop("Custom poststratification data is not supported for special cases like COVID or polling data. Please use the `link_acs` method instead.")
@@ -569,6 +668,36 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object or patchwork object showing demographic comparisons
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#'
+#'  # Create demographic comparison plots
+#'  workflow$demo_bars(demo = "sex")
+#' }
+#'
 demo_bars <- function(demo, file = NULL, ...) {
   private$assert_mrp_exists()
 
@@ -624,6 +753,37 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object showing the covariate distribution histogram.
+#'
+#' @examples
+#' \dontrun{
+#' library(shinymrp)
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = "covid",
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#'
+#'  # Create covariate distribution histograms
+#'  workflow$covar_hist("college")
+#' }
+#'
 covar_hist <- function(covar, file = NULL, ...) {
   private$assert_mrp_exists()
   
@@ -725,7 +885,6 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #' @name MRPWorkflow-method-sample_size_map
 #' @aliases sample_size_map
 #'
-#'
 #' @description The `$sample_size_map()` method creates interactive choropleth maps 
 #' showing data distribution with respect to geography. This method cannot be used
 #' if there is no geographic information in either the sample or poststratification data.
@@ -733,6 +892,36 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #' @param file Optional file path to save the plot.
 #'
 #' @return A highcharter map object showing sample size distribution.
+#' 
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#' 
+#'  # Create sample size map
+#'  workflow$sample_size_map()
+#' }
+#' 
 sample_size_map <- function(file = NULL) {
   private$assert_mrp_exists()
 
@@ -788,6 +977,36 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object showing the outcome measure distribution.
+#' 
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#'
+#'  # Create outcome plots
+#'  workflow$outcome_plot()
+#' }
+#' 
 outcome_plot <- function(file = NULL, ...) {
   private$assert_mrp_exists()
 
@@ -833,6 +1052,36 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #' @param file Optional file path to save the map.
 #'
 #' @return A highcharter map object showing outcome measures by geography.
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#'
+#'  # Create outcome maps
+#'  workflow$outcome_map(summary_type = "max")
+#' }
+#'
 outcome_map <- function(summary_type = "max", file = NULL) {
   private$assert_mrp_exists()
 
@@ -907,6 +1156,24 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @return A ggplot object showing MRP estimates.
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  example_model <- example_model()
+#'
+#'  # Overall estimates
+#'  workflow$estimate_plot(example_model)
+#'
+#'  # Estimates by demographic group
+#'  workflow$estimate_plot(example_model, group = "sex")
+#' }
+#'
 estimate_plot <- function(
   model,
   group = NULL,
@@ -985,7 +1252,7 @@ estimate_plot <- function(
 MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 
 #' Create a choropleth map of MRP estimates
-#' 
+#'
 #' @name MRPWorkflow-method-estimate_map
 #' @aliases estimate_map
 #'
@@ -993,7 +1260,7 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #'
 #' @param model Fitted MRPModel object
 #' @param geo Character string specifying the geographic level for mapping.
-#' Options include geography for data linking and those at larger scales. 
+#' Options include geography for data linking and those at larger scales.
 #' A "linking" geography is required to use this method. It is either specified
 #' as `geo` in the `$link_acs()` method or the smallest common geographic scale
 #' between the sample data and the custom poststratification data
@@ -1003,8 +1270,24 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' @param interval Confidence interval (a numeric value between 0 and 1) or
 #' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
 #' @param file Optional file path to save the map.
-#' 
+#'
 #' @return A highcharter map object showing MRP estimates by geography
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  example_model <- example_model()
+#'
+#'  # Create estimate maps
+#'  workflow$estimate_map(example_model, geo = "county")
+#'
+#' }
+#'
 estimate_map <- function(
   model,
   geo = NULL,
@@ -1097,7 +1380,7 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' @param sens Sensitivity adjustment in the COVID test results. Check *Details* for more information.
 #' @param spec Specificity adjustment in the COVID test results. Check *Details* for more information.
 #'
-#' @details 
+#' @details
 #' #### Prior specification
 #' The syntax for the prior distributions is similar to that of Stan. The following are currently supported:
 #'
@@ -1125,6 +1408,51 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' \deqn{p_k=(1-\gamma)(1-\pi_k )+\delta \pi_k.}
 #'
 #' @return A new MRPModel object
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#'
+#'  # Create a new model object
+#'  model <- workflow$create_model(
+#'    intercept_prior = "normal(0, 4)",
+#'    fixed = list(
+#'      sex = "normal(0, 2)"
+#'    ),
+#'    varying = list(
+#'      race = "normal(0, 2)",
+#'      age = "normal(0, 2)",
+#'      time = "normal(0, 2)"
+#'    ),
+#'    interaction = list(
+#'      `sex:time` = "normal(0, 2)",
+#'      `race:time` = "normal(0, 2)",
+#'      `age:time` = "normal(0, 2)"
+#'    )
+#'  )
+#' }
+#'
 create_model <- function(
   intercept_prior = NULL,
   fixed = NULL,
@@ -1162,9 +1490,7 @@ MRPWorkflow$set("public", "create_model", create_model)
 #'
 #' @name MRPWorkflow-method-pp_check
 #' @aliases pp_check
-
-
-
+#' 
 #' @description The `$pp_check()` method creates posterior predictive check plots
 #' to assess model fit by comparing observed data to replicated data from
 #' the posterior predictive distribution.
@@ -1172,6 +1498,21 @@ MRPWorkflow$set("public", "create_model", create_model)
 #' @param model Fitted MRPModel object.
 #' @param file Optional file path to save the plot.
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  example_model <- example_model()
+#'
+#' # Perform posterior predictive check
+#'  workflow$pp_check(example_model)
+#' }
+#'
 pp_check <- function(model, file = NULL, ...) {
 
   p <- if (model$metadata()$is_timevar) {
@@ -1212,6 +1553,70 @@ MRPWorkflow$set("public", "pp_check", pp_check)
 #' @param suppress Character string specifying output to suppress during comparison.
 #'
 #' @return A data frame summarizing the comparison results
+#'
+#' @examples
+#' \dontrun{
+#'  library(shinymrp)
+#'
+#'  # Initialize workflow
+#'  workflow <- mrp_workflow()
+#'
+#'  # Load example data
+#'  sample_data <- example_sample_data()
+#'
+#'  # Preprocess sample data
+#'  workflow$preprocess(
+#'    sample_data,
+#'    is_timevar = TRUE,
+#'    is_aggregated = TRUE,
+#'    special_case = NULL,
+#'    family = "binomial"
+#'  )
+#'
+#'  # Link to ACS data at ZIP code level
+#'  workflow$link_acs(
+#'    link_geo = "zip",
+#'    acs_year = 2021
+#'  )
+#'
+#'  # Create and fit multiple models
+#'  model1 <- workflow$create_model(
+#'    intercept_prior = "normal(0, 4)",
+#'    fixed = list(
+#'      sex = "normal(0, 2)"
+#'    ),
+#'    varying = list(
+#'      race = "normal(0, 2)",
+#'      age = "normal(0, 2)",
+#'      time = "normal(0, 2)"
+#'    )
+#'  )
+#'
+#'  model2 <- workflow$create_model(
+#'    intercept_prior = "normal(0, 4)",
+#'    fixed = list(
+#'      sex = "normal(0, 2)"
+#'    ),
+#'    varying = list(
+#'      race = "normal(0, 2)",
+#'      age = "normal(0, 2)",
+#'      time = "normal(0, 2)"
+#'    ),
+#'    interaction = list(
+#'      `sex:time` = "normal(0, 2)",
+#'      `race:time` = "normal(0, 2)",
+#'      `age:time` = "normal(0, 2)"
+#'    )
+#'  )
+#'
+#'  # Fit all models
+#'  model1$fit(n_iter = 500, n_chains = 2, seed = 123)
+#'  model2$fit(n_iter = 500, n_chains = 2, seed = 123)
+#'
+#'  # Compare models
+#'  comparison <- workflow$compare_models(model1, model2)
+#' }
+#'
 compare_models <- function(..., suppress = NULL) {
 
   if (length(list(...)) < 2) {

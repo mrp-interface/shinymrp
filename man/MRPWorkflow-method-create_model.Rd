@@ -75,3 +75,48 @@ specificity \eqn{\gamma}, and the true incidence \eqn{\pi_k} for individuals in 
 \deqn{p_k=(1-\gamma)(1-\pi_k )+\delta \pi_k.}
 }
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
+
+ # Create a new model object
+ model <- workflow$create_model(
+   intercept_prior = "normal(0, 4)",
+   fixed = list(
+     sex = "normal(0, 2)"
+   ),
+   varying = list(
+     race = "normal(0, 2)",
+     age = "normal(0, 2)",
+     time = "normal(0, 2)"
+   ),
+   interaction = list(
+     `sex:time` = "normal(0, 2)",
+     `race:time` = "normal(0, 2)",
+     `age:time` = "normal(0, 2)"
+   )
+ )
+}
+
+}

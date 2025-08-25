@@ -17,3 +17,30 @@ The \verb{$link_acs()} method obtains poststratification data by
 linking the preprocessed sample data to the American Community Survey
 based on given geographic granularity and year.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
+}
+
+}

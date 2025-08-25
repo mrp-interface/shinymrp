@@ -18,3 +18,33 @@ The \verb{$sample_size_map()} method creates interactive choropleth maps
 showing data distribution with respect to geography. This method cannot be used
 if there is no geographic information in either the sample or poststratification data.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
+
+ # Create sample size map
+ workflow$sample_size_map()
+}
+
+}
