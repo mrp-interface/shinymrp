@@ -61,9 +61,9 @@ methods, many of which have their own (linked) documentation pages:
 
 \subsection{Post-processing}{\tabular{ll}{
    \strong{Method} \tab \strong{Description} \cr
-   \code{\link[=MRPModel-method-ppc]{$ppc()}} \tab Run posterior predictive check. \cr
-   \code{\link[=MRPModel-method-loo]{$loo()}} \tab Create input for leave-one-out cross-validation. \cr
-   \code{\link[=MRPModel-method-poststratify]{$poststratify()}} \tab Run post-stratification to generate population estimates. \cr
+   \code{\link[=MRPModel-method-ppc]{$ppc()}} \tab Create input for posterior predictive check. \cr
+   \code{\link[=MRPModel-method-log_lik]{$log_lik()}} \tab Create input for leave-one-out cross-validation. \cr
+   \code{\link[=MRPModel-method-poststratify]{$poststratify()}} \tab Run poststratification to generate population estimates. \cr
 }
 
 }

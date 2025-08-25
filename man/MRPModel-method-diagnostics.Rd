@@ -14,6 +14,7 @@ diagnostics(summarize = TRUE)
 A data.frame object if \code{summarize} is TRUE, otherwise a list of raw diagnostics
 }
 \description{
-The \verb{$diagnostics()} method returns MCMC diagnostics including
+The \verb{$diagnostics()} method of a \code{MRPModel} object
+returns MCMC diagnostics including
 convergence statistics and sampling efficiency measures.
 }

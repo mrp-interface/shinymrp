@@ -16,6 +16,8 @@ A data.frame object containing the poststratified estimates and their
 corresponding uncertainty intervals.
 }
 \description{
-The \verb{$poststratify()} method runs Stan's standalone generated quantities
-and extracts posterior samples for poststratified estimates.
+The \verb{$poststratify()} method of a \code{MRPModel} object
+runs Stan's standalone generated quantities and extracts posterior samples
+for poststratified estimates. This method is called by the \verb{$poststratify()}
+method of a \code{MRPWorkflow} object and does not need to be called directly by users.
 }

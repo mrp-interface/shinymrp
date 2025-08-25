@@ -17,5 +17,5 @@ fit(n_iter = 2000, n_chains = 4, seed = NULL, ...)
 \item{...}{Additional arguments passed to CmdStanR \verb{$sample()} method}
 }
 \description{
-The \verb{$fit()} method fits the model using Stan.
+The \verb{$fit()} method of a \code{MRPModel} object fits the model using Stan.
 }

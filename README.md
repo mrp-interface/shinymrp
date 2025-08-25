@@ -2,6 +2,8 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/mrp-interface/shinymrp/actions/workflows/ci.yaml/badge.svg)](https://github.com/mrp-interface/shinymrp/actions/workflows/ci.yaml)
+[![Codecov test coverage](https://codecov.io/gh/mrp-interface/shinymrp/graph/badge.svg)](https://app.codecov.io/gh/mrp-interface/shinymrp)
+<!-- badges: end -->
 
 
 The shinymrp package provides interfaces for applications of Multilevel Regression and Poststratification to a variety of datasets, from hospital records to political polling data. It scaffolds the steps of an end-to-end Bayesian data analysis workflow.

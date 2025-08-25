@@ -8,6 +8,7 @@
 metadata()
 }
 \description{
-The \verb{$metadata()} method returns the metadata associated with the model,
+The \verb{$metadata()} method of a \code{MRPModel} object
+returns the metadata associated with the model,
 including metadata inherited from a workflow object and model fitting parameters.
 }

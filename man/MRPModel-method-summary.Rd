@@ -8,8 +8,16 @@
 summary()
 }
 \value{
-A data frame containing the summary statistics for the posterior samples and diagnostics.
+A list of \code{data.frame} objects containing posterior sample
+summary and diagnostics for model parameters:
+\itemize{
+\item fixed effects (\code{fixed})
+\item standard deviations of varying effects (\code{varying})
+\item standard deviations of residuals (\code{other})
+}
 }
 \description{
-The \verb{$summary()} method returns a summary of posterior samples for the model parameters and diagnostics.
+The \verb{$summary()} method of a \code{MRPModel} object
+returns tables containing summary of posterior samples
+for the model parameters and diagnostics.
 }

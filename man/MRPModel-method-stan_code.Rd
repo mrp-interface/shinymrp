@@ -8,5 +8,6 @@
 stan_code()
 }
 \description{
-The \verb{$stan_code()} method return Stan code.
+The \verb{$stan_code()} method of a \code{MRPModel} object
+returns the Stan code.
 }

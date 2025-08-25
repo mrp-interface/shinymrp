@@ -11,5 +11,6 @@ check_fit_exists()
 Logical indicating whether the model has been fitted.
 }
 \description{
-The \verb{$check_fit_exists()} method checks whether the model has been fitted.
+The \verb{$check_fit_exists()} method of a \code{MRPModel} object
+checks whether the model has been fitted.
 }
