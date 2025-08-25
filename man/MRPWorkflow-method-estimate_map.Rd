@@ -36,3 +36,19 @@ A highcharter map object showing MRP estimates by geography
 \description{
 The \verb{$estimate_map()} method creates interactive choropleth maps showing MRP estimates by geographic regions.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ example_model <- example_model()
+
+ # Create estimate maps
+ workflow$estimate_map(example_model, geo = "county")
+
+}
+
+}

@@ -11,3 +11,15 @@ formula()
 The \verb{$formula()} method of a \code{MRPModel} object
 returns the lme4-style formula constructed from the model specification list.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Load example data
+ example_model <- example_model()
+
+ # Get model formula
+ formula <- example_model$formula()
+}
+
+}

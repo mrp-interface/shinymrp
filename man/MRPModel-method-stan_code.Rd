@@ -11,3 +11,15 @@ stan_code()
 The \verb{$stan_code()} method of a \code{MRPModel} object
 returns the Stan code.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Load example data
+ example_model <- example_model()
+
+ # Get Stan code
+ stan_code <- example_model$stan_code()
+}
+
+}

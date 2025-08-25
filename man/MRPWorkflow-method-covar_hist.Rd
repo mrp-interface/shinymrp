@@ -24,3 +24,34 @@ showing the distribution of geographic covariates across ZIP codes. Refer to the
 \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-covariates}{"More on data preparation"} for their definitions.
 \emph{This method is only available for \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules}{COVID data}}.
 }
+\examples{
+\dontrun{
+library(shinymrp)
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = "covid",
+   family = "binomial"
+ )
+
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
+
+ # Create covariate distribution histograms
+ workflow$covar_hist("college")
+}
+
+}

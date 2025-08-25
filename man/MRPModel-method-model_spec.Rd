@@ -14,3 +14,15 @@ A list containing the model specification including intercept, fixed effects, va
 The \verb{$model_spec()} method of a \code{MRPModel} object
 returns the model specification list.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Load example data
+ example_model <- example_model()
+
+ # Get model specification list
+ spec <- example_model$model_spec()
+}
+
+}

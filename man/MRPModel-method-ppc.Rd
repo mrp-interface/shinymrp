@@ -3,9 +3,12 @@
 \name{MRPModel-method-ppc}
 \alias{MRPModel-method-ppc}
 \alias{ppc}
-\title{Run posterior predictive check}
+\title{Create input for posterior predictive check}
 \usage{
 ppc()
+}
+\value{
+A \code{data.frame} containing samples from the posterior predictive distribution.
 }
 \description{
 The \verb{$ppc()} method of a \code{MRPModel} object

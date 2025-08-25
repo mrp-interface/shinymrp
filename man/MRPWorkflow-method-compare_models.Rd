@@ -19,3 +19,67 @@ A data frame summarizing the comparison results
 The \verb{$compare_models()} method compares multiple fitted \code{MRPModel} objects
 using leave-one-out cross-validation to assess relative model performance.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
+
+ # Create and fit multiple models
+ model1 <- workflow$create_model(
+   intercept_prior = "normal(0, 4)",
+   fixed = list(
+     sex = "normal(0, 2)"
+   ),
+   varying = list(
+     race = "normal(0, 2)",
+     age = "normal(0, 2)",
+     time = "normal(0, 2)"
+   )
+ )
+
+ model2 <- workflow$create_model(
+   intercept_prior = "normal(0, 4)",
+   fixed = list(
+     sex = "normal(0, 2)"
+   ),
+   varying = list(
+     race = "normal(0, 2)",
+     age = "normal(0, 2)",
+     time = "normal(0, 2)"
+   ),
+   interaction = list(
+     `sex:time` = "normal(0, 2)",
+     `race:time` = "normal(0, 2)",
+     `age:time` = "normal(0, 2)"
+   )
+ )
+
+ # Fit all models
+ model1$fit(n_iter = 500, n_chains = 2, seed = 123)
+ model2$fit(n_iter = 500, n_chains = 2, seed = 123)
+
+ # Compare models
+ comparison <- workflow$compare_models(model1, model2)
+}
+
+}

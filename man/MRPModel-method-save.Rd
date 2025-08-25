@@ -13,4 +13,24 @@ save(file)
 \description{
 The \verb{$save()} method of a \code{MRPModel} object
 saves a fitted MRPModel object to a file for later use.
+\code{qs::qsave()} is used internally and it is customary
+to use the \code{.qs} file extension.
+}
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example model
+ example_model <- example_model()
+
+ # Save model to file
+ model$save("/path/to/model.qs")
+
+ # Load model later
+ # model <- qs::qread("/path/to/model.qs")
+}
+
 }

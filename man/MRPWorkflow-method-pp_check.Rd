@@ -19,3 +19,18 @@ The \verb{$pp_check()} method creates posterior predictive check plots
 to assess model fit by comparing observed data to replicated data from
 the posterior predictive distribution.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ example_model <- example_model()
+
+# Perform posterior predictive check
+ workflow$pp_check(example_model)
+}
+
+}

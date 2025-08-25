@@ -12,3 +12,15 @@ The \verb{$metadata()} method of a \code{MRPModel} object
 returns the metadata associated with the model,
 including metadata inherited from a workflow object and model fitting parameters.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Load example data
+ example_model <- example_model()
+
+ # Get model metadata
+ metadata <- example_model$metadata()
+}
+
+}

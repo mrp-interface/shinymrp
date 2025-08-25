@@ -35,3 +35,21 @@ A ggplot object showing MRP estimates.
 The \verb{$estimate_plot()} method creates plots showing overall MRP estimates or
 estimates for different demographic groups.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ example_model <- example_model()
+
+ # Overall estimates
+ workflow$estimate_plot(example_model)
+
+ # Estimates by demographic group
+ workflow$estimate_plot(example_model, group = "sex")
+}
+
+}

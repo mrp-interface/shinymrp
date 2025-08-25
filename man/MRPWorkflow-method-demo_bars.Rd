@@ -21,3 +21,33 @@ A ggplot object or patchwork object showing demographic comparisons
 Creates bar plots for comparing demographic distributions between
 sample data and poststratification data.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
+
+ # Create demographic comparison plots
+ workflow$demo_bars(demo = "sex")
+}
+
+}

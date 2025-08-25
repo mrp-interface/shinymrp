@@ -27,7 +27,7 @@ multilevel regression model with methods for sampling, diagnostics,
 and post-stratification.
 
 Creates a new instance of the \code{MRPModel} class. This method is called by the \verb{$create_model()}
-method from \code{MRPWorkflow} and should not be called directly by users.
+method of a \code{MRPWorkflow} object and does not need to be called directly by users.
 }
 \section{Methods}{
  \code{MRPModel} objects have the following associated
@@ -77,76 +77,54 @@ methods, many of which have their own (linked) documentation pages:
 }
 
 \examples{
-  library(shinymrp)
+\dontrun{
+ library(shinymrp)
 
-  # Initialize the MRP workflow
-  workflow <- mrp_workflow()
+ # Initialize workflow
+ workflow <- mrp_workflow()
 
-  # Load example data
-  sample_data <- example_sample_data()
+ # Load example data
+ sample_data <- example_sample_data()
 
-  ### DATA PREPARATION
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
 
-  # Preprocess sample data
-  workflow$preprocess(
-    sample_data,
-    is_timevar = TRUE,
-    is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
-  )
+ # Link to ACS data at ZIP code level
+ workflow$link_acs(
+   link_geo = "zip",
+   acs_year = 2021
+ )
 
-  # Link data to the ACS
-  # and obtain poststratification data
-  workflow$link_acs(
-    link_geo = "zip",
-    acs_year = 2021
-  )
+ # Create and fit multiple models
+ model <- workflow$create_model(
+   intercept_prior = "normal(0, 4)",
+   fixed = list(
+     sex = "normal(0, 2)"
+   ),
+   varying = list(
+     race = "normal(0, 2)",
+     age = "normal(0, 2)",
+     time = "normal(0, 2)"
+   )
+ )
 
-  ### DESCRIPTIVE STATISTICS
+ # Run MCMC
+ model$fit(n_iter = 500, n_chains = 2, seed = 123)
 
-  # Visualize demographic distribution of data
-  workflow$demo_bars(demo = "sex")
+ # Estimates summary and diagnostics
+ model$summary()
 
-  # Visualize geographic distribution of data
-  workflow$sample_size_map()
+ # Sampling diagnostics
+ model$diagnostics()
 
-  # Visualize outcome measure
-  workflow$outcome_plot()
-
-  ### MODEL BUILDING
-
-  # Create new model objects
-  model <- workflow$create_model(
-    intercept_prior = "normal(0, 4)",
-    fixed = list(
-      sex = "normal(0, 2)",
-      race = "normal(0, 2)"
-    ),
-    varying = list(
-      age = "",
-      time = ""
-    )
-  )
-
-  # Run MCMC
-  model$fit(n_iter = 500, n_chains = 2, seed = 123)
-
-  # Estimates summary and diagnostics
-  model$summary()
-
-  # Sampling diagnostics
-  model$diagnostics()
-
-  # Posterior predictive check
-  workflow$pp_check(model)
-
-  ### VISUALIZE RESULTS
-
-  # Plots of overall estimates, estimates for demographic groups and geographic areas
-  workflow$estimate_plot(model, group = "sex")
-
-  # Choropleth map of estimates for geographic areas
-  workflow$estimate_map(model, geo = "county")
+ # Save model object
+ model$save("/path/to/model.qs")
+}
 
 }

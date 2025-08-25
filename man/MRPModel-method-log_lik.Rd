@@ -7,6 +7,9 @@
 \usage{
 log_lik()
 }
+\value{
+A \code{data.frame} containing log-likelihood values.
+}
 \description{
 The \verb{$log_lik()} method of a \code{MRPModel} object
 runs Stan's standalone generated quantities

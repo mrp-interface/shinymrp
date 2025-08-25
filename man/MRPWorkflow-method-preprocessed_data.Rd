@@ -10,3 +10,27 @@ preprocessed_data()
 \description{
 The \verb{$preprocessed_data()} method returns the preprocessed sample data.
 }
+\examples{
+\dontrun{
+ library(shinymrp)
+
+ # Initialize workflow
+ workflow <- mrp_workflow()
+
+ # Load example data
+ sample_data <- example_sample_data()
+
+ # Preprocess sample data
+ workflow$preprocess(
+   sample_data,
+   is_timevar = TRUE,
+   is_aggregated = TRUE,
+   special_case = NULL,
+   family = "binomial"
+ )
+
+ # Get the preprocessed data
+ preprocessed <- workflow$preprocessed_data()
+}
+
+}
