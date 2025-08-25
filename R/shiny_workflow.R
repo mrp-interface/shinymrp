@@ -93,7 +93,7 @@ ShinyMRPWorkflow <- R6::R6Class(
       loo_list <- purrr::map(models, function(m) {
         utils::capture.output({
           loo_output <- loo::loo(
-            m$loo(),
+            m$log_lik(),
             cores = m$metadata()$n_chains
           )
         }, type = suppress)

@@ -11,5 +11,6 @@ check_estimate_exists()
 Logical indicating whether poststratification has been performed.
 }
 \description{
-The \verb{$check_estimate_exists()} method checks whether poststratification has been performed.
+The \verb{$check_estimate_exists()} method of a \code{MRPModel} object
+checks whether poststratification has been performed.
 }

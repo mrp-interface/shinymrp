@@ -52,6 +52,6 @@ example_pstrat_data <- function() {
 #' @return A `MRPModel` object.
 #'
 #' @export
-example_mrp_model <- function() {
+example_model <- function() {
   .fetch_data("timevarying_binomial_fit.qs", subdir = "example/fit")
 }

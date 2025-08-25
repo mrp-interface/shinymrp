@@ -8,6 +8,9 @@
 ppc()
 }
 \description{
-The \verb{$ppc()} method runs Stan's standalone generated quantities
-for posterior predictive checks.
+The \verb{$ppc()} method of a \code{MRPModel} object
+runs Stan's standalone generated quantities
+to draw from the posterior predictive distribution. This method is called
+by the \verb{$pp_check()} method of a \code{MRPWorkflow} object and does
+not need to be called directly by users.
 }

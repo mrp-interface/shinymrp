@@ -825,7 +825,8 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #'
 #'
 #' @description The `$outcome_map()` method creates maps showing average outcome measure by geography for
-#' cross-sectional data, or highest/lowest temporal average for time-varying data.
+#' cross-sectional data, or highest/lowest temporal average for time-varying data. The sample and
+#' poststratification data must contain geographic information for this method to work.
 #'
 #' @param summary_type Character string for time-varying data, indicating whether to display the
 #' highest (`"max"`) or lowest (`"min"`) temporal average. Default is `"max"`.
@@ -992,9 +993,10 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #'
 #' @param model Fitted MRPModel object
 #' @param geo Character string specifying the geographic level for mapping.
-#' Options are geographic level for linking data and greater. Linking geography
-#' is either specified as `geo` in the `$link_acs()` method or the smallest common
-#' geographic scale between the sample data and the custom poststratification data
+#' Options include geography for data linking and those at larger scales. 
+#' A "linking" geography is required to use this method. It is either specified
+#' as `geo` in the `$link_acs()` method or the smallest common geographic scale
+#' between the sample data and the custom poststratification data
 #' input using `$load_pstrat()`.
 #'
 #' @param time_index Numeric value specifying the time index for time-varying data.
@@ -1225,7 +1227,7 @@ compare_models <- function(..., suppress = NULL) {
   loo_list <- purrr::map(models, function(m) {
     utils::capture.output({
       loo_output <- loo::loo(
-        m$loo(),
+        m$log_lik(),
         cores = m$metadata()$n_chains
       )
     }, type = suppress)

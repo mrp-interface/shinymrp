@@ -17,9 +17,10 @@ estimate_map(
 \item{model}{Fitted MRPModel object}
 
 \item{geo}{Character string specifying the geographic level for mapping.
-Options are geographic level for linking data and greater. Linking geography
-is either specified as \code{geo} in the \verb{$link_acs()} method or the smallest common
-geographic scale between the sample data and the custom poststratification data
+Options include geography for data linking and those at larger scales.
+A "linking" geography is required to use this method. It is either specified
+as \code{geo} in the \verb{$link_acs()} method or the smallest common geographic scale
+between the sample data and the custom poststratification data
 input using \verb{$load_pstrat()}.}
 
 \item{time_index}{Numeric value specifying the time index for time-varying data.}

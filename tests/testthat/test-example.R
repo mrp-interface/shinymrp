@@ -138,9 +138,9 @@ test_that("example_pstrat_data retrieves the correct files", {
   )
 })
 
-test_that("example_mrp_model retrieves the correct files", {
+test_that("example_model retrieves the correct files", {
   expect_s3_class(
-    example_mrp_model(),
+    example_model(),
     "MRPModel"
   )
 })

@@ -11,5 +11,6 @@ save(file)
 \item{file}{File path where the model should be saved.}
 }
 \description{
-The \verb{$save()} method saves a fitted MRPModel object to a file for later use.
+The \verb{$save()} method of a \code{MRPModel} object
+saves a fitted MRPModel object to a file for later use.
 }

@@ -18,5 +18,6 @@ A highcharter map object showing outcome measures by geography.
 }
 \description{
 The \verb{$outcome_map()} method creates maps showing average outcome measure by geography for
-cross-sectional data, or highest/lowest temporal average for time-varying data.
+cross-sectional data, or highest/lowest temporal average for time-varying data. The sample and
+poststratification data must contain geographic information for this method to work.
 }
