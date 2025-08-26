@@ -947,52 +947,64 @@
   return(df_join)
 }
 
-#' Determine data type of a column
+#' Infer simple data type of a column
 #'
-#' @description Intelligently classifies a data column as binary, categorical, or
-#' continuous based on its values, distribution, and uniqueness patterns. This
-#' classification is crucial for determining appropriate statistical modeling
-#' approaches and variable treatment in MRP analysis.
+#' Internal helper to classify a vector as binary, categorical, or continuous
+#' using simple heuristics. Returns either labels ("bin", "cat", "cont")
+#' or numeric codes (1, 2, 3) if `num = TRUE`.
 #'
-#' @param col Vector representing a data column to be classified. Can be numeric,
-#'   character, factor, or logical. Missing values (NA) are handled appropriately.
-#' @param num Logical. If TRUE, returns numeric codes for programmatic use
-#'   (1=binary, 2=categorical, 3=continuous). If FALSE, returns descriptive
-#'   character labels ("bin", "cat", "cont"). Default is FALSE.
-#' @param threshold Numeric between 0 and 1. Threshold for determining if numeric
-#'   data should be treated as continuous based on the proportion of unique values.
-#'   Higher values favor categorical classification. Default is 0.1 (10%).
+#' @param col A vector (typically a data frame column).
+#' @param num Logical; if `TRUE` return numeric codes instead of labels.
+#' @param max_levels_cat Max distinct integer-like values to treat as categorical.
+#' @param uniq_prop_cat Proportion of unique values below which to call categorical.
+#' @param singleton_thr Fraction of singleton values below which to call categorical.
+#' @param tol Numeric tolerance for integer-like check.
+#' @param use_round_probe Logical; try rounding probe for numeric categories.
 #'
-#' @return Data type classification:
-#' \itemize{
-#'   \item **Binary ("bin" or 1)**: Exactly 2 unique values (e.g., male/female, yes/no)
-#'   \item **Categorical ("cat" or 2)**: Multiple discrete values, low uniqueness
-#'   \item **Continuous ("cont" or 3)**: High uniqueness or non-integer numeric values
-#' }
-#'
-#' @noRd
-#'
-#' @importFrom dplyr n_distinct
-.data_type <- function(col, num = FALSE, threshold = 0.1) {
-  if(is.numeric(col)) {
-    if(!all(as.integer(col) == col) ||
-       mean(table(col) == 1) > threshold) {
-      dtype <- if(num) 3 else "cont"
-    } else if(dplyr::n_distinct(col) == 2) {
-      dtype <- if(num) 1 else "bin"
-    } else {
-      dtype <- if(num) 2 else "cat"
+#' @noRd 
+#' @keywords internal
+.data_type <- function(col,
+                       num = FALSE,
+                       max_levels_cat = 12,
+                       uniq_prop_cat = 0.10,
+                       singleton_thr  = 0.10,
+                       tol = 1e-8,
+                       use_round_probe = TRUE) {
+  lbl <- c("bin", "cat", "cont")
+
+  non_na <- col[!is.na(col)]
+  n <- length(non_na); ndist <- dplyr::n_distinct(non_na)
+
+  if (n == 0) return(if (num) 2L else lbl[2])
+  if (is.logical(col) || ndist == 2L) return(if (num) 1L else lbl[1])
+  if (is.character(col) || is.factor(col)) return(if (num) 2L else lbl[2])
+
+  if (is.numeric(col)) {
+    intish <- all(abs(non_na - round(non_na)) <= tol)
+    uniq_prop <- ndist / n
+    singleton_rate <- mean(table(non_na) == 1)
+
+    looks_discrete <- FALSE
+    if (use_round_probe && ndist > max_levels_cat) {
+      nd0 <- dplyr::n_distinct(round(non_na, 0))
+      nd1 <- dplyr::n_distinct(round(non_na, 1))
+      looks_discrete <- nd0 <= max_levels_cat || nd1 <= max_levels_cat ||
+                        nd0/ndist <= 0.5 || nd1/ndist <= 0.5
     }
-  } else {
-    if(dplyr::n_distinct(col, na.rm = TRUE) == 2) {
-      dtype <- if(num) 1 else "bin"
-    } else {
-      dtype <- if(num) 2 else "cat"
-    }
+
+    code <- if (intish && ndist <= max_levels_cat) 2L
+      else if (n < 10) if (intish) 2L else 3L
+      else if (intish && uniq_prop <= uniq_prop_cat && singleton_rate <= singleton_thr) 2L
+      else if (looks_discrete) 2L
+      else 3L
+
+    return(if (num) code else lbl[code])
   }
 
-  return(dtype)
+  if (num) 2L else lbl[2]
 }
+
+
 
 #' Create expected data types for variables
 #'
@@ -1015,8 +1027,7 @@
   
   types <- list(
     sex  = "bin",
-    race = "cat",
-    age  = "cat"
+    race = "cat"
   )
 
   if (!is.null(metadata$special_case) &&
@@ -1036,7 +1047,10 @@
   }
 
   if (is_aggregated) {
+    types$age  <- "cat"
     types$total <- "ignore"
+  } else {
+    types$age  <- "ignore"
   }
   
   return(types)

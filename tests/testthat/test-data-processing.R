@@ -18,16 +18,7 @@ expect_equal_saved_prep <- function(
       make_hashed_filename(metadata, prefix = "prep")
     ) %>%
       testthat::test_path() %>%
-      readr::read_csv(
-        col_types = readr::cols(
-          zip = readr::col_character(),
-          county = readr::col_character(),
-          state = readr::col_character(),
-          date = readr::col_character(),
-          .default = readr::col_guess()
-        ),
-        show_col_types = FALSE
-      )
+      read_saved_csv()
   )
 
   expect_equal(
@@ -331,4 +322,41 @@ test_that("load_pstrat works correctly", {
     workflow$load_pstrat(pstrat_data),
     "Custom poststratification data is not supported for special cases"
   )
+})
+
+test_that(".impute is consistent", {
+  set.seed(123)
+
+  n <- 20
+  cols <- c("sex", "race", "age")
+
+  data <- example_sample_data(
+    is_timevar = FALSE,
+    is_aggregated = FALSE,
+    special_case = NULL,
+    family = "binomial"
+  ) %>%
+    dplyr::mutate(
+      dplyr::across(all_of(cols),
+      ~ replace(., dplyr::row_number() <= n, NA))
+    )
+
+  workflow <- mrp_workflow()
+
+  workflow$preprocess(
+    data,
+    is_timevar = FALSE,
+    is_aggregated = FALSE,
+    special_case = NULL,
+    family = "binomial"
+  )
+
+  saved <- testthat::test_path("snapshots/data_processing/impute.csv") %>%
+    read_saved_csv()
+
+  expect_equal(
+    workflow$preprocessed_data(),
+    saved
+  )
+
 })
