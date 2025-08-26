@@ -12,7 +12,7 @@ The \verb{$formula()} method of a \code{MRPModel} object
 returns the lme4-style formula constructed from the model specification list.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Load example data

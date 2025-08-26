@@ -25,7 +25,7 @@ showing the distribution of geographic covariates across ZIP codes. Refer to the
 \emph{This method is only available for \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules}{COVID data}}.
 }
 \examples{
-\dontrun{
+\donttest{
 library(shinymrp)
  library(shinymrp)
 

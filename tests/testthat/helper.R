@@ -94,3 +94,10 @@ setup_test_model <- function(workflow, model_spec = NULL, fit_model = TRUE) {
 
   return(model)
 }
+
+expect_save_file <- function(func, ext, ...) {
+  temp_file <- tempfile(fileext = ext)
+  func(temp_file, ...)
+  expect_true(file.exists(temp_file))
+  unlink(temp_file)
+}

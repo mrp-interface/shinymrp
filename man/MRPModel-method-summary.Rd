@@ -22,14 +22,14 @@ returns tables containing summary of posterior samples
 for the model parameters and diagnostics.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Load example data
  example_model <- example_model()
 
  # Get parameter summaries
- parameter_summary <- model$summary()
+ parameter_summary <- example_model$summary()
 
  # Fixed effects
  parameter_summary$fixed

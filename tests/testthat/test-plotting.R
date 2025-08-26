@@ -3,7 +3,7 @@
 # outcome_plot, outcome_map, estimate_plot, estimate_map, pp_check
 
 
-test_that("demo_bars method works correctly for general data", {
+test_that("demo_bars works correctly for general data", {
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -30,17 +30,17 @@ test_that("demo_bars method works correctly for general data", {
     workflow$demo_bars("invalid_demo"),
     "Assertion on 'demo' failed"
   )
-  
-  # Test file saving functionality (without actually saving)
-  temp_file <- tempfile(fileext = ".png")
-  p3 <- workflow$demo_bars("age", file = temp_file)
-  expect_s3_class(p3, "ggplot")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+
+  # Test file saving functionality
+  expect_save_file(
+    workflow$demo_bars,
+    ext = ".png",
+    demo = "age"
+  )
 })
 
 
-test_that("demo_bars method works correctly for polling data", {
+test_that("demo_bars works correctly for polling data", {
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -56,7 +56,7 @@ test_that("demo_bars method works correctly for polling data", {
 })
 
 
-test_that("covar_hist method works correctly for COVID data", {
+test_that("covar_histworks correctly for COVID data", {
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = TRUE,
@@ -78,12 +78,12 @@ test_that("covar_hist method works correctly for COVID data", {
     "Assertion on 'covar' failed"
   )
 
-  # Test file saving functionality (without actually saving)
-  temp_file <- tempfile(fileext = ".png")
-  p3 <- workflow$covar_hist("college", file = temp_file)
-  expect_s3_class(p3, "ggplot")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  # Test file saving functionality
+  expect_save_file(
+    workflow$covar_hist,
+    ext = ".png",
+    covar = "income"
+  )
 })
 
 test_that("covar_hist fails appropriately for non-COVID data", {
@@ -103,7 +103,7 @@ test_that("covar_hist fails appropriately for non-COVID data", {
   )
 })
 
-test_that("sample_size_map method works correctly", {
+test_that("sample_size_map works correctly", {
   # Linking through ZIP code
   workflow <- setup_test_workflow(
     metadata = list(
@@ -131,18 +131,17 @@ test_that("sample_size_map method works correctly", {
   # Test basic functionality
   hc <- workflow$sample_size_map()
   expect_s3_class(hc, "highchart")
-  
+
   # Test file saving functionality
-  temp_file <- tempfile(fileext = ".html")
-  hc2 <- workflow$sample_size_map(file = temp_file)
-  expect_s3_class(hc2, "highchart")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  expect_save_file(
+    workflow$sample_size_map,
+    ext = ".html"
+  )
 })
 
 
 # Test outcome_plot method
-test_that("outcome_plot method works correctly", {
+test_that("outcome_plot works correctly", {
   # For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -170,17 +169,16 @@ test_that("outcome_plot method works correctly", {
   # Test basic functionality
   p <- workflow$outcome_plot()
   expect_s3_class(p, "ggplot")
-  
+
   # Test file saving functionality
-  temp_file <- tempfile(fileext = ".png")
-  p2 <- workflow$outcome_plot(file = temp_file)
-  expect_s3_class(p2, "ggplot")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  expect_save_file(
+    workflow$outcome_plot,
+    ext = ".png"
+  )
 })
 
 # Test outcome_map method
-test_that("outcome_map method works correctly", {
+test_that("outcome_map works correctly", {
   # For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -218,17 +216,17 @@ test_that("outcome_map method works correctly", {
     workflow$outcome_map(summary_type = NULL),
     "Assertion on 'summary_type' failed"
   )
-  
+
   # Test file saving functionality
-  temp_file <- tempfile(fileext = ".html")
-  hc4 <- workflow$outcome_map(file = temp_file)
-  expect_s3_class(hc4, "highchart")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  expect_save_file(
+    workflow$outcome_map,
+    ext = ".html",
+    summary_type = "max"
+  )
 })
 
 # Test pp_check method
-test_that("pp_check method works correctly", {
+test_that("pp_check works correctly", {
   # For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -264,15 +262,15 @@ test_that("pp_check method works correctly", {
   }, type = "message")
     
   # Test file saving functionality
-  temp_file <- tempfile(fileext = ".png")
-  p <- workflow$pp_check(model, file = temp_file)
-  expect_s3_class(p, "ggplot")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  expect_save_file(
+    workflow$pp_check,
+    ext = ".png",
+    model = model
+  )
 })
 
-# Test estimate_plot method
-test_that("estimate_plot method works correctly", {
+
+test_that("estimate_plot works correctly", {
   ### For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -348,15 +346,18 @@ test_that("estimate_plot method works correctly", {
   )
 
   # Test file saving functionality
-  temp_file <- tempfile(fileext = ".png")
-  p <- workflow$estimate_plot(model, file = temp_file)
-  expect_s3_class(p, "ggplot")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  expect_save_file(
+    workflow$estimate_plot,
+    ext = ".png",
+    model = model,
+    group = NULL,
+    interval = 0.95,
+    show_caption = TRUE
+  )
 })
 
 # Test estimate_map method
-test_that("estimate_map method works correctly", {
+test_that("estimate_map works correctly", {
   ### For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -412,11 +413,14 @@ test_that("estimate_map method works correctly", {
   expect_s3_class(hc, "highchart")
   
   # Test file saving functionality
-  temp_file <- tempfile(fileext = ".html")
-  hc6 <- workflow$estimate_map(model, file = temp_file)
-  expect_s3_class(hc6, "highchart")
-  expect_true(file.exists(temp_file))
-  unlink(temp_file)
+  expect_save_file(
+    workflow$estimate_map,
+    ext = ".html",
+    model = model,
+    geo = "county",
+    time_index = 1,
+    interval = 0.95
+  )
 })
 
 test_that("methods fail appropriately without preprocessed data", {

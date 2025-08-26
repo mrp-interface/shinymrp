@@ -20,7 +20,7 @@ to assess model fit by comparing observed data to replicated data from
 the posterior predictive distribution.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

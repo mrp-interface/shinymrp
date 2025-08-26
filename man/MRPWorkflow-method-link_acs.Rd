@@ -18,7 +18,7 @@ linking the preprocessed sample data to the American Community Survey
 based on given geographic granularity and year.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

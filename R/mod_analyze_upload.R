@@ -412,7 +412,7 @@ mod_analyze_upload_server <- function(id, global){
     # Handle sample data upload
     observeEvent(input$sample_upload, {
       waiter::waiter_show(
-        html = .waiter_ui("wait"),
+        html = .waiter_ui(),
         color = waiter::transparent(0.9)
       )
 
@@ -448,7 +448,7 @@ mod_analyze_upload_server <- function(id, global){
     # Use individual-level example data
     observeEvent(input$use_indiv_example, {
       waiter::waiter_show(
-        html = .waiter_ui("wait"),
+        html = .waiter_ui(),
         color = waiter::transparent(0.9)
       )
 
@@ -475,7 +475,7 @@ mod_analyze_upload_server <- function(id, global){
     # Use aggregated example data
     observeEvent(input$use_agg_example, {
       waiter::waiter_show(
-        html = .waiter_ui("wait"),
+        html = .waiter_ui(),
         color = waiter::transparent(0.9)
       )
 
@@ -601,7 +601,7 @@ mod_analyze_upload_server <- function(id, global){
     #----------------------------------------------------------------------------
     observeEvent(input$pstrat_upload, {
       waiter::waiter_show(
-        html = .waiter_ui("wait"),
+        html = .waiter_ui(),
         color = waiter::transparent(0.9)
       )
 

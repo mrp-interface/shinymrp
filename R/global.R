@@ -68,6 +68,8 @@ module_ids <- list(
         iter_range = c(100, 5000),
         chain_range = c(1, 8)
       ),
+      loading_types = c("fit", "pstrat", "loo", "setup", "init"),
+      guide_sections = c("workflow", "upload", "model_spec", "model_fit"),
       animation = list(
         duration = 1000,
         delay = 100

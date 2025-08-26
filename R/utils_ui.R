@@ -13,43 +13,43 @@
 #' @importFrom shiny tagList tags
 #'
 #' @noRd
-.waiter_ui <- function(type = "") {
+.waiter_ui <- function(loading_type = NULL) {
   text_style <- "color: black; margin-top: 10px;"
 
-  if(type == "fit") {
-    tagList(
+  checkmate::assert_choice(
+    loading_type, 
+    .const()$ui$loading_types, 
+    null.ok = TRUE
+  )
+
+  loading_type <- .replace_null(loading_type, "")
+
+  switch(loading_type,
+    "fit" = tagList(
       waiter::spin_loaders(2, color = "black"),
       tags$h4("Fitting model...", style = text_style)
-    )
-  } else if(type == "pstrat") {
-    tagList(
+    ),
+    "pstrat" = tagList(
       waiter::spin_loaders(2, color = "black"),
       tags$h4("Running poststratification...", style = text_style)
-    )
-  } else if(type == "loo") {
-    tagList(
+    ),
+    "loo" = tagList(
       waiter::spin_loaders(2, color = "black"),
       tags$h4("Running diagnostics...", style = text_style)
-    )
-  } else if (type == "setup") {
-    tagList(
+    ),
+    "setup" = tagList(
       waiter::spin_loaders(15, color = "black"),
       tags$h4("Installing CmdStan...", style = text_style)
-    )
-  } else if (type == "wait") {
+    ),
+    "init" = tagList(
+      waiter::spin_loaders(15, color = "black"),
+      tags$h4("Initializing...", style = text_style)
+    ),
     tagList(
       waiter::spin_loaders(15, color = "black"),
       tags$h4("Please wait...", style = text_style)
     )
-  } else if (type == "init") {
-    tagList(
-      waiter::spin_loaders(15, color = "black"),
-      tags$h4("Initializing...", style = text_style)
-    )
-  
-  } else {
-    NULL
-  }
+  )
 }
 
 #' Show alert modal dialog
@@ -112,8 +112,9 @@
 #' @importFrom shiny tags withMathJax
 #'
 #' @noRd
-.create_guide <- function(open = c("workflow", "upload", "model_spec", "model_fit")) {
-  open <- match.arg(open)
+.create_guide <- function(open = .const()$ui$guide_sections[1]) {
+
+  checkmate::assert_choice(open, .const()$ui$guide_sections)
 
   bslib::accordion(
     id = "guide_accordion",
@@ -414,120 +415,114 @@
       class = "btn-xs remove_model"
     )
   )
-  
-  bslib::nav_insert(
-    id = "navbar_model",
-    target = last_tab_id,
-    position = "after",
-    select = TRUE,
-    nav = bslib::nav_panel(
-      title = tab_header,
-      value = model$get_id("tab"),
-      tags$div(
-        bslib::layout_columns(
-          col_widths = c(11, 1),
-          class = "mb-0",
-          HTML(paste0("<h4 class='formula'>", "Formula: ", model$formula(), "</h4>")),
-          tags$div(class = "d-flex align-items-end gap-2",
-            bslib::tooltip(
-              actionButton(
-                inputId = ns(model$get_id("diagnos_btn")),
-                label = NULL,
-                icon = icon("sliders-h", lib = "font-awesome"),
-                class = "btn btn-sm btn-secondary"
-              ),
-              "Please check sampler diagnostics",
-              id = ns(model$get_id("diagnos_tooltip")),
-              placement = "left",
-              options = list(trigger = "manual")
+
+  bslib::nav_panel(
+    title = tab_header,
+    value = model$get_id("tab"),
+    tags$div(
+      bslib::layout_columns(
+        col_widths = c(11, 1),
+        class = "mb-0",
+        HTML(paste0("<h4 class='formula'>", "Formula: ", model$formula(), "</h4>")),
+        tags$div(class = "d-flex align-items-end gap-2",
+          bslib::tooltip(
+            actionButton(
+              inputId = ns(model$get_id("diagnos_btn")),
+              label = NULL,
+              icon = icon("sliders-h", lib = "font-awesome"),
+              class = "btn btn-sm btn-secondary"
             ),
-            bslib::popover(
-              actionButton(
-                inputId = ns(model$get_id("save_popover_btn")),
-                label = NULL,
-                icon = icon("download"),
-                class = "btn btn-sm btn-secondary"
-              ),
-              title = "Save Options",
-              downloadButton(
-                outputId = ns(model$get_id("save_code_btn")),
-                label = "Model Code",
-                icon = NULL,
-                style = "width: 100%; margin-bottom: 5px;"
-              ),
-              downloadButton(
-                outputId = ns(model$get_id("save_fit_btn")),
-                label = "Estimation Result",
-                icon = NULL,
-                style = "width: 100%;"
-              ),
-              placement = "left"
-            )
+            "Please check sampler diagnostics",
+            id = ns(model$get_id("diagnos_tooltip")),
+            placement = "left",
+            options = list(trigger = "manual")
+          ),
+          bslib::popover(
+            actionButton(
+              inputId = ns(model$get_id("save_popover_btn")),
+              label = NULL,
+              icon = icon("download"),
+              class = "btn btn-sm btn-secondary"
+            ),
+            title = "Save Options",
+            downloadButton(
+              outputId = ns(model$get_id("save_code_btn")),
+              label = "Model Code",
+              icon = NULL,
+              style = "width: 100%; margin-bottom: 5px;"
+            ),
+            downloadButton(
+              outputId = ns(model$get_id("save_fit_btn")),
+              label = "Estimation Result",
+              icon = NULL,
+              style = "width: 100%;"
+            ),
+            placement = "left"
           )
+        )
+      ),
+      if (model$metadata()$family == "binomial") {
+        tags$p(
+          paste0(
+            "A binomial model with a logit function of the positive response rate. ",
+            "Samples are generated using ",
+            model$metadata()$n_chains, " chains with ", model$metadata()$n_iter / 2,
+            " post-warmup iterations each."
+          ),
+          class = "fst-italic small"
+        )
+      } else {
+        tags$p(
+          paste0(
+            "A linear model of the outcome measure. ",
+            "Samples are generated using ",
+            model$metadata()$n_chains," chains with ", model$metadata()$n_iter / 2,
+            " post-warmup iterations each."
+          ),
+          class = "fst-italic small"
+        )
+      },
+      actionButton(
+        inputId = ns(model$get_id("postprocess_btn")),
+        label = "Run poststratification"
+      ),
+      tags$div(style = "margin-top: 30px",
+        bslib::card(
+          bslib::card_header(tags$b("Note")),
+          bslib::card_body(tags$ul(
+            tags$li("Large ", tags$a("R-hat", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#r-hat", target = "_blank"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
+            tags$li("Low values for ", tags$a("Bulk-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " and ", tags$a("Tail-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
+          ))
         ),
-        if (model$metadata()$family == "binomial") {
-          tags$p(
-            paste0(
-              "A binomial model with a logit function of the positive response rate. ",
-              "Samples are generated using ",
-              model$metadata()$n_chains, " chains with ", model$metadata()$n_iter / 2,
-              " post-warmup iterations each."
-            ),
-            class = "fst-italic small"
-          )
-        } else {
-          tags$p(
-            paste0(
-              "A linear model of the outcome measure. ",
-              "Samples are generated using ",
-              model$metadata()$n_chains," chains with ", model$metadata()$n_iter / 2,
-              " post-warmup iterations each."
-            ),
-            class = "fst-italic small"
+        if(nrow(model$summary()$fixed) > 0) {
+          tags$div(
+            tags$h4("Fixed Effects", class = "break_title"),
+            tags$hr(class = "break_line"),
+            tableOutput(ns(model$get_id("fixed_tbl")))
           )
         },
-        actionButton(
-          inputId = ns(model$get_id("postprocess_btn")),
-          label = "Run poststratification"
-        ),
-        tags$div(style = "margin-top: 30px",
+        if(nrow(model$summary()$varying) > 0) {
+          tags$div(
+            tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
+            tags$hr(class = "break_line"),
+            tableOutput(ns(model$get_id("varying_tbl")))  
+          )
+        },
+        if(nrow(model$summary()$other) > 0) {
+          tags$div(
+            tags$h4("Standard Deviation of Residuals", class = "break_title"),
+            tags$hr(class = "break_line"),
+            tableOutput(ns(model$get_id("other_tbl")))  
+          )
+        },
+        tags$div(
+          tags$h4("Posterior Predictive Check", class = "break_title"),
+          tags$hr(class = "break_line"),
           bslib::card(
             bslib::card_header(tags$b("Note")),
-            bslib::card_body(tags$ul(
-              tags$li("Large ", tags$a("R-hat", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#r-hat", target = "_blank"), " (e.g., greater than 1.05) values indicate that the computation has not yet converged, and it is necessary to run more iterations and/or modify model and prior specifications."),
-              tags$li("Low values for ", tags$a("Bulk-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " and ", tags$a("Tail-ESS", href = "https://mc-stan.org/learn-stan/diagnostics-warnings.html#bulk-and-tail-ess", target = "_blank"), " (ESS stands for Effective Sample Size) also suggest that more iterations are required.")
-            ))
+            bslib::card_body(tags$p("The plot shows the outcome averages computed from the observed data and 10 sets of replicated data.")) 
           ),
-          if(nrow(model$summary()$fixed) > 0) {
-            tags$div(
-              tags$h4("Fixed Effects", class = "break_title"),
-              tags$hr(class = "break_line"),
-              tableOutput(ns(model$get_id("fixed_tbl")))
-            )
-          },
-          if(nrow(model$summary()$varying) > 0) {
-            tags$div(
-              tags$h4("Standard Deviation of Varying Effects", class = "break_title"),
-              tags$hr(class = "break_line"),
-              tableOutput(ns(model$get_id("varying_tbl")))  
-            )
-          },
-          if(nrow(model$summary()$other) > 0) {
-            tags$div(
-              tags$h4("Standard Deviation of Residuals", class = "break_title"),
-              tags$hr(class = "break_line"),
-              tableOutput(ns(model$get_id("other_tbl")))  
-            )
-          },
-          tags$div(
-            tags$h4("Posterior Predictive Check", class = "break_title"),
-            tags$hr(class = "break_line"),
-            bslib::card(
-              bslib::card_header(tags$b("Note")),
-              bslib::card_body(tags$p("The plot shows the outcome averages computed from the observed data and 10 sets of replicated data.")) 
-            ),
-            plotOutput(outputId = ns(model$get_id("ppc_plot")))
-          )
+          plotOutput(outputId = ns(model$get_id("ppc_plot")))
         )
       )
     )

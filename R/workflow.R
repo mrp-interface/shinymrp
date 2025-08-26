@@ -32,7 +32,7 @@ mrp_workflow <- function() {
 #'  [`$preprocess()`][MRPWorkflow-method-preprocess] | Preprocess sample data. |
 #'  [`$preprocessed_data()`][MRPWorkflow-method-preprocessed_data] | Return preprocessed sample data. |
 #'  [`$link_acs()`][MRPWorkflow-method-link_acs] | Link sample data to ACS data. |
-#'  [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom post-stratification data. |
+#'  [`$load_pstrat()`][MRPWorkflow-method-load_pstrat] | Load custom poststratification data. |
 #'
 #'  ## Model fitting & diagnostics
 #'  |**Method**|**Description**|
@@ -53,7 +53,7 @@ mrp_workflow <- function() {
 #'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic areas. |
 #'
 #' @examples
-#'  \dontrun{
+#'  \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize the MRP workflow
@@ -240,7 +240,7 @@ MRPWorkflow <- R6::R6Class(
 #' @description The `$preprocessed_data()` method returns the preprocessed sample data.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -292,7 +292,7 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' Values with lower frequency will cause the entire row to be removed. The default value is 0.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -356,10 +356,10 @@ preprocess <- function(
       is_aggregated = is_aggregated
     )
   
-  }, error = function(e) {
-    # show error message
-    error_message <- paste("Error processing data:\n", e$message)
-    message(error_message)
+  # }, error = function(e) {
+  #   # show error message
+  #   error_message <- paste("Error processing sample data:\n", e$message)
+  #   message(error_message)
   })
 
 }
@@ -379,7 +379,7 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #' @param acs_year Numeric value specifying the last year of the 5-year period for the target ACS dataset.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -544,7 +544,7 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -571,7 +571,7 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #'    is_aggregated = TRUE
 #'  )
 #' }
-load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
+load_pstrat <- function(pstrat_data, is_aggregated = TRUE) {
   if (!is.null(private$metadat_$special_case)) {
     stop("Custom poststratification data is not supported for special cases like COVID or polling data. Please use the `link_acs` method instead.")
   }
@@ -581,7 +581,7 @@ load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
   }
 
   if (is.null(pstrat_data)) {
-    stop("Post-stratification data is required. Please provide valid pstrat_data.")
+    stop("Poststratification data is required. Please provide valid pstrat_data.")
   }
 
   message("Preprocessing poststratification data...")
@@ -638,7 +638,7 @@ load_pstrat <- function(pstrat_data, is_aggregated = FALSE) {
 
   }, error = function(e) {
     # show error message
-    error_message <- paste("Error processing data:\n", e$message)
+    error_message <- paste("Error processing poststratification data:\n", e$message)
     message(error_message)
     
     # reset fields
@@ -670,7 +670,7 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #' @return A ggplot object or patchwork object showing demographic comparisons
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -755,7 +755,7 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #' @return A ggplot object showing the covariate distribution histogram.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(shinymrp)
 #'  library(shinymrp)
 #'
@@ -894,7 +894,7 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #' @return A highcharter map object showing sample size distribution.
 #' 
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -979,7 +979,7 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #' @return A ggplot object showing the outcome measure distribution.
 #' 
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1054,7 +1054,7 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #' @return A highcharter map object showing outcome measures by geography.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1158,7 +1158,7 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #' @return A ggplot object showing MRP estimates.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1274,7 +1274,7 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' @return A highcharter map object showing MRP estimates by geography
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1410,7 +1410,7 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' @return A new MRPModel object
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1500,7 +1500,7 @@ MRPWorkflow$set("public", "create_model", create_model)
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1555,7 +1555,7 @@ MRPWorkflow$set("public", "pp_check", pp_check)
 #' @return A data frame summarizing the comparison results
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow

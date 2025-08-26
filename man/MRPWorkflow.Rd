@@ -16,7 +16,7 @@ methods with their own (linked) documentation pages:
    \code{\link[=MRPWorkflow-method-preprocess]{$preprocess()}} \tab Preprocess sample data. \cr
    \code{\link[=MRPWorkflow-method-preprocessed_data]{$preprocessed_data()}} \tab Return preprocessed sample data. \cr
    \code{\link[=MRPWorkflow-method-link_acs]{$link_acs()}} \tab Link sample data to ACS data. \cr
-   \code{\link[=MRPWorkflow-method-load_pstrat]{$load_pstrat()}} \tab Load custom post-stratification data. \cr
+   \code{\link[=MRPWorkflow-method-load_pstrat]{$load_pstrat()}} \tab Load custom poststratification data. \cr
 }
 
 }
@@ -45,7 +45,7 @@ methods with their own (linked) documentation pages:
 }
 
 \examples{
- \dontrun{
+ \donttest{
  library(shinymrp)
 
  # Initialize the MRP workflow

@@ -19,7 +19,7 @@ A ggplot object showing the outcome measure distribution.
 The \verb{$outcome_plot()} method creates average plots of the outcome measure.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

@@ -15,7 +15,7 @@ The \verb{$check_estimate_exists()} method of a \code{MRPModel} object
 checks whether poststratification has been performed.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow
