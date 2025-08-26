@@ -22,7 +22,7 @@ cross-sectional data, or highest/lowest temporal average for time-varying data. 
 poststratification data must contain geographic information for this method to work.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

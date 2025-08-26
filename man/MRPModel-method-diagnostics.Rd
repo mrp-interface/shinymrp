@@ -19,7 +19,7 @@ returns MCMC diagnostics including
 convergence statistics and sampling efficiency measures.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Load example data

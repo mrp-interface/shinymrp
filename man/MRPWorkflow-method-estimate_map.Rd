@@ -37,7 +37,7 @@ A highcharter map object showing MRP estimates by geography
 The \verb{$estimate_map()} method creates interactive choropleth maps showing MRP estimates by geographic regions.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

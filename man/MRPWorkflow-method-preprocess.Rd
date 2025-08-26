@@ -41,7 +41,7 @@ The \verb{$preprocess()} method runs the preprocessing pipeline
 that includes data standardization, filtering, imputation, and aggregation.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

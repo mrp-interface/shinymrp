@@ -975,7 +975,8 @@
 #' @importFrom dplyr n_distinct
 .data_type <- function(col, num = FALSE, threshold = 0.1) {
   if(is.numeric(col)) {
-    if(!all(as.integer(col) == col) | mean(table(col) == 1) > threshold) {
+    if(!all(as.integer(col) == col) ||
+       mean(table(col) == 1) > threshold) {
       dtype <- if(num) 3 else "cont"
     } else if(dplyr::n_distinct(col) == 2) {
       dtype <- if(num) 1 else "bin"
@@ -1661,31 +1662,4 @@
     levels = levels,
     vars = vars
   ))
-}
-
-#' Aggregate FIPS codes to state level
-#'
-#' @description Converts county-level FIPS codes to state-level by taking the
-#' first two digits and removing county information while keeping unique
-#' state-level records. Used to create state-level lookup tables from
-#' county-level data.
-#'
-#' @param df Data frame containing FIPS codes and geographic information
-#'   with columns: fips (5-digit county codes), county, state, state_name.
-#'
-#' @return Data frame with state-level FIPS codes (2-digit) and corresponding
-#'   state information. County column is removed and duplicates eliminated.
-#'
-#' @noRd
-#'
-#' @importFrom dplyr mutate select distinct
-#' @importFrom rlang .data
-.aggregate_fips <- function(df) {
-
-  df <- df %>%
-    dplyr::mutate(fips = substr(.data$fips, 1, 2)) %>%
-    dplyr::select(-.data$county) %>%
-    dplyr::distinct(.data$fips, .keep_all = TRUE)
-
-  return(df)
 }

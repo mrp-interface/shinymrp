@@ -6,7 +6,7 @@
 \arguments{
 \item{model_spec}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
 
-\item{mrp_data}{List containing the MRP data structure with input sample data and new post-stratification data}
+\item{mrp_data}{List containing the MRP data structure with input sample data and new poststratification data}
 
 \item{metadata}{List containing metadata about the analysis including family, time variables, and special cases}
 
@@ -24,7 +24,7 @@ A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
 \code{\link[=MRPWorkflow-method-create_model]{$create_model()}} method of a
 \code{\link{MRPWorkflow}} object. Each \code{MRPModel} object represents a
 multilevel regression model with methods for sampling, diagnostics,
-and post-stratification.
+and poststratification.
 
 Creates a new instance of the \code{MRPModel} class. This method is called by the \verb{$create_model()}
 method of a \code{MRPWorkflow} object and does not need to be called directly by users.
@@ -46,7 +46,7 @@ methods, many of which have their own (linked) documentation pages:
    \strong{Method} \tab \strong{Description} \cr
    \code{\link[=MRPModel-method-fit]{$fit()}} \tab Fit multilevel regression model using CmdStanR. \cr
    \code{\link[=MRPModel-method-check_fit_exists]{$check_fit_exists()}} \tab Check if model has been fitted. \cr
-   \code{\link[=MRPModel-method-check_estimate_exists]{$check_estimate_exists()}} \tab Check if post-stratification has been performed. \cr
+   \code{\link[=MRPModel-method-check_estimate_exists]{$check_estimate_exists()}} \tab Check if poststratification has been performed. \cr
 }
 
 }
@@ -77,7 +77,7 @@ methods, many of which have their own (linked) documentation pages:
 }
 
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

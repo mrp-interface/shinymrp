@@ -736,7 +736,7 @@ mod_analyze_model_server <- function(id, global){
 
     observeEvent(input$fit_upload, {
       waiter::waiter_show(
-        html = .waiter_ui("wait"),
+        html = .waiter_ui(),
         color = waiter::transparent(0.9)
       )
 
@@ -753,7 +753,7 @@ mod_analyze_model_server <- function(id, global){
 
     observeEvent(input$use_example, {
       waiter::waiter_show(
-        html = .waiter_ui("wait"),
+        html = .waiter_ui(),
         color = waiter::transparent(0.9)
       )
 
@@ -789,7 +789,14 @@ mod_analyze_model_server <- function(id, global){
       } else {
         "nav_compare"
       }
-      .create_model_tab(ns, model, last_tab_id)
+      
+      bslib::nav_insert(
+        id = "navbar_model",
+        target = last_tab_id,
+        position = "after",
+        select = TRUE,
+        nav = .create_model_tab(ns, model, last_tab_id)
+      )
 
       # changeable tab title
       model_name <- paste0("Model ", length(global$models) + 1)
@@ -872,7 +879,7 @@ mod_analyze_model_server <- function(id, global){
           },
           content = function(file) {
             waiter::waiter_show(
-              html = .waiter_ui("wait"),
+              html = .waiter_ui(),
               color = waiter::transparent(0.9)
             )
 
@@ -896,7 +903,7 @@ mod_analyze_model_server <- function(id, global){
         },
         content = function(file) {
           waiter::waiter_show(
-            html = .waiter_ui("wait"),
+            html = .waiter_ui(),
             color = waiter::transparent(0.9)
           )
 

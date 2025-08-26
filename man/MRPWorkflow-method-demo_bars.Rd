@@ -22,7 +22,7 @@ Creates bar plots for comparing demographic distributions between
 sample data and poststratification data.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

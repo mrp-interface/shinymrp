@@ -36,7 +36,7 @@ The \verb{$estimate_plot()} method creates plots showing overall MRP estimates o
 estimates for different demographic groups.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

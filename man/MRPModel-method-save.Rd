@@ -17,7 +17,7 @@ saves a fitted MRPModel object to a file for later use.
 to use the \code{.qs} file extension.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow
@@ -27,10 +27,10 @@ to use the \code{.qs} file extension.
  example_model <- example_model()
 
  # Save model to file
- model$save("/path/to/model.qs")
+ # example_model$save("/path/to/model.qs")
 
  # Load model later
- # model <- qs::qread("/path/to/model.qs")
+ # loaded_model <- qs::qread("/path/to/model.qs")
 }
 
 }

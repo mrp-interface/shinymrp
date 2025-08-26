@@ -5,7 +5,7 @@
 \alias{load_pstrat}
 \title{Load custom poststratification data}
 \usage{
-load_pstrat(pstrat_data, is_aggregated = FALSE)
+load_pstrat(pstrat_data, is_aggregated = TRUE)
 }
 \arguments{
 \item{pstrat_data}{An object of class \code{data.frame} (or one that can be coerced to that class).}
@@ -17,7 +17,7 @@ The \verb{$load_pstrat()} method processes and stores input poststratification d
 The object is subject to the same data preprocessing steps as the sample data.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

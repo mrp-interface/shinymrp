@@ -15,7 +15,7 @@ The \verb{$check_fit_exists()} method of a \code{MRPModel} object
 checks whether the model has been fitted.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow

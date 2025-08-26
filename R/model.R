@@ -4,7 +4,7 @@
 #' [`$create_model()`][MRPWorkflow-method-create_model] method of a
 #' [`MRPWorkflow`][MRPWorkflow] object. Each `MRPModel` object represents a
 #' multilevel regression model with methods for sampling, diagnostics,
-#' and post-stratification.
+#' and poststratification.
 
 #' @section Methods: `MRPModel` objects have the following associated
 #'   methods, many of which have their own (linked) documentation pages:
@@ -22,7 +22,7 @@
 #'   |:----------|:---------------|
 #'   [`$fit()`][MRPModel-method-fit] | Fit multilevel regression model using CmdStanR. |
 #'   [`$check_fit_exists()`][MRPModel-method-check_fit_exists] | Check if model has been fitted. |
-#'   [`$check_estimate_exists()`][MRPModel-method-check_estimate_exists] | Check if post-stratification has been performed. |
+#'   [`$check_estimate_exists()`][MRPModel-method-check_estimate_exists] | Check if poststratification has been performed. |
 #'
 #'   ## Posterior summary & diagnostics
 #'   |**Method**|**Description**|
@@ -44,7 +44,7 @@
 #'
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -127,7 +127,7 @@ MRPModel <- R6::R6Class(
     #' method of a `MRPWorkflow` object and does not need to be called directly by users.
     #'
     #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
-    #' @param mrp_data List containing the MRP data structure with input sample data and new post-stratification data
+    #' @param mrp_data List containing the MRP data structure with input sample data and new poststratification data
     #' @param metadata List containing metadata about the analysis including family, time variables, and special cases
     #' @param link_data List containing information about data linking including geography and ACS year
     #' @param plot_data List containing data prepared for visualization including dates and geojson objects
@@ -194,7 +194,7 @@ MRPModel <- R6::R6Class(
 #' @return A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -218,7 +218,7 @@ MRPModel$set("public", "model_spec", model_spec)
 #' returns the lme4-style formula constructed from the model specification list.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -244,7 +244,7 @@ MRPModel$set("public", "formula", formula)
 #' including metadata inherited from a workflow object and model fitting parameters.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -269,7 +269,7 @@ MRPModel$set("public", "metadata", metadata)
 #' returns the Stan code.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -298,7 +298,7 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @param ... Additional arguments passed to CmdStanR `$sample()` method
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -385,7 +385,7 @@ MRPModel$set("public", "fit", fit)
 #' @return Logical indicating whether the model has been fitted.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -449,7 +449,7 @@ MRPModel$set("public", "check_fit_exists", check_fit_exists)
 #' @return Logical indicating whether poststratification has been performed.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -521,14 +521,14 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #' - standard deviations of residuals (`other`)
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Load example data
 #'  example_model <- example_model()
 #'
 #'  # Get parameter summaries
-#'  parameter_summary <- model$summary()
+#'  parameter_summary <- example_model$summary()
 #'
 #'  # Fixed effects
 #'  parameter_summary$fixed
@@ -571,7 +571,7 @@ MRPModel$set("public", "summary", summary)
 #' @return A data.frame object if `summarize` is TRUE, otherwise a list of raw diagnostics
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -696,9 +696,9 @@ poststratify <- function(interval = 0.95) {
   .check_interval(interval)
 
   if (is.null(private$buffer_$interval) || private$buffer_$interval != interval) {
-    message("Running post-stratification...")
+    message("Running poststratification...")
 
-    # run standalone generated quantities for post-stratification
+    # run standalone generated quantities for poststratification
     fit_pstrat <- .run_gq(
       fit_mcmc = private$fit_,
       stan_code = private$stancode_$pstrat,
@@ -735,7 +735,7 @@ MRPModel$set("public", "poststratify", poststratify)
 #' @param file File path where the model should be saved.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -745,10 +745,10 @@ MRPModel$set("public", "poststratify", poststratify)
 #'  example_model <- example_model()
 #'
 #'  # Save model to file
-#'  model$save("/path/to/model.qs")
+#'  # example_model$save("/path/to/model.qs")
 #'
 #'  # Load model later
-#'  # model <- qs::qread("/path/to/model.qs")
+#'  # loaded_model <- qs::qread("/path/to/model.qs")
 #' }
 #'
 save <- function(file) {

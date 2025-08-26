@@ -138,9 +138,17 @@ test_that("example_pstrat_data retrieves the correct files", {
   )
 })
 
-test_that("example_model retrieves the correct files", {
-  expect_s3_class(
-    example_model(),
-    "MRPModel"
+test_that("example_model returns a functional MRPModel object", {
+  model <- example_model()
+
+  expect_s3_class(model, "MRPModel")
+
+  expected_methods <- c(
+    "metadata", "mrp_data", "link_data", "plot_data",
+    "model_spec", "formula", "stan_data", "stan_code", "fit_object",
+    "fit", "check_fit_exists", "check_estimate_exists",
+    "summary", "diagnostics", "ppc", "log_lik", "poststratify", "save"
   )
+
+  expect_true(all(expected_methods %in% names(model)))
 })

@@ -1,36 +1,42 @@
-test_that("mrp_workflow returns valid MRPWorkflow object", {  
-  # Call the function
-  workflow <- mrp_workflow()
-  
-  # Test return type
-  expect_s3_class(workflow, "MRPWorkflow")
-  expect_s3_class(workflow, "R6")
-  
-  # Test that it's a new instance
-  expect_true(R6::is.R6(workflow))
-})
-
-test_that("mrp_workflow creates independent instances", {  
-  # Create two instances
-  workflow1 <- mrp_workflow()
-  workflow2 <- mrp_workflow()
-  
-  # They should be different objects
-  expect_false(identical(workflow1, workflow2))
-  
-  # But same class
-  expect_identical(class(workflow1), class(workflow2))
-})
-
-test_that("mrp_workflow fails gracefully without CmdStan", {
-  # Mock cmdstanr::cmdstan_version to return NULL
-  local_mocked_bindings(
-    cmdstan_version = function(error_on_NA = FALSE) NULL,
-    .package = "cmdstanr"
+test_that("compare_models works correctly", {
+  workflow <- setup_test_workflow(
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    )
   )
-  
-  expect_error(
-    mrp_workflow(),
-    "CmdStan is not installed.*install_cmdstan"
+
+  model1 <- setup_test_model(workflow,
+    model_spec = list(
+      intercept = list(
+        intercept = "normal(0, 1)"
+      ),
+      fixed = list(
+        race = "normal(0, 1)"
+      )
+    )
+  )
+  model2 <- setup_test_model(workflow,
+    model_spec = list(
+      intercept = list(
+        intercept = "normal(0, 1)"
+      ),
+      varying = list(
+        race = "normal(0, 1)"
+      )
+    )
+  )
+
+  # Compare different models
+  expect_s3_class(
+    workflow$compare_models(model1, model2),
+    "data.frame"
+  )
+
+  # Compare the same models
+  expect_s3_class(
+    workflow$compare_models(model1, model1),
+    "data.frame"
   )
 })

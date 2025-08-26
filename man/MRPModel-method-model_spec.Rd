@@ -15,7 +15,7 @@ The \verb{$model_spec()} method of a \code{MRPModel} object
 returns the model specification list.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Load example data

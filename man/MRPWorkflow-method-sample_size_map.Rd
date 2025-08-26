@@ -19,7 +19,7 @@ showing data distribution with respect to geography. This method cannot be used
 if there is no geographic information in either the sample or poststratification data.
 }
 \examples{
-\dontrun{
+\donttest{
  library(shinymrp)
 
  # Initialize workflow
