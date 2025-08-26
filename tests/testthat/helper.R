@@ -101,3 +101,17 @@ expect_save_file <- function(func, ext, ...) {
   expect_true(file.exists(temp_file))
   unlink(temp_file)
 }
+
+read_saved_csv <- function(file_path) {
+  readr::read_csv(
+    file_path,
+    col_types = readr::cols(
+      zip = readr::col_character(),
+      county = readr::col_character(),
+      state = readr::col_character(),
+      date = readr::col_character(),
+      .default = readr::col_guess()
+    ),
+    show_col_types = FALSE
+  )
+}

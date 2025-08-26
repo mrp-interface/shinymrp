@@ -356,10 +356,10 @@ preprocess <- function(
       is_aggregated = is_aggregated
     )
   
-  # }, error = function(e) {
-  #   # show error message
-  #   error_message <- paste("Error processing sample data:\n", e$message)
-  #   message(error_message)
+  }, error = function(e) {
+    # show error message
+    error_message <- paste("Error processing sample data:\n", e$message)
+    message(error_message)
   })
 
 }
