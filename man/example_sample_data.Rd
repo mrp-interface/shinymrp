@@ -21,7 +21,7 @@ Options are \code{NULL}, \code{"covid"} and \code{"poll"}. The default is \code{
 data is not specific to any supported use case.}
 
 \item{family}{Character string specifying the distribution family for outcome measures.
-Options are \code{"binomial"} and \code{"normal"}.}
+Options are \code{"binomial"} for binary outcomes and \code{"normal"} for continuous outcomes.}
 }
 \value{
 A \code{data.frame} object.

@@ -411,10 +411,7 @@ mod_analyze_upload_server <- function(id, global){
 
     # Handle sample data upload
     observeEvent(input$sample_upload, {
-      waiter::waiter_show(
-        html = .waiter_ui(),
-        color = waiter::transparent(0.9)
-      )
+      .show_waiter("wait")
 
       # Read and store the raw sample data
       .read_data(input$sample_upload$datapath) %>%
@@ -447,10 +444,7 @@ mod_analyze_upload_server <- function(id, global){
     
     # Use individual-level example data
     observeEvent(input$use_indiv_example, {
-      waiter::waiter_show(
-        html = .waiter_ui(),
-        color = waiter::transparent(0.9)
-      )
+      .show_waiter("wait")
 
       .create_example_filename(global$metadata, suffix = "raw") %>%
         .fetch_data(subdir = "example/data") %>%
@@ -474,10 +468,7 @@ mod_analyze_upload_server <- function(id, global){
 
     # Use aggregated example data
     observeEvent(input$use_agg_example, {
-      waiter::waiter_show(
-        html = .waiter_ui(),
-        color = waiter::transparent(0.9)
-      )
+      .show_waiter("wait")
 
       .create_example_filename(global$metadata, suffix = "prep") %>%
         .fetch_data(subdir = "example/data") %>%
@@ -600,10 +591,7 @@ mod_analyze_upload_server <- function(id, global){
     # Handle poststratification data upload
     #----------------------------------------------------------------------------
     observeEvent(input$pstrat_upload, {
-      waiter::waiter_show(
-        html = .waiter_ui(),
-        color = waiter::transparent(0.9)
-      )
+      .show_waiter("wait")
 
       .read_data(input$pstrat_upload$datapath) %>%
         raw_pstrat_rv()

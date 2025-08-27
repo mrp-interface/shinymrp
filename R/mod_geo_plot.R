@@ -18,7 +18,7 @@ mod_geo_plot_ui <- function(id) {
     ),
     plotOutput(
       outputId = ns("plot"),
-      height = .const()$plot$ui$plot_height
+      height = .plot_height()
     )
   )
 }

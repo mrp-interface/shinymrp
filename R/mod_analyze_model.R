@@ -471,11 +471,8 @@ mod_analyze_model_server <- function(id, global){
       selected_ids <- input$model_select
 
       if(length(selected_ids) >= 1) {
-        waiter::waiter_show(
-          html = .waiter_ui("loo"),
-          color = waiter::transparent(0.9)
-        )
-      
+        .show_waiter("loo")
+
         ### PPC plots
         selected_models <- global$models[selected_ids]
 
@@ -499,7 +496,7 @@ mod_analyze_model_server <- function(id, global){
 
           }, error = function(e) {
             message(paste0("Error during LOO-CV: ", e$message))
-            .show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.", global$session)
+            .show_alert("An error occured during leave-one-out cross-validation. Please check whether the models being compared were generated from the same dataset.")
           })
 
           if (!is.null(out)) {
@@ -608,7 +605,7 @@ mod_analyze_model_server <- function(id, global){
         } else {
           tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), ".")
         }
-        .show_alert(msg, global$session)
+        .show_alert(msg)
         return()
       }
       
@@ -633,21 +630,20 @@ mod_analyze_model_server <- function(id, global){
             tags$ul(
               purrr::map(check$msg, ~ tags$li(.x))
             )
-          ),
-          global$session
+          )
         )
         return()
       }
       
       # Check if maximum number of models is reached
       if(length(global$models) + 1 > .const()$ui$model$max_models) {
-        .show_alert("Maximum number of models reached. Please remove existing models to add more.", global$session)
+        .show_alert("Maximum number of models reached. Please remove existing models to add more.")
         return()
       }
       
       # Check if the user selected any predictors
       if(length(c(input$fixed, input$varying, input$interaction)) == 0) {
-        .show_alert("No predictor has been selected. Please include at least one.", global$session)
+        .show_alert("No predictor has been selected. Please include at least one.")
         return()
       }
       
@@ -659,16 +655,13 @@ mod_analyze_model_server <- function(id, global){
       }) %>% unlist()
       
       if(!all(valid_priors)) {
-        .show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.", global$session)
+        .show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.")
         return()
       }
       
       # All validation passed, show waiter and proceed
-      waiter::waiter_show(
-        html = .waiter_ui("fit"),
-        color = waiter::transparent(0.9)
-      )
-      
+      .show_waiter("fit")
+
       # Try to fit the model
       tryCatch({
         # assign default priors to all selected effects
@@ -729,16 +722,13 @@ mod_analyze_model_server <- function(id, global){
 
       }, error = function(e) {
         message(paste0("Error fitting model: ", e$message))
-        .show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.", global$session)
+        .show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.")
         waiter::waiter_hide()
       })
     })
 
     observeEvent(input$fit_upload, {
-      waiter::waiter_show(
-        html = .waiter_ui(),
-        color = waiter::transparent(0.9)
-      )
+      .show_waiter("wait")
 
       model_buffer(
         qs::qread(input$fit_upload$datapath)
@@ -752,10 +742,7 @@ mod_analyze_model_server <- function(id, global){
     })
 
     observeEvent(input$use_example, {
-      waiter::waiter_show(
-        html = .waiter_ui(),
-        color = waiter::transparent(0.9)
-      )
+      .show_waiter("wait")
 
       file_name <- .create_example_filename(
         global$workflow$metadata(),
@@ -862,11 +849,7 @@ mod_analyze_model_server <- function(id, global){
 
       # postprocessing
       observeEvent(input[[model$get_id("postprocess_btn")]], {
-
-        waiter::waiter_show(
-          html = .waiter_ui("pstrat"),
-          color = waiter::transparent(0.9)
-        )
+        .show_waiter("pstrat")
 
         global$models[[model_id]]$poststratify()
 
@@ -878,10 +861,7 @@ mod_analyze_model_server <- function(id, global){
             paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
           },
           content = function(file) {
-            waiter::waiter_show(
-              html = .waiter_ui(),
-              color = waiter::transparent(0.9)
-            )
+            .show_waiter("wait")
 
             model$save(file)
             
@@ -902,10 +882,7 @@ mod_analyze_model_server <- function(id, global){
           paste0("estimation_wo_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
         },
         content = function(file) {
-          waiter::waiter_show(
-            html = .waiter_ui(),
-            color = waiter::transparent(0.9)
-          )
+          .show_waiter("wait")
 
           model$save(file)
 

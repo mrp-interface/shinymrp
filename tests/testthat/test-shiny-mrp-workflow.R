@@ -54,6 +54,57 @@ test_that("methods that returns DT::datatable() work", {
   }
 })
 
+test_that("estimate_plot_geo works correctly", {
+  workflow <- ShinyMRPWorkflow$new()
+
+  expect_s3_class(
+    workflow$estimate_plot_geo(
+      example_model(is_timevar = TRUE),
+      "county"
+    ),
+    "ggplot"
+  )
+
+  expect_s3_class(
+    workflow$estimate_plot_geo(
+      example_model(is_timevar = FALSE),
+      "state"
+    ),
+    "ggplot"
+  )
+
+  # Error for invalid geography
+  expect_error(
+    workflow$estimate_plot_geo(model, "invalid"),
+    "Assertion on 'geo' failed"
+  )
+})
+
+test_that("estimate_map works correctly", {
+  workflow <- ShinyMRPWorkflow$new()
+
+  expect_s3_class(
+    workflow$estimate_map(
+      example_model(is_timevar = TRUE),
+      "county"
+    ),
+    "highchart"
+  )
+
+  expect_s3_class(
+    workflow$estimate_map(
+      example_model(is_timevar = FALSE),
+      "state"
+    ),
+    "highchart"
+  )
+
+  # Error for invalid geography
+  expect_error(
+    workflow$estimate_map(model, "invalid"),
+    "Assertion on 'geo' failed"
+  )
+})
 
 test_that("compare_models works correctly", {
   workflow <- setup_test_workflow(

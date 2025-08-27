@@ -81,6 +81,55 @@ ShinyMRPWorkflow <- R6::R6Class(
         )
     },
 
+    estimate_plot_geo = function(model, geo, subset = NULL) {
+      checkmate::assert_choice(geo, .const()$vars$geo2)
+
+      fips_df <- fips_[[geo]] %>% .fips_upper()
+
+      plot_df <- model$poststratify()[[geo]] %>%
+        rename("fips" = "factor") %>%
+        left_join(fips_df, by = "fips") %>%
+        rename("factor" = geo)
+
+      subset <- .replace_null(subset, plot_df$factor[1])
+
+      plot_df <- plot_df %>%
+        filter(factor %in% subset)
+
+      p <- if(model$metadata()$is_timevar) {
+        .plot_est_timevar(
+          plot_df = plot_df,
+          dates = model$plot_data()$dates,
+          metadata = model$metadata()
+        )
+      } else {
+        .plot_est_static(
+          plot_df = plot_df,
+          metadata = model$metadata()
+        )
+      }
+
+      return(p)
+    },
+
+    estimate_map = function(model, geo, slider_input = NULL) {
+      checkmate::assert_choice(geo, .const()$vars$geo2)
+      is_timevar <- model$metadata()$is_timevar
+      dates <- model$plot_data()$dates
+
+      time_index <- NULL
+      if (is_timevar) {
+        time_index <- if (!is.null(slider_input) && !is.null(dates)) {
+          date <- format(slider_input, .const()$ui$format$date)
+          which(as.character(date) == dates)
+        } else {
+          .replace_null(slider_input, 1)
+        }
+      }
+      
+      super$estimate_map(model, geo, time_index)
+    },
+
     compare_models = function(models, suppress = "message") {
 
       if (length(models) < 2) {

@@ -2,9 +2,13 @@
 % Please edit documentation in R/example.R
 \name{example_model}
 \alias{example_model}
-\title{Return example \code{MRPModel} object with estimation results}
+\title{Return example \code{MRPModel} object with estimation results.}
 \usage{
-example_model()
+example_model(is_timevar = TRUE)
+}
+\arguments{
+\item{is_timevar}{Logical indicating whether the model is fitted
+to time-varying data.}
 }
 \value{
 A \code{MRPModel} object.

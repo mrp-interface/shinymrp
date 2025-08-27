@@ -29,11 +29,10 @@ mod_est_plot_server <- function(id, workflow, model, var) {
     }, height = function() {
       req(model())
       
-      if(model()$metadata()$is_timevar) {
-        .const()$plot$ui$subplot_height * (length(model()$mrp_data()$levels[[var]]) + 1)
-      } else {
-        .const()$plot$ui$plot_height
-      }
+      .plot_height(
+        n = length(model()$mrp_data()$levels[[var]]) + 1,
+        is_timevar = model()$metadata()$is_timevar
+      )
     })
   })
 }
