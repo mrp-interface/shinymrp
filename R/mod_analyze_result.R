@@ -165,7 +165,7 @@ mod_analyze_result_server <- function(id, global){
       req(selected_model_r())
 
       global$workflow$estimate_plot(selected_model_r())
-    }, height = function() .const()$plot$ui$plot_height)
+    })
     
     # --------------------------------------------------------------------------
     # Render UI dynamically based on the user's selection.
@@ -177,7 +177,7 @@ mod_analyze_result_server <- function(id, global){
       subgroup_select <- isolate(input$subgroup_select)
 
       if (result_category == "overall") {
-        plotOutput(ns("est_overall"), height = .const()$plot$ui$plot_height)
+        plotOutput(ns("est_overall"), height = .plot_height())
       } else if (result_category == "subgroup") {
         switch(subgroup_select,
           "sex" = mod_est_plot_ui(ns("est_sex")),

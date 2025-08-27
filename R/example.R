@@ -9,7 +9,7 @@
 #' Options are `NULL`, `"covid"` and `"poll"`. The default is `NULL` which indicates the
 #'  data is not specific to any supported use case.
 #' @param family Character string specifying the distribution family for outcome measures.
-#' Options are `"binomial"` and `"normal"`.
+#' Options are `"binomial"` for binary outcomes and `"normal"` for continuous outcomes.
 #' 
 #' @return A `data.frame` object.
 #' 
@@ -45,13 +45,20 @@ example_pstrat_data <- function() {
   .fetch_data("pstrat.csv", subdir = "example/data")
 }
 
-#' Return example `MRPModel` object with estimation results
+#' Return example `MRPModel` object with estimation results.
 #'
 #' @description Return example `MRPModel` object with estimation results.
+#' 
+#' @param is_timevar Logical indicating whether the model is fitted
+#' to time-varying data.
 #'
 #' @return A `MRPModel` object.
 #'
 #' @export
-example_model <- function() {
-  .fetch_data("timevarying_binomial_fit.qs", subdir = "example/fit")
+example_model <- function(is_timevar = TRUE) {
+  if (is_timevar) {
+    .fetch_data("timevarying_binomial_fit.qs", subdir = "example/fit")
+  } else {
+    .fetch_data("crosssectional_binomial_fit.qs", subdir = "example/fit")
+  }
 }

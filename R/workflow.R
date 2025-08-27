@@ -1462,6 +1462,8 @@ create_model <- function(
   spec = 1
 ) {
 
+  private$assert_mrp_exists()
+
   intercept_prior <- .replace_null(intercept_prior, "")
   model_spec <- list(
     intercept = list(intercept = intercept_prior),

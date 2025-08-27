@@ -115,11 +115,8 @@ mod_home_server <- function(id, global){
     # install CmdStan if not installed already
     if (.get_config("install_cmdstan") &&
         is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-          
-      waiter::waiter_show(
-        html = .waiter_ui("setup"),
-        color = waiter::transparent(0.9)
-      )
+
+      .show_waiter("setup")
 
       cmdstanr::check_cmdstan_toolchain(fix = TRUE)
       cmdstanr::install_cmdstan(check_toolchain = FALSE)

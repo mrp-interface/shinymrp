@@ -106,42 +106,18 @@ mod_analyze_visualize_server <- function(id, global){
     # Update the subcategory selectInput based on the main category selection.
     observeEvent(input$plot_category, {
       # Define the subcategory choices for each category.
-      if (input$plot_category == "indiv") {
-        label <- "2. Select characteristic"
-        choices <- .const()$ui$plot_selection$indiv
-        if(is.null(global$workflow$metadata()$special_case) ||
-           global$workflow$metadata()$special_case != "poll") {
-          choices <- choices[!choices == "edu"]
-        }
-      } else if (input$plot_category == "geo") {
-        label <- "2. Select characteristic"
-        choices <- .const()$ui$plot_selection$geo
-        if (!is.null(global$workflow$metadata()$special_case) &&
-            global$workflow$metadata()$special_case == "covid") {
-          choices <- c(choices, .const()$ui$plot_selection$geo_covar)
-        }
-      } else if (input$plot_category == "outcome") {
-        label <- "2. Select plot type"
-        choices <- .const()$ui$plot_selection$outcome
-
-        if (!global$workflow$metadata()$is_timevar) {
-          choices <- choices[!choices == "overall"]
-        }
-
-        if (is.null(global$workflow$link_data()$link_geo)) {
-          choices <- choices[!choices == "by_geo"]
-        }
-      } else {
-        label <- character(0)  # No label if the category is not recognized.
-        choices <- NULL  # No choices if the category is not recognized.
-      }
+      out <- .subcat_select_vis(
+        category = input$plot_category,
+        metadata = global$workflow$metadata(),
+        linkdata = global$workflow$link_data()
+      )
 
       # Update the subcategory selectInput with the new choices and label.
       updateSelectInput(
         session = session,
         inputId = "plot_subcategory",
-        choices = choices,
-        label = label)
+        choices = out$choices,
+        label   = out$label)
     })
 
     # Render the UI for the selected plot.
@@ -153,24 +129,24 @@ mod_analyze_visualize_server <- function(id, global){
 
       if (category == "indiv") {
         switch(subcategory,
-          "sex" = mod_indiv_plot_ui(ns("indiv_sex")),
+          "sex"  = mod_indiv_plot_ui(ns("indiv_sex")),
           "race" = mod_indiv_plot_ui(ns("indiv_race")),
-          "age" = mod_indiv_plot_ui(ns("indiv_age")),
-          "edu" = mod_indiv_plot_ui(ns("indiv_edu"))
+          "age"  = mod_indiv_plot_ui(ns("indiv_age")),
+          "edu"  = mod_indiv_plot_ui(ns("indiv_edu"))
         )
       } else if (category == "geo") {
         switch(subcategory,
-          "sample" = mod_indiv_map_ui(ns("geo_sample")),
-          "college" = mod_geo_plot_ui(ns("geo_college")),
-          "poverty" = mod_geo_plot_ui(ns("geo_poverty")),
+          "sample"     = mod_indiv_map_ui(ns("geo_sample")),
+          "college"    = mod_geo_plot_ui(ns("geo_college")),
+          "poverty"    = mod_geo_plot_ui(ns("geo_poverty")),
           "employment" = mod_geo_plot_ui(ns("geo_employment")),
-          "income" = mod_geo_plot_ui(ns("geo_income")),
+          "income"     = mod_geo_plot_ui(ns("geo_income")),
           "urbanicity" = mod_geo_plot_ui(ns("geo_urbanicity")),
-          "adi" = mod_geo_plot_ui(ns("geo_adi"))
+          "adi"        = mod_geo_plot_ui(ns("geo_adi"))
         )
       } else if (category == "outcome") {
         switch(subcategory,
-          "overall" = plotOutput(ns("positive_plot"), height = .const()$plot$ui$plot_height),
+          "overall" = plotOutput(ns("positive_plot"), height = .plot_height()),
           "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = .const()$plot$ui$map_height)
         )
       }

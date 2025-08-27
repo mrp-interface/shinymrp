@@ -13,7 +13,7 @@
 #' @importFrom shiny tagList tags
 #'
 #' @noRd
-.waiter_ui <- function(loading_type = NULL) {
+.waiter_ui <- function(loading_type) {
   text_style <- "color: black; margin-top: 10px;"
 
   checkmate::assert_choice(
@@ -45,56 +45,11 @@
       waiter::spin_loaders(15, color = "black"),
       tags$h4("Initializing...", style = text_style)
     ),
-    tagList(
+    "wait" = tagList(
       waiter::spin_loaders(15, color = "black"),
       tags$h4("Please wait...", style = text_style)
-    )
-  )
-}
-
-#' Show alert modal dialog
-#'
-#' @description Displays a warning modal dialog with a triangle exclamation icon
-#' and custom message to alert users of important information or errors.
-#'
-#' @param message Character. The message content to display in the alert modal
-#' @param session Shiny session object for displaying the modal
-#'
-#' @return No return value, called for side effect of showing modal
-#'
-#' @importFrom shiny showModal modalDialog tagList icon
-#'
-#' @noRd
-.show_alert <- function(message, session) {
-  showModal(
-    modalDialog(
-      title = tagList(icon("triangle-exclamation", "fa"), "Warning"),
-      message
     ),
-    session = session
-  )
-}
-
-#' Show notification modal dialog
-#'
-#' @description Displays a notification modal dialog with a bell icon and
-#' custom message to inform users of status updates or general information.
-#'
-#' @param message Character. The message content to display in the notification modal
-#' @param session Shiny session object for displaying the modal
-#'
-#' @return No return value, called for side effect of showing modal
-#'
-#' @importFrom shiny showModal modalDialog tagList icon
-#'
-#' @noRd
-.show_notif <- function(message, session) {
-  showModal(
-    modalDialog(
-      title = tagList(icon("bell", "fa"), "Notification"),
-      message
-    ),
-    session = session
+    NULL
   )
 }
 
@@ -112,9 +67,15 @@
 #' @importFrom shiny tags withMathJax
 #'
 #' @noRd
-.create_guide <- function(open = .const()$ui$guide_sections[1]) {
+.create_guide <- function(open) {
 
-  checkmate::assert_choice(open, .const()$ui$guide_sections)
+  checkmate::assert_choice(
+    open, 
+    .const()$ui$guide_sections,
+    null.ok = TRUE
+  )
+
+  open <- .replace_null(open, .const()$ui$guide_sections[1])
 
   bslib::accordion(
     id = "guide_accordion",
@@ -358,32 +319,6 @@
   )
 }
 
-#' Show user guide modal
-#'
-#' @description Displays the user guide in a modal dialog with specified
-#' accordion panel open. Provides comprehensive help documentation for
-#' application usage.
-#'
-#' @param open Character. Which accordion panel should be open by default.
-#'   If NULL, uses default from .create_guide function
-#'
-#' @return No return value, called for side effect of showing modal
-#'
-#' @importFrom shiny showModal modalDialog modalButton
-#'
-#' @noRd
-.show_guide <- function(open = NULL) {
-  showModal(
-    modalDialog(
-      title = "User Guide",
-      .create_guide(open),
-      size = "xl",
-      easyClose = TRUE,
-      footer = modalButton("Close")
-    )
-  )
-}
-
 #' Create model result tabs
 #'
 #' @description Creates dynamic navigation tabs for displaying model results
@@ -529,123 +464,134 @@
   )
 }
 
-#' Reset form inputs
+#' Returns UI elements for visualization of estimates for geographic areas
 #'
-#' @description Resets all model specification form inputs to their default
-#' states, clearing selections and resetting input fields for predictor
-#' selection, MCMC parameters, and file uploads.
+#' @param model The model object containing post-stratification and plot data.
+#' @param ns Namespace function for UI element IDs.
+#' @param geo_scale The geographic scale to visualize (e.g., "county", "state").
+#' @param geo_view The type of view to display (e.g., "map", "line_scatter").
 #'
-#' @param vars List containing variable choices for fixed effects, varying
-#'   effects, and interactions to reset selection inputs
-#'
-#' @return No return value, called for side effect of resetting form inputs
-#'
-#' @importFrom shinyjs reset
-#'
+#' @return A list of UI elements for the specified geographic visualization.
+#' 
 #' @noRd
-.reset_inputs <- function(vars) {
-  shinyWidgets::updateVirtualSelect(
-    inputId = "fixed",
-    choices = vars$fixed,
-    selected = NULL
+.est_map_ui <- function(ns, model, geo_scale, geo_view) {
+
+  checkmate::assert_choice(geo_scale, .const()$vars$geo2)
+  checkmate::assert_choice(geo_view, .const()$ui$geo_view)
+
+  time_indices <- model$poststratify()[[geo_scale]]$time
+  dates <- model$plot_data()$dates
+
+  switch(geo_view,
+    "map" = tagList(
+      highcharter::highchartOutput(
+        outputId = ns("map"),
+        height = .const()$plot$ui$map_height
+      ),
+      # Only show slider if we have time-varying data
+      if (!is.null(time_indices)) {
+        if(!is.null(dates)) {
+          div(
+            class = "mx-4",
+            sliderInput(
+            inputId = ns("map_slider"),
+              label = NULL,
+              min = as.Date(dates[1], format = .const()$ui$format$date),
+              max = as.Date(dates[length(dates)], format = .const()$ui$format$date),
+              step = 7,
+              value = as.Date(dates[1], format = .const()$ui$format$date),
+              width = "100%",
+              animate = .const()$ui$animation
+            )
+          )
+        } else {
+          div(
+            class = "mx-4",
+            sliderInput(
+              inputId = ns("map_slider"),
+              label = NULL,
+              min = 1,
+              max = max(time_indices),
+              step = 1,
+              value = 1,
+              width = "100%",
+              animate = .const()$ui$animation
+            )
+          )
+        }
+      }
+    ),
+    "line_scatter" = plotOutput(ns("plot")),
+    NULL
   )
-  
-  shinyWidgets::updateVirtualSelect(
-    inputId = "varying",
-    choices = vars$varying,
-    selected = NULL
-  )
-  
-  shinyWidgets::updateVirtualSelect(
-    inputId = "interaction",
-    choices = list(),
-    selected = NULL
-  )
-  
-  shinyjs::reset("predictor_select")
-  shinyjs::reset("iter_select")
-  shinyjs::reset("iter_kb")
-  shinyjs::reset("chain_select")
-  shinyjs::reset("seed_select")
-  shinyjs::reset("spec_kb")
-  shinyjs::reset("sens_kb")
-  shinyjs::reset("fit_upload")
 }
 
-#' Start busy state
-#'
-#' @description Initiates a busy state for a button by adding a spinning icon,
-#' disabling the button, and showing a loading overlay to indicate ongoing
-#' processing to users.
-#'
-#' @param session Shiny session object for updating UI elements
-#' @param id Character. Input ID of the button to set to busy state
-#' @param label Character. New label text to display on the busy button
-#'
-#' @return No return value, called for side effect of updating UI state
-#'
-#' @importFrom shiny updateActionButton icon
-#' @importFrom shinyjs disable
-#'
+#' Determine plot height based on number of plots and time-varying flag
+#' 
+#' @param n Number of plots to be displayed
+#' @param is_timevar Logical flag indicating if the data is time-varying
+#' 
+#' @return Numeric height for the plot output
+#' 
 #' @noRd
-.start_busy <- function(session, id, label) {
-  updateActionButton(
-    session = session,
-    inputId = id,
-    label = label,
-    icon = icon("spinner", class = "fa-spin")
-  )
+.plot_height <- function(n = 1, is_timevar = FALSE) {
+  plot_height <- .const()$plot$ui$plot_height
+  subplot_height <- .const()$plot$ui$subplot_height
 
-  shinyjs::disable(id)
-  waiter::waiter_show(
-    html = .waiter_ui(),
-    color = waiter::transparent(0)
-  )
+  h <- if (n > 1 && is_timevar) {
+    subplot_height * n
+  } else {
+    plot_height
+  }
+
+  return(h)
 }
 
-#' Stop busy state
-#'
-#' @description Ends a busy state for a button by updating the icon to indicate
-#' success or failure, re-enabling the button, and hiding the loading overlay.
-#'
-#' @param session Shiny session object for updating UI elements
-#' @param id Character. Input ID of the button to remove from busy state
-#' @param label Character. New label text to display on the button
-#' @param success Logical. Whether the operation was successful (TRUE shows
-#'   check icon, FALSE shows warning icon)
-#'
-#' @return No return value, called for side effect of updating UI state
-#'
-#' @importFrom shiny updateActionButton icon
-#' @importFrom shinyjs enable
-#'
-#' @noRd
-.stop_busy <- function(session, id, label, success) {
-  updateActionButton(
-    session = session,
-    inputId = id,
-    label = label,
-    icon = if(success) icon("check") else icon("exclamation-triangle")
+.subcat_select_vis <- function(category, metadata, linkdata) {
+  ui_ps   <- .const()$ui$plot_selection
+
+  # Base label/choices by category
+  base <- switch(category,
+    indiv   = list(label = "2. Select characteristic", choices = ui_ps$indiv),
+    geo     = list(label = "2. Select characteristic", choices = ui_ps$geo),
+    outcome = list(label = "2. Select plot type",      choices = ui_ps$outcome),
+    NULL
   )
 
-  shinyjs::enable(id)
-  waiter::waiter_hide()
-}
+  if (is.null(base)) return(list(label = character(0), choices = NULL))
 
-.to_analyze <- function(session) {
-  bslib::nav_select(
-    id = "navbar",
-    selected = "nav_analyze",
-    session = session
+  choices <- base$choices
+
+  # Category-specific adjustments
+  if (identical(category, "indiv")) {
+    # remove "edu" unless special_case == "poll"
+    if (!identical(metadata$special_case, "poll")) {
+      choices <- choices[!choices == "edu"]
+    }
+  }
+
+  if (identical(category, "geo")) {
+    # append geo covariates when special_case == "covid"
+    if (identical(metadata$special_case, "covid")) {
+      choices <- c(choices, ui_ps$geo_covar)
+    }
+  }
+
+  if (identical(category, "outcome")) {
+    # hide "overall" when not time-varying
+    if (!isTRUE(metadata$is_timevar)) {
+      choices <- choices[!choices == "overall"]
+    }
+    # hide "by_geo" when link_geo is missing
+    if (is.null(linkdata$link_geo)) {
+      choices <- choices[!choices == "by_geo"]
+    }
+  }
+
+  return(
+    list(
+      label = base$label,
+      choices = choices
+    )
   )
-
-  bslib::nav_select(
-    id = "navbar_analyze",
-    selected = "nav_analyze_upload",
-    session = session
-  )
-}
-
-.check_divergence <- function(diagnostics) {
-  return(sum(diagnostics$num_divergent) > 0)
 }
