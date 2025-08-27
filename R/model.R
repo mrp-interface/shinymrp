@@ -91,7 +91,7 @@
 #'  model$diagnostics()
 #'
 #'  # Save model object
-#'  model$save("/path/to/model.qs")
+#'  # model$save("model.qs")
 #' }
 #'
 #' @export
@@ -745,10 +745,10 @@ MRPModel$set("public", "poststratify", poststratify)
 #'  example_model <- example_model()
 #'
 #'  # Save model to file
-#'  # example_model$save("/path/to/model.qs")
+#'  # example_model$save("model.qs")
 #'
 #'  # Load model later
-#'  # loaded_model <- qs::qread("/path/to/model.qs")
+#'  # loaded_model <- qs::qread("model.qs")
 #' }
 #'
 save <- function(file) {

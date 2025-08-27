@@ -124,7 +124,7 @@ methods, many of which have their own (linked) documentation pages:
  model$diagnostics()
 
  # Save model object
- model$save("/path/to/model.qs")
+ # model$save("model.qs")
 }
 
 }
