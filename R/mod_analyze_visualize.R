@@ -106,7 +106,7 @@ mod_analyze_visualize_server <- function(id, global){
     # Update the subcategory selectInput based on the main category selection.
     observeEvent(input$plot_category, {
       # Define the subcategory choices for each category.
-      out <- .subcat_select_vis(
+      out <- .vis_subcat_select(
         category = input$plot_category,
         metadata = global$workflow$metadata(),
         linkdata = global$workflow$link_data()
@@ -124,32 +124,11 @@ mod_analyze_visualize_server <- function(id, global){
     output$plot_output <- renderUI({
       req(input$plot_category, input$plot_subcategory)
 
-      category <- isolate(input$plot_category)
-      subcategory <- isolate(input$plot_subcategory)
-
-      if (category == "indiv") {
-        switch(subcategory,
-          "sex"  = mod_indiv_plot_ui(ns("indiv_sex")),
-          "race" = mod_indiv_plot_ui(ns("indiv_race")),
-          "age"  = mod_indiv_plot_ui(ns("indiv_age")),
-          "edu"  = mod_indiv_plot_ui(ns("indiv_edu"))
-        )
-      } else if (category == "geo") {
-        switch(subcategory,
-          "sample"     = mod_indiv_map_ui(ns("geo_sample")),
-          "college"    = mod_geo_plot_ui(ns("geo_college")),
-          "poverty"    = mod_geo_plot_ui(ns("geo_poverty")),
-          "employment" = mod_geo_plot_ui(ns("geo_employment")),
-          "income"     = mod_geo_plot_ui(ns("geo_income")),
-          "urbanicity" = mod_geo_plot_ui(ns("geo_urbanicity")),
-          "adi"        = mod_geo_plot_ui(ns("geo_adi"))
-        )
-      } else if (category == "outcome") {
-        switch(subcategory,
-          "overall" = plotOutput(ns("positive_plot"), height = .plot_height()),
-          "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = .const()$plot$ui$map_height)
-        )
-      }
+      .vis_ui(
+        ns = ns,
+        cat = input$plot_category,
+        subcategory = input$plot_subcategory
+      )
     })
 
     # --------------------------------------------------------------------------
