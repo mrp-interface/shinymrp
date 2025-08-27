@@ -27,10 +27,10 @@ to use the \code{.qs} file extension.
  example_model <- example_model()
 
  # Save model to file
- # example_model$save("/path/to/model.qs")
+ # example_model$save("model.qs")
 
  # Load model later
- # loaded_model <- qs::qread("/path/to/model.qs")
+ # loaded_model <- qs::qread("model.qs")
 }
 
 }
