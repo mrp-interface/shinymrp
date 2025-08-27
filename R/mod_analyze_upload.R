@@ -282,7 +282,7 @@ mod_analyze_upload_server <- function(id, global){
     output$data_preprocessed <- reactive({
       req(global$workflow)
       global$prep_ver
-      global$workflow$check_data_exists() 
+      global$workflow$check_prep_data_exists() 
     })
     outputOptions(output, "data_preprocessed", suspendWhenHidden = FALSE)
 
@@ -340,7 +340,7 @@ mod_analyze_upload_server <- function(id, global){
     output$sample_feedback <- renderUI({
       req(raw_sample_rv())
 
-      if (global$workflow$check_data_exists()) {
+      if (global$workflow$check_prep_data_exists()) {
         tags$div(
           tagList(icon("circle-check", "fa"), "Success"),
           tags$p("All requirements are met. You may proceed to the Poststratification Data section'.", class = "small")
@@ -404,7 +404,7 @@ mod_analyze_upload_server <- function(id, global){
         paste0("preprocessed_data_", format(Sys.Date(), "%Y%m%d"), ".csv")
       },
       content = function(file) {
-        req(global$workflow$check_data_exists())
+        req(global$workflow$check_prep_data_exists())
         readr::write_csv(global$workflow$preprocessed_data(), file)
       }
     )
@@ -546,7 +546,7 @@ mod_analyze_upload_server <- function(id, global){
     # Create poststratification data from ACS data
     #---------------------------------------------------------------------------
     observeEvent(input$link_acs, {
-      req(global$workflow$check_data_exists())
+      req(global$workflow$check_prep_data_exists())
 
       .start_busy(
         session = session,

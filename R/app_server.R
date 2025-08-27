@@ -109,10 +109,10 @@ app_server <- function(input, output, session) {
   # Check if the data upload is valid
   observeEvent(input$navbar_analyze, {
     if (input$navbar_analyze %in% c("nav_analyze_visualize", "nav_analyze_model", "nav_analyze_result")) {
-      if (!global$workflow$check_data_exists() ||
+      if (!global$workflow$check_prep_data_exists() ||
           !global$workflow$check_mrp_exists()) {
 
-        message <- if (!global$workflow$check_data_exists()) {
+        message <- if (!global$workflow$check_prep_data_exists()) {
           "Invalid input data. Please make sure your data passes all requirements."
         } else if (!global$workflow$check_mrp_exists()) {
           "Invalid poststratification table. Please provide information for linking your data to the ACS data or upload your own poststatification table."

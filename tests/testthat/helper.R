@@ -33,7 +33,8 @@ setup_test_workflow <- function(
   is_aggregated = TRUE,
   time_freq = NULL,
   link_geo = NULL,
-  link = TRUE
+  link = TRUE,
+  constructor = mrp_workflow
 ) {
   
   data <- example_sample_data(
@@ -42,7 +43,8 @@ setup_test_workflow <- function(
     special_case = metadata$special_case,
     family = metadata$family
   )
-  workflow <- mrp_workflow()
+  
+  workflow <- constructor()
 
   capture.output({
     workflow$preprocess(
