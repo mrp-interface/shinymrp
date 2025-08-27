@@ -1,3 +1,17 @@
+test_that("getter and setter methods work correctly", {
+  workflow <- setup_test_workflow(
+    metadata = list(
+      is_timevar = FALSE,
+      special_case = NULL,
+      family = "binomial"
+    )
+  )
+
+  expect_type(workflow$metadata(), "list")
+  expect_s3_class(workflow$preprocessed_data(), "data.frame")
+})
+
+
 test_that("compare_models works correctly", {
   workflow <- setup_test_workflow(
     metadata = list(

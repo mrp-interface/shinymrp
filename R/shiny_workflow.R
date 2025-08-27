@@ -129,7 +129,7 @@ ShinyMRPWorkflow <- R6::R6Class(
       return(!is.null(private$metadat_))
     },
 
-    check_data_exists = function() {
+    check_prep_data_exists = function() {
       return(!is.null(private$prepdat_))
     },
 
