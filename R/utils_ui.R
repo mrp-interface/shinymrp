@@ -547,7 +547,19 @@
   return(h)
 }
 
-.subcat_select_vis <- function(category, metadata, linkdata) {
+#' Determine sub-category label and choices
+#' 
+#' @description Returns the appropriate label and choices for the sub-category
+#' selection input based on the selected main category, metadata, and link data.
+#' 
+#' @param category The main category selected by the user (e.g., "indiv", "geo", "outcome").
+#' @param metadata A list containing metadata about the current analysis, including special cases and time-varying flag.
+#' @param linkdata A list containing information about linked geographic data.
+#' 
+#' @return A list with 'label' and 'choices' for the sub-category selection input.
+#' 
+#' @noRd
+.vis_subcat_select <- function(category, metadata, linkdata) {
   ui_ps   <- .const()$ui$plot_selection
 
   # Base label/choices by category
@@ -594,4 +606,39 @@
       choices = choices
     )
   )
+}
+
+#' Generate UI for specific visualization based on category and sub-category
+#' 
+#' @param ns Namespace function for UI element IDs
+#' @param category The main category selected by the user (e.g., "indiv", "geo", "outcome")
+#' @param subcategory The sub-category selected by the user
+#' 
+#' @return The UI elements corresponding to the selected category and sub-category
+#' 
+#' @noRd
+.vis_ui <- function(ns, category, subcategory) {
+  if (category == "indiv") {
+    switch(subcategory,
+      "sex"  = mod_indiv_plot_ui(ns("indiv_sex")),
+      "race" = mod_indiv_plot_ui(ns("indiv_race")),
+      "age"  = mod_indiv_plot_ui(ns("indiv_age")),
+      "edu"  = mod_indiv_plot_ui(ns("indiv_edu"))
+    )
+  } else if (category == "geo") {
+    switch(subcategory,
+      "sample"     = mod_indiv_map_ui(ns("geo_sample")),
+      "college"    = mod_geo_plot_ui(ns("geo_college")),
+      "poverty"    = mod_geo_plot_ui(ns("geo_poverty")),
+      "employment" = mod_geo_plot_ui(ns("geo_employment")),
+      "income"     = mod_geo_plot_ui(ns("geo_income")),
+      "urbanicity" = mod_geo_plot_ui(ns("geo_urbanicity")),
+      "adi"        = mod_geo_plot_ui(ns("geo_adi"))
+    )
+  } else if (category == "outcome") {
+    switch(subcategory,
+      "overall" = plotOutput(ns("positive_plot"), height = .plot_height()),
+      "by_geo" = highcharter::highchartOutput(ns("positive_map"), height = .const()$plot$ui$map_height)
+    )
+  }
 }
