@@ -547,6 +547,30 @@
   return(h)
 }
 
+#' Determine main category choices
+#' 
+#' @description Returns the appropriate main category choices for the plot
+#' selection input based on the metadata and link data.
+#' 
+#' @param metadata A list containing metadata about the current analysis, including special cases and time
+#' -varying flag.
+#' @param linkdata A list containing information about linked geographic data.
+#' 
+#' @return A character vector of main category choices for the plot selection input.
+#' 
+#' @noRd
+.vis_cat_select <- function(metadata, linkdata) {
+  choices <- .const()$ui$plot_selection$vis_main[[metadata$family]]
+  counts <- purrr::map_int(
+    choices,
+    ~ length(.vis_subcat_select(.x, metadata, linkdata)$choices)
+  )
+
+  choices <- choices[counts > 0]
+
+  return(choices)
+}
+
 #' Determine sub-category label and choices
 #' 
 #' @description Returns the appropriate label and choices for the sub-category
@@ -587,6 +611,9 @@
     if (identical(metadata$special_case, "covid")) {
       choices <- c(choices, ui_ps$geo_covar)
     }
+    if (is.null(linkdata$link_geo)) {
+      choices <- character(0)
+    }
   }
 
   if (identical(category, "outcome")) {
@@ -618,6 +645,18 @@
 #' 
 #' @noRd
 .vis_ui <- function(ns, category, subcategory) {
+  ui_ps <- .const()$ui$plot_selection
+
+  checkmate::assert_choice(
+    category,
+    ui_ps$vis_main[[1]]
+  )
+
+  checkmate::assert_choice(
+    subcategory,
+    unlist(ui_ps[c("indiv", "geo", "geo_covar", "outcome")])
+  )
+
   if (category == "indiv") {
     switch(subcategory,
       "sex"  = mod_indiv_plot_ui(ns("indiv_sex")),

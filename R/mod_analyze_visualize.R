@@ -91,14 +91,13 @@ mod_analyze_visualize_server <- function(id, global){
       # Reset the select inputs
       shinyjs::reset("summary_slt")
 
-      choices <- .const()$ui$plot_selection$vis_main[[global$workflow$metadata()$family]]
-
-      if (is.null(global$workflow$link_data()$link_geo)) {
-        choices <- choices[!choices == "geo"]
-      }
+      choices <- .vis_cat_select(
+        metadata = global$workflow$metadata(),
+        linkdata = global$workflow$link_data()
+      )
 
       # Update the plot category selectInput with the new choices.
-      updateSelectInput(session, "plot_category", choices = c("foo")) # trigger update
+      updateSelectInput(session, "plot_category", choices = c("foo")) # force update
       updateSelectInput(session, "plot_category", choices = choices)
     })
 

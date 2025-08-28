@@ -569,97 +569,6 @@
   return(geojson)
 }
 
-#' Filter data based on state and ZIP code thresholds
-#'
-#' @description Filters COVID data to include only ZIP codes and states that
-#' meet minimum sample size requirements for reliable statistical inference.
-#' This two-stage filtering process removes geographic areas with insufficient
-#' data that could lead to unstable estimates in MRP modeling. Essential for
-#' COVID surveillance data where sample sizes vary dramatically across
-#' geographic areas due to population density, testing availability, and
-#' outbreak patterns.
-#'
-#' @param df A data frame containing aggregated COVID data with the following
-#'   required columns:
-#' \itemize{
-#'   \item `zip`: Character or factor - ZIP code identifier (5-digit format)
-#'   \item `total`: Numeric - Count of observations/tests for each ZIP code
-#'     (must be positive integers representing sample sizes)
-#' }
-#' Additional columns (demographics, time periods) are preserved through filtering.
-#'
-#' @param zip_county_state A data frame containing geographic covariates and identifiers
-#'   with the following required columns:
-#' \itemize{
-#'   \item `zip`: Character or factor - ZIP code identifier matching `df$zip`
-#'   \item `county`: Character - County FIPS code where the first two digits
-#'     represent the state FIPS code (e.g., "06001" for Alameda County, CA where
-#'     "06" is California's state FIPS code)
-#' }
-#' Used to map ZIP codes to states for hierarchical filtering.
-#'
-#' @param zip_threshold Numeric. Minimum number of observations required per ZIP
-#'   code to be retained in the analysis. Default is 5, which provides minimal
-#'   sample size for basic statistical inference. Higher values (10-20) may be
-#'   appropriate for more complex modeling.
-#'
-#' @param state_threshold Numeric. Minimum proportion of total national sample
-#'   required per state to be retained. Default is 0.01 (1%), which excludes
-#'   states with very small samples that could destabilize hierarchical models.
-#'   Range should be between 0 and 1.
-#'
-#' @return A data frame filtered to include only ZIP codes meeting both geographic
-#'   thresholds. ZIP codes are retained if and only if:
-#' \enumerate{
-#'   \item Their state has at least `state_threshold` proportion of total
-#'      national observations (state-level filter)
-#'   \item The ZIP code itself has at least `zip_threshold` observations
-#'      (ZIP-level filter)
-#' }
-#' The returned data frame maintains the same structure as the input but with
-#' potentially fewer rows due to geographic exclusions.
-#'
-#' @importFrom dplyr group_by summarize mutate select distinct inner_join filter ungroup
-#' @importFrom magrittr %>%
-#' @importFrom rlang .data
-#'
-#' @noRd
-.filter_state_zip <- function(
-    df,
-    zip_county_state,
-    zip_threshold = 0,
-    state_threshold = 0
-) {
-  
-  zip_count <- df %>%
-    dplyr::group_by(.data$zip) %>%
-    dplyr::summarize(count = dplyr::n())
-
-  # create a table containing state, zip and zip count
-  state_zip <- zip_county_state %>%
-    dplyr::mutate(state = substr(.data$fips, 1, 2)) %>%
-    dplyr::select(.data$zip, .data$state) %>%
-    dplyr::distinct(.data$zip, .keep_all = TRUE) %>%
-    dplyr::inner_join(zip_count, by = "zip")
-
-  # filter based on proportion of state
-  N <- sum(state_zip$count)
-  state_zip <- state_zip %>%
-    dplyr::group_by(.data$state) %>%
-    dplyr::filter(sum(.data$count) > state_threshold * N) %>%
-    dplyr::ungroup()
-
-  # filter based on number of zip
-  state_zip <- state_zip %>%
-    dplyr::group_by(.data$zip) %>%
-    dplyr::filter(sum(.data$count) > zip_threshold) %>%
-    dplyr::ungroup()
-
-  df <- df %>% dplyr::filter(.data$zip %in% state_zip$zip)
-
-  return(df)
-}
-
 #' Convert geographic identifiers to FIPS codes
 #'
 #' @description Converts geographic identifiers (names, abbreviations, or codes)
@@ -887,40 +796,6 @@
   
   return(df)
 }
-
-#' Find nested relationships between categorical variables
-#'
-#' @description Identifies pairs of categorical variables that have a bijective
-#' (one-to-one) relationship, indicating potential nesting or perfect correlation.
-#'
-#' @param df Data frame containing categorical variables to test.
-#' @param cols Character vector of column names to test for nesting relationships.
-#' @param sep Character string used as separator when combining variable values.
-#'   Default is "---".
-#'
-#' @return Character vector of variable pairs that show nesting relationships,
-#'   formatted as "var1:var2".
-#'
-#' @noRd
-#'
-.find_nested <- function(df, cols, sep = "---") {
-  # generate all 2-column combinations
-  pairs <- utils::combn(cols, 2, simplify = FALSE)
-  
-  # test each pair for a bijection via approach 2
-  is_bij <- vapply(pairs, function(pr) {
-    x  <- df[[pr[1]]]
-    y  <- df[[pr[2]]]
-    ux <- unique(x)
-    uy <- unique(y)
-    up <- unique(paste(x, y, sep = sep))
-    length(ux) == length(uy) && length(up) == length(ux)
-  }, logical(1))
-  
-  # return only the names of the true pairs, collapsed with “:”
-  vapply(pairs[is_bij], paste, collapse = ":", FUN.VALUE = "")
-}
-
 
 #' Perform a clean left join between data frames
 #'

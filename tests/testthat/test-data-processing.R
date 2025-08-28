@@ -360,3 +360,24 @@ test_that(".impute is consistent", {
   )
 
 })
+
+
+test_that(".read_data works correctly", {
+  # CSV file
+  expect_s3_class(
+    .read_data(testthat::test_path("fixtures/data/read_test.csv")),
+    "data.frame"
+  )
+
+  # Excel file
+  expect_s3_class(
+    .read_data(testthat::test_path("fixtures/data/read_test.xlsx")),
+    "data.frame"
+  )
+
+  # SAS file
+  expect_s3_class(
+    .read_data(testthat::test_path("fixtures/data/read_test.sas7bdat")),
+    "data.frame"
+  )
+})
