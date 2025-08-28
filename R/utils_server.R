@@ -1,4 +1,33 @@
-#' Reset form inputs
+#' Reset inputs on data upload page
+#' 
+#' @description Resets all form inputs on the data upload page to their default
+#' states, clearing file selections, toggles, and dropdowns to allow users to
+#' start fresh with new data uploads.
+#'
+#' @noRd 
+.reset_upload_pg <- function() {
+  shinyjs::reset("sample_upload")
+  shinyjs::reset("pstrat_upload")
+  shinyjs::reset("toggle_sample")
+  shinyjs::reset("toggle_pstrat")
+  shinyjs::reset("toggle_table")
+  shinyjs::reset("link_geo")
+  shinyjs::reset("acs_year")
+
+  # reset the accordion to show the sample data panel
+  bslib::accordion_panel_open(
+    id = "accordion",
+    values = "sample"
+  )
+
+  # reset popover states
+  shinyjs::show("sample_spec_popover")
+  shinyjs::show("link_acs_popover")
+  shinyjs::hide("pstrat_upload_popover")
+}
+
+
+#' Reset form inputs on model fitting page
 #'
 #' @description Resets all model specification form inputs to their default
 #' states, clearing selections and resetting input fields for predictor
@@ -12,7 +41,7 @@
 #' @importFrom shinyjs reset
 #'
 #' @noRd
-.reset_inputs <- function(vars) {
+.reset_model_pg <- function(vars) {
   shinyWidgets::updateVirtualSelect(
     inputId = "fixed",
     choices = vars$fixed,

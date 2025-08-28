@@ -249,4 +249,55 @@ test_that(".vis_ui works", {
   ) 
 })
 
+test_that(".preview_table works correctly", {
+  df <- data.frame(
+    a = rnorm(10),
+    b = runif(10),
+    outcome = rbinom(10, 1, 0.5),
+    positive = rbinom(10, 10, 0.5)
+  )
 
+  tbl <- .preview_table(df)
+  expect_s3_class(tbl, "datatables")
+  expect_equal(
+    nrow(tbl$x$data),
+    min(nrow(df), .const()$ui$preview_size)
+  )
+})
+
+
+test_that(".link_select works correctly", {
+  # Test if options for linking geography reflect data
+
+  data <- data.frame(
+    zip = character(0),
+    county = character(0),
+    state = character(0)
+  )
+  period_regex <- "^[0-9]{4}-[0-9]{4}$"
+
+  # COVID data
+  choices_covid <- .link_select(data, "covid")
+  expect_setequal(
+    choices_covid$link_geos,
+    c("zip")
+  )
+  expect_true(all(grepl(period_regex, choices_covid$acs_years)))
+
+  # Poll data
+  choices_poll <- .link_select(data, "poll")
+  expect_setequal(
+    choices_poll$link_geos,
+    c("state")
+  )
+  expect_true(all(grepl(period_regex, choices_poll$acs_years)))
+
+  # General data
+  choices_gnr <- .link_select(data)
+  expect_setequal(
+    choices_gnr$link_geos,
+    c("zip", "county", "state", "Do not include geography")
+  )
+  expect_true(all(grepl(period_regex, choices_gnr$acs_years)))
+
+})

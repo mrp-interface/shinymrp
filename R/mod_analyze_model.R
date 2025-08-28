@@ -591,7 +591,7 @@ mod_analyze_model_server <- function(id, global){
     observeEvent(input$reset_btn, {
       prior_buffer(list())
 
-      .reset_inputs(global$workflow$mrp_data()$vars)
+      .reset_model_pg(global$workflow$mrp_data()$vars)
     })
 
     #-----------------------------------------------------------------------
@@ -939,7 +939,7 @@ mod_analyze_model_server <- function(id, global){
         pareto_k_dfs(NULL)
         model_uploaded(FALSE)
 
-        .reset_inputs(vars = list(
+        .reset_model_pg(vars = list(
           fixed = list(),
           varying = list()
         ))

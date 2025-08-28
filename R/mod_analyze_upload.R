@@ -291,28 +291,10 @@ mod_analyze_upload_server <- function(id, global){
     # Reset everything when new workflow is created
     # --------------------------------------------------------------------------
     observeEvent(global$workflow, {
-      shinyjs::reset("sample_upload")
-      shinyjs::reset("pstrat_upload")
-      shinyjs::reset("toggle_sample")
-      shinyjs::reset("toggle_pstrat")
-      shinyjs::reset("toggle_table")
-      shinyjs::reset("link_geo")
-      shinyjs::reset("acs_year")
-      
       raw_sample_rv(NULL)
       raw_pstrat_rv(NULL)
 
-      # reset the accordion to show the sample data panel
-      bslib::accordion_panel_open(
-        id = "accordion",
-        values = "sample",
-        session = session
-      )
-
-      # reset popover states
-      shinyjs::show("sample_spec_popover")
-      shinyjs::show("link_acs_popover")
-      shinyjs::hide("pstrat_upload_popover")
+      .reset_upload_pg()
     })
     
     # --------------------------------------------------------------------------
@@ -358,44 +340,13 @@ mod_analyze_upload_server <- function(id, global){
     output$table <- DT::renderDT({
       req(raw_sample_rv())
       
-      df <- if(is.null(input$toggle_table) ||
-               input$toggle_table == "raw") {
-        raw_sample_rv()
-      } else {
-        global$workflow$preprocessed_data()
-      }
-      
-      df <- df %>%
-        utils::head(.const()$ui$preview_size) %>%
-        DT::datatable(
-          options = list(
-            columnDefs = list(
-              list(className = "dt-left", targets = "_all")
-            ),
-            scrollX = TRUE,
-            lengthChange = FALSE,
-            searching = FALSE,
-            info = FALSE
-          )
-        )
-
-      if (global$workflow$metadata()$family == "normal" &&
-          "outcome" %in% names(df)) {
-        df <- df %>%
-          DT::formatRound(
-            columns = c("outcome"),
-            digits = 4
-          )
-      } else if (global$workflow$metadata()$family == "binomial" &&
-                 "positive" %in% names(df)) {
-        df <- df %>%
-          DT::formatStyle(
-            columns = c("positive"),
-            `max-width` = "150px"
-          )
-      }
-
-      return(df)
+      .preview_table(
+        if(identical(input$toggle_table, "prep")) {
+          global$workflow$preprocessed_data()
+        } else {
+          raw_sample_rv()
+        }
+      )
     })
 
     # Preprocessed data download handler
@@ -496,30 +447,19 @@ mod_analyze_upload_server <- function(id, global){
     observeEvent(global$prep_ver, {
       req(global$workflow)
 
-      if(!is.null(global$metadata$special_case) &&
-         global$metadata$special_case == "covid") {
-        link_geos <- c("zip")
-        acs_years <- 2021
-      } else if (!is.null(global$metadata$special_case) &&
-                 global$metadata$special_case == "poll") {
-        link_geos <- c("state")
-        acs_years <- 2018
-      } else {
-        link_geos <- c(
-          .get_possible_geos(names(global$workflow$preprocessed_data())),
-          "Do not include geography"
-        )
-        acs_years <- 2019:2023
-      }
+      choices <- .link_select(
+        data = global$workflow$preprocessed_data(),
+        use_case = global$metadata$special_case
+      )
 
       updateSelectInput(session,
         inputId = "link_geo",
-        choices = link_geos
+        choices = choices$link_geos
       )
 
       updateSelectInput(session,
         inputId = "acs_year",
-        choices = paste0(acs_years - 4, "-", acs_years)
+        choices = choices$acs_years
       )
 
       # Update the accordion to show the poststratification data panel
