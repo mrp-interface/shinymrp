@@ -681,3 +681,81 @@
     )
   }
 }
+
+#' Generate a preview table of the data
+#' 
+#' @param df A data frame to be previewed
+#' 
+#' @return A datatable preview of the data
+#' 
+#' @noRd 
+.preview_table <- function(df) {
+  
+  preview <- df %>%
+    utils::head(.const()$ui$preview_size) %>%
+    DT::datatable(
+      options = list(
+        columnDefs = list(
+          list(
+            className = "dt-left",
+            targets = "_all"
+          )
+        ),
+        scrollX = TRUE,
+        lengthChange = FALSE,
+        searching = FALSE,
+        info = FALSE
+      )
+    )
+
+  preview <- if ("outcome" %in% names(df)) {
+    preview %>%
+      DT::formatRound(
+        columns = c("outcome"),
+        digits = 4
+      )
+  } else if ("positive" %in% names(df)) {
+    preview %>%
+      DT::formatStyle(
+        columns = c("positive"),
+        `max-width` = "150px"
+      )
+  }
+
+  return(preview)
+}
+
+
+#' Returns linking options based on use case
+#' 
+#' @param data The sample data to be analyzed
+#' @param use_case The use case for the analysis
+#' @param no_link_geo_label The label to use for the "no linking geography" option
+#' 
+#' @return A list containing linking geography options and ACS year options
+#' 
+#' @noRd
+.link_select <- function(
+  data,
+  use_case = NULL,
+  no_link_geo_label = "Do not include geography"
+) {
+
+  use_case <- use_case %||% "general"
+  
+  choices <- switch(use_case,
+    "covid" = list(link_geos = c("zip"), acs_years = 2021),
+    "poll"  = list(link_geos = c("state"), acs_years = 2018),
+    "general" = list(
+      link_geos = c(
+        .get_possible_geos(names(data)),
+        no_link_geo_label
+      ),
+      acs_years = 2019:2023
+    )
+  )
+
+  choices$acs_years <- paste0(choices$acs_years - 4, "-", choices$acs_years)
+
+  return(choices)
+}
