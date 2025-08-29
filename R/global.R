@@ -132,7 +132,8 @@ module_ids <- list(
       acs_years = 2018:2023,
       effect_types = c("fixed", "varying", "interaction"),
       family = c("binomial", "normal"),
-      summary_types = c("max", "min")
+      summary_types = c("max", "min"),
+      time_freq = c("week", "month", "year")
     ),
     vars = list(
       pstrat = c("sex", "race", "age", "edu", "county", "state"),

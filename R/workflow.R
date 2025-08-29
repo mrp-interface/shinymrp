@@ -330,10 +330,6 @@ preprocess <- function(
   if (!is_timevar && !is.null(time_freq)) {
     stop("Time indexing frequency cannot be specified for static data.")
   }
-
-  if (family == "normal" && is_aggregated) {
-    stop("is_aggregated cannot be TRUE for data with continuous outcome (normal family).")
-  }
   
   private$metadat_ <- list(
     is_timevar = is_timevar,
