@@ -450,27 +450,42 @@
 #' @noRd
 #'
 #' @importFrom dplyr full_join
-.add_time_indices <- function(df, time_freq) {
-  common <- intersect(names(df), .const()$vars$time)
+.add_time_indices <- function(df, time_freq = NULL) {
+  
+  checkmate::assert_choice(
+    time_freq,
+    choices = .const()$args$time_freq,
+    null.ok = TRUE
+  )
 
-  if (length(common) == 1 && "date" %in% common) {
-    # convert date to time indices
-    out <- .get_time_indices(df$date, time_freq)
-    df$time <- out$indices
-
-    # add the column containing first dates of the periods
-    df <- df %>% dplyr::select(-"date")
-    df <- df %>%
-      dplyr::full_join(
-        data.frame(
-          time = 1:max(df$time),
-          date = as.character(out$timeline)
-        ),
-        by = "time"
-      )
-  } else if (length(common) == 0) {
-    stop("No dates or time indices found.")
+  if (is.null(time_freq) && !"time" %in% names(df)) {
+    warning("time_freq is not specified. Defaulting to 'week'.")
+    time_freq <- "week"
   }
+
+  if (is.null(time_freq)) {
+    return(df)
+  }
+
+  if (!"date" %in% names(df)) {
+    stop("time_freq is specified but date column cannot be found.")
+  }
+
+  # convert date to time indices
+  out <- .get_time_indices(df$date, time_freq)
+  df$time <- out$indices
+
+  # add the column containing first dates of the periods
+  df <- df %>% dplyr::select(-"date")
+  df <- df %>%
+    dplyr::full_join(
+      data.frame(
+        time = 1:max(df$time),
+        date = as.character(out$timeline)
+      ),
+      by = "time"
+    )
+  
 
   return(df)
 }
@@ -517,20 +532,32 @@
     return(.recode_covid(df, expected_levels))
   }
 
-  # this function assumes that strings are already lower case
-  ranges <- expected_levels$age
-  age_bounds <- regmatches(
-    ranges,
-    regexpr("^\\d+", ranges)
-  ) %>%
-    as.numeric()
-  breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
   colnames <- names(df)
+
+  # this function assumes that strings are already lower case
+  if ("age" %in% colnames) {
+    if (is.numeric(df$age)) {
+      ranges <- expected_levels$age
+      age_bounds <- regmatches(
+        ranges,
+        regexpr("^\\d+", ranges)
+      ) %>%
+        as.numeric()
+      breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
+
+      df <- df %>% dplyr::mutate(
+        age = cut(df$age, breaks, ranges) %>% as.character()
+      )
+    } else {
+      df <- df %>% dplyr::mutate(
+        age = dplyr::if_else(.data$age %in% expected_levels$age, .data$age, NA)
+      )
+    }
+  }
 
   df <- df %>% dplyr::mutate(
     sex  = if("sex" %in% colnames) dplyr::if_else(.data$sex %in% expected_levels$sex, .data$sex, NA),
     race = if("race" %in% colnames) dplyr::if_else(.data$race %in% c(expected_levels$race, NA), .data$race, "other"),
-    age  = if("age" %in% colnames) cut(df$age, breaks, ranges) %>% as.character(),
     edu  = if("edu" %in% colnames) dplyr::if_else(.data$edu %in% expected_levels$edu, .data$edu, NA),
     positive = if("positive" %in% colnames) dplyr::case_match(
       as.character(.data$positive),
@@ -905,10 +932,13 @@
     race = "cat"
   )
 
-  if (!is.null(metadata$special_case) &&
-      metadata$special_case == "covid") types$zip <- "cat"
-  if (!is.null(metadata$special_case) &&
-      metadata$special_case == "poll") types$edu <- "cat"
+  if (identical(metadata$special_case, "covid")) {
+    types$zip <- "cat"
+    if (!is_aggregated) types$id <- "ignore"
+  }
+  if (identical(metadata$special_case, "poll")) {
+    types$edu <- "cat"
+  }
 
   if (is_sample) {
     if (metadata$family == "binomial") {
@@ -923,11 +953,14 @@
 
   if (is_aggregated) {
     types$age  <- "cat"
-    types$total <- "ignore"
   } else {
     types$age  <- "ignore"
   }
-  
+
+  if (is_aggregated && metadata$family == "binomial") {
+    types$total <- "ignore"
+  }
+
   return(types)
 }
 
@@ -988,7 +1021,11 @@
 #'
 #' @noRd
 #'
-.check_data <- function(df, expected_types, is_aggregated, na_threshold = 0.5) {
+.check_data <- function(
+  df,
+  expected_types,
+  na_threshold = 0.5
+) {
   expected_columns <- names(expected_types)
 
   # Check for missing columns
@@ -996,7 +1033,6 @@
   if(length(missing) > 0) {
     stop(paste0("The following columns are missing: ",
                   paste(missing, collapse = ", ")))
-
   }
   
   # Check data types
@@ -1020,9 +1056,59 @@
                 na_threshold * 100, "% rows with missing data: ",
                 paste(high_na_cols, collapse = ", ")))
   }
+}
+
+#' Check sample data for potential issues
+#'
+#' @param df Data frame containing sample data.
+#' @param metadata List containing analysis metadata.
+#' @param is_aggregated Logical indicating if the data is aggregated.
+#'
+#' @noRd
+.check_sample <- function(df, metadata, is_aggregated) {
+  # Check for if data aggregation and distribution family
+  # for outcome measure are specified correctly
+  if (metadata$family == "normal") {
+    if (is_aggregated) {
+      stop("Data with continuous outcome ('normal' family) cannot be aggregated.")
+    } else {
+      if (!("outcome" %in% names(df))) {
+        stop("Data with continuous outcome ('normal' family) must contain an 'outcome' column.")
+      }
+    }
+
+  } else if (metadata$family == "binomial") {
+    if (is_aggregated) {
+      if (!("total" %in% names(df))) {
+        stop("Aggregated data must contain a 'total' column for data with binary outcome ('binomial' family).")
+      }
+      if (!("positive" %in% names(df))) {
+        stop("Aggregated data must contain a 'positive' column for data with binary outcome ('binomial' family).")
+      }
+    } else {
+      if (!("positive" %in% names(df))) {
+        stop("Individual-level data must contain a 'positive' column for data with binary outcome ('binomial' family).")
+      } else if (dplyr::n_distinct(df$positive) != 2) {
+        stop("Individual-level data must have 'positive' column with binary values.")
+      }
+    }
+  } else {
+    stop("Unsupported distribution family.")
+  }
+
   
-  # Check date format
-  if("time" %in% expected_columns) {
+  if (metadata$is_timevar) {
+    # Check for time and date columns in time-varying data
+    if (length(intersect(.const()$vars$time, names(df))) == 0) {
+      stop("Data contains neither time indices or dates but is specified as time-varying.")
+    }
+
+    # Check if there is only one time index
+    if ("time" %in% names(df) && dplyr::n_distinct(df$time) == 1) {
+      stop("There is only one time index. Please use modules for cross-sectional data instead.")
+    }
+
+    # Check date availability and format
     if("date" %in% names(df)) {
       if (anyNA(as.Date(stats::na.omit(df$date), optional = TRUE))) {
         warning("Provided dates are not in expected format. Plots will use time indices instead.")
@@ -1032,10 +1118,6 @@
     }
   }
 
-  # Check if aggregated data misspecified as individual-level
-  if ("total" %in% names(df) && !is_aggregated) {
-    stop("Input data may be aggregated but is specified as individual-level.")
-  }
 }
 
 #' Validate poststratification data against sample data
@@ -1149,7 +1231,11 @@
     is_sample = is_sample,
     is_aggregated = is_aggregated
   )
-  .check_data(data, types, is_aggregated)
+  .check_data(data, types)
+
+  if (is_sample) {
+    .check_sample(data, metadata, is_aggregated)
+  }
 
   # Convert date column to character
   data <- .convert_date_to_character(data)
@@ -1161,12 +1247,8 @@
     data <- data %>% tidyr::drop_na(dplyr::all_of(check_cols))
 
     # convert date to time indices if necessary
-    if (metadata$is_timevar & !is.null(time_freq)) {
-      data <- .add_time_indices(data, time_freq = time_freq)
-
-      if (dplyr::n_distinct(data$time) == 1) {
-        stop("Time variable has only one unique value. Please use modules for cross-sectional data instead.")
-      }
+    if (metadata$is_timevar) {
+      data <- .add_time_indices(data, time_freq)
     }
 
     # remove duplicate rows
