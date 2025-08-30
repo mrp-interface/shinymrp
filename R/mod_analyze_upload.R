@@ -17,6 +17,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny NS tagList conditionalPanel fileInput actionButton downloadButton uiOutput selectizeInput actionLink tags
 mod_analyze_upload_ui <- function(id) {
@@ -260,6 +261,7 @@ mod_analyze_upload_ui <- function(id) {
 #' state with preprocessed data ready for analysis.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateSelectInput updateActionButton renderUI req
 #' @importFrom dplyr mutate filter

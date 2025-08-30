@@ -1,7 +1,7 @@
 sample_data <- example_sample_data(
     is_timevar = TRUE,
     is_aggregated = TRUE,
-    special_case = NULL,
+    special_case = "poll",
     family = "binomial"
 )
 View(sample_data)
@@ -11,8 +11,8 @@ workflow$preprocess(
     sample_data,
     is_timevar = TRUE,
     is_aggregated = TRUE,
-    special_case = NULL,
-    family = "binomial"
+    special_case = "poll",
+    family = "normal"
 )
 
 View(workflow$preprocessed_data())

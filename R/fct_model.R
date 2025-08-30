@@ -10,6 +10,7 @@
 #' @return A cleaned character string with whitespace removed and converted to
 #'   lowercase (e.g., "normal(0,1)" or "student_t(3,0,1)").
 #' @noRd
+#' @keywords internal
 .clean_prior_syntax <- function(s) {
   # Remove whitespace
   s <- gsub("\\s+", "", s)
@@ -38,6 +39,7 @@
 #' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE).
 #'   Returns TRUE for NULL inputs (no prior specified).
 #' @noRd
+#' @keywords internal
 .check_prior_syntax <- function(s) {
   if (is.null(.nullify(s))) {
     return(TRUE)
@@ -89,6 +91,7 @@
 #'   appropriate defaults from .const()$default_priors. Each effect type gets its
 #'   corresponding default prior distribution.
 #' @noRd
+#' @keywords internal
 .set_default_priors <- function(effects) {
   for (type in c("intercept", .const()$args$effect_types)) {
     effects[[type]] <- purrr::map(effects[[type]], ~ .replace_null(.nullify(.x), .const()$default_priors[[type]]))
@@ -113,6 +116,7 @@
 #'   }
 #'
 #' @noRd
+#' @keywords internal
 .group_fixed <- function(fixed, dat) {
   out <- list(
     cat = list(),
@@ -151,6 +155,7 @@
 #'     \item varying_intercept_special: Binary×categorical interactions
 #'   }
 #' @noRd
+#' @keywords internal
 .group_interactions <- function(interactions, dat) {
   out <- list(
     fixed_slope = list(),
@@ -215,6 +220,7 @@
 #'     \item structured: Grouped interactions with structured priors
 #'   }
 #' @noRd
+#' @keywords internal
 .group_effects <- function(effects, dat) {
   out <- list()
   
@@ -266,6 +272,7 @@
 #'     \item s_varits: Special structured varying-intercept interactions
 #'   }
 #' @noRd
+#' @keywords internal
 .ungroup_effects <- function(effects) {
   # for cleaner code
   out <- list(
@@ -543,6 +550,7 @@
 #'     \item Structured priors: Global and local scale parameters (if used)
 #'   }
 #' @noRd
+#' @keywords internal
 .model_stan <- function(effects, metadata) {
   # group effects
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
@@ -594,6 +602,7 @@
 #' @return Character string containing Stan generated quantities code that computes
 #'   log_lik vector with binomial log probability mass function values for each observation
 #' @noRd
+#' @keywords internal
 .gq_loo <- function(metadata) {
   lpf <- switch(metadata$family,
     binomial = "binomial_lpmf(y[n] | n_sample[n], p_sample[n])",
@@ -617,6 +626,7 @@
 #' @return Character string containing Stan generated quantities code that generates
 #'   y_rep array with binomial random draws using fitted probabilities
 #' @noRd
+#' @keywords internal
 .gq_ppc <- function(metadata) {
   scode <- switch(metadata$family,
     binomial = "\n  array[N] int<lower = 0> y_rep = binomial_rng(n_sample, p_sample);",
@@ -647,6 +657,7 @@
 #'     \item Temporal aggregation if specified
 #'   }
 #' @noRd
+#' @keywords internal
 .gq_pstrat <- function(effects, metadata) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
@@ -760,6 +771,7 @@
 #'   }
 #'   Ready for compilation and MCMC sampling.
 #' @noRd
+#' @keywords internal
 .make_stancode_mcmc <- function(effects, metadata=NULL) {
   
   scode <- stringr::str_interp("
@@ -806,6 +818,7 @@ model { ${.model_stan(effects, metadata)}
 #'   }
 #'   Ready for use with generate_quantities() method.
 #' @noRd
+#' @keywords internal
 .make_stancode_gq <- function(
   effects,
   metadata,
@@ -854,6 +867,7 @@ generated quantities { ${gq_code}
 #'     \item Ignored columns: Left unchanged (outcome variables, totals, etc.)
 #'   }
 #' @noRd
+#' @keywords internal
 .stan_factor <- function(df) {
   # find the columns to mutate
   col_names <- setdiff(names(df), .const()$vars$ignore)
@@ -928,6 +942,7 @@ generated quantities { ${gq_code}
 #'     \item sens, spec: Sensitivity and specificity parameters
 #'   }
 #' @noRd
+#' @keywords internal
 .make_standata <- function(
     input_data,
     new_data,
@@ -1073,6 +1088,7 @@ generated quantities { ${gq_code}
 #'   \item{stan_data}{List of data passed to Stan}
 #'   \item{stan_code}{List of generated Stan code for mcmc, ppc, loo, and pstrat}
 #' @noRd
+#' @keywords internal
 .run_mcmc <- function(
     input_data,
     new_data,
@@ -1138,6 +1154,7 @@ generated quantities { ${gq_code}
 #' @return CmdStanR generated quantities fit object containing the requested
 #'   generated quantities (e.g., y_rep for PPC, log_lik for LOO, theta_pop for MRP).
 #' @noRd
+#' @keywords internal
 .run_gq <- function(
     fit_mcmc,
     stan_code,
@@ -1187,6 +1204,7 @@ generated quantities { ${gq_code}
 #'     \item Row names: Updated to include variable.level format
 #'   }
 #' @noRd
+#' @keywords internal
 .add_ref_lvl <- function(df_fixed, effects, input_data) {
   ### include reference levels for binary variables
   m_fix_bc_names <- names(effects$m_fix_bc) %>%
@@ -1244,6 +1262,7 @@ generated quantities { ${gq_code}
 #'     \item ess_bulk, ess_tail: Effective sample size measures
 #'   }
 #' @noRd
+#' @keywords internal
 .get_params_summary <- function(fit, variables, probs = c(0.025, 0.975)) {
   fit$summary(
     variables = variables,
@@ -1274,6 +1293,7 @@ generated quantities { ${gq_code}
 #'     \item Bulk_ESS, Tail_ESS: Effective sample size measures
 #'   }
 #' @noRd
+#' @keywords internal
 .format_params_summary <- function(
     df,
     row_names = NULL,
@@ -1339,6 +1359,7 @@ generated quantities { ${gq_code}
 #'     }
 #'   }
 #' @noRd
+#' @keywords internal
 .get_parameters <- function(
   fit,
   effects,
@@ -1439,6 +1460,7 @@ generated quantities { ${gq_code}
 #'   }
 #'   \item{show_warnings}{Logical indicating whether any diagnostic issues were found}
 #' @noRd
+#' @keywords internal
 .get_diagnostics <- function(
   fit,
   total_transitions,
@@ -1510,6 +1532,7 @@ generated quantities { ${gq_code}
 #'     \item std: Posterior standard deviation
 #'   }
 #' @noRd
+#' @keywords internal
 .get_estimates <- function(
   fit,
   new_data,
@@ -1595,6 +1618,7 @@ generated quantities { ${gq_code}
 #'       }
 #'   }
 #' @noRd
+#' @keywords internal
 .get_replicates <- function(
   fit,
   input_data,

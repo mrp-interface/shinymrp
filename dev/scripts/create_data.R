@@ -38,6 +38,7 @@ major_county <- function(zip_tract) {
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr mutate group_by summarise left_join
 #' @importFrom rlang .data
@@ -74,6 +75,7 @@ create_zip_county_state <- function(zip_tract) {
 #'   When for_plotting=TRUE, names are formatted for display purposes.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr select distinct mutate
 #' @importFrom rlang .data

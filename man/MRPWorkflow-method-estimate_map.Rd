@@ -23,12 +23,13 @@ as \code{geo} in the \verb{$link_acs()} method or the smallest common geographic
 between the sample data and the custom poststratification data
 input using \verb{$load_pstrat()}.}
 
-\item{time_index}{Numeric value specifying the time index for time-varying data.}
+\item{time_index}{Integer specifying the time index for time-varying data.}
 
 \item{interval}{Confidence interval (a numeric value between 0 and 1) or
-standard deviation (\code{"1sd"}, \code{"2sd"}, or \code{"3sd"}) for the estimates (default is 0.95).}
+standard deviation (\code{"1sd"} or \code{"2sd"}) for the estimates (default is 0.95).}
 
-\item{file}{Optional file path to save the map.}
+\item{file}{Optional file path with .html extension to save the interactive map.
+Expand the hamburger menu in the top right corner of the map to access other export options.}
 }
 \value{
 A highcharter map object showing MRP estimates by geography
@@ -37,7 +38,7 @@ A highcharter map object showing MRP estimates by geography
 The \verb{$estimate_map()} method creates interactive choropleth maps showing MRP estimates by geographic regions.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -46,8 +47,12 @@ The \verb{$estimate_map()} method creates interactive choropleth maps showing MR
  # Load example data
  example_model <- example_model()
 
- # Create estimate maps
- workflow$estimate_map(example_model, geo = "county")
+ # Create and (optionally) save an interactive map of MRP estimates
+ est_map <- workflow$estimate_map(
+   example_model,
+   geo = "county",
+   file = "/path/to/est_map.html"
+ )
 
 }
 

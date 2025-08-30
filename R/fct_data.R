@@ -17,6 +17,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom readr read_csv
 #' @importFrom readxl read_excel
@@ -51,6 +52,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .clean_names <- function(names) {
   names %>% 
     tolower() %>% 
@@ -79,6 +81,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr mutate across where
 #' @importFrom stringr str_trim
@@ -107,6 +110,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .find_bad_geocode <- function(geocodes) {
   # Coerce to character (so that NA stays NA_character_)
   geocodes <- as.character(geocodes)
@@ -140,6 +144,7 @@
 #' }
 #' 
 #' @noRd
+#' @keywords internal
 .format_geocode <- function(df) {
   if ("zip" %in% names(df)) {
     if (is.numeric(df$zip)) {
@@ -191,6 +196,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #' @importFrom dplyr mutate across everything if_else
 .clean_data <- function(
     df,
@@ -233,7 +239,8 @@
 #' @return A data frame with rows containing rare values removed. The returned
 #'   data frame maintains the same structure as the input but with fewer rows.
 #' 
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 .omit_rare_rows <- function(df, threshold) {
   # For each column, compute frequencies and flag rare rows
   keep <- rep(TRUE, nrow(df))
@@ -269,6 +276,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .rename_columns <- function(
     df,
     covid_indiv = FALSE
@@ -312,6 +320,7 @@
 #' @return Data frame with duplicate records removed.
 #'
 #' @noRd
+#' @keywords internal
 .remove_duplicates <- function(data, is_covid = FALSE) {
   if (is_covid) {
     data <- .remove_duplicates_covid(data)
@@ -340,6 +349,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .impute <- function(v) {
   cond <- is.na(v)
  
@@ -374,6 +384,7 @@
 #'   - timeline: Date vector of the first date of every period between the min and max
 #'
 #' @noRd
+#' @keywords internal
 .get_time_indices <- function(date_strings, time_freq = c("week", "month", "year")) {
   time_freq <- base::match.arg(time_freq)
   dates <- base::as.Date(date_strings)
@@ -417,6 +428,7 @@
 #'   otherwise returns the original data frame unchanged
 #'
 #' @noRd
+#' @keywords internal
 .convert_date_to_character <- function(df) {
   if ("date" %in% names(df)) {
     df <- df %>% dplyr::mutate(date = as.character(.data$date))
@@ -448,6 +460,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr full_join
 .add_time_indices <- function(df, time_freq = NULL) {
@@ -501,6 +514,7 @@
 #' @return Character vector of formatted unique dates in sorted order.
 #'
 #' @noRd
+#' @keywords internal
 .get_dates <- function(df) {
   df$date %>%
     stats::na.omit() %>%
@@ -524,6 +538,7 @@
 #' @return Data frame with recoded variables matching expected levels.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr mutate if_else case_match
 #' @importFrom rlang .data
@@ -582,6 +597,7 @@
 #'   if input is NULL.
 #'
 #' @noRd
+#' @keywords internal
 #'
 .filter_geojson <- function(geojson, geoids, omit = FALSE) {
   if(is.null(geojson) | is.null(geoids)) {
@@ -622,6 +638,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .to_fips <- function(vec, link_geo) {
   checkmate::assert_choice(
     link_geo,
@@ -663,6 +680,7 @@
 #'   their associated geographic predictors.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr group_by summarize_all select distinct all_of sym n_distinct
 .get_geo_predictors <- function(df, geo_col) {
@@ -694,6 +712,7 @@
 #'   Returns NULL if no geographic variables are found.
 #'
 #' @noRd
+#' @keywords internal
 #'
 .get_smallest_geo <- function(col_names) {
   geo_all <- .const()$vars$geo
@@ -728,6 +747,7 @@
 #'   Geographic scales follow the hierarchy: zip -> county -> state.
 #'
 #' @noRd
+#' @keywords internal
 .get_possible_geos <- function(col_names) {
   smallest <- .get_smallest_geo(col_names)
   if (is.null(smallest)) {
@@ -750,6 +770,7 @@
 #' @return Data frame with additional geographic variables at larger scales.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr select rename mutate distinct
 #' @importFrom rlang .data
@@ -810,6 +831,7 @@
 #' @return Data frame with specified columns converted to factors.
 #'
 #' @noRd
+#' @keywords internal
 .as_factor <- function(df, levels) {
   # Find columns that exist in both df and have defined levels
   cols_to_convert <- intersect(names(df), names(levels))
@@ -836,6 +858,7 @@
 #' @return Data frame resulting from the clean left join operation.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr select right_join
 .clean_left_join <- function(df1, df2, by) {
@@ -863,7 +886,8 @@
 #' @param tol Numeric tolerance for integer-like check.
 #' @param use_round_probe Logical; try rounding probe for numeric categories.
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #' @keywords internal
 .data_type <- function(col,
                        num = FALSE,
@@ -921,6 +945,7 @@
 #'   data types ("bin", "cat", "cont", "ignore").
 #'
 #' @noRd
+#' @keywords internal
 .create_expected_types <- function(
   metadata,
   is_sample = TRUE,
@@ -981,6 +1006,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .create_expected_levels <- function(metadata) {
   if (!is.null(metadata$special_case) &&
       metadata$special_case == "poll") {
@@ -1020,6 +1046,7 @@
 #' Issues warnings for date format problems in time-varying data.
 #'
 #' @noRd
+#' @keywords internal
 #'
 .check_data <- function(
   df,
@@ -1065,6 +1092,7 @@
 #' @param is_aggregated Logical indicating if the data is aggregated.
 #'
 #' @noRd
+#' @keywords internal
 .check_sample <- function(df, metadata, is_aggregated) {
   # Check for if data aggregation and distribution family
   # for outcome measure are specified correctly
@@ -1137,6 +1165,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 .check_pstrat <- function(df, df_ref, expected_levels) {
   if (is.null(df_ref)) {
     stop("Sample data is not provided.")
@@ -1178,7 +1207,6 @@
 #'     \item special_case: "covid" or "poll" for specialized processing
 #'   }
 #' @param zip_county_state Data frame containing ZIP code to county/state crosswalk.
-#' @param time_freq Character string specifying the time indexing frequency or time length for grouping dates (YYYY-MM-DD) in the data.
 #' @param freq_threshold Numeric. Minimum frequency threshold for omitting rare rows.
 #' @param is_sample Logical. Whether the data represents sample data (TRUE) or
 #'   poststratification data (FALSE). Affects validation and processing steps.
@@ -1197,6 +1225,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
 #' @importFrom tidyr drop_na
@@ -1205,7 +1234,6 @@
   data,
   metadata,
   zip_county_state,
-  time_freq = NULL,
   freq_threshold = NULL,
   is_sample = TRUE,
   is_aggregated = TRUE
@@ -1247,8 +1275,8 @@
     data <- data %>% tidyr::drop_na(dplyr::all_of(check_cols))
 
     # convert date to time indices if necessary
-    if (metadata$is_timevar) {
-      data <- .add_time_indices(data, time_freq)
+    if (!is.null(metadata$time_freq)) {
+      data <- .add_time_indices(data, metadata$time_freq)
     }
 
     # remove duplicate rows
@@ -1313,6 +1341,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 .create_variable_list <- function(input_data, covariates) {
   # list of variables for model specification
@@ -1385,6 +1414,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr select rename inner_join group_by summarise across mutate summarize_all
 #' @importFrom rlang .data
@@ -1473,6 +1503,7 @@
 #'   \item{vars}{Variable lists for model specification (fixed, varying, omit)}
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr filter select mutate arrange across left_join
 #' @importFrom rlang sym .data
@@ -1570,6 +1601,7 @@
 #'   \item{vars}{Variable lists for model specification (fixed, varying, omit)}
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom dplyr filter mutate
 #' @importFrom rlang sym

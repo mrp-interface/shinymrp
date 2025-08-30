@@ -8,6 +8,7 @@
 #' within your package. The default, none, returns the root of the app.
 #'
 #' @noRd
+#' @keywords internal
 app_sys <- function(...) {
   system.file(..., package = "shinymrp")
 }
@@ -22,6 +23,7 @@ app_sys <- function(...) {
 #' @param file Location of the config file
 #'
 #' @noRd
+#' @keywords internal
 get_golem_config <- function(
   value,
   config = Sys.getenv(

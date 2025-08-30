@@ -8,7 +8,8 @@
 sample_size_map(file = NULL)
 }
 \arguments{
-\item{file}{Optional file path to save the plot.}
+\item{file}{Optional file path with .html extension to save the interactive map.
+Expand the hamburger menu in the top right corner of the map to access other export options.}
 }
 \value{
 A highcharter map object showing sample size distribution.
@@ -16,10 +17,10 @@ A highcharter map object showing sample size distribution.
 \description{
 The \verb{$sample_size_map()} method creates interactive choropleth maps
 showing data distribution with respect to geography. This method cannot be used
-if there is no geographic information in either the sample or poststratification data.
+if either the sample or poststratification data contains no geographic information.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -43,8 +44,8 @@ if there is no geographic information in either the sample or poststratification
    acs_year = 2021
  )
 
- # Create sample size map
- workflow$sample_size_map()
+ # Create and (optionally) save an interactive sample size map
+ ss_map <- workflow$sample_size_map(file ="path/to/sample_size_map.html")
 }
 
 }

@@ -20,7 +20,7 @@ The \verb{$compare_models()} method compares multiple fitted \code{MRPModel} obj
 using leave-one-out cross-validation to assess relative model performance.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow

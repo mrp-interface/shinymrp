@@ -5,6 +5,7 @@
 #' including unique ID generation and name management for Shiny modules.
 #'
 #' @noRd
+#' @keywords internal
 ShinyMRPModel <- R6::R6Class(
   "ShinyMRPModel",
   inherit = MRPModel,

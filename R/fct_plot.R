@@ -9,6 +9,7 @@
 #' @return A data frame with state names converted to uppercase, state_name to title case,
 #'   and county names to title case if present
 #' @noRd
+#' @keywords internal
 .fips_upper <- function(fips) {
   has_county <- "county" %in% names(fips)
 
@@ -35,6 +36,7 @@
 #' @return A data frame formatted for visualization with geographic identifiers, counts,
 #'   percentages, and hover text for maps or cleaned names for tables
 #' @noRd
+#' @keywords internal
 .prep_sample_size <- function(
   input_data,
   fips_codes,
@@ -120,6 +122,7 @@
 #'   }
 #'   Returns NULL if input_data is NULL.
 #' @noRd
+#' @keywords internal
 .prep_raw <- function(
   input_data,
   fips_codes,
@@ -131,12 +134,6 @@
   checkmate::assert_choice(
     geo,
     choices = .const()$vars$geo2,
-    null.ok = FALSE
-  )
-  
-  checkmate::assert_choice(
-    summary_type,
-    choices = .const()$args$summary_types,
     null.ok = FALSE
   )
   
@@ -235,6 +232,7 @@
 #' @return A data frame with estimates, geographic information, and formatted hover
 #'   text for map visualization
 #' @noRd
+#' @keywords internal
 .prep_est <- function(
     est_df,
     fips_codes,
@@ -301,6 +299,7 @@
 #'
 #' @return A ggplot object or patchwork object showing demographic comparisons
 #' @noRd
+#' @keywords internal
 .plot_demographic <- function(
     input_data,
     new_data,
@@ -382,6 +381,7 @@
 #'
 #' @return A ggplot object showing the covariate distribution histogram
 #' @noRd
+#' @keywords internal
 .plot_geographic <- function(
     covariates,
     breaks,
@@ -450,6 +450,7 @@
 #'
 #' @return A ggplot object showing prevalence time series with optional estimates
 #' @noRd
+#' @keywords internal
 .plot_outcome_timevar <- function(
   raw,
   yrep_est = NULL,
@@ -588,6 +589,7 @@
 #'
 #' @return A ggplot object showing support comparison with error bars
 #' @noRd
+#' @keywords internal
 .plot_outcome_static <- function(
     raw,
     yrep_est = NULL,
@@ -672,6 +674,7 @@
 #'
 #' @return A ggplot object showing posterior predictive check with multiple replications
 #' @noRd
+#' @keywords internal
 .plot_ppc_timevar_subset <- function(
     yrep,
     raw,
@@ -761,6 +764,7 @@
 #'
 #' @return A ggplot object showing posterior predictive check for polling data
 #' @noRd
+#' @keywords internal
 .plot_ppc_static <- function(
     yrep,
     raw,
@@ -821,6 +825,7 @@
 #'
 #' @return A patchwork object containing multiple ggplot panels showing time-varying estimates
 #' @noRd
+#' @keywords internal
 .plot_est_timevar <- function(
     plot_df,
     dates,
@@ -962,6 +967,7 @@
 #'
 #' @return A ggplot object showing static estimates with error bars
 #' @noRd
+#' @keywords internal
 .plot_est_static <- function(
   plot_df,
   metadata = NULL,
@@ -1029,6 +1035,7 @@
 #'
 #' @return A highcharter map object showing choropleth visualization
 #' @noRd
+#' @keywords internal
 .choro_map <- function(
     plot_df,
     geojson,

@@ -1,6 +1,7 @@
 #' @title Global list of shiny module IDs
 #' @noRd
 #' @keywords internal
+#' @keywords internal
 module_ids <- list(
   home = "home",
   analyze = list(
@@ -21,6 +22,7 @@ module_ids <- list(
 #' @title Global Constants
 #' @description A global list containing paths, UI styles, and other constants used throughout the application.
 #' @noRd
+#' @keywords internal
 #' @keywords internal
 .const <- function() {
   list(

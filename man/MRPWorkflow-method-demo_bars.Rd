@@ -12,17 +12,17 @@ demo_bars(demo, file = NULL, ...)
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
 }
 \value{
-A ggplot object or patchwork object showing demographic comparisons
+A ggplot object showing demographic comparisons
 }
 \description{
 Creates bar plots for comparing demographic distributions between
 sample data and poststratification data.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -46,8 +46,15 @@ sample data and poststratification data.
    acs_year = 2021
  )
 
- # Create demographic comparison plots
- workflow$demo_bars(demo = "sex")
+ # Create and (optionally) save a demographic comparison plot
+ # with dimensions in inches
+ sex_bar <- workflow$demo_bars(
+   demo = "sex",
+   file = "path/to/sex_bar.png",
+   width = 18,
+   height = 8,
+   units = "in"
+ )
 }
 
 }

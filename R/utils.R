@@ -9,6 +9,7 @@
 #' @return NULL if the input is considered empty, otherwise returns x unchanged
 #'
 #' @noRd
+#' @keywords internal
 .nullify <- function(x) {
   # Check for empty vector and NULL
   if (length(x) == 0) return(NULL)
@@ -39,6 +40,7 @@
 #' @return The replacement value if x is NULL, otherwise returns x unchanged
 #'
 #' @noRd
+#' @keywords internal
 .replace_null <- function(x, replacement) {
   if (is.null(x)) {
     return(replacement)
@@ -57,6 +59,7 @@
 #'   or "Unknown Data Format" if the format is not recognized
 #'
 #' @noRd
+#' @keywords internal
 .use_case_label <- function(metadata, labels = .const()$ui$use_case_labels) {
   if (!is.null(metadata$special_case)) {
     switch(metadata$special_case,
@@ -87,6 +90,7 @@
 #' @return Character. A random alphanumeric string of length n
 #'
 #' @noRd
+#' @keywords internal
 .generate_id <- function(n = 8) {
   # Define the pool of characters: digits, lowercase and uppercase letters
   chars <- c(0:9, letters, LETTERS)
@@ -108,6 +112,7 @@
 #' @importFrom config get
 #'
 #' @noRd
+#' @keywords internal
 .get_config <- function(value) {
   config::get(
     value  = value,
@@ -132,6 +137,7 @@
 #'   pattern: usecase_family_suffix.ext (e.g., "covid_binomial_raw.csv")
 #'
 #' @noRd
+#' @keywords internal
 .create_example_filename <- function(
   metadata,
   suffix = c("raw", "prep", "fit"),
@@ -171,7 +177,7 @@
 #'
 #' @param interval Numeric value between 0 and 1 for credible intervals
 #'   (e.g., 0.95 for 95% CI), or character string for standard deviations
-#'   ("1sd", "2sd", or "3sd")
+#'   ("1sd" or "2sd")
 #'
 #' @return List containing interval parameters:
 #'   \itemize{
@@ -182,6 +188,7 @@
 #'   }
 #'
 #' @noRd
+#' @keywords internal
 .check_interval <- function(interval) {
   is_ci <- TRUE
   qlower <- 0.025
@@ -189,8 +196,8 @@
   n_sd <- 1
 
   if (is.character(interval)) {
-    if (!grepl("^[1-3]+sd$", interval, ignore.case = FALSE)) {
-      stop("For standard deviation of uncertainty, 'interval' must be either '1sd', '2sd', or '3sd'.")
+    if (!grepl("^[1-2]+sd$", interval, ignore.case = FALSE)) {
+      stop("For standard deviation of uncertainty, 'interval' must be either '1sd' or '2sd'.")
     }
     
     is_ci <- FALSE
@@ -235,6 +242,7 @@
 #' determined by file extension (CSV files return data frames, QS files
 #' return the original R object, and R files return character lines)
 #' @noRd
+#' @keywords internal
 .fetch_data <- function(
   file,
   org = "mrp-interface",

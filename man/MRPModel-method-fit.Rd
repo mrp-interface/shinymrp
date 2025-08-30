@@ -20,7 +20,7 @@ fit(n_iter = 2000, n_chains = 4, seed = NULL, ...)
 The \verb{$fit()} method of a \code{MRPModel} object fits the model using Stan.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow

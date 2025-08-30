@@ -17,6 +17,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny NS tagList fluidRow column tags
 mod_about_ui <- function(id){
@@ -70,6 +71,7 @@ mod_about_ui <- function(id){
 #' module server structure without active reactive functionality.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny moduleServer
 mod_about_server <- function(id){

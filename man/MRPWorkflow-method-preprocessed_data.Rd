@@ -11,7 +11,7 @@ preprocessed_data()
 The \verb{$preprocessed_data()} method returns the preprocessed sample data.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow

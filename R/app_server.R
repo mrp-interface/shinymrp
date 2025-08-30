@@ -4,6 +4,7 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @noRd
+#' @keywords internal
 app_server <- function(input, output, session) {
   # set file upload size limit
   options(shiny.maxRequestSize = 200*1024^2)

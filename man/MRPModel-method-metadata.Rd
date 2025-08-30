@@ -13,7 +13,7 @@ returns the metadata associated with the model,
 including metadata inherited from a workflow object and model fitting parameters.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Load example data

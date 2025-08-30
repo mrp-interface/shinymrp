@@ -13,7 +13,7 @@ covar_hist(covar, file = NULL, ...)
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
 }
 \value{
 A ggplot object showing the covariate distribution histogram.
@@ -25,7 +25,7 @@ showing the distribution of geographic covariates across ZIP codes. Refer to the
 \emph{This method is only available for \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules}{COVID data}}.
 }
 \examples{
-\donttest{
+if (FALSE) {
 library(shinymrp)
  library(shinymrp)
 
@@ -50,8 +50,15 @@ library(shinymrp)
    acs_year = 2021
  )
 
- # Create covariate distribution histograms
- workflow$covar_hist("college")
+ # Create and (optionally) save a covariate distribution histogram
+ # with dimensions in inches
+ college_hist <- workflow$covar_hist(
+   "college",
+   file = "path/to/college_hist.png",
+   width = 18,
+   height = 8,
+   units = "in"
+ )
 }
 
 }

@@ -17,6 +17,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny NS tagList uiOutput selectInput conditionalPanel plotOutput
 mod_analyze_visualize_ui <- function(id){
@@ -74,6 +75,7 @@ mod_analyze_visualize_ui <- function(id){
 #' various types of plots and maps for data exploration.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny moduleServer observeEvent updateSelectInput renderUI renderPlot req isolate
 #' @importFrom dplyr mutate

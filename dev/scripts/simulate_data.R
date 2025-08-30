@@ -245,6 +245,7 @@ simulate_data <- function(
 #' @return Character. A random alphanumeric string of length n
 #'
 #' @noRd
+#' @keywords internal
 .generate_id <- function(n = 8) {
   # Define the pool of characters: digits, lowercase and uppercase letters
   chars <- c(0:9, letters, LETTERS)

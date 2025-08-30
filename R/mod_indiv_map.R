@@ -4,7 +4,8 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #'
 #' @importFrom shiny NS tagList 
 mod_indiv_map_ui <- function(id) {
@@ -29,7 +30,8 @@ mod_indiv_map_ui <- function(id) {
     
 #' indiv_map Server Functions
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #' @importFrom dplyr mutate
 #' @importFrom rlang .data
 mod_indiv_map_server <- function(id, workflow, fips_codes){

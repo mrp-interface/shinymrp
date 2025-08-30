@@ -195,6 +195,19 @@ test_that("outcome_map works correctly", {
     expect_s3_class(hc, "highchart")
   }
 
+  # Test error handling for invalid summary_type
+  expect_error(
+    workflow$outcome_map(summary_type = "invalid_type"),
+    "Assertion on 'summary_type' failed"
+  )
+
+  # Test error handling for NULL summary_type
+  expect_error(
+    workflow$outcome_map(summary_type = NULL),
+    "For time-varying data, please specify summary_type"
+  )
+
+
   # For cross-sectional data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -206,15 +219,13 @@ test_that("outcome_map works correctly", {
   )
 
   # Test basic functionality
-  for (stype in c("max", "min")) {
-    hc <- workflow$outcome_map(summary_type = stype)
-    expect_s3_class(hc, "highchart")
-  }
+  hc <- workflow$outcome_map(summary_type = NULL)
+  expect_s3_class(hc, "highchart")
 
-  # Test error handling for invalid summary_type
-  expect_error(
-    workflow$outcome_map(summary_type = NULL),
-    "Assertion on 'summary_type' failed"
+  # Expect warning when summary_type is correctly specified
+  expect_warning(
+    workflow$outcome_map(summary_type = "max"),
+    "summary_type is only applicable for time-varying data."
   )
 
   # Test file saving functionality
@@ -409,7 +420,7 @@ test_that("estimate_map works correctly", {
   expect_s3_class(hc, "highchart")
   
   # Test different intervals
-  hc <- workflow$estimate_map(model, interval = "3sd")
+  hc <- workflow$estimate_map(model, interval = "2sd")
   expect_s3_class(hc, "highchart")
   
   # Test file saving functionality

@@ -19,35 +19,34 @@ library(shinymrp)
 ```
 
 
-This vignette provides data requirements, implementation overview, and relevant code reference for the data preparation in `shinymrp`.
+This vignette details the data requirements, implementation steps, and relevant code references for data preparation in **shinymrp**.
 
-MRP requires two key components: the survey or test data and the corresponding poststratification table. The first stage uses 
-multilevel regression (MR) models to infer relationships between demographic-geographic information and the outcome measure,
-optionally incorporating geographic covariates to account for area-level differences. The second stage, poststratification (P),
-adjusts estimates based on the composition of the target population.
+MRP requires two main data components: the survey or test data, and a corresponding poststratification table. The workflow involves two stages:
+
+- **Multilevel regression (MR):** Modeling the relationship between the outcome and demographic/geographic predictors, optionally incorporating area-level covariates;
+- **Poststratification (P):** Aggregating estimates according to the population structure of the target.
 
 ## Data requirements
 
-### Individual-level vs. Aggregated Data
+### Individual-level vs. aggregated data
 
-The preprocessing code accepts data in two formats:
+Data preprocessing accepts either of these formats:
 
-- **Individual-level**: Each row contains information for one individual.
-- **Aggregated**: Each row contains information for one group (e.g., White males aged 18-30 in Michigan), with geographic-demographic factors, total numbers of individuals, and summary of outcomes.
+- **Individual-level:** Each row contains data for a single person.
+- **Aggregated:** Each row contains data for a group (e.g., White males aged 18-30 in Michigan), summarizing demographic/geographic factors, totals, and outcome summaries.
 
-Data with continuous outcome measures are expected only at individual-level.
-For data with binary outcome measures, the aggregated format is preferred for computational benefits.
-Individual-level data will be automatically aggregated upon upload.
-Data requirements vary slightly between formats, mainly regarding the outcome measure.
+For **continuous outcomes**, only individual-level data are supported.  
+For **binary outcomes**, the aggregated format is preferred for computational efficiency; individual-level data are aggregated automatically upon upload.
+Other data requirements depend on format, primarily regarding outcome measures.
 
-### Required Columns and Categories
+### Required columns and naming conventions
 
-The code screens input data using a specific naming convention. Here's a list of the expected columns and their values (case-insensitive):
+The code expects columns with specific names and values (not case-sensitive):
 
 - Sex: male, female
 - Race: Black, White, other
 - Age
-- Education attainment (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
+- Edu (education attainment): below high school (no hs), high school (hs), some college, 4-year college, post-grad
 - ZIP code [^geo]
 - County [^geo]
 - State [^geo]
@@ -58,18 +57,15 @@ The code screens input data using a specific naming convention. Here's a list of
 - Cross-tabulation cell counts (total) [^outcome-bin]
 - Survey weights (weight) [^weight]
 
-[^geo]: For general use cases, providing geographic information is optional. The application will automatically identify the smallest geographic scale available and provide the corresponding higher levels.
-[^time]: If the input sample data are in aggregated format, there has to be a column named 'time' that contains time indices. An optional 'date' column containing the date of the first day of each period can be included for visualization purposes. For individual-level sample data, the interface will automatically convert the dates to time indices, but users can also provide the time indices directly. The interface uses time-invariant poststratification data.
-[^outcome-cont]: For data with continuous outcome measures, the outcome column must be named 'outcome'.
-[^outcome-bin]: For binary outcome measures, the outcome column of individual-level data must be named 'positive'. Aggregated data require two columns to represent the outcome measures: the total count of individuals and the number of positive responses for each cross-tabulation cell, which should be named 'total' and 'positive', respectively.
-[^weight]: Please name the column containing survey weights in the data 'weight'. If the uploaded poststratification data include survey weights, the interface uses weights to estimate the population counts.
+[^geo]: Geographical columns are optional for general use. The app automatically identifies the smallest available geographic scale and infers higher levels.
+[^time]: For individual-level data, dates are automatically converted to time indices but can be provided explicitly. Aggregated data must include a `time` column with time indices. Optionally include a `date` column (first day of each period) for visualization. The interface uses time-invariant poststratification data.
+[^outcome-cont]: For continuous outcomes, name your outcome column `outcome`.
+[^outcome-bin]: For binary outcomes, the column in individual-level data must be `positive`. For aggregated data, use `total` (number in cell) and `positive` (number positive in cell).
+[^weight]: Survey weights must be in a column named `weight`. If uploaded poststratification data contain weights, they’re used to estimate population counts.
 
-### Data Categories/Modules
+### Data modules
 
-We categorize input data for clear definition of requirements and clean implementation.
-The two main categories, time-varying and cross-sectional data, supports specific applications
-along with broader uses cases. Below is a comprehensive data requirements cheatsheet that
-represents the data preprocessing result for each category.
+Input data are categorized for clear requirements and implementation, with multiple modules. The two primary categories, **time-varying** and **cross-sectional**, support specific applications as well as general cases. The following cheatsheet summarizes requirements and typical preprocessing outputs for each.
 
 ---
 
@@ -77,15 +73,15 @@ represents the data preprocessing result for each category.
 
 ---
 
-**COVID Test Data**
+**COVID-19 Test Data**
 
 1. Sample data
 
 - Sex: male, female
 - Race: Black, White, other
 - Age: 0-17, 18-34, 35-64, 65-74, 75+
-- ZIP code (zip): Each ZIP code is treated as distinct
-- Time: Dates (yyyy-mm-dd) or time indices (starting with index 1 assigned to the earliest period in the data)
+- ZIP code: each ZIP treated as distinct
+- Time: Dates (yyyy-mm-dd) or sequential indices (starting at 1)
 
 2. Poststratification data
 
@@ -99,10 +95,10 @@ represents the data preprocessing result for each category.
 - Sex: male, female
 - Race: Black, White, other
 - Age: 0-17, 18-34, 35-64, 65-74, 75+
-- ZIP code: Each ZIP code is treated as distinct
-- County: Five-digit FIPS codes required due to duplicates in county names
-- State: Names, abbreviations, or FIPS accepted
-- Time: Dates (yyyy-mm-dd) or time indices (starting with index 1 assigned to the earliest period in the data)
+- ZIP code: each ZIP treated as distinct
+- County: five-digit FIPS codes required
+- State: name, abbreviation, or FIPS code
+- Time: Dates or sequential indices
 
 2. Poststratification data
 
@@ -122,8 +118,8 @@ represents the data preprocessing result for each category.
 - Sex: male, female
 - Race: Black, White, other
 - Age: 18-29, 30-39, 40-49, 50-59, 60-69, 70+
-- Education level (edu): below high school (no hs), high school (hs), some college, 4-year college, post-grad
-- State: Names (e.g., Michigan), abbreviations (e.g., MI), or FIPS (e.g., 26) accepted
+- Education (edu): below high school, high school, some college, 4-year college, post-grad
+- State: name, abbreviation, or FIPS code
 
 2. Poststratification data
 
@@ -136,9 +132,9 @@ represents the data preprocessing result for each category.
 - Sex: male, female
 - Race: Black, White, other
 - Age: 0-17, 18-34, 35-64, 65-74, 75+
-- ZIP code: Each ZIP code is treated as distinct
-- County: Five-digit FIPS codes required due to duplicates in county names
-- State: Names, abbreviations, or FIPS accepted
+- ZIP code: each ZIP treated as distinct
+- County: five-digit FIPS codes
+- State: name, abbreviation, or FIPS code
 
 2. Poststratification data
 
@@ -146,48 +142,51 @@ represents the data preprocessing result for each category.
 - User upload
 
 
-### Data Preprocessing
+### Data preprocessing steps
 
-The preprocessing pipeline follows these general steps:
+The preprocessing pipeline includes:
 
-- **Data cleaning**: standardizing column names, converting character values to lowercase, handling missing/unknown data, standardizing ZIP and FIPS codes
-- **Conversion to categorical data**: recoding categorical data, converting numeric values to categories using predefined intervals, assigning time indices to dates
-- **Data imputation**: imputing missing data based on frequency distributions of converted categories in the data
-- **Data aggregation**: aggregating individual-level records to create cell counts for each unique combination of relevant demographic-geographic factors
+- **Data cleaning**: Standardizes column names, converts values to lowercase, handles missing/unknown data, and standardizes ZIP/FIPS codes.
+- **Conversion to categorical**: Recodes variables, applies categorization intervals, and assigns time indices to dates.
+- **Imputation**: Imputes missing entries using observed frequency distributions.
+- **Aggregation**: Aggregates individual-level data to produce cell counts for each combination of relevant group factors.
 
-Code reference: [`.preprocess`](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R#L1211).
+Code reference: [preprocess](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R#L1211).
 
-### Geographic Identifiers & Covariates
+### Geographic identifiers and covariates
 
-One of the major strengths of MRP is small-area estimation. To leverage this capability, information about geographic areas and their characteristics should be included so that the model can account for related group-level variation in the data. To this end, the interface gathers as much geographic information as possible based on what is provided in the data.
+A major strength of MRP is small area estimation, so it is recommended to include as much geographic/geocovariate information as available.
 
-First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that overlaps with each ZIP code the most.
+First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that has the largest overlap with each ZIP code.
 
-In addition to geographic areas, the application also gathers quantities associated with them either from the data or external sources. For use cases other than COVID data, the app scans the data to find quantities that have a one-to-one relationship with the geographic identifier of interest. For COVID data, we have identified certain ZIP code-level quantities that are informative in modeling COVID test results, such as education level and household income. We obtain these quantities at the tract level from the ACS and other sources, then aggregate over the tracts that overlap with each ZIP code based on the USPS crosswalk table.
+Quantitative measures associated with geographic units are sourced from your data or external datasets. For general use cases, the app scans the data to find quantities that have a one-to-one relationship with the geographic identifier of interest. 
+
+For the COVID-19 use case, we have identified certain ZIP code-level measures that are informative in modeling COVID-19 test results. We obtain these quantities at the tract level from the ACS and other sources, then aggregate over the tracts that overlap with each ZIP code based on the USPS crosswalk table.
 
 We obtain the following tract-level measures from the ACS and other sources:
 
 - Binary indicators of whether tracts are classified as urban or not
-- Population sizes based on levels of education
-- Population sizes based on ratios of income to poverty level in the past 12 months
-- Population sizes based on employment status
+- Population counts categorized by levels of education
+- Population counts categorized by ratios of income to poverty level in the past 12 months
+- Population counts categorized by employment status
 - Median household income in the past 12 months
-- [Area Deprivation Index (ADI)](https://www.neighborhoodatlas.medicine.wisc.edu)
+- [Area Deprivation Index (ADI)](https://www.neighborhoodatlas.medicine.wisc.edu).
 
-Code reference: [`get_tract_data`](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/get_tract_data.R#L49)
+Code reference: [get_tract_data](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/get_tract_data.R#L49).
 
-To obtain ZIP-code-level estimates, we combine the values across census tracts as follows:
+While the ACS reports geography at the levels of census tracts, counties, and states, ZIP codes are defined by the U.S. Postal Service (USPS). We use the ZIP code crosswalk table released by the U.S. Department of Housing and Urban Development and USPS to link ZIP codes to census tracts and calculate the ZIP-code-level measures by aggregating all available tract-level measures weighted by tract population counts. ZIP code level statistics are computed by combining the values across census tracts as follows:
 
-- Urbanicity of a ZIP code is defined as the percentage of covered census tracts classified as urban, weighted by tract population counts.
-- Higher education measure of a ZIP code is defined as the percentage of the residing population who have earned an Associate's degree or higher.
-- Poverty measure of a ZIP code is defined as the percentage of the residing population whose ratio of income to poverty level in the past 12 months is below 100%.
-- Employment rate of a ZIP code is defined as the percentage of the residing population who are employed as a part of the civilian labor force.
-- Income measure of a ZIP code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts.
-- Area Deprivation Index (ADI) of a ZIP code is the average ADI across covered census tracts, weighted by tract population counts.
+- Urbanicity of a ZIP code is defined as the percentage of covered census tracts classified as urban, weighted by tract population counts;
+- Higher education measure of a ZIP code is defined as the percentage of the residing population who have earned an Associate's degree or higher;
+- Poverty measure of a ZIP code is defined as the percentage of the residing population whose ratio of income to poverty level in the past 12 months is below 1;
+- Employment rate of a ZIP code is defined as the percentage of the residing population who are employed as a part of the civilian labor force;
+- Income measure of a ZIP code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts;
+- ADI of a ZIP code is the average ADI across covered census tracts, weighted by tract population counts.
 
-Code reference: [`combine_tracts_covid`](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97)
+Code reference: [combine_tracts_covid](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97).
 
-### Poststratification Table
-We obtain ACS data through the packages tidycensus and IPUMS to compute the poststratification tables, which contain the size of each subpopulation defined by the cross-tabulation of demographic-geographic factors. Each subpopulation consists of individuals corresponding to a unique combination of these factors. We precompute and store the poststratification table at the tract level, then aggregate across tracts to derive counts at larger geographic scales. Census tracts fall perfectly within counties and states but ZIP codes have many-to-many relationships with tracts. We address this by summing over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
+### Poststratification tables
 
-Code reference: [`.combine_tracts`](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R#L1403) and [`combine_tracts_covid`](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97)
+Poststratification tables are computed from ACS data via the `tidycensus` and `IPUMS` packages and summarize the size of every subpopulation defined by demographic and geographic cross-categories. For efficiency, tables are precomputed at the tract level and then aggregated for larger geographies. We select the county with the most-overlapping residential addresses for one ZIP code as the ZIP-linked county and sum over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
+
+Code reference: [combine_tracts](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R#L1403) and [combine_tracts_covid](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97)

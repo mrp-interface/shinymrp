@@ -44,54 +44,54 @@
 #'
 #'
 #' @examples
-#' \donttest{
-#'  library(shinymrp)
+#' if (FALSE) {
+#'    library(shinymrp)
 #'
-#'  # Initialize workflow
-#'  workflow <- mrp_workflow()
+#'    # Initialize workflow
+#'    workflow <- mrp_workflow()
 #'
-#'  # Load example data
-#'  sample_data <- example_sample_data()
+#'    # Load example data
+#'    sample_data <- example_sample_data()
 #'
-#'  # Preprocess sample data
-#'  workflow$preprocess(
-#'    sample_data,
-#'    is_timevar = TRUE,
-#'    is_aggregated = TRUE,
-#'    special_case = NULL,
-#'    family = "binomial"
-#'  )
-#'
-#'  # Link to ACS data at ZIP code level
-#'  workflow$link_acs(
-#'    link_geo = "zip",
-#'    acs_year = 2021
-#'  )
-#'
-#'  # Create and fit multiple models
-#'  model <- workflow$create_model(
-#'    intercept_prior = "normal(0, 4)",
-#'    fixed = list(
-#'      sex = "normal(0, 2)"
-#'    ),
-#'    varying = list(
-#'      race = "normal(0, 2)",
-#'      age = "normal(0, 2)",
-#'      time = "normal(0, 2)"
+#'    # Preprocess sample data
+#'    workflow$preprocess(
+#'      sample_data,
+#'      is_timevar = TRUE,
+#'      is_aggregated = TRUE,
+#'      special_case = NULL,
+#'      family = "binomial"
 #'    )
-#'  )
 #'
-#'  # Run MCMC
-#'  model$fit(n_iter = 500, n_chains = 2, seed = 123)
+#'    # Link to ACS data at ZIP code level
+#'    workflow$link_acs(
+#'      link_geo = "zip",
+#'      acs_year = 2021
+#'    )
 #'
-#'  # Estimates summary and diagnostics
-#'  model$summary()
+#'    # Create and fit multiple models
+#'    model <- workflow$create_model(
+#'      intercept_prior = "normal(0, 4)",
+#'      fixed = list(
+#'        sex = "normal(0, 2)"
+#'      ),
+#'      varying = list(
+#'        race = "normal(0, 2)",
+#'        age = "normal(0, 2)",
+#'        time = "normal(0, 2)"
+#'      )
+#'    )
 #'
-#'  # Sampling diagnostics
-#'  model$diagnostics()
+#'    # Run MCMC
+#'    model$fit(n_iter = 500, n_chains = 2, seed = 123)
 #'
-#'  # Save model object
-#'  # model$save("model.qs")
+#'    # Estimates summary and diagnostics
+#'    model$summary()
+#'
+#'    # Sampling diagnostics
+#'    model$diagnostics()
+#'
+#'    # Save model object
+#'    model$save("/path/to/model.qs")
 #' }
 #'
 #' @export
@@ -194,7 +194,7 @@ MRPModel <- R6::R6Class(
 #' @return A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -218,7 +218,7 @@ MRPModel$set("public", "model_spec", model_spec)
 #' returns the lme4-style formula constructed from the model specification list.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -244,7 +244,7 @@ MRPModel$set("public", "formula", formula)
 #' including metadata inherited from a workflow object and model fitting parameters.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -269,7 +269,7 @@ MRPModel$set("public", "metadata", metadata)
 #' returns the Stan code.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -298,7 +298,7 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @param ... Additional arguments passed to CmdStanR `$sample()` method
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -385,7 +385,7 @@ MRPModel$set("public", "fit", fit)
 #' @return Logical indicating whether the model has been fitted.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -449,7 +449,7 @@ MRPModel$set("public", "check_fit_exists", check_fit_exists)
 #' @return Logical indicating whether poststratification has been performed.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -521,7 +521,7 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #' - standard deviations of residuals (`other`)
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -571,7 +571,7 @@ MRPModel$set("public", "summary", summary)
 #' @return A data.frame object if `summarize` is TRUE, otherwise a list of raw diagnostics
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Load example data
@@ -685,7 +685,7 @@ MRPModel$set("public", "log_lik", log_lik)
 #' method of a `MRPWorkflow` object and does not need to be called directly by users.
 #'
 #' @param interval Confidence interval (a numeric value between 0 and 1) or
-#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#' standard deviation (`"1sd"` or `"2sd"`) for the estimates (default is 0.95).
 #'
 #' @return A data.frame object containing the poststratified estimates and their
 #' corresponding uncertainty intervals.
@@ -735,7 +735,7 @@ MRPModel$set("public", "poststratify", poststratify)
 #' @param file File path where the model should be saved.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow

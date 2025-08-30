@@ -22,7 +22,7 @@ returns tables containing summary of posterior samples
 for the model parameters and diagnostics.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Load example data

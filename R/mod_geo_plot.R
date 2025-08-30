@@ -4,7 +4,8 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #'
 #' @importFrom shiny NS tagList 
 mod_geo_plot_ui <- function(id) {
@@ -25,7 +26,8 @@ mod_geo_plot_ui <- function(id) {
     
 #' geo_plot Server Functions
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #' @importFrom dplyr mutate select rename
 #' @importFrom rlang sym .data
 mod_geo_plot_server <- function(id, workflow, covar){
