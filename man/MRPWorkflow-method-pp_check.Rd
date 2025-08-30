@@ -12,7 +12,7 @@ pp_check(model, file = NULL, ...)
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
 }
 \description{
 The \verb{$pp_check()} method creates posterior predictive check plots
@@ -20,7 +20,7 @@ to assess model fit by comparing observed data to replicated data from
 the posterior predictive distribution.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -29,8 +29,8 @@ the posterior predictive distribution.
  # Load example data
  example_model <- example_model()
 
-# Perform posterior predictive check
- workflow$pp_check(example_model)
+ # Perform posterior predictive check and (optionally) save the plot
+ ppc_plot <- workflow$pp_check(example_model, file = "/path/to/ppc_plot.png")
 }
 
 }

@@ -5,16 +5,17 @@
 \alias{outcome_map}
 \title{Visualize raw outcome measure by geography}
 \usage{
-outcome_map(summary_type = "max", file = NULL)
+outcome_map(summary_type = NULL, file = NULL)
 }
 \arguments{
-\item{summary_type}{Character string for time-varying data, indicating whether to display the
-highest (\code{"max"}) or lowest (\code{"min"}) temporal average. Default is \code{"max"}.}
+\item{summary_type}{Character string, for time-varying data, indicating whether to display the
+highest (\code{"max"}) or lowest (\code{"min"}) temporal average. Leave as \code{NULL} for cross-sectional data.}
 
-\item{file}{Optional file path to save the map.}
+\item{file}{Optional file path with .html extension to save the interactive map.
+Expand the hamburger menu in the top right corner of the map to access other export options.}
 }
 \value{
-A highcharter map object showing outcome measures by geography.
+A highcharter map object showing average outcome measure by geography.
 }
 \description{
 The \verb{$outcome_map()} method creates maps showing average outcome measure by geography for
@@ -22,7 +23,7 @@ cross-sectional data, or highest/lowest temporal average for time-varying data. 
 poststratification data must contain geographic information for this method to work.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -46,8 +47,12 @@ poststratification data must contain geographic information for this method to w
    acs_year = 2021
  )
 
- # Create outcome maps
- workflow$outcome_map(summary_type = "max")
+ # Create and (optionally) save an interactive map
+ # of average outcome measure
+ oc_map <- workflow$outcome_map(
+   summary_type = "max",
+   file = "path/to/outcome_map.html"
+ )
 }
 
 }

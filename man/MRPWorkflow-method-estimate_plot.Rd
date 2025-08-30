@@ -17,16 +17,17 @@ estimate_plot(
 \arguments{
 \item{model}{Fitted MRPModel object}
 
-\item{group}{Character string specifying the demographic group for plotting}
+\item{group}{Character string specifying the demographic group.
+If left as \code{NULL}, overall estimates are plotted.}
 
 \item{interval}{Confidence interval (a numeric value between 0 and 1) or
-standard deviation (\code{"1sd"}, \code{"2sd"}, or \code{"3sd"}) for the estimates (default is 0.95).}
+standard deviation (\code{"1sd"} or \code{"2sd"}) for the estimates (default is 0.95).}
 
 \item{show_caption}{Logical indicating whether to show the caption in the plot (default is TRUE).}
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
 }
 \value{
 A ggplot object showing MRP estimates.
@@ -36,7 +37,7 @@ The \verb{$estimate_plot()} method creates plots showing overall MRP estimates o
 estimates for different demographic groups.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -45,11 +46,21 @@ estimates for different demographic groups.
  # Load example data
  example_model <- example_model()
 
- # Overall estimates
- workflow$estimate_plot(example_model)
+ # Create and (optionally) save a plot of overall estimates
+ # with dimensions in inches
+ p_est_overall <- workflow$estimate_plot(
+   example_model,
+   width = 18,
+   height = 8,
+   units = "in"
+ )
 
- # Estimates by demographic group
- workflow$estimate_plot(example_model, group = "sex")
+ # Create estimate plots for sex with 90 percent confidence intervals
+ p_est_sex <- workflow$estimate_plot(
+   example_model,
+   group = "sex",
+   interval = 0.9
+ )
 }
 
 }

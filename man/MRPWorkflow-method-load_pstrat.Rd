@@ -17,7 +17,7 @@ The \verb{$load_pstrat()} method processes and stores input poststratification d
 The object is subject to the same data preprocessing steps as the sample data.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow

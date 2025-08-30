@@ -3,6 +3,7 @@
 #' @description A sub-class of MRPWorkflow for use with Shiny applications
 #'
 #' @noRd
+#' @keywords internal
 ShinyMRPWorkflow <- R6::R6Class(
   "ShinyMRPWorkflow",
   inherit = MRPWorkflow,

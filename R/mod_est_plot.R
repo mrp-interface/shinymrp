@@ -4,7 +4,8 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #'
 #' @importFrom shiny NS tagList 
 mod_est_plot_ui <- function(id) {
@@ -14,7 +15,8 @@ mod_est_plot_ui <- function(id) {
     
 #' est_plot Server Functions
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #' @importFrom dplyr mutate
 #' @importFrom rlang .data
 mod_est_plot_server <- function(id, workflow, model, var) {

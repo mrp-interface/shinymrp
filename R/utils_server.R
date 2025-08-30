@@ -4,7 +4,8 @@
 #' states, clearing file selections, toggles, and dropdowns to allow users to
 #' start fresh with new data uploads.
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 .reset_upload_pg <- function() {
   shinyjs::reset("sample_upload")
   shinyjs::reset("pstrat_upload")
@@ -41,6 +42,7 @@
 #' @importFrom shinyjs reset
 #'
 #' @noRd
+#' @keywords internal
 .reset_model_pg <- function(vars) {
   shinyWidgets::updateVirtualSelect(
     inputId = "fixed",
@@ -86,6 +88,7 @@
 #' @importFrom shinyjs disable
 #'
 #' @noRd
+#' @keywords internal
 .start_busy <- function(session, id, label) {
   updateActionButton(
     session = session,
@@ -115,6 +118,7 @@
 #' @importFrom shinyjs enable
 #'
 #' @noRd
+#' @keywords internal
 .stop_busy <- function(session, id, label, success) {
   updateActionButton(
     session = session,
@@ -131,6 +135,7 @@
 #' Navigate to analyze tab
 #' 
 #' @noRd
+#' @keywords internal
 .to_analyze <- function(session) {
   bslib::nav_select(
     id = "navbar",
@@ -160,6 +165,7 @@
 #' @importFrom shiny showModal modalDialog modalButton
 #'
 #' @noRd
+#' @keywords internal
 .show_guide <- function(open = NULL) {
   showModal(
     modalDialog(
@@ -181,6 +187,7 @@
 #' @param loading_type Character. The type of loading UI to display.
 #'
 #' @noRd
+#' @keywords internal
 .show_waiter <- function(loading_type = NULL, transparency = 0.9) {
   waiter::waiter_show(
     html = .waiter_ui(loading_type),
@@ -201,6 +208,7 @@
 #' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
+#' @keywords internal
 .show_alert <- function(message) {
   showModal(
     modalDialog(
@@ -223,6 +231,7 @@
 #' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
+#' @keywords internal
 .show_notif <- function(message) {
   showModal(
     modalDialog(

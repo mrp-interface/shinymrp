@@ -16,6 +16,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny NS tagList conditionalPanel selectInput selectizeInput uiOutput plotOutput
 mod_analyze_result_ui <- function(id){
@@ -97,6 +98,7 @@ mod_analyze_result_ui <- function(id){
 #' MRP estimation results visualization.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny moduleServer reactive req isolate renderUI renderPlot observeEvent updateSelectInput updateTabsetPanel showModal modalDialog removeModal actionButton
 #' @importFrom dplyr mutate select filter

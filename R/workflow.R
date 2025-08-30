@@ -53,7 +53,7 @@ mrp_workflow <- function() {
 #'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic areas. |
 #'
 #' @examples
-#'  \donttest{
+#'  if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize the MRP workflow
@@ -240,7 +240,7 @@ MRPWorkflow <- R6::R6Class(
 #' @description The `$preprocessed_data()` method returns the preprocessed sample data.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -292,7 +292,7 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' Values with lower frequency will cause the entire row to be removed. The default value is 0.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -326,16 +326,15 @@ preprocess <- function(
     choices = .const()$args$family,
     null.ok = TRUE
   )
-
-  if (!is_timevar && !is.null(time_freq)) {
-    stop("Time indexing frequency cannot be specified for static data.")
-  }
   
   private$metadat_ <- list(
     is_timevar = is_timevar,
     special_case = special_case,
-    family = family
+    family = family,
+    time_freq = time_freq
   )
+
+  .check_data_spec(private$metadat_)
 
   message("Preprocessing sample data...")
 
@@ -346,7 +345,6 @@ preprocess <- function(
       data = data,
       metadata = private$metadat_,
       zip_county_state = zip_county_state,
-      time_freq = time_freq,
       freq_threshold = freq_threshold,
       is_sample = TRUE,
       is_aggregated = is_aggregated
@@ -375,7 +373,7 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #' @param acs_year Numeric value specifying the last year of the 5-year period for the target ACS dataset.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -540,7 +538,7 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -584,11 +582,13 @@ load_pstrat <- function(pstrat_data, is_aggregated = TRUE) {
 
   tryCatch({
     zip_county_state <- .fetch_data("zip_county_state.csv", subdir = "geo")
+    metadata <- private$metadat_
+    metadata$time_freq <- NULL
 
     # Process data
     new_data <- .preprocess(
       data = pstrat_data,
-      metadata = private$metadat_,
+      metadata = metadata,
       zip_county_state = zip_county_state,
       is_sample = FALSE,
       is_aggregated = is_aggregated
@@ -661,12 +661,12 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #'
 #' @param demo Character string specifying the demographic variable to plot.
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
 #'
-#' @return A ggplot object or patchwork object showing demographic comparisons
+#' @return A ggplot object showing demographic comparisons
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -690,8 +690,15 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #'    acs_year = 2021
 #'  )
 #'
-#'  # Create demographic comparison plots
-#'  workflow$demo_bars(demo = "sex")
+#'  # Create and (optionally) save a demographic comparison plot
+#'  # with dimensions in inches
+#'  sex_bar <- workflow$demo_bars(
+#'    demo = "sex",
+#'    file = "path/to/sex_bar.png",
+#'    width = 18,
+#'    height = 8,
+#'    units = "in"
+#'  )
 #' }
 #'
 demo_bars <- function(demo, file = NULL, ...) {
@@ -746,12 +753,12 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #' @param covar Character string specifying the geographic covariate. Options are
 #' `"college"`, `"poverty"`, `"employment"`, `"income"`, `"urbanicity"`, and `"adi"`
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
 #'
 #' @return A ggplot object showing the covariate distribution histogram.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #' library(shinymrp)
 #'  library(shinymrp)
 #'
@@ -776,8 +783,15 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #'    acs_year = 2021
 #'  )
 #'
-#'  # Create covariate distribution histograms
-#'  workflow$covar_hist("college")
+#'  # Create and (optionally) save a covariate distribution histogram
+#'  # with dimensions in inches
+#'  college_hist <- workflow$covar_hist(
+#'    "college",
+#'    file = "path/to/college_hist.png",
+#'    width = 18,
+#'    height = 8,
+#'    units = "in"
+#'  )
 #' }
 #'
 covar_hist <- function(covar, file = NULL, ...) {
@@ -883,14 +897,15 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #'
 #' @description The `$sample_size_map()` method creates interactive choropleth maps 
 #' showing data distribution with respect to geography. This method cannot be used
-#' if there is no geographic information in either the sample or poststratification data.
+#' if either the sample or poststratification data contains no geographic information.
 #'
-#' @param file Optional file path to save the plot.
+#' @param file Optional file path with .html extension to save the interactive map.
+#' Expand the hamburger menu in the top right corner of the map to access other export options.
 #'
 #' @return A highcharter map object showing sample size distribution.
 #' 
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -913,9 +928,9 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #'    link_geo = "zip",
 #'    acs_year = 2021
 #'  )
-#' 
-#'  # Create sample size map
-#'  workflow$sample_size_map()
+#'
+#'  # Create and (optionally) save an interactive sample size map
+#'  ss_map <- workflow$sample_size_map(file ="path/to/sample_size_map.html")
 #' }
 #' 
 sample_size_map <- function(file = NULL) {
@@ -970,12 +985,12 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #' @description The `$outcome_plot()` method creates average plots of the outcome measure.
 #'
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
 #'
 #' @return A ggplot object showing the outcome measure distribution.
 #' 
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -999,8 +1014,14 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #'    acs_year = 2021
 #'  )
 #'
-#'  # Create outcome plots
-#'  workflow$outcome_plot()
+#'  # Create and (optionally) save outcome plots
+#'  # with dimensions in inches
+#'  oc_plot <- workflow$outcome_plot(
+#'    file = "path/to/outcome_plot.png",
+#'    width = 18,
+#'    height = 8,
+#'    units = "in"
+#'  )
 #' }
 #' 
 outcome_plot <- function(file = NULL, ...) {
@@ -1038,19 +1059,19 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #' @name MRPWorkflow-method-outcome_map
 #' @aliases outcome_map
 #'
-#'
 #' @description The `$outcome_map()` method creates maps showing average outcome measure by geography for
 #' cross-sectional data, or highest/lowest temporal average for time-varying data. The sample and
 #' poststratification data must contain geographic information for this method to work.
 #'
-#' @param summary_type Character string for time-varying data, indicating whether to display the
-#' highest (`"max"`) or lowest (`"min"`) temporal average. Default is `"max"`.
-#' @param file Optional file path to save the map.
+#' @param summary_type Character string, for time-varying data, indicating whether to display the
+#' highest (`"max"`) or lowest (`"min"`) temporal average. Leave as `NULL` for cross-sectional data.
+#' @param file Optional file path with .html extension to save the interactive map.
+#' Expand the hamburger menu in the top right corner of the map to access other export options.
 #'
-#' @return A highcharter map object showing outcome measures by geography.
+#' @return A highcharter map object showing average outcome measure by geography.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1074,18 +1095,29 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #'    acs_year = 2021
 #'  )
 #'
-#'  # Create outcome maps
-#'  workflow$outcome_map(summary_type = "max")
+#'  # Create and (optionally) save an interactive map
+#'  # of average outcome measure
+#'  oc_map <- workflow$outcome_map(
+#'    summary_type = "max",
+#'    file = "path/to/outcome_map.html"
+#'  )
 #' }
 #'
-outcome_map <- function(summary_type = "max", file = NULL) {
+outcome_map <- function(summary_type = NULL, file = NULL) {
   private$assert_mrp_exists()
 
   checkmate::assert_choice(
     summary_type,
     choices = .const()$args$summary_types,
-    null.ok = FALSE
+    null.ok = TRUE
   )
+
+  if (private$metadat_$is_timevar && is.null(summary_type)) {
+    stop("For time-varying data, please specify summary_type as either 'max' or 'min'.")
+  } else if (!private$metadat_$is_timevar && !is.null(summary_type)) {
+    warning("summary_type is only applicable for time-varying data. Ignoring the input.")
+    summary_type <- NULL
+  }
 
   geo <- private$linkdat_$link_geo
   if (is.null(geo)) {
@@ -1144,17 +1176,18 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #' estimates for different demographic groups.
 #'
 #' @param model Fitted MRPModel object
-#' @param group Character string specifying the demographic group for plotting
+#' @param group Character string specifying the demographic group.
+#' If left as `NULL`, overall estimates are plotted.
 #' @param interval Confidence interval (a numeric value between 0 and 1) or
-#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
+#' standard deviation (`"1sd"` or `"2sd"`) for the estimates (default is 0.95).
 #' @param file Optional file path to save the plot.
 #' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE).
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
 #'
 #' @return A ggplot object showing MRP estimates.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1163,11 +1196,21 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #'  # Load example data
 #'  example_model <- example_model()
 #'
-#'  # Overall estimates
-#'  workflow$estimate_plot(example_model)
+#'  # Create and (optionally) save a plot of overall estimates
+#'  # with dimensions in inches
+#'  p_est_overall <- workflow$estimate_plot(
+#'    example_model,
+#'    width = 18,
+#'    height = 8,
+#'    units = "in"
+#'  )
 #'
-#'  # Estimates by demographic group
-#'  workflow$estimate_plot(example_model, group = "sex")
+#'  # Create estimate plots for sex with 90 percent confidence intervals
+#'  p_est_sex <- workflow$estimate_plot(
+#'    example_model,
+#'    group = "sex",
+#'    interval = 0.9
+#'  )
 #' }
 #'
 estimate_plot <- function(
@@ -1262,15 +1305,16 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' between the sample data and the custom poststratification data
 #' input using `$load_pstrat()`.
 #'
-#' @param time_index Numeric value specifying the time index for time-varying data.
+#' @param time_index Integer specifying the time index for time-varying data.
 #' @param interval Confidence interval (a numeric value between 0 and 1) or
-#' standard deviation (`"1sd"`, `"2sd"`, or `"3sd"`) for the estimates (default is 0.95).
-#' @param file Optional file path to save the map.
+#' standard deviation (`"1sd"` or `"2sd"`) for the estimates (default is 0.95).
+#' @param file Optional file path with .html extension to save the interactive map.
+#' Expand the hamburger menu in the top right corner of the map to access other export options.
 #'
 #' @return A highcharter map object showing MRP estimates by geography
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1279,8 +1323,12 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #'  # Load example data
 #'  example_model <- example_model()
 #'
-#'  # Create estimate maps
-#'  workflow$estimate_map(example_model, geo = "county")
+#'  # Create and (optionally) save an interactive map of MRP estimates
+#'  est_map <- workflow$estimate_map(
+#'    example_model,
+#'    geo = "county",
+#'    file = "/path/to/est_map.html"
+#'  )
 #'
 #' }
 #'
@@ -1406,7 +1454,7 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' @return A new MRPModel object
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1495,10 +1543,10 @@ MRPWorkflow$set("public", "create_model", create_model)
 #'
 #' @param model Fitted MRPModel object.
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave].
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow
@@ -1507,8 +1555,8 @@ MRPWorkflow$set("public", "create_model", create_model)
 #'  # Load example data
 #'  example_model <- example_model()
 #'
-#' # Perform posterior predictive check
-#'  workflow$pp_check(example_model)
+#'  # Perform posterior predictive check and (optionally) save the plot
+#'  ppc_plot <- workflow$pp_check(example_model, file = "/path/to/ppc_plot.png")
 #' }
 #'
 pp_check <- function(model, file = NULL, ...) {
@@ -1553,7 +1601,7 @@ MRPWorkflow$set("public", "pp_check", pp_check)
 #' @return A data frame summarizing the comparison results
 #'
 #' @examples
-#' \donttest{
+#' if (FALSE) {
 #'  library(shinymrp)
 #'
 #'  # Initialize workflow

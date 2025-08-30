@@ -26,6 +26,7 @@
 #' Only columns matching the expected patterns are retained; all other columns
 #' are dropped to ensure consistent downstream processing.
 #' @noRd
+#' @keywords internal
 .rename_columns_covid <- function(df) {
   all_names <- names(df)
   patterns <- c("(encrypted|masked).*id", "sex", "race", "age", "zip")
@@ -83,6 +84,7 @@
 #'   \item Row count may be reduced if duplicates were present
 #' }
 #' @noRd
+#' @keywords internal
 .remove_duplicates_covid <- function(df) {
   # only keep the latest result if a patient have multiple tests in the same week
   df <- df %>%
@@ -131,6 +133,7 @@
 #'     `NA` (ambiguous/invalid results)
 #' }
 #' @noRd
+#' @keywords internal
 .recode_covid <- function(df, expected_levels) {
   ranges <- expected_levels$age
   age_bounds <- regmatches(
@@ -229,6 +232,7 @@
 #'     random effects, and variables to omit.}
 #' }
 #' @noRd
+#' @keywords internal
 .prepare_mrp_covid <- function(
     input_data,
     pstrat_data,

@@ -76,7 +76,7 @@ specificity \eqn{\gamma}, and the true incidence \eqn{\pi_k} for individuals in 
 }
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow

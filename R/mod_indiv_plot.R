@@ -4,7 +4,8 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #'
 #' @importFrom shiny NS tagList 
 mod_indiv_plot_ui <- function(id) {
@@ -18,7 +19,8 @@ mod_indiv_plot_ui <- function(id) {
     
 #' indiv_plot Server Functions
 #'
-#' @noRd 
+#' @noRd
+#' @keywords internal 
 #' @importFrom dplyr mutate select filter
 #' @importFrom rlang sym .data
 mod_indiv_plot_server <- function(id, workflow, demo_var){

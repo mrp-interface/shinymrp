@@ -77,54 +77,54 @@ methods, many of which have their own (linked) documentation pages:
 }
 
 \examples{
-\donttest{
- library(shinymrp)
+if (FALSE) {
+   library(shinymrp)
 
- # Initialize workflow
- workflow <- mrp_workflow()
+   # Initialize workflow
+   workflow <- mrp_workflow()
 
- # Load example data
- sample_data <- example_sample_data()
+   # Load example data
+   sample_data <- example_sample_data()
 
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and fit multiple models
- model <- workflow$create_model(
-   intercept_prior = "normal(0, 4)",
-   fixed = list(
-     sex = "normal(0, 2)"
-   ),
-   varying = list(
-     race = "normal(0, 2)",
-     age = "normal(0, 2)",
-     time = "normal(0, 2)"
+   # Preprocess sample data
+   workflow$preprocess(
+     sample_data,
+     is_timevar = TRUE,
+     is_aggregated = TRUE,
+     special_case = NULL,
+     family = "binomial"
    )
- )
 
- # Run MCMC
- model$fit(n_iter = 500, n_chains = 2, seed = 123)
+   # Link to ACS data at ZIP code level
+   workflow$link_acs(
+     link_geo = "zip",
+     acs_year = 2021
+   )
 
- # Estimates summary and diagnostics
- model$summary()
+   # Create and fit multiple models
+   model <- workflow$create_model(
+     intercept_prior = "normal(0, 4)",
+     fixed = list(
+       sex = "normal(0, 2)"
+     ),
+     varying = list(
+       race = "normal(0, 2)",
+       age = "normal(0, 2)",
+       time = "normal(0, 2)"
+     )
+   )
 
- # Sampling diagnostics
- model$diagnostics()
+   # Run MCMC
+   model$fit(n_iter = 500, n_chains = 2, seed = 123)
 
- # Save model object
- # model$save("model.qs")
+   # Estimates summary and diagnostics
+   model$summary()
+
+   # Sampling diagnostics
+   model$diagnostics()
+
+   # Save model object
+   model$save("/path/to/model.qs")
 }
 
 }

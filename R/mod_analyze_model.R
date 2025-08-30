@@ -17,6 +17,7 @@
 #' }
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny NS tagList conditionalPanel fileInput actionButton uiOutput selectizeInput actionLink numericInput selectInput fluidRow column tags
 mod_analyze_model_ui <- function(id) {
@@ -144,6 +145,7 @@ mod_analyze_model_ui <- function(id) {
 #' and diagnostic plots, and manages model tabs dynamically.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateSelectInput renderUI renderTable renderPlot req isolate showModal modalDialog modalButton
 #' @importFrom shinyWidgets virtualSelectInput

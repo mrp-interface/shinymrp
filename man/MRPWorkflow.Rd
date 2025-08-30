@@ -45,7 +45,7 @@ methods with their own (linked) documentation pages:
 }
 
 \examples{
- \donttest{
+ if (FALSE) {
  library(shinymrp)
 
  # Initialize the MRP workflow

@@ -17,7 +17,7 @@ saves a fitted MRPModel object to a file for later use.
 to use the \code{.qs} file extension.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow

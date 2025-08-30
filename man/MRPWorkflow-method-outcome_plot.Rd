@@ -10,7 +10,7 @@ outcome_plot(file = NULL, ...)
 \arguments{
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
 }
 \value{
 A ggplot object showing the outcome measure distribution.
@@ -19,7 +19,7 @@ A ggplot object showing the outcome measure distribution.
 The \verb{$outcome_plot()} method creates average plots of the outcome measure.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Initialize workflow
@@ -43,8 +43,14 @@ The \verb{$outcome_plot()} method creates average plots of the outcome measure.
    acs_year = 2021
  )
 
- # Create outcome plots
- workflow$outcome_plot()
+ # Create and (optionally) save outcome plots
+ # with dimensions in inches
+ oc_plot <- workflow$outcome_plot(
+   file = "path/to/outcome_plot.png",
+   width = 18,
+   height = 8,
+   units = "in"
+ )
 }
 
 }

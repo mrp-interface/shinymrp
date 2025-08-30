@@ -1,16 +1,16 @@
 ---
-title: "Programmatic workflow walkthrough"
+title: "Programmatic workflow demonstration"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Programmatic workflow walkthrough}
+  %\VignetteIndexEntry{Programmatic workflow demonstration}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 
-This vignette provides more details about the individual methods of the `MRPWorkflow` objects
-and `MRPModel` objects, including their purposes, arguments, and caveats.
-For a more general overview of the classes, please refer to the ["Getting started with shinymrp"](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
+This vignette provides an in-depth walkthrough of the `MRPWorkflow` and `MRPModel` classes in the **shinymrp** package. You will find practical information about each method’s purpose, arguments, and caveats, enabling you to conduct MRP analyses programmatically.
+
+For an introduction to the package and workflow concepts, begin with the [Getting started with shinymrp](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -19,45 +19,41 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Initializing the workflow
+# Initializing the workflow
 
-The process begins with creating an `MRPWorkflow` object using the `mrp_workflow()` function. The object-oriented design allows the object to manage the essential data under the hood and offer a clean interface that does not require the users to input the same piece of information repeatedly. Methods from [R6 classes](https://r6.r-lib.org/) can be accessed with the `$` operator.
+MRP analysis begins by instantiating an `MRPWorkflow` object with `mrp_workflow()`. The object-oriented design efficiently manages your data and supports a reproducible workflow without requiring repeated user input. All workflow methods are accessed via the [R6](https://r6.r-lib.org/) `$` operator.
 
 ```{r}
 library(shinymrp)
-
 workflow <- mrp_workflow()
 ```
 
 ```{r theme_update, include=FALSE}
-
 ggplot2::theme_update(
   text = ggplot2::element_text(size = 12),
   plot.margin = ggplot2::margin(0, 0, 0, 0)
 )
 ```
 
-## Data preparation
+# 1. Data preparation
 
-The goal of this stage is to produce two essential pieces of data:
+MRP requires two key data components:
 
-- **Sample data**: The analysis sample that includes the outcome of interest (either binary or continuous ) and predictors, such as the COVID test records and survey sample results.
-- **Poststratification data**: The table containing sizes of groups in the target population defined by the demographic and geographic factors.
+- **Sample data**: Your analysis sample, which must include the outcome of interest (binary or continuous) and predictors (demographic, geographic, etc.), such as COVID-19 test records or survey responses.
+- **Poststratification data**: A table containing population sizes of groups defined by demographic and geographic factors.
 
-### Preprocessing sample data
+For details on accepted formats and preprocessing, see the [Data Preprocessing](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
 
-Generally, the package expects tabular data with demographic-geographic predictors and an outcome measure.
-It also supports specific use cases, such as COVID-19 hospital test records which follows the Epic system standards.
-If included, dates or indices of week/month/year will be incorporated to produce time-varying summary statistics and estimates.
+## 1.1 Preprocessing the sample data
 
-The `example_sample_data()` function returns examples of the data formats accepted by shinymrp based on several key characteristics.
+Sample data should be a tidy data frame with your outcome measure and predictors. Time-varying data are also supported, allowing dates or indices (e.g., week, month, or year) to be incorporated for time-varying summaries and estimates.
+
+The `example_sample_data()` function demonstrates accepted structures and common options:
 
 - whether a time variable is included
-- whether the data is aggregated
-- whether the data follows a specific standard (e.g. Epic system) or contains additional demographic variables
+- whether the data are aggregated
+- whether the data follow a specific standard (e.g. medical records from the Epic system)
 - whether the outcome measure is binary (modeled with binomial distributions) or continuous (modeled with Gaussian/normal distributions)
-
-For more details about data requirements and preprocessing steps, please refer to the ["More on data preprocessing"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
 
 ```{r}
 sample_data <- example_sample_data(
@@ -66,15 +62,13 @@ sample_data <- example_sample_data(
   special_case = NULL,
   family = "binomial"
 )
-
 head(sample_data)
 ```
 
-The `$preprocess()` method performs several preprocessing steps to prepare the data for MRP,
-such as removing defects, converting raw values to categories (e.g., numeric age to age groups, date to time index), etc.
-However, exhaustive preprocessing is not guaranteed; users may need to prepare data beforehand.
-The detailed description and link to the source code of the preprocessing pipeline can be found
-in the ["More on data preprocessing"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
+
+Data preprocessing is performed with the `$preprocess()` method, which standardizes formats (e.g., recodes age groups, creates time indices), removes duplicates, and prepares data for modeling.
+
+Note: Only basic cleaning is performed. Conduct preliminary data checks beforehand.
 
 ```{r}
 workflow$preprocess(
@@ -86,101 +80,77 @@ workflow$preprocess(
 )
 ```
 
-### Linking data to the ACS
+## 1.2 Assembling poststratification data
 
-The `$link_acs()` method retrieves poststratification data from a 5-year ACS dataset based on the specified geographic granularity and
-the last year of the collection period. The current supported geographic levels are ZIP code, county, and state. If not provided, the
-poststratification data will result from a cross-tabulation of the demographic variables.
+### 1.2.1 Linking to ACS
+
+Use the `$link_acs()` method to retrieve poststratification data from the American Community Survey (ACS), specifying the desired geographic level and reference year (i.e., the last year of the five-year ACS data collection). Supported levels include ZIP code, county, and state. If not specified, poststratification data are aggregated for the U.S. population.
 
 ```{r}
 workflow$link_acs(link_geo = "zip", acs_year = 2021)
 ```
 
-### Load custom poststratification data
+### 1.2.2 Importing custom poststratification data
 
-Users can also load their own poststratification data using the `$load_pstrat()` method.
-The input is subject to similar [requirements](https://mrp-interface.github.io/shinymrp/articles/data-prep#required-columns-and-categories)
-and preprocessing steps to those of the sample data.
+You can also import your own poststratification data using `$load_pstrat()`. [Requirements](https://mrp-interface.github.io/shinymrp/articles/data-prep#required-columns-and-categories) mirror those for sample data.
 
 ```{r}
 pstrat_data <- example_pstrat_data()
 workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
 ```
 
-## Visualizing descriptive statistics
+# 2. Descriptive statistics
 
-The `MRPWorkflow` class provides several methods for visualizing descriptive statistics that are useful for
-interpreting MRP estimates and diagnosing problems during the modeling stage.
+The `MRPWorkflow` class provides methods for creating visualizations of demographic distributions, geographic coverage, and outcome summaries.
 
-The `$demo_bars()` method creates bar plots for comparison of demographic distributions between the sample data and the poststratification data.
+Use `$demo_bars()` to generate bar plots comparing demographic distributions in the sample and poststratification data.
 
 ```{r}
 workflow$demo_bars(demo = "sex")
 ```
 
-The `$covar_hist()` method creates a histogram of the geographic covariates that can help models capture
-the structured difference between geographic areas. This method currently only supports COVID data and
-will throw the following error if it is called with incompatible data.
+For analyzing COVID-19 test data with linked geographic predictors, the `$covar_hist()` method creates frequency histograms of the geographic predictors. This method will give the following error if it is called with incompatible data that do not include geographic predictors.
 
 ```{r, error = TRUE}
 workflow$covar_hist()
 ```
 
-The `$sample_size_map()` method visualizes the geographic distribution of the sample size
-with an interactive choropleth map. The map is created using the
-[`highcharter`](https://cran.r-project.org/web/packages/highcharter/index.html)
-package and has useful features such as tooltips and download options.
+`$sample_size_map()` visualizes sample sizes across geographic areas in an interactive choropleth map, powered by [highcharter](https://cran.r-project.org/web/packages/highcharter/index.html).
 
 ```{r}
 workflow$sample_size_map()
 ```
 
-The `$outcome_plot()` method create an average line or scatter plot of the outcome measure
-depending whether the data is time-varying or not.
+`$outcome_plot()` creates plots of average outcome values, including time variation if present.
 
 ```{r}
 workflow$outcome_plot()
 ```
 
-The `$outcome_map()` method visualizes the geography-based summary statistics such as
-the highest weekly positive response rates for the geographic areas in the sample data.
+`$outcome_map()` visualizes outcome summaries by geography, with options for the maximum or minimum value across time.
 
 ```{r}
 workflow$outcome_map(summary_type = "max")
 ```
 
-## Model fitting and diagnostics
+# 3. Model building
 
-The `MRPModel` class is designed to represent individual models and provides methods for
-interacting with the CmdStanR objects under the hood, from running MCMC to extracting
-posterior samples and processing them into a format suitable for visualization.
+The `MRPModel` class is a wrapper around CmdStanR objects, providing a high-level interface for obtaining posterior summaries and diagnostics.
 
-### Model specification
+## 3.1 Model specification
 
-The `$create_model()` method takes in a nested list that specifies the variables to include in the model,
-whether they are included as fixed or varying effects, selected interactions and the assigned prior distributions.
-This is used to generate Stan code for compilation using the CmdStanR package. The syntax for the prior distributions
-is similar to that of Stan. The following are currently supported:
+Use `$create_model()` to specify the model, including the mean structure (fixed and varying effects, two-way interactions) and priors. Varying effects assume normal distributions with unknown standard deviations (with specified priors). Stan code is generated for compilation via CmdStanR. Supported prior types include:
 
-- normal(mu, sigma)
-- student_t(nu, mu, sigma)
-- structured*
+- `normal(mu, sigma)`
+- `student_t(nu, mu, sigma)`
+- `structured` (see [Si et al., 2020](https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh))
 
-The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
+Default priors are used if `""` (empty string) is supplied:
 
-The following default prior distributions are assigned to effects with empty strings (`""`)
-in the model specification list:
-
-- Overall intercept: normal(0,5)
-- Coefficient: normal(0,3)
-
-The model assumes varying effects follow a normal distribution with an unknown standard deviation, which will be assigned with priors.
-
-- Standard deviation (main effect): normal<sub>+</sub>(0,3)
-- Standard deviation (interaction): normal<sub>+</sub>(0,1)
-
-The returned `MRPModel` object has  methods for extracting draws from
-the internal `CmdStanMCMC` object and formating them for display.
+- Overall intercept: normal(0, 5)
+- Coefficient: normal(0, 3)
+- Standard deviation (main effect): normal<sub>+</sub>(0, 3)
+- Standard deviation (interaction): normal<sub>+</sub>(0, 1)
 
 ```{r}
 model1 <- workflow$create_model(
@@ -196,9 +166,9 @@ model1 <- workflow$create_model(
 )
 ```
 
-### Running MCMC
+## 3.2 Model fitting
 
-
+The `$fit()` method runs Stan's main Markov chain Monte Carlo algorithm via CmdStanR.
 
 ```{r}
 model1$fit(
@@ -211,32 +181,29 @@ model1$fit(
 
 ```
 
-### Posterior summary & diagnostics
+## 3.3 Posterior summaries and diagnostics
 
-The `$summary()` method returns summary statistics of the posterior samples along with common diagnostic 
-quantities such as effective sample size and R-hat.
+The fitted `MRPModel` object extracts draws from the internal `CmdStanMCMC` object for summaries and diagnostics.
+
+- **Posterior summary and convergence diagnostics**: Use `$summary()` for posterior statistics, effective sample sizes, and R-hat diagnostics.
 
 ```{r}
 model1$summary()
 ```
 
-The `$diagnostics()` method provides additional diagnostic information about the sampling process. The guide
-to interpreting these convergence metrics can be found in the [Stan documentation](https://mc-stan.org/learn-stan/diagnostics-warnings). 
+- **Additional diagnostics**: Use `$diagnostics()` for [detailed diagnostic information](https://mc-stan.org/learn-stan/diagnostics-warnings) about the MCMC process.
 
 ```{r}
 model1$diagnostics()
 ```
 
-The `$pp_check()` method extracts the samples from the posterior predictive distribution and generates
-visual checks of the model fit.
+- **Posterior predictive check**: Use `$pp_check()` to compare posterior predictive samples against observed data.
 
 ```{r}
 workflow$pp_check(model1)
 ```
 
-It is common to test different model specifications to find one that best captures the relationship
-between the predictors and the outcome. Once you have your roster, you can pass several model objects
-into the `$compare_models()` method to perform model comparison using leave-one-out cross-validation.
+- **Model comparison**: Compare models via leave-one-out cross-validation with `$compare_models()`.
 
 ```{r}
 model2 <- workflow$create_model(
@@ -269,11 +236,9 @@ model2$fit(
 workflow$compare_models(model1, model2)
 ```
 
-### Saving and loading models
+## 3.4 Saving and loading models
 
-Once a `MRPModel` object is created, it can be saved to disk at any point using the `$save()` method.
-Under the hood, the method uses the `qs` package to serialize the object to a file with a `.qs` extension.
-The model object can be read back into R using the `qs::qread()` function.
+You can easily save and restore models using the `qs` package. The `$save()` gathers all posterior draws and diagnostics then calls `qs::qsave()` internally.
 
 ```{r, save_model, eval=FALSE}
 model1$save(file = "model1.qs")
@@ -283,18 +248,24 @@ model1 <- qs::qread("model1.qs")
 ```
 
 
-## Visualize estimates
+# 4. Result visualization
 
-`$estimate_plot()` is the primary method for visualizing estimates from the fitted models. By default,
-it uses a 95% credible interval for uncertainty quantification but users can specify other intervals.
+Use `$estimate_plot()` to visualize the model estimates, either overall or by group, with a 95% credible interval by default. Users can specify alternative intervals.
 
 ```{r, estimate_plot, fig.height=10}
 workflow$estimate_plot(model1, group = "sex", interval = 0.95)
 ```
 
-For geography-based estimates, we recommend using estimate_map, which also takes a similar argument to estimate_plot for uncertainty quantification.
-The selected interval values are shown in the tooltip when users hover over individual tiles on the map.
+For time-varying data, `$estimate_map()` creates snapshots of geography-based estimates at specific time points. `time_index` is irrelevant for cross-sectional data.
 
 ```{r, estimate_map}
-workflow$estimate_map(model1, geo = "county", interval = 0.95)
+workflow$estimate_map(model1, geo = "county", interval = 0.95, time_index = 1)
 ```
+
+
+# Further reading
+
+- [Getting Started with shinymrp](https://mrp-interface.github.io/shinymrp/articles/getting-started.html)
+- [Data Preprocessing](https://mrp-interface.github.io/shinymrp/articles/data-prep)
+- [Stan Model Diagnostics](https://mc-stan.org/learn-stan/diagnostics-warnings)
+

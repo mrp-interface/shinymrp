@@ -10,6 +10,7 @@
 #' @return Character string with variables sorted alphabetically within the pair.
 #'   For example, "gender:age" becomes "age:gender".
 #' @noRd
+#' @keywords internal
 # helper to normalize a single "a:b" → "a:b" or "b:a" → "a:b"
 .norm_pair <- function(p, sep = ":") {
   parts <- strsplit(p, sep, fixed = TRUE)[[1]]
@@ -29,6 +30,7 @@
 #' @return Character vector containing normalized interaction pairs that appear
 #'   in both pairs1 and pairs2, accounting for order-invariant matching.
 #' @noRd
+#' @keywords internal
 .pair_intersect <- function(pairs1, pairs2, sep = ":") {
   # normalize pairs
   norms1 <- vapply(pairs1, .norm_pair, FUN.VALUE = character(1), sep = sep)
@@ -50,6 +52,7 @@
 #' @return Character vector containing pairs from pairs1 that are not present in pairs2,
 #'   accounting for order-invariant matching
 #' @noRd
+#' @keywords internal
 .pair_setdiff <- function(pairs1, pairs2, sep = ":") {
   # precompute the normalized sets of pairs
   norm1 <- vapply(pairs1, .norm_pair, FUN.VALUE = character(1), sep = sep)
@@ -74,6 +77,7 @@
 #'
 #' @return Character vector of filtered interaction terms suitable for structured priors
 #' @noRd
+#' @keywords internal
 .filter_interactions <- function(interactions, fixed_effects, data) {
   bool <- purrr::map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -101,6 +105,7 @@
 #' @return Character vector of interaction terms with variables reordered within
 #'   each term according to type hierarchy (binary < categorical < continuous)
 #' @noRd
+#' @keywords internal
 .sort_interactions <- function(interactions, dat) {
   interactions <- purrr::map_chr(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -131,6 +136,7 @@
 #'   var1 <= var2 alphabetically to ensure uniqueness
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom rlang .data
 .create_interactions <- function(fixed_effects, varying_effects, dat) {
@@ -168,6 +174,7 @@
 #'   interactions, uses formula: (levels1 - 1) * n_categories2 + levels2
 #'
 #' @noRd
+#' @keywords internal
 #'
 .interaction_levels <- function(levels1, levels2) {
   numcat1 <- dplyr::n_distinct(levels1)
@@ -200,6 +207,7 @@
 #'   \item{msg}{Character vector of validation error messages, empty if valid}
 #'
 #' @noRd
+#' @keywords internal
 .check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, seed) {
   flag <- TRUE
   msg <- c()
@@ -258,6 +266,7 @@
 #' @return A character string representing the model formula with fixed effects,
 #'   varying intercepts (1 | group), and varying slopes (0 + variable | group)
 #' @noRd
+#' @keywords internal
 .create_formula <- function(effects) {
 
   m_fix_c <- names(effects$m_fix_c) %>%
@@ -293,6 +302,7 @@
 #' @return Logical indicating if any divergent transitions were detected.
 #' 
 #' @noRd
+#' @keywords internal
 .check_divergence <- function(diagnostics) {
   return(sum(diagnostics$num_divergent) > 0)
 }

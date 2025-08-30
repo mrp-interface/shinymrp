@@ -42,12 +42,12 @@ reference:
 articles:
   - title: "Getting started"
     desc: >
-      An overview of the package, its structure, and installation instructions.
+      An overview of the package and installation instructions.
     contents:
       - getting-started
   - title: "More details"
     desc: >
-      A deeper dive into each stage of the data analysis workflow that the package implements.
+      A deeper dive into the programmatic interface and data preprocessing in shinymrp.
     contents:
       - workflow
       - data-prep

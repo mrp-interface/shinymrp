@@ -12,7 +12,7 @@ The \verb{$stan_code()} method of a \code{MRPModel} object
 returns the Stan code.
 }
 \examples{
-\donttest{
+if (FALSE) {
  library(shinymrp)
 
  # Load example data

@@ -11,6 +11,7 @@
 #' data type selection cards, and conditional panels for different workflows.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny NS tagList conditionalPanel actionButton tags
 mod_home_ui <- function(id) {
@@ -94,6 +95,7 @@ mod_home_ui <- function(id) {
 #' panel navigation and observes user interactions to update global state.
 #'
 #' @noRd
+#' @keywords internal
 #'
 #' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateNavbarPage
 mod_home_server <- function(id, global){

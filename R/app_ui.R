@@ -5,6 +5,7 @@
 #' @import shiny
 #' @import bslib
 #' @noRd
+#' @keywords internal
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
@@ -149,6 +150,7 @@ app_ui <- function(request) {
 #' @import shiny
 #' @importFrom golem add_resource_path activate_js favicon bundle_resources
 #' @noRd
+#' @keywords internal
 golem_add_external_resources <- function() {
   add_resource_path(
     "www",

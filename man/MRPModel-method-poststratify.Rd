@@ -9,7 +9,7 @@ poststratify(interval = 0.95)
 }
 \arguments{
 \item{interval}{Confidence interval (a numeric value between 0 and 1) or
-standard deviation (\code{"1sd"}, \code{"2sd"}, or \code{"3sd"}) for the estimates (default is 0.95).}
+standard deviation (\code{"1sd"} or \code{"2sd"}) for the estimates (default is 0.95).}
 }
 \value{
 A data.frame object containing the poststratified estimates and their

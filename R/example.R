@@ -26,6 +26,9 @@ example_sample_data <- function(
     special_case = special_case,
     family = family
   )
+
+  .check_data_spec(metadata)
+
   suffix <- if (is_aggregated) "prep" else "raw"
   filename <- .create_example_filename(metadata, suffix)
 
