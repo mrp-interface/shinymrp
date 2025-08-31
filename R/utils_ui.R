@@ -483,14 +483,13 @@
         if(!is.null(dates)) {
           div(
             class = "mx-4",
-            sliderInput(
-            inputId = ns("map_slider"),
+            shinyWidgets::sliderTextInput(
+              inputId = ns("map_slider"),
               label = NULL,
-              min = as.Date(dates[1], format = .const()$ui$format$date),
-              max = as.Date(dates[length(dates)], format = .const()$ui$format$date),
-              step = 7,
-              value = as.Date(dates[1], format = .const()$ui$format$date),
+              choices = dates,
+              selected = dates[1],
               width = "100%",
+              grid = TRUE,
               animate = .const()$ui$animation
             )
           )

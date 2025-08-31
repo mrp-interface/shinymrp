@@ -253,6 +253,9 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     output$positive_plot <- renderPlot({
       req(global$workflow)
+      global$prep_ver
+      global$mrp_ver
+      
       global$workflow$outcome_plot()
     })
 
@@ -261,6 +264,8 @@ mod_analyze_visualize_server <- function(id, global){
     # --------------------------------------------------------------------------
     output$positive_map <- highcharter::renderHighchart({
       req(global$workflow, global$workflow$link_data()$link_geo)
+      global$prep_ver
+      global$mrp_ver
 
       global$workflow$outcome_map(summary_type = input$summary_slt)
     })
