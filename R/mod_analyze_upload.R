@@ -372,7 +372,7 @@ mod_analyze_upload_server <- function(id, global){
 
       # Overwrite default input values
       is_aggregated <- input$toggle_sample == "agg"
-      if (global$metadata$family != "normal") {
+      if (identical(global$metadata$family, "normal")) {
         is_aggregated <- FALSE
       }
 
@@ -381,6 +381,7 @@ mod_analyze_upload_server <- function(id, global){
         time_freq <- NULL
       }
 
+      global$workflow$reset()
       global$workflow$preprocess(
         raw_sample_rv(),
         is_timevar = global$metadata$is_timevar,
@@ -390,7 +391,9 @@ mod_analyze_upload_server <- function(id, global){
         time_freq = time_freq
       )
 
-      global$trigger_prep_change()
+      if (global$workflow$check_prep_data_exists()) {
+        global$trigger_prep_change()
+      }
 
       waiter::waiter_hide()
     })
@@ -403,9 +406,8 @@ mod_analyze_upload_server <- function(id, global){
         .fetch_data(subdir = "example/data") %>%
         raw_sample_rv()
 
-      workflow <- global$workflow
-
-      workflow$preprocess(
+      global$workflow$reset()
+      global$workflow$preprocess(
         raw_sample_rv(),
         is_timevar = global$metadata$is_timevar,
         is_aggregated = FALSE,
@@ -427,7 +429,7 @@ mod_analyze_upload_server <- function(id, global){
         .fetch_data(subdir = "example/data") %>%
         raw_sample_rv()
 
-
+      global$workflow$reset()
       global$workflow$preprocess(
         raw_sample_rv(),
         is_timevar = global$metadata$is_timevar,

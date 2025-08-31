@@ -24,6 +24,14 @@ ShinyMRPWorkflow <- R6::R6Class(
       private$model_class_ <- ShinyMRPModel
     },
 
+    reset = function() {
+      private$prepdat_ <- NULL
+      private$metadat_ <- NULL
+      private$linkdat_ <- NULL
+      private$plotdat_ <- NULL
+      private$mrpdat_ <- NULL
+    },
+
     covar_table = function(covar) {
       private$assert_mrp_exists()
       
@@ -120,11 +128,10 @@ ShinyMRPWorkflow <- R6::R6Class(
 
       time_index <- NULL
       if (is_timevar) {
-        time_index <- if (!is.null(slider_input) && !is.null(dates)) {
-          date <- format(slider_input, .const()$ui$format$date)
-          which(as.character(date) == dates)
+        time_index <- if (is.character(slider_input)) {
+          which(slider_input == dates)
         } else {
-          .replace_null(slider_input, 1)
+          slider_input %||% 1
         }
       }
       
