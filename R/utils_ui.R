@@ -225,7 +225,7 @@
       
       tags$h5("Data Linking", class = "mt-4"),
       tags$p("To facilitate ACS data linkage, the interface recognizes the smallest geographic unit in the sample and infers corresponding higher-level geographies (e.g., ZIP to county or state). The application also enriches data with geographic covariates at the ZIP code level (urbanicity, Area Deprivation Index, etc.). More information is available on the ", tags$b("Learn > Data Preprocessing"), " page."),
-      tags$p("Linking to the ACS enables estimation of approximate population counts for poststratification. Users may select geographic levels and ACS reference years, with built-in constraints for some use cases (e.g., COVID-19 or public opinion polls). Currently, COVID-19 data are linked to five-year ACS (2017–2021) at the ZIP code level, and polling data to five-year ACS (2014–2018) at the state level. General modules offer additional linking options.")
+      tags$p("Linking to the ACS enables estimation of approximate population counts for poststratification. Users may select geographic levels and ACS reference years, with built-in constraints for some use cases (e.g., COVID-19 or public opinion polls). Currently, COVID-19 data are linked to five-year ACS (2017-2021) at the ZIP code level, and polling data to five-year ACS (2014-2018) at the state level. General modules offer additional linking options.")
     ),
 
     # Plot Selection panel

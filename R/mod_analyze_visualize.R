@@ -127,7 +127,7 @@ mod_analyze_visualize_server <- function(id, global){
 
       .vis_ui(
         ns = ns,
-        cat = input$plot_category,
+        category = input$plot_category,
         subcategory = input$plot_subcategory
       )
     })
