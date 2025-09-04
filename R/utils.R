@@ -220,6 +220,7 @@
 #' @return Data frame or object loaded from the specified file, with format
 #' determined by file extension (CSV files return data frames, QS files
 #' return the original R object, and R files return character lines)
+#' 
 #' @noRd
 #' @keywords internal
 .fetch_data <- function(
@@ -235,73 +236,98 @@
   if (!dir.exists(cache_dir)) {
     dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
   }
-  
-  # construct local path and URLs
-  dest <- file.path(cache_dir, file)
-  file_path <- if (nzchar(subdir)) paste0(subdir, "/", file) else file
+
+  # local cache path includes subdir to avoid collisions
+  rel  <- if (nzchar(subdir)) file.path(subdir, file) else file
+  dest <- file.path(cache_dir, rel)
+  if (!dir.exists(dirname(dest))) {
+    dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+  }
+
+  # construct URLs (URL-encode the path part)
+  file_path     <- if (nzchar(subdir)) paste0(subdir, "/", file) else file
+  file_path_enc <- utils::URLencode(file_path, reserved = TRUE)
+
   raw_url <- sprintf(
     "https://raw.githubusercontent.com/%s/%s/%s/%s",
-    org, repo, branch, file_path
+    org, repo, branch, file_path_enc
   )
-  
+
   # determine if download is needed
   should_dl <- !file.exists(dest)
-  
-  if (!should_dl && check_remote) {
-    # use GitHub API to get file information
+
+  remote_sha <- NULL
+  if (!should_dl && isTRUE(check_remote)) {
     api_url <- sprintf(
       "https://api.github.com/repos/%s/%s/contents/%s",
-      org, repo, file_path
+      org, repo, file_path_enc
     )
-    
+
     tryCatch({
-      # get file info from GitHub API
-      resp <- httr2::request(api_url) %>%
-        httr2::req_url_query(ref = branch) %>%
+      # GitHub Contents API
+      resp <- httr2::request(api_url) |>
+        httr2::req_url_query(ref = branch) |>
+        httr2::req_user_agent("shinymrp-fetch/1.0") |>
         httr2::req_perform()
-      
+
       if (httr2::resp_status(resp) == 200) {
         file_info <- httr2::resp_body_json(resp)
-        
-        # compare SHA hashes (more reliable than timestamps)
         remote_sha <- file_info$sha
-        
-        # store SHA in a companion file for comparison
+
+        # compare to stored sha (if any)
         sha_file <- paste0(dest, ".sha")
-        local_sha <- NULL
-        
-        if (file.exists(sha_file)) {
-          local_sha <- readLines(sha_file, n = 1, warn = FALSE)
-        }
-        
-        if (is.null(local_sha) || remote_sha != local_sha) {
+        local_sha <- if (file.exists(sha_file)) readLines(sha_file, n = 1, warn = FALSE) else NULL
+
+        if (is.null(local_sha) || !identical(remote_sha, local_sha)) {
           should_dl <- TRUE
         }
       }
     }, error = function(e) {
-      # if API call fails, fall back to downloading
       warning("GitHub API check failed: ", e$message, ". Proceeding with download.")
       should_dl <- TRUE
     })
   }
-  
+
   # download if required
   if (should_dl) {
     utils::download.file(raw_url, destfile = dest, mode = "wb")
-    
-    # if we successfully checked remote, store the SHA for next time
-    if (check_remote && exists("remote_sha")) {
+
+    # store the remote sha if we successfully obtained it
+    if (!is.null(remote_sha)) {
       sha_file <- paste0(dest, ".sha")
       writeLines(remote_sha, sha_file)
     }
   }
-  
-  # read file based on extension
-  ext <- tools::file_ext(file)
+
+  # read file based on extension (case-insensitive)
+  ext <- tolower(tools::file_ext(file))
   switch(ext,
     csv = readr::read_csv(dest, show_col_types = FALSE),
-    qs = qs::qread(dest),
-    R = readLines(dest),
+    qs  = qs::qread(dest),
+    r   = readLines(dest, warn = FALSE),
+    rds = readRDS(dest),
     stop("Unsupported file extension: ", ext)
   )
+}
+
+
+#' Clear shinymrp cache directory
+#'
+#' @description Deletes the local cache directory used by shinymrp to store
+#' downloaded data files. Useful for freeing up disk space or
+#' forcing re-download of cached files.
+#' @param cache_dir Character string specifying the cache directory path.
+#'   Defaults to the standard user cache directory for shinymrp.
+#'
+#' @noRd
+#' @keywords internal
+.clear_cache <- function(
+  cache_dir = tools::R_user_dir("shinymrp", which = "cache")
+) {
+  if (dir.exists(cache_dir)) {
+    unlink(cache_dir, recursive = TRUE, force = TRUE)
+    message("Cleared shinymrp cache at: ", cache_dir)
+  } else {
+    message("No cache directory found at: ", cache_dir)
+  }
 }
