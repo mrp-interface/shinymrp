@@ -23,7 +23,7 @@
     null.ok = TRUE
   )
 
-  loading_type <- .replace_null(loading_type, "")
+  loading_type <- loading_type %||% ""
 
   switch(loading_type,
     "fit" = tagList(
@@ -77,7 +77,7 @@
     null.ok = TRUE
   )
 
-  open <- .replace_null(open, .const()$ui$guide_sections[1])
+  open <- open %||% .const()$ui$guide_sections[1]
 
   bslib::accordion(
     id = "guide_accordion",
