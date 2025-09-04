@@ -28,27 +28,6 @@
   return(x)
 }
 
-#' Replace NULL values with a replacement value
-#'
-#' @description Replaces NULL values with a specified replacement value,
-#' leaving non-NULL values unchanged. Useful for providing default values
-#' when NULL inputs are encountered.
-#'
-#' @param x Any R object to check for NULL
-#' @param replacement Any R object to use as replacement when x is NULL
-#'
-#' @return The replacement value if x is NULL, otherwise returns x unchanged
-#'
-#' @noRd
-#' @keywords internal
-.replace_null <- function(x, replacement) {
-  if (is.null(x)) {
-    return(replacement)
-  } else {
-    return(x)
-  }
-}
-
 #' Create human-readable data format labels
 #'
 #' @description Converts internal data format codes to human-readable labels

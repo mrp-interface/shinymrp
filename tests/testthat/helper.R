@@ -119,15 +119,12 @@ setup_test_workflow <- function(
 }
 
 setup_test_model <- function(workflow, model_spec = NULL, fit_model = TRUE) {
-  model_spec <- .replace_null(
-    model_spec,
-    list(
-      intercept = list(
-        intercept = "normal(0, 1)"
-      ),
-      fixed = list(
-        sex = "normal(0, 1)"
-      )
+  model_spec <- model_spec %||% list(
+    intercept = list(
+      intercept = "normal(0, 1)"
+    ),
+    fixed = list(
+      sex = "normal(0, 1)"
     )
   )
 

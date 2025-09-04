@@ -426,9 +426,7 @@ link_acs <- function(
   )
 
   tryCatch({
-    if (!is.null(private$metadat_$special_case) &&
-        private$metadat_$special_case == "covid") {
-
+    if (identical(private$metadat_$special_case, "covid")) {
       if (is.null(private$linkdat_$link_geo) ||
           private$linkdat_$link_geo != "zip") {
         private$linkdat_$link_geo <- "zip"
@@ -457,8 +455,7 @@ link_acs <- function(
           filter(.data$zip %in% unique(private$mrpdat_$input$zip))
       )
 
-    } else if (!is.null(private$metadat_$special_case) &&
-                private$metadat_$special_case == "poll") {
+    } else if (identical(private$metadat_$special_case, "poll")) {
 
       if (is.null(private$linkdat_$link_geo) ||
           private$linkdat_$link_geo != "state") {
@@ -1350,7 +1347,7 @@ estimate_map <- function(
     choices = choices,
     null.ok = TRUE
   )
-  geo <- .replace_null(geo, choices[1])
+  geo <- geo %||% choices[1]
 
   time_index <- if (model$metadata()$is_timevar) {
     choices <- model$mrp_data()$levels$time
@@ -1359,7 +1356,7 @@ estimate_map <- function(
       choices = choices,
       null.ok = TRUE
     )
-    .replace_null(time_index, choices[1])
+    time_index %||% choices[1]
   } else {
     NULL
   }
