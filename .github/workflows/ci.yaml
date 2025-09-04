@@ -12,24 +12,47 @@ concurrency:
 
 jobs:
   check:
-    name: R-CMD-check
-    runs-on: ubuntu-latest
+    name: R-CMD-check (${{ matrix.config.os }} / R ${{ matrix.config.r }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: macos-latest,   r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,   r: 'release'}
+          - {os: ubuntu-latest,   r: 'oldrel-1'}
+    env:
+      R_KEEP_PKG_SOURCE: yes
     steps:
       - uses: actions/checkout@v4
 
-      - uses: r-lib/actions/setup-r@v2
+      - name: Setup R ${{ matrix.config.r }}
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          # Speeds up installs on Ubuntu via RSPM
+          use-public-rspm: true
+          # Ensure Rtools on Windows for compilation (needed by cmdstanr)
+          rtools: true
 
       - name: Cache R library
         uses: actions/cache@v4
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-R-${{ hashFiles('renv.lock', 'DESCRIPTION') }}
+          key: ${{ runner.os }}-R-${{ matrix.config.r }}-${{ hashFiles('renv.lock', 'DESCRIPTION') }}
           restore-keys: |
+            ${{ runner.os }}-R-${{ matrix.config.r }}-
             ${{ runner.os }}-R-
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - name: Install dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          # keep your original extras; adds local package
           extra-packages: any::rcmdcheck, local::.
+          # Enable binary installs on Linux for speed
+          needs: check
 
       - name: Install cmdstan
         run: |
@@ -37,25 +60,32 @@ jobs:
           cmdstanr::install_cmdstan(cores = 2)
         shell: Rscript {0}
 
-      - uses: r-lib/actions/check-r-package@v2
+      - name: R CMD check
+        uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual", "--as-cran")'
+          # Show full testthat output if something fails
+          error-on: '"error"'
 
   coverage:
     name: test-coverage
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+          r-version: 'release'
 
       - name: Cache R library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-R-${{ hashFiles('renv.lock', 'DESCRIPTION') }}
+          key: ${{ runner.os }}-R-release-${{ hashFiles('renv.lock', 'DESCRIPTION') }}
           restore-keys: |
+            ${{ runner.os }}-R-release-
             ${{ runner.os }}-R-
 
       - uses: r-lib/actions/setup-r-dependencies@v2
