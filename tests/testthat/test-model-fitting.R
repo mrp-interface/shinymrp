@@ -3,7 +3,7 @@ get_test_data <- function(fit) {
   fit$summary(variables = variables) %>% select(mean, sd)
 }
 
-expect_equal_saved_estimates <- function(workflow, model_spec) {
+expect_equal_saved_estimates <- function(workflow, model_spec, file) {
   model <- workflow$create_model(
     intercept_prior = model_spec$intercept$intercept,
     fixed = model_spec$fixed,
@@ -19,9 +19,20 @@ expect_equal_saved_estimates <- function(workflow, model_spec) {
     diagnostics = NULL
   )
 
+  path <- paste0(
+    "snapshots/model_fitting/",
+    file
+  ) %>%
+    testthat::test_path()
+
+  readr::write_csv(
+    get_test_data(model$fit_object()),
+    path
+  )
+
   saved <- paste0(
     "snapshots/model_fitting/",
-    make_hashed_filename(model_spec, prefix = "model")
+    file
   ) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
@@ -48,47 +59,50 @@ test_that("estimated parameters match saved values", {
   # fixed effects of binary variables
   expect_equal_saved_estimates(
     workflow, 
-    list(
+    model_spec = list(
       intercept = list(
         intercept = "normal(0, 1)"
       ),
       fixed = list(
         sex = "normal(0, 1)"
       )
-    )
+    ),
+    file = "fix-bin.csv"
   )
 
   # fixed effects of categorical variables
   expect_equal_saved_estimates(
     workflow,
-    list(
+    model_spec = list(
       intercept = list(
         intercept = "normal(0, 1)"
       ),
       fixed = list(
         race = "normal(0, 1)"
       )
-    )
+    ),
+    file = "fix-cat.csv"
   )
 
   # varying effects of categorical variables
   expect_equal_saved_estimates(
     workflow,
-    list(
+    model_spec = list(
       intercept = list(
         intercept = "normal(0, 1)"
       ),
       varying = list(
         race = "normal(0, 1)"
       )
-    )
+    ),
+    file = "var-cat.csv"
   )
 
   # varying effects of categorical variables
   # and interactions
   expect_equal_saved_estimates(
     workflow,
-    list(
+    model_spec = list(
       intercept = list(
         intercept = "normal(0, 1)"
       ),
@@ -99,7 +113,8 @@ test_that("estimated parameters match saved values", {
       interaction = list(
         `race:age` = "normal(0, 1)"
       )
-    )
+    ),
+    file = "var-cat_int.csv"
   )
 
   # fixed effects of binary variables,
@@ -107,7 +122,7 @@ test_that("estimated parameters match saved values", {
   # and interactions
   expect_equal_saved_estimates(
     workflow,
-    list(
+    model_spec = list(
       intercept = list(
         intercept = "normal(0, 1)"
       ),
@@ -120,7 +135,8 @@ test_that("estimated parameters match saved values", {
       interaction = list(
         `sex:race` = "normal(0, 1)"
       )
-    )
+    ),
+    file = "fix-bin_var-cat_int.csv"
   )
 
   # fixed effects of categorical variables,
@@ -128,7 +144,7 @@ test_that("estimated parameters match saved values", {
   # and interactions
   expect_equal_saved_estimates(
     workflow,
-    list(
+    model_spec = list(
       intercept = list(
         intercept = "normal(0, 1)"
       ),
@@ -141,7 +157,8 @@ test_that("estimated parameters match saved values", {
       interaction = list(
         `sex:race` = "normal(0, 1)"
       )
-    )
+    ),
+    file = "fix-cat_var-cat_int.csv"
   )
 
 })
