@@ -34,8 +34,6 @@ jobs:
           r-version: ${{ matrix.config.r }}
           # Speeds up installs on Ubuntu via RSPM
           use-public-rspm: true
-          # Ensure Rtools on Windows for compilation (needed by cmdstanr)
-          rtools: true
 
       - name: Cache R library
         uses: actions/cache@v4

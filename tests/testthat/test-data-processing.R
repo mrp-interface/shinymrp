@@ -12,14 +12,23 @@ expect_equal_saved_prep <- function(
     link = FALSE
   )
 
-  suppressWarnings(
-    saved <- paste0(
-      "snapshots/data_processing/",
-      make_hashed_filename(metadata, prefix = "prep")
-    ) %>%
-      testthat::test_path() %>%
-      read_saved_csv()
+  path <- paste0(
+    "snapshots/data_processing/",
+    make_hashed_filename(metadata, prefix = "prep")
+  ) %>%
+    testthat::test_path()
+
+  readr::write_csv(
+    workflow$preprocessed_data(),
+    file = path
   )
+
+  saved <- paste0(
+    "snapshots/data_processing/",
+    make_hashed_filename(metadata, prefix = "prep")
+  ) %>%
+    testthat::test_path() %>%
+    read_saved_csv()
 
   expect_equal(
     workflow$preprocessed_data(),
