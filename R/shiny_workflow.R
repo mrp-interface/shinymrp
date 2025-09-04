@@ -100,7 +100,7 @@ ShinyMRPWorkflow <- R6::R6Class(
         left_join(fips_df, by = "fips") %>%
         rename("factor" = geo)
 
-      subset <- .replace_null(subset, plot_df$factor[1])
+      subset <- subset %||% plot_df$factor[1]
 
       plot_df <- plot_df %>%
         filter(factor %in% subset)

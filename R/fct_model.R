@@ -94,7 +94,7 @@
 #' @keywords internal
 .set_default_priors <- function(effects) {
   for (type in c("intercept", .const()$args$effect_types)) {
-    effects[[type]] <- purrr::map(effects[[type]], ~ .replace_null(.nullify(.x), .const()$default_priors[[type]]))
+    effects[[type]] <- purrr::map(effects[[type]], ~ .nullify(.x) %||% .const()$default_priors[[type]])
   }
 
   return(effects)

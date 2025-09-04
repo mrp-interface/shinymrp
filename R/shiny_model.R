@@ -46,7 +46,7 @@ ShinyMRPModel <- R6::R6Class(
         null.ok = TRUE
       )
 
-      ui_name <- .replace_null(ui_name, "main")
+      ui_name <- ui_name %||% "main"
 
       return(private$id_[[ui_name]])
     },
