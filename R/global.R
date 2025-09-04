@@ -63,7 +63,7 @@ module_ids <- list(
       preview_size = 100,
       format = list(
         date = "%b%d\n%Y",
-        data = c(".csv", ".xlsx", ".sas7bdat")
+        data = c(".csv")
       ),
       model = list(
         max_models = 5,
