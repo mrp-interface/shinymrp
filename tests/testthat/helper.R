@@ -2,7 +2,7 @@ make_hashed_filename <- function(
   x,
   prefix = NULL,
   ext    = ".csv",
-  n      = 16   # safer default than 8; feel free to set back to 8
+  n      = 16
 ) {
   # ------------------------
   # Helpers (base R only)
@@ -12,45 +12,125 @@ make_hashed_filename <- function(
       !is.null(names(z)) && any(nzchar(names(z)))
   }
 
-  # Normalize object so that equal content ⇒ equal hash across OS/R
+  strip_attrs <- function(z, keep = character()) {
+    a <- attributes(z)
+    if (is.null(a)) return(z)
+    a_keep <- a[intersect(names(a), keep)]
+    attributes(z) <- a_keep
+    z
+  }
+
+  # Canonicalize dimnames (UTF-8, drop NULL vs "" ambiguity)
+  canon_dimnames <- function(dn) {
+    if (is.null(dn)) return(NULL)
+    lapply(dn, function(v) if (is.null(v)) NULL else enc2utf8(v))
+  }
+
+  # ------------------------
+  # Canonicalize object so equal content ⇒ equal bytes across R/OS
+  # ------------------------
   canonicalize <- function(z) {
-    # Normalize common atomic types
-    if (inherits(z, "POSIXt")) return(as.POSIXct(z, tz = "UTC"))
-    if (is.factor(z))         return(enc2utf8(as.character(z)))
-    if (is.character(z))      return(enc2utf8(z))
-    if (is.numeric(z))        return(signif(z, 14))   # damp tiny BLAS diffs
-
-    # Don’t disturb data frames (row/col order is meaningful)
-    if (is.data.frame(z))     return(z)
-
-    # Strip environments from formulas/functions (session noise)
-    if (inherits(z, "formula")) {
-      environment(z) <- emptyenv()
+    # Basic scalars & vectors
+    if (inherits(z, "POSIXt")) {
+      # Always serialize as UTC seconds since epoch
+      z <- as.POSIXct(z, tz = "UTC")
       return(z)
     }
+    if (inherits(z, "Date")) {
+      # Keep as Date (days since epoch are stable)
+      return(as.Date(z))
+    }
+    if (inherits(z, "difftime")) {
+      # Normalize to seconds
+      return(as.numeric(z, units = "secs"))
+    }
+    if (is.factor(z)) {
+      # Factor → UTF-8 character (levels/order differences removed)
+      return(enc2utf8(as.character(z)))
+    }
+    if (is.ordered(z)) {
+      return(enc2utf8(as.character(z)))
+    }
+    if (is.character(z)) {
+      return(enc2utf8(z))
+    }
+    if (is.integer(z)) {
+      # Integer vs double can vary between code paths → use double
+      return(as.numeric(z))
+    }
+    if (is.numeric(z)) {
+      # Damp tiny BLAS/ALTREP diffs
+      return(signif(z, 14))
+    }
+    if (is.logical(z) || is.complex(z) || is.raw(z)) {
+      return(z)
+    }
+
+    # Functions / formulas: strip environments
     if (is.function(z)) {
       environment(z) <- emptyenv()
       return(z)
     }
+    if (inherits(z, "formula")) {
+      environment(z) <- emptyenv()
+      return(z)
+    }
 
-    # Recurse into named lists as maps: sort by (UTF-8) key
+    # Matrices / arrays
+    if (is.matrix(z) || length(dim(z)) > 1L) {
+      # Normalize storage mode for numeric-like
+      if (is.integer(z)) z <- apply(z, seq_along(dim(z)), as.numeric)
+      if (is.numeric(z)) z <- signif(z, 14)
+
+      # Canonicalize character entries
+      if (is.character(z)) z <- enc2utf8(z)
+
+      # Normalize dimnames
+      dn <- canon_dimnames(dimnames(z))
+      dimnames(z) <- dn
+
+      # Keep only essential attrs: dim + dimnames + class (matrix/array)
+      z <- strip_attrs(z, keep = c("dim", "dimnames", "class"))
+      return(z)
+    }
+
+    # Data frames / tibbles: preserve row/col order, but canonicalize columns
+    if (is.data.frame(z)) {
+      z <- as.data.frame(z, stringsAsFactors = FALSE, check.names = FALSE)
+      z[] <- lapply(z, canonicalize)
+      # Normalize row.names representation
+      row.names(z) <- as.character(seq_len(NROW(z)))
+      # Keep only essential attrs
+      z <- strip_attrs(z, keep = c("names", "row.names", "class"))
+      return(z)
+    }
+
+    # Named lists as maps: sort by UTF-8 key, then recurse
     if (is_named_list(z)) {
       nm  <- enc2utf8(names(z))
       ord <- order(nm, method = "radix", na.last = TRUE)
       z   <- z[ord]
       names(z) <- nm[ord]
-      return(lapply(z, canonicalize))
+      z <- lapply(z, canonicalize)
+      # Keep only names attribute
+      z <- strip_attrs(z, keep = "names")
+      return(z)
     }
 
-    # Recurse into other lists (unnamed arrays) without reordering
-    if (is.list(z)) return(lapply(z, canonicalize))
+    # Other lists: recurse without reordering; drop stray attrs
+    if (is.list(z)) {
+      z <- lapply(z, canonicalize)
+      z <- strip_attrs(z, keep = NULL)
+      return(z)
+    }
 
-    z
+    # Fallback: drop non-essential attributes
+    strip_attrs(z, keep = NULL)
   }
 
   sanitize_prefix <- function(p) {
     if (is.null(p) || identical(p, "")) return(NULL)
-    p <- gsub("[^A-Za-z0-9._-]+", "-", p)   # keep letters, numbers, . _ -
+    p <- gsub("[^A-Za-z0-9._-]+", "-", p)  # keep letters, numbers, . _ -
     sub("[-.]+$", "", p)
   }
 
@@ -60,18 +140,18 @@ make_hashed_filename <- function(
   }
 
   # ------------------------
-  # Canonicalize + serialize (pin version for portability)
+  # Canonicalize + serialize with pinned format
   # ------------------------
   norm_obj <- canonicalize(x)
   raw_ser  <- serialize(norm_obj, connection = NULL, version = 2)
 
   # ------------------------
-  # Hash with base R (tools::md5sum via tempfile)
+  # Hash (base R: tools::md5sum via a tempfile)
   # ------------------------
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   writeBin(raw_ser, tmp)
-  full_hash <- unname(tools::md5sum(tmp))  # 32 hex chars (md5)
+  full_hash <- unname(tools::md5sum(tmp))  # 32 hex chars
 
   short_hash <- substr(full_hash, 1L, as.integer(n))
 
