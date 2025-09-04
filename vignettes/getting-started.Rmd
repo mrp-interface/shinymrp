@@ -115,7 +115,6 @@ model$fit(n_iter = 500, n_chains = 2, seed = 123)
 
 # Inspect summary and diagnostics
 model$summary()
-summary(model)
 model$diagnostics()
 
 # Posterior predictive checks
