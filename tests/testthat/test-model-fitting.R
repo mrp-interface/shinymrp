@@ -20,9 +20,9 @@ expect_equal_saved_estimates <- function(workflow, model_spec) {
   )
 
   saved <- paste0(
-      "snapshots/model_fitting/",
-      make_hashed_filename(model_spec, prefix = "model")
-    ) %>%
+    "snapshots/model_fitting/",
+    make_hashed_filename(model_spec, prefix = "model")
+  ) %>%
     testthat::test_path() %>%
     readr::read_csv(show_col_types = FALSE)
 

@@ -2,31 +2,85 @@ make_hashed_filename <- function(
   x,
   prefix = NULL,
   ext    = ".csv",
-  n      = 8
+  n      = 16   # safer default than 8; feel free to set back to 8
 ) {
-  # recursively sort each sub‐list by name
-  normalize <- function(z) {
-    if (!is.list(z)) return(z)
-    z <- z[sort(names(z))]
-    lapply(z, normalize)
+  # ------------------------
+  # Helpers (base R only)
+  # ------------------------
+  is_named_list <- function(z) {
+    is.list(z) && !is.data.frame(z) &&
+      !is.null(names(z)) && any(nzchar(names(z)))
   }
 
-  # normalize the object so ordering doesn't matter
-  norm_obj <- normalize(x)
+  # Normalize object so that equal content ⇒ equal hash across OS/R
+  canonicalize <- function(z) {
+    # Normalize common atomic types
+    if (inherits(z, "POSIXt")) return(as.POSIXct(z, tz = "UTC"))
+    if (is.factor(z))         return(enc2utf8(as.character(z)))
+    if (is.character(z))      return(enc2utf8(z))
+    if (is.numeric(z))        return(signif(z, 14))   # damp tiny BLAS diffs
 
-  # serialize to a raw vector
-  raw_ser <- serialize(norm_obj, connection = NULL)
+    # Don’t disturb data frames (row/col order is meaningful)
+    if (is.data.frame(z))     return(z)
 
-  # write to a temp file and compute its MD5 sum
+    # Strip environments from formulas/functions (session noise)
+    if (inherits(z, "formula")) {
+      environment(z) <- emptyenv()
+      return(z)
+    }
+    if (is.function(z)) {
+      environment(z) <- emptyenv()
+      return(z)
+    }
+
+    # Recurse into named lists as maps: sort by (UTF-8) key
+    if (is_named_list(z)) {
+      nm  <- enc2utf8(names(z))
+      ord <- order(nm, method = "radix", na.last = TRUE)
+      z   <- z[ord]
+      names(z) <- nm[ord]
+      return(lapply(z, canonicalize))
+    }
+
+    # Recurse into other lists (unnamed arrays) without reordering
+    if (is.list(z)) return(lapply(z, canonicalize))
+
+    z
+  }
+
+  sanitize_prefix <- function(p) {
+    if (is.null(p) || identical(p, "")) return(NULL)
+    p <- gsub("[^A-Za-z0-9._-]+", "-", p)   # keep letters, numbers, . _ -
+    sub("[-.]+$", "", p)
+  }
+
+  sanitize_ext <- function(e) {
+    e <- if (is.null(e) || e == "") ".dat" else e
+    if (!startsWith(e, ".")) paste0(".", e) else e
+  }
+
+  # ------------------------
+  # Canonicalize + serialize (pin version for portability)
+  # ------------------------
+  norm_obj <- canonicalize(x)
+  raw_ser  <- serialize(norm_obj, connection = NULL, version = 2)
+
+  # ------------------------
+  # Hash with base R (tools::md5sum via tempfile)
+  # ------------------------
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   writeBin(raw_ser, tmp)
-  full_hash <- unname(tools::md5sum(tmp))
+  full_hash <- unname(tools::md5sum(tmp))  # 32 hex chars (md5)
 
-  # take only the first n hex chars and build the filename
-  short_hash <- substr(full_hash, 1, n)
-  paste0(prefix, "_", short_hash, ext)
+  short_hash <- substr(full_hash, 1L, as.integer(n))
+
+  pfx <- sanitize_prefix(prefix)
+  ext <- sanitize_ext(ext)
+
+  if (is.null(pfx)) paste0(short_hash, ext) else paste0(pfx, "_", short_hash, ext)
 }
+
 
 setup_test_workflow <- function(
   metadata,
@@ -105,15 +159,17 @@ expect_save_file <- function(func, ext, ...) {
 }
 
 read_saved_csv <- function(file_path) {
-  readr::read_csv(
-    file_path,
-    col_types = readr::cols(
-      zip = readr::col_character(),
-      county = readr::col_character(),
-      state = readr::col_character(),
-      date = readr::col_character(),
-      .default = readr::col_guess()
-    ),
-    show_col_types = FALSE
+  suppressWarnings(
+    readr::read_csv(
+      file_path,
+      col_types = readr::cols(
+        zip = readr::col_character(),
+        county = readr::col_character(),
+        state = readr::col_character(),
+        date = readr::col_character(),
+        .default = readr::col_guess()
+      ),
+      show_col_types = FALSE
+    )
   )
 }
