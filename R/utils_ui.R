@@ -481,7 +481,7 @@
       # Only show slider if we have time-varying data
       if (!is.null(time_indices)) {
         if(!is.null(dates)) {
-          div(
+          tags$div(
             class = "mx-4",
             shinyWidgets::sliderTextInput(
               inputId = ns("map_slider"),
@@ -494,7 +494,7 @@
             )
           )
         } else {
-          div(
+          tags$div(
             class = "mx-4",
             sliderInput(
               inputId = ns("map_slider"),
