@@ -1,38 +1,3 @@
-#' Read data from various file formats
-#'
-#' @description Reads data from CSV, Excel (xlsx/xls), or SAS (sas7bdat) files
-#' based on the file extension. Automatically detects the file format and uses
-#' the appropriate reading function with optimized parameters for each format.
-#'
-#' @param file_path Character string. Path to the data file to be read. Must be
-#'   a valid file path with one of the supported extensions: .csv, .xlsx, .xls,
-#'   or .sas7bdat.
-#'
-#' @return A data frame containing the data from the specified file. Column types
-#'   are automatically detected based on the file format:
-#' \itemize{
-#'   \item CSV files: Uses readr::read_csv() with column type detection disabled
-#'   \item Excel files: Uses readxl::read_excel() with increased guess_max for better type detection
-#'   \item SAS files: Uses haven::read_sas() with native SAS data types preserved
-#' }
-#'
-#' @noRd
-#' @keywords internal
-#'
-#' @importFrom readr read_csv
-#' @importFrom readxl read_excel
-#' @importFrom haven read_sas
-#' @importFrom stringr str_ends
-.read_data <- function(file_path) {
-  if(stringr::str_ends(file_path, "csv")) {
-    readr::read_csv(file_path, show_col_types = FALSE)
-  } else if (stringr::str_ends(file_path, "(xlsx|xls)")) {
-    readxl::read_excel(file_path, guess_max = 5000)
-  } else if (stringr::str_ends(file_path, "sas7bdat")) {
-    haven::read_sas(file_path)
-  }
-}
-
 #' Clean and standardize column names
 #'
 #' @description Converts column names to a standardized format by applying
