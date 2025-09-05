@@ -6,9 +6,9 @@
 #' @import shiny
 #'
 #' @importFrom dplyr across all_of any_of arrange bind_rows bind_cols
-#'   case_match case_when distinct everything filter first full_join
+#'   case_match case_when desc distinct everything filter first full_join
 #'   group_by if_else inner_join left_join mutate n n_distinct
-#'   rename rename_with right_join select slice_max
+#'   rename rename_with right_join row_number select slice_max
 #'   summarize summarize_all sym syms ungroup where
 #'
 #' @importFrom golem activate_js add_resource_path bundle_resources favicon
@@ -17,6 +17,8 @@
 #' @importFrom magrittr %>%
 #'
 #' @importFrom rlang .data
+#'
+#' @importFrom R6 R6Class
 #'
 #' @importFrom shiny HTML NS actionButton actionLink column conditionalPanel
 #'   downloadButton downloadHandler fileInput fluidRow icon isolate modalButton
