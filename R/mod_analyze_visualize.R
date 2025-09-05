@@ -18,8 +18,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList uiOutput selectInput conditionalPanel plotOutput
 mod_analyze_visualize_ui <- function(id){
   ns <- NS(id)
   
@@ -76,12 +74,6 @@ mod_analyze_visualize_ui <- function(id){
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer observeEvent updateSelectInput renderUI renderPlot req isolate
-#' @importFrom dplyr mutate
-#' @importFrom dplyr mutate
-#' @importFrom rlang .data
-#' @importFrom shinyjs reset
 mod_analyze_visualize_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

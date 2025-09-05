@@ -88,8 +88,6 @@
 #'
 #' @return The configuration value associated with the specified key
 #'
-#' @importFrom config get
-#'
 #' @noRd
 #' @keywords internal
 .get_config <- function(value) {

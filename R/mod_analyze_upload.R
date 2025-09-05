@@ -18,8 +18,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList conditionalPanel fileInput actionButton downloadButton uiOutput selectizeInput actionLink tags
 mod_analyze_upload_ui <- function(id) {
   ns <- NS(id)
   
@@ -213,7 +211,7 @@ mod_analyze_upload_ui <- function(id) {
         col_widths = c(4, 8),
         conditionalPanel(
           condition = sprintf("output['%s'] == true", ns("data_preprocessed")),
-          div(class = "d-flex align-items-start gap-2",
+          tags$div(class = "d-flex align-items-start gap-2",
             # Toggle button for table view
             shinyWidgets::radioGroupButtons(
               inputId = ns("toggle_table"),
@@ -262,12 +260,6 @@ mod_analyze_upload_ui <- function(id) {
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateSelectInput updateActionButton renderUI req
-#' @importFrom dplyr mutate filter
-#' @importFrom dplyr mutate filter
-#' @importFrom rlang .data
-#' @importFrom shinyjs reset toggle show hide delay
 mod_analyze_upload_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

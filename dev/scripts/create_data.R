@@ -39,9 +39,6 @@ major_county <- function(zip_tract) {
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr mutate group_by summarise left_join
-#' @importFrom rlang .data
 create_zip_county_state <- function(zip_tract) {
   # find the most common county for each zip code
   zip_fips <- major_county(zip_tract)
@@ -76,9 +73,6 @@ create_zip_county_state <- function(zip_tract) {
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr select distinct mutate
-#' @importFrom rlang .data
 create_fips_county_state <- function(zip_county_state, for_plotting = FALSE) {
   fips_county_state <- zip_county_state %>%
     select(.data$fips, .data$county, .data$state, .data$state_name) %>%

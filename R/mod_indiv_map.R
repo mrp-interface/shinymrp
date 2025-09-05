@@ -6,8 +6,6 @@
 #'
 #' @noRd
 #' @keywords internal 
-#'
-#' @importFrom shiny NS tagList 
 mod_indiv_map_ui <- function(id) {
   ns <- NS(id)
   
@@ -31,9 +29,7 @@ mod_indiv_map_ui <- function(id) {
 #' indiv_map Server Functions
 #'
 #' @noRd
-#' @keywords internal 
-#' @importFrom dplyr mutate
-#' @importFrom rlang .data
+#' @keywords internal
 mod_indiv_map_server <- function(id, workflow, fips_codes){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

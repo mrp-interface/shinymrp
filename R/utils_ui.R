@@ -10,8 +10,6 @@
 #'
 #' @return A tagList containing spinner and message elements, or NULL for empty type
 #'
-#' @importFrom shiny tagList tags
-#'
 #' @noRd
 #' @keywords internal
 .waiter_ui <- function(loading_type) {
@@ -64,8 +62,6 @@
 #'   Options: "workflow", "upload", "model_spec", "model_fit"
 #'
 #' @return A bslib accordion object containing detailed user guide content
-#'
-#' @importFrom shiny tags withMathJax
 #'
 #' @noRd
 #' @keywords internal
@@ -319,8 +315,6 @@
 #' @param last_tab_id Character. ID of the last tab for positioning the new tab
 #'
 #' @return No return value, called for side effect of inserting navigation tab
-#'
-#' @importFrom shiny tags actionButton downloadButton textOutput plotOutput tableOutput icon HTML
 #'
 #' @noRd
 #' @keywords internal

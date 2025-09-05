@@ -6,8 +6,6 @@
 #'
 #' @noRd
 #' @keywords internal 
-#'
-#' @importFrom shiny NS tagList conditionalPanel selectInput selectizeInput plotOutput
 mod_est_map_ui <- function(id) {
   ns <- NS(id)
   uiOutput(ns("ui"))
@@ -17,8 +15,6 @@ mod_est_map_ui <- function(id) {
 #'
 #' @noRd
 #' @keywords internal 
-#' @importFrom dplyr rename left_join filter
-#' @importFrom rlang .data
 mod_est_map_server <- function(id, workflow, model, geo_scale, geo_view, geo_subset){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

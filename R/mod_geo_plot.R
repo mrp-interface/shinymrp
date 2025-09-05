@@ -6,8 +6,6 @@
 #'
 #' @noRd
 #' @keywords internal 
-#'
-#' @importFrom shiny NS tagList 
 mod_geo_plot_ui <- function(id) {
   ns <- NS(id)
   bslib::layout_sidebar(
@@ -27,9 +25,7 @@ mod_geo_plot_ui <- function(id) {
 #' geo_plot Server Functions
 #'
 #' @noRd
-#' @keywords internal 
-#' @importFrom dplyr mutate select rename
-#' @importFrom rlang sym .data
+#' @keywords internal
 mod_geo_plot_server <- function(id, workflow, covar){
   moduleServer(id, function(input, output, session){
     # Render the plot

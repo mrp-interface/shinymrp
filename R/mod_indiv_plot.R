@@ -6,8 +6,6 @@
 #'
 #' @noRd
 #' @keywords internal 
-#'
-#' @importFrom shiny NS tagList 
 mod_indiv_plot_ui <- function(id) {
   ns <- NS(id)
   plotOutput(
@@ -21,8 +19,6 @@ mod_indiv_plot_ui <- function(id) {
 #'
 #' @noRd
 #' @keywords internal 
-#' @importFrom dplyr mutate select filter
-#' @importFrom rlang sym .data
 mod_indiv_plot_server <- function(id, workflow, demo_var){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

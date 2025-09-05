@@ -18,8 +18,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList withMathJax tags
 mod_learn_interface_ui <- function(id){
   ns <- NS(id)
   bslib::layout_columns(
@@ -246,8 +244,6 @@ mod_learn_interface_ui <- function(id){
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer observeEvent updateTabsetPanel downloadHandler
 mod_learn_interface_server <- function(id, global){
   moduleServer( id, function(input, output, session){
   })

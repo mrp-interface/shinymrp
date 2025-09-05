@@ -137,8 +137,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom rlang .data
 .create_interactions <- function(fixed_effects, varying_effects, dat) {
   main_effects <- c(fixed_effects, varying_effects)
   

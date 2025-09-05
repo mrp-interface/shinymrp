@@ -12,8 +12,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList conditionalPanel actionButton tags
 mod_home_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -96,8 +94,6 @@ mod_home_ui <- function(id) {
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer reactiveVal reactive outputOptions observeEvent updateNavbarPage
 mod_home_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

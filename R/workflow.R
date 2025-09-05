@@ -128,8 +128,6 @@ mrp_workflow <- function() {
 #'  }
 #'
 #' @export
-#' 
-#' @importFrom R6 R6Class
 MRPWorkflow <- R6::R6Class(
   "MRPWorkflow",
   private = list(

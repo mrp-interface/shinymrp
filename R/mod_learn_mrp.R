@@ -18,8 +18,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList withMathJax tags
 mod_learn_mrp_ui <- function(id){
   ns <- NS(id)
 
@@ -156,8 +154,6 @@ mod_learn_mrp_ui <- function(id){
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer
 mod_learn_mrp_server <- function(id){
   moduleServer( id, function(input, output, session){
     ns <- session$ns

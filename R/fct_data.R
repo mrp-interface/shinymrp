@@ -47,9 +47,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr mutate across where
-#' @importFrom stringr str_trim
 .clear_chr <- function(df) {
   # Convert character columns to lowercase and trim whitespace
   df %>% dplyr::mutate(
@@ -162,7 +159,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#' @importFrom dplyr mutate across everything if_else
 .clean_data <- function(
     df,
     na_strings = c("", "na", "n/a", "none", "null", "unknown")
@@ -426,8 +422,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr full_join
 .add_time_indices <- function(df, time_freq = NULL) {
   
   checkmate::assert_choice(
@@ -504,9 +498,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr mutate if_else case_match
-#' @importFrom rlang .data
 .recode_values <- function(df, expected_levels, is_covid=FALSE) {
   if (is_covid) {
     return(.recode_covid(df, expected_levels))
@@ -646,8 +637,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr group_by summarize_all select distinct all_of sym n_distinct
 .get_geo_predictors <- function(df, geo_col) {
   bool <- df %>%
     dplyr::group_by(!!dplyr::sym(geo_col)) %>%
@@ -736,9 +725,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr select rename mutate distinct
-#' @importFrom rlang .data
 .append_geo <- function(input_data, zip_county_state) {
   # get the smallest geographic scale in the data
   smallest <- .get_smallest_geo(names(input_data))
@@ -824,8 +810,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr select right_join
 .clean_left_join <- function(df1, df2, by) {
   common <- intersect(names(df1), names(df2))
   to_drop <- setdiff(common, by)
@@ -1191,10 +1175,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr mutate group_by summarize ungroup across any_of first n full_join
-#' @importFrom tidyr drop_na
-#' @importFrom rlang syms .data
 .preprocess <- function(
   data,
   metadata,
@@ -1380,9 +1360,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr select rename inner_join group_by summarise across mutate summarize_all
-#' @importFrom rlang .data
 .combine_tracts <- function(
     tract_data,
     zip_tract,
@@ -1469,9 +1446,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr filter select mutate arrange across left_join
-#' @importFrom rlang sym .data
 .prepare_mrp_acs <- function(
     input_data,
     tract_data,
@@ -1567,9 +1541,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom dplyr filter mutate
-#' @importFrom rlang sym
 .prepare_mrp_custom <- function(
     input_data,
     new_data,
