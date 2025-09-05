@@ -42,7 +42,7 @@
                              & !grepl("igg", all_names, ignore.case=TRUE)]
                  )
 
-  df <- df %>% dplyr::select(dplyr::all_of(old_names))
+  df <- df %>% select(all_of(old_names))
   new_names <- c("id", "sex", "race", "age", "zip",
                  "positive", "date")
   names(df) <- new_names
@@ -88,9 +88,9 @@
 .remove_duplicates_covid <- function(df) {
   # only keep the latest result if a patient have multiple tests in the same week
   df <- df %>%
-    dplyr::group_by(.data$id, .data$time) %>%
-    dplyr::slice_max(.data$date, n = 1, with_ties = FALSE) %>%
-    dplyr::ungroup()
+    group_by(.data$id, .data$time) %>%
+    slice_max(.data$date, n = 1, with_ties = FALSE) %>%
+    ungroup()
 
   return(df)
 }
@@ -145,9 +145,9 @@
   is_pos <- grepl("positive|detected|1", df$positive, ignore.case = TRUE)
   is_neg <- grepl("not|negative|undetected|0", df$positive, ignore.case = TRUE)
 
-  df <- df %>% dplyr::mutate(
-    sex = dplyr::if_else(stringr::str_detect(.data$sex, stringr::regex("female", ignore_case = TRUE)), "female", "male"),
-    race = dplyr::case_when(
+  df <- df %>% mutate(
+    sex = if_else(stringr::str_detect(.data$sex, stringr::regex("female", ignore_case = TRUE)), "female", "male"),
+    race = case_when(
       stringr::str_detect(.data$race, stringr::regex("white", ignore_case = TRUE)) ~ "white",
       stringr::str_detect(.data$race, stringr::regex("black", ignore_case = TRUE)) ~ "black",
       TRUE ~ "other"
@@ -241,16 +241,16 @@
 ) {
 
 
-  covariates <- covariates %>% dplyr::filter(.data$zip %in% input_data$zip)
-  pstrat_data <- pstrat_data %>% dplyr::filter(.data$zip %in% input_data$zip)
+  covariates <- covariates %>% filter(.data$zip %in% input_data$zip)
+  pstrat_data <- pstrat_data %>% filter(.data$zip %in% input_data$zip)
   cell_counts <- pstrat_data[-c(1)] %>% t() %>% c()
   
   # # prevent duplicate columns
   dup_cols <- intersect(names(input_data), names(covariates)) %>% setdiff(c("zip"))
-  input_data <- input_data %>% dplyr::select(-dplyr::all_of(dup_cols))
+  input_data <- input_data %>% select(-all_of(dup_cols))
 
   input_data <- input_data %>%
-    dplyr::inner_join(covariates, by = "zip")
+    inner_join(covariates, by = "zip")
 
   # create lists of all factor levels
   levels <- .create_expected_levels(metadata)
@@ -258,9 +258,9 @@
   levels$zip <- pstrat_data$zip
 
   new_data <- expand.grid(levels, stringsAsFactors = FALSE) %>%
-    dplyr::arrange(.data$time, .data$zip, .data$sex, .data$race, .data$age) %>%  # IMPORTANT: To match the cell order of poststratification data
-    dplyr::mutate(total = rep(cell_counts, length(levels$time))) %>%
-    dplyr::inner_join(covariates, by = "zip")
+    arrange(.data$time, .data$zip, .data$sex, .data$race, .data$age) %>%  # IMPORTANT: To match the cell order of poststratification data
+    mutate(total = rep(cell_counts, length(levels$time))) %>%
+    inner_join(covariates, by = "zip")
 
   # append levels for other geographic predictors
   # NOTE: this must be done after new_data is created

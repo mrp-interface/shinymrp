@@ -4,6 +4,8 @@
 
 
 test_that("demo_bars works correctly for general data", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -41,6 +43,8 @@ test_that("demo_bars works correctly for general data", {
 
 
 test_that("demo_bars works correctly for polling data", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -57,6 +61,8 @@ test_that("demo_bars works correctly for polling data", {
 
 
 test_that("covar_histworks correctly for COVID data", {
+  skip_on_cran()
+  
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = TRUE,
@@ -87,6 +93,8 @@ test_that("covar_histworks correctly for COVID data", {
 })
 
 test_that("covar_hist fails appropriately for non-COVID data", {
+  skip_on_cran()
+
   # Test error handling for non-COVID data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -104,6 +112,8 @@ test_that("covar_hist fails appropriately for non-COVID data", {
 })
 
 test_that("sample_size_map works correctly", {
+  skip_on_cran()
+
   # Linking through ZIP code
   workflow <- setup_test_workflow(
     metadata = list(
@@ -142,6 +152,8 @@ test_that("sample_size_map works correctly", {
 
 # Test outcome_plot method
 test_that("outcome_plot works correctly", {
+  skip_on_cran()
+
   # For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -179,6 +191,8 @@ test_that("outcome_plot works correctly", {
 
 # Test outcome_map method
 test_that("outcome_map works correctly", {
+  skip_on_cran()
+
   # For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -238,6 +252,8 @@ test_that("outcome_map works correctly", {
 
 # Test pp_check method
 test_that("pp_check works correctly", {
+  skip_on_cran()
+
   # For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -282,6 +298,8 @@ test_that("pp_check works correctly", {
 
 
 test_that("estimate_plot works correctly", {
+  skip_on_cran()
+
   ### For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -369,6 +387,8 @@ test_that("estimate_plot works correctly", {
 
 # Test estimate_map method
 test_that("estimate_map works correctly", {
+  skip_on_cran()
+
   ### For time-varying data
   workflow <- setup_test_workflow(
     metadata = list(
@@ -462,6 +482,8 @@ test_that("methods fail appropriately without preprocessed data", {
 
 # Test error handling for methods requiring fitted models
 test_that("model-dependent methods fail appropriately without fitted models", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -488,6 +510,8 @@ test_that("model-dependent methods fail appropriately without fitted models", {
 })
 
 test_that("map-generating methods fail without linking geography", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,

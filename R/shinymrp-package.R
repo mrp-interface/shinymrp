@@ -5,9 +5,10 @@
 #' @import bslib
 #' @import shiny
 #'
-#' @importFrom dplyr across all_of any_of arrange case_match distinct everything
-#'   filter first full_join group_by if_else inner_join left_join mutate n
-#'   n_distinct rename right_join select summarise summarize summarize_all
+#' @importFrom dplyr across all_of any_of arrange bind_rows bind_cols
+#'   case_match case_when distinct everything filter first full_join
+#'   group_by if_else inner_join left_join mutate n n_distinct
+#'   rename right_join select slice_max summarise summarize summarize_all
 #'   sym syms ungroup where
 #'
 #' @importFrom golem activate_js add_resource_path bundle_resources favicon

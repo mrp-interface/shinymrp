@@ -13,7 +13,7 @@
 .fips_upper <- function(fips) {
   has_county <- "county" %in% names(fips)
 
-  fips %>% dplyr::mutate(
+  fips %>% mutate(
     state = toupper(.data$state),
     state_name = tools::toTitleCase(.data$state_name),
     county = if(has_county) tools::toTitleCase(.data$county)
@@ -54,27 +54,27 @@
     return(NULL)
   }
 
-  input_data <- input_data %>% dplyr::mutate(fips = input_data[[geo]])
+  input_data <- input_data %>% mutate(fips = input_data[[geo]])
   fips_codes <- fips_codes %>% .fips_upper()
   
   total_count <- sum(input_data$total)
   plot_df <- input_data %>%
-    dplyr::group_by(.data$fips) %>%
-    dplyr::summarize(
+    group_by(.data$fips) %>%
+    summarize(
       count = sum(.data$total),
       perc = (sum(.data$total) / total_count) * 100
     ) %>%
-    dplyr::left_join(fips_codes, by = "fips")
+    left_join(fips_codes, by = "fips")
 
   if(for_map) {
     if(geo == "state") {
-      plot_df <- plot_df %>% dplyr::mutate(
+      plot_df <- plot_df %>% mutate(
         value = .data$count,
         hover = sprintf("%s: %d (%.2f%%)",
                         .data$state, .data$count, .data$perc)
       )
     } else {
-      plot_df <- plot_df %>% dplyr::mutate(
+      plot_df <- plot_df %>% mutate(
         value = .data$count,
         hover = sprintf("%s (%s): %d (%.2f%%)",
                         .data$county, .data$state, .data$count, .data$perc)
@@ -82,13 +82,13 @@
     }
   } else {
     if(geo == "county") {
-      plot_df <- plot_df %>% dplyr::mutate(county = gsub(" [Cc][Oo][Uu][Nn][Tt][Yy]", "", .data$county))
+      plot_df <- plot_df %>% mutate(county = gsub(" [Cc][Oo][Uu][Nn][Tt][Yy]", "", .data$county))
     }
     
     plot_df <- plot_df %>%
-      dplyr::select(-c("fips", "perc", "state_name")) %>%
-      dplyr::select(-"count", "count") %>%
-      dplyr::arrange(dplyr::desc(.data$count))
+      select(-c("fips", "perc", "state_name")) %>%
+      select(-"count", "count") %>%
+      arrange(desc(.data$count))
   }
 
 
@@ -141,14 +141,14 @@
     return(NULL)
   }
 
-  input_data <- input_data %>% dplyr::mutate(fips = input_data[[geo]])
+  input_data <- input_data %>% mutate(fips = input_data[[geo]])
   fips_codes <- fips_codes %>% .fips_upper()
 
   # compute temporal average
   group_cols <- if(metadata$is_timevar) c("fips", "time") else c("fips")
   plot_df <- input_data %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
-    dplyr::summarize(
+    group_by(across(all_of(group_cols))) %>%
+    summarize(
       value = switch(metadata$family,
         "binomial" = sum(.data$positive) / sum(.data$total),
         "normal"   = mean(.data$outcome)
@@ -162,22 +162,22 @@
     )
 
     plot_df <- plot_df %>%
-      dplyr::group_by(.data$fips) %>%
-      dplyr::summarize(
+      group_by(.data$fips) %>%
+      summarize(
         value = summary_fn(.data$value)
       )
   }
   
   # construct hover text based on geographic level
   plot_df <- plot_df %>%
-    dplyr::left_join(fips_codes, by = "fips") %>%
-    dplyr::mutate(
+    left_join(fips_codes, by = "fips") %>%
+    mutate(
       hover = switch(geo,
         "state" = paste0(.data$state, ": "),
         "county" = paste0(.data$county, " (", .data$state, "): ")
       )
     ) %>%
-    dplyr::mutate(
+    mutate(
       hover = paste0(.data$hover, round(.data$value, 4))
     )
 
@@ -256,16 +256,16 @@
   fips_codes <- fips_codes %>% .fips_upper()
   
   if(!is.null(time_index)) {
-    est_df <- est_df %>% dplyr::filter(.data$time == time_index)
+    est_df <- est_df %>% filter(.data$time == time_index)
   }
 
   plot_df <- est_df %>%
-    dplyr::rename("fips" = "factor") %>%
-    dplyr::left_join(fips_codes, by = "fips")
+    rename("fips" = "factor") %>%
+    left_join(fips_codes, by = "fips")
 
   # construct hover text
   plot_df <- plot_df %>%
-    dplyr::mutate(
+    mutate(
       hover_pre = if (geo == "state") {
         paste0(.data$state, ": ", round(.data$est, 4))
       } else {
@@ -312,22 +312,22 @@
 
   total_input <- sum(input_data$total)
   input <- input_data %>%
-    dplyr::group_by(.data$demo) %>%
-    dplyr::summarize(perc = sum(.data$total) / total_input)
+    group_by(.data$demo) %>%
+    summarize(perc = sum(.data$total) / total_input)
 
   total_new <- sum(new_data$total)
   new <- new_data %>%
-    dplyr::group_by(.data$demo) %>%
-    dplyr::summarize(perc = sum(.data$total) / total_new)
+    group_by(.data$demo) %>%
+    summarize(perc = sum(.data$total) / total_new)
 
   datasets <- c("Input Data", "Target Population")
-  plot_df <- rbind(input, new) %>% dplyr::mutate(
+  plot_df <- rbind(input, new) %>% mutate(
     dataset = rep(datasets, each = nrow(input))
   )
 
 
   p1 <- ggplot2::ggplot(
-    data = plot_df %>% dplyr::filter(.data$dataset == datasets[1]),
+    data = plot_df %>% filter(.data$dataset == datasets[1]),
     ggplot2::aes(x = .data$demo, y = .data$perc)
   ) +
     ggplot2::geom_bar(
@@ -340,7 +340,7 @@
     )
 
   p2 <- ggplot2::ggplot(
-    data = plot_df %>% dplyr::filter(.data$dataset == datasets[2]),
+    data = plot_df %>% filter(.data$dataset == datasets[2]),
     ggplot2::aes(x = .data$demo,
         y = .data$perc)
   ) +
@@ -469,8 +469,8 @@
 
   # compute temporal rates/averages
   plot_df <- raw %>%
-    dplyr::group_by(.data$time) %>%
-    dplyr::summarize(
+    group_by(.data$time) %>%
+    summarize(
       raw = switch(metadata$family,
         "binomial" = sum(.data$positive) / sum(.data$total),
         "normal" = mean(.data$outcome)
@@ -479,14 +479,14 @@
 
   # ensure missing time points are included
   plot_df <- plot_df %>%
-    dplyr::right_join(
+    right_join(
       data.frame(time = 1:max(raw$time, na.rm = TRUE)),
       by = "time"
     )
 
   if(!is.null(yrep_est)) {
     plot_df <- plot_df %>%
-      dplyr::left_join(yrep_est, by = "time")
+      left_join(yrep_est, by = "time")
 
     if (metadata$family == "binomial") {
       # ensure bounds are non-negative for binomial family
@@ -618,16 +618,16 @@
   plot_df <- raw
   if (!is.null(yrep_est)) {
     yrep_est <- yrep_est %>%
-      dplyr::mutate(
+      mutate(
         data = "Estimate",
         lower = .data$lower,
         median = .data$est,
         upper = .data$upper
       ) %>%
-      dplyr::select("data", "lower", "median", "upper")
+      select("data", "lower", "median", "upper")
 
     plot_df <- rbind(raw, yrep_est) %>%
-      dplyr::mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
+      mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))
   }
 
   p <- ggplot2::ggplot(data = plot_df) +
@@ -687,8 +687,8 @@
   }
 
   raw <- raw %>%
-    dplyr::group_by(.data$time) %>%
-    dplyr::summarize(
+    group_by(.data$time) %>%
+    summarize(
       prev = switch(metadata$family,
         "binomial" = sum(.data$positive) / sum(.data$total),
         "normal" = mean(.data$outcome)
@@ -885,7 +885,7 @@
   for(level in levels) {
     i <- i + 1
     plot_list[[i]] <- ggplot2::ggplot(
-      data = plot_df %>% dplyr::filter(.data$factor == level),
+      data = plot_df %>% filter(.data$factor == level),
       ggplot2::aes(
         x = .data$time,
         y = .data$est,
@@ -1017,7 +1017,7 @@
       }
     ) +
     ggplot2::theme(
-      axis.text.x = ggplot2::element_text(angle = if(dplyr::n_distinct(plot_df$factor) > 20) 90 else 0)
+      axis.text.x = ggplot2::element_text(angle = if(n_distinct(plot_df$factor) > 20) 90 else 0)
     )
 
   return(p)
