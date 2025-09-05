@@ -50,7 +50,7 @@ ShinyMRPWorkflow <- R6::R6Class(
 
       raw_covariates %>%
         mutate(measure = round(!!sym(covar), decimal_places)) %>%
-        select(.data$zip, .data$measure) %>%
+        select("zip", "measure") %>%
         rename("ZIP Code" = "zip") %>%
         DT::datatable(
           options = list(
@@ -98,7 +98,7 @@ ShinyMRPWorkflow <- R6::R6Class(
       plot_df <- model$poststratify()[[geo]] %>%
         rename("fips" = "factor") %>%
         left_join(fips_df, by = "fips") %>%
-        rename("factor" = geo)
+        rename("factor" := all_of(geo))
 
       subset <- subset %||% plot_df$factor[1]
 

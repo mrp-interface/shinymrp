@@ -711,7 +711,7 @@ demo_bars <- function(demo, file = NULL, ...) {
   input_data <- private$mrpdat_$input %>%
     .as_factor(private$mrpdat_$levels[demo]) %>%
     mutate(demo = !!sym(demo)) %>%
-    select(.data$demo, .data$total)
+    select("demo", "total")
 
   new_data <- private$mrpdat_$new
   if ("time" %in% names(new_data)) {
@@ -720,7 +720,7 @@ demo_bars <- function(demo, file = NULL, ...) {
   new_data <- new_data %>%
     .as_factor(private$mrpdat_$levels[demo]) %>%
     mutate(demo = !!sym(demo)) %>%
-    select(.data$demo, .data$total)
+    select("demo", "total")
 
   p <- .plot_demographic(input_data, new_data)
 

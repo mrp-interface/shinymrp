@@ -1,6 +1,7 @@
 get_test_data <- function(fit) {
   variables <- setdiff(fit$metadata()$variables, "lp__")
-  fit$summary(variables = variables) %>% select(mean, sd)
+  fit$summary(variables = variables) %>%
+    select("mean", "sd")
 }
 
 expect_equal_saved_estimates <- function(workflow, model_spec, file) {
