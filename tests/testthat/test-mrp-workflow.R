@@ -13,6 +13,9 @@ test_that("getter and setter methods work correctly", {
 
 
 test_that("compare_models works correctly", {
+
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,

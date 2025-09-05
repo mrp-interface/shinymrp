@@ -874,14 +874,14 @@ generated quantities { ${gq_code}
   
   # save the “raw” columns
   df_raw <- df %>%
-    dplyr::select(dplyr::all_of(col_names)) %>%
-    dplyr::rename_with(~ paste0(.x, "_raw"), dplyr::everything())
+    select(all_of(col_names)) %>%
+    rename_with(~ paste0(.x, "_raw"), everything())
   
   # transform the original columns in-place
   df_mutated <- df %>%
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::all_of(col_names),
+    mutate(
+      across(
+        all_of(col_names),
         ~ {
           vec   <- .
           dtype <- .data_type(vec)
@@ -903,7 +903,7 @@ generated quantities { ${gq_code}
     )
   
   # concatenate the "raw" columns
-  df_out <- dplyr::bind_cols(df_mutated, df_raw)
+  df_out <- bind_cols(df_mutated, df_raw)
   
   return(df_out)
 }
@@ -976,7 +976,7 @@ generated quantities { ${gq_code}
 
     # fixed main effects (continuous && binary)
     X_cont <- dat %>%
-      dplyr::select(dplyr::all_of(names(effects$m_fix_bc))) %>%
+      select(all_of(names(effects$m_fix_bc))) %>%
       data.matrix()
 
     # fixed main effects (categorical)
@@ -1005,7 +1005,7 @@ generated quantities { ${gq_code}
     ) %>% 
       unique()
     for(s in union(m_fix_c_names, names(effects$m_var))) {
-      stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- dplyr::n_distinct(dat[[s]])
+      stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
       stan_data[[stringr::str_interp("J_${s}${subfix}")]] <- dat[[s]]
     }
     
@@ -1029,26 +1029,26 @@ generated quantities { ${gq_code}
   # poststratification
   if (!is.null(metadata)) {
     pstrat_data <- new_data %>%
-      dplyr::mutate(
-        dplyr::across(dplyr::everything(), ~ if(dplyr::n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
+      mutate(
+        across(everything(), ~ if(n_distinct(.x) == 2 && all(sort(unique(.x)) == c(0, 1))) .x + 1 else .x),
         overall = 1
       )
     for(s in c("overall", metadata$pstrat_vars)) {
       group_cols <- if(metadata$is_timevar) c("time", s) else c(s)
       
       pop_prop <- pstrat_data %>%
-        dplyr::group_by(!!!rlang::syms(group_cols)) %>%
-        dplyr::mutate(prop = .data$total / sum(.data$total))
+        group_by(!!!rlang::syms(group_cols)) %>%
+        mutate(prop = .data$total / sum(.data$total))
       
       if(s != "overall") {
-        stan_data[[stringr::str_interp("N_${s}_pstrat")]] <- dplyr::n_distinct(pstrat_data[[s]])
+        stan_data[[stringr::str_interp("N_${s}_pstrat")]] <- n_distinct(pstrat_data[[s]])
         stan_data[[stringr::str_interp("J_${s}_pstrat")]] <- pstrat_data[[s]]
       }
       stan_data[[stringr::str_interp("P_${s}_pstrat")]] <- pop_prop$prop
     }
     
     if(metadata$is_timevar) {
-      stan_data$N_time_pstrat <- dplyr::n_distinct(new_data$time)
+      stan_data$N_time_pstrat <- n_distinct(new_data$time)
       stan_data$J_time_pstrat <- new_data$time
     }
   }
@@ -1306,7 +1306,7 @@ generated quantities { ${gq_code}
     "rhat", "ess_bulk", "ess_tail"
   )
   df <- df %>%
-    dplyr::select(dplyr::all_of(col_names)) %>%
+    select(all_of(col_names)) %>%
     as.data.frame()
 
   # rename columns
@@ -1545,8 +1545,8 @@ generated quantities { ${gq_code}
   # convert new data to numeric factors
   col_names <- if(metadata$is_timevar) c(metadata$pstrat_vars, "time") else metadata$pstrat_vars
   new_data <- new_data %>%
-    dplyr::select(dplyr::all_of(col_names)) %>%
-    dplyr::mutate(overall = "overall") %>%  # add placeholder column for overall estimates
+    select(all_of(col_names)) %>%
+    mutate(overall = "overall") %>%  # add placeholder column for overall estimates
     .stan_factor()
 
   est <- list()
@@ -1564,13 +1564,13 @@ generated quantities { ${gq_code}
 
     # Order raw levels based on numeric levels to match order of posterior draws matrix
     est_ <- new_data %>%
-      dplyr::arrange(dplyr::across(dplyr::all_of(col_names))) %>%
-      dplyr::distinct(dplyr::across(dplyr::all_of(raw_col_names))) %>%
+      arrange(across(all_of(col_names))) %>%
+      distinct(across(all_of(raw_col_names))) %>%
       stats::setNames(new_col_names)
 
     if (out$is_ci) {
       est[[s]] <- est_ %>%
-        dplyr::mutate(
+        mutate(
           est = pred_mat %>% apply(1, mean),
           lower = pred_mat %>% apply(1, stats::quantile, probs = out$qlower),
           upper = pred_mat %>% apply(1, stats::quantile, probs = out$qupper)
@@ -1578,13 +1578,13 @@ generated quantities { ${gq_code}
 
     } else {
       est[[s]] <- est_ %>%
-        dplyr::mutate(
+        mutate(
           est = pred_mat %>% apply(1, mean),
           std = pred_mat %>% apply(1, stats::sd),
           lower = .data$est - out$n_sd * .data$std,
           upper = .data$est + out$n_sd * .data$std
         ) %>%
-        dplyr::select(-"std")
+        select(-"std")
     }
   }
 
@@ -1638,20 +1638,20 @@ generated quantities { ${gq_code}
   yrep <- if (metadata$is_timevar) {
     yrep_mat %>%
       as.data.frame() %>%
-      dplyr::mutate(
+      mutate(
         time = input_data$time,
         total = input_data$total
       ) %>%
-      dplyr::group_by(.data$time) %>%
-      dplyr::summarise_all(sum) %>%
-      dplyr::ungroup() %>%
-      dplyr::mutate(
-        dplyr::across(
+      group_by(.data$time) %>%
+      summarise_all(sum) %>%
+      ungroup() %>%
+      mutate(
+        across(
           -c(.data$time, .data$total),
           ~ .x / .data$total
         )
       ) %>%
-      dplyr::select(-"total")
+      select(-"total")
   } else {
     colSums(yrep_mat) / sum(input_data$total)
   }

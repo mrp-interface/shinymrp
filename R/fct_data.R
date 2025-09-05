@@ -49,8 +49,8 @@
 #' @keywords internal
 .clear_chr <- function(df) {
   # Convert character columns to lowercase and trim whitespace
-  df %>% dplyr::mutate(
-    dplyr::across(dplyr::where(is.character), ~ stringr::str_trim(tolower(.x)))
+  df %>% mutate(
+    across(where(is.character), ~ stringr::str_trim(tolower(.x)))
   )
 }
 
@@ -177,8 +177,8 @@
 
   # Convert common NA strings to actual NA
   df <- df %>%
-    dplyr::mutate(dplyr::across(dplyr::everything(),
-                 ~dplyr::if_else(.x %in% na_strings, NA, .x)))
+    mutate(across(everything(),
+                 ~if_else(.x %in% na_strings, NA, .x)))
 
   # Format geographic identifiers
   df <- .format_geocode(df)
@@ -266,7 +266,7 @@
   rename_spec <- stats::setNames(rename_map, names(rename_map))
   
   # Apply renaming
-  dplyr::rename(df, !!!rename_spec)
+  rename(df, !!!rename_spec)
 }
 
 #' Remove duplicate records from data
@@ -392,7 +392,7 @@
 #' @keywords internal
 .convert_date_to_character <- function(df) {
   if ("date" %in% names(df)) {
-    df <- df %>% dplyr::mutate(date = as.character(.data$date))
+    df <- df %>% mutate(date = as.character(.data$date))
   }
   return(df)
 }
@@ -448,9 +448,9 @@
   df$time <- out$indices
 
   # add the column containing first dates of the periods
-  df <- df %>% dplyr::select(-"date")
+  df <- df %>% select(-"date")
   df <- df %>%
-    dplyr::full_join(
+    full_join(
       data.frame(
         time = 1:max(df$time),
         date = as.character(out$timeline)
@@ -516,21 +516,21 @@
         as.numeric()
       breaks <- c(-1, age_bounds[2:length(age_bounds)] - 1, 200)
 
-      df <- df %>% dplyr::mutate(
+      df <- df %>% mutate(
         age = cut(df$age, breaks, ranges) %>% as.character()
       )
     } else {
-      df <- df %>% dplyr::mutate(
-        age = dplyr::if_else(.data$age %in% expected_levels$age, .data$age, NA)
+      df <- df %>% mutate(
+        age = if_else(.data$age %in% expected_levels$age, .data$age, NA)
       )
     }
   }
 
-  df <- df %>% dplyr::mutate(
-    sex  = if("sex" %in% colnames) dplyr::if_else(.data$sex %in% expected_levels$sex, .data$sex, NA),
-    race = if("race" %in% colnames) dplyr::if_else(.data$race %in% c(expected_levels$race, NA), .data$race, "other"),
-    edu  = if("edu" %in% colnames) dplyr::if_else(.data$edu %in% expected_levels$edu, .data$edu, NA),
-    positive = if("positive" %in% colnames) dplyr::case_match(
+  df <- df %>% mutate(
+    sex  = if("sex" %in% colnames) if_else(.data$sex %in% expected_levels$sex, .data$sex, NA),
+    race = if("race" %in% colnames) if_else(.data$race %in% c(expected_levels$race, NA), .data$race, "other"),
+    edu  = if("edu" %in% colnames) if_else(.data$edu %in% expected_levels$edu, .data$edu, NA),
+    positive = if("positive" %in% colnames) case_match(
       as.character(.data$positive),
       c("positive", "detected", "yes", "y", "true", "1") ~ 1,
       c("negative", "undetected", "no", "n", "false", "0") ~ 0
@@ -639,16 +639,16 @@
 #' @keywords internal
 .get_geo_predictors <- function(df, geo_col) {
   bool <- df %>%
-    dplyr::group_by(!!dplyr::sym(geo_col)) %>%
-    dplyr::summarize_all(dplyr::n_distinct) %>%
+    group_by(!!sym(geo_col)) %>%
+    summarize_all(n_distinct) %>%
     lapply(function(c) all(c == 1)) %>%
     unlist()
 
   geo_pred_cols <- names(bool)[bool]
 
   geo_preds <- df %>%
-    dplyr::select(dplyr::all_of(c(geo_col, geo_pred_cols))) %>%
-    dplyr::distinct(!!dplyr::sym(geo_col), .keep_all = TRUE)
+    select(all_of(c(geo_col, geo_pred_cols))) %>%
+    distinct(!!sym(geo_col), .keep_all = TRUE)
 
   return(geo_preds)
 }
@@ -738,11 +738,11 @@
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_county_state %>%
-    dplyr::select("zip", "fips") %>%
-    dplyr::rename("county" = "fips") %>%
-    dplyr::mutate(state = substr(.data$county, 1, 2)) %>%
-    dplyr::select(dplyr::all_of(geo_vars)) %>%
-    dplyr::distinct()
+    select("zip", "fips") %>%
+    rename("county" = "fips") %>%
+    mutate(state = substr(.data$county, 1, 2)) %>%
+    select(all_of(geo_vars)) %>%
+    distinct()
   
   # Convert names to FIPS for smallest geographic scale
   if (smallest$geo != "zip") { 
@@ -814,8 +814,8 @@
   common <- intersect(names(df1), names(df2))
   to_drop <- setdiff(common, by)
   df_join <- df2 %>%
-    dplyr::select(-dplyr::all_of(to_drop)) %>%
-    dplyr::right_join(df1, by = by)
+    select(-all_of(to_drop)) %>%
+    right_join(df1, by = by)
 
   
   return(df_join)
@@ -848,7 +848,7 @@
   lbl <- c("bin", "cat", "cont")
 
   non_na <- col[!is.na(col)]
-  n <- length(non_na); ndist <- dplyr::n_distinct(non_na)
+  n <- length(non_na); ndist <- n_distinct(non_na)
 
   if (n == 0) return(if (num) 2L else lbl[2])
   if (is.logical(col) || ndist == 2L) return(if (num) 1L else lbl[1])
@@ -861,8 +861,8 @@
 
     looks_discrete <- FALSE
     if (use_round_probe && ndist > max_levels_cat) {
-      nd0 <- dplyr::n_distinct(round(non_na, 0))
-      nd1 <- dplyr::n_distinct(round(non_na, 1))
+      nd0 <- n_distinct(round(non_na, 0))
+      nd1 <- n_distinct(round(non_na, 1))
       looks_discrete <- nd0 <= max_levels_cat || nd1 <= max_levels_cat ||
                         nd0/ndist <= 0.5 || nd1/ndist <= 0.5
     }
@@ -1012,7 +1012,7 @@
   }
   
   # Check data types
-  types <- df %>% dplyr::select(dplyr::all_of(expected_columns)) %>% lapply(.data_type) %>% unlist()
+  types <- df %>% select(all_of(expected_columns)) %>% lapply(.data_type) %>% unlist()
   valid <- unlist(expected_types) == types
   valid[expected_types == "ignore"] <- TRUE
   
@@ -1065,7 +1065,7 @@
     } else {
       if (!("positive" %in% names(df))) {
         stop("Individual-level data must contain a 'positive' column for data with binary outcome ('binomial' family).")
-      } else if (dplyr::n_distinct(df$positive) != 2) {
+      } else if (n_distinct(df$positive) != 2) {
         stop("Individual-level data must have 'positive' column with binary values.")
       }
     }
@@ -1080,11 +1080,6 @@
       stop("Data contains neither time indices or dates but is specified as time-varying.")
     }
 
-    # Check if there is only one time index
-    if ("time" %in% names(df) && dplyr::n_distinct(df$time) == 1) {
-      stop("There is only one time index. Please use modules for cross-sectional data instead.")
-    }
-
     # Check date availability and format
     if("date" %in% names(df)) {
       if (anyNA(as.Date(stats::na.omit(df$date), optional = TRUE))) {
@@ -1096,6 +1091,27 @@
   }
 
 }
+
+
+#' Post-cleaning checks
+#'
+#' @param df Data frame containing the cleaned data.
+#' @param metadata List containing analysis metadata.
+#'
+#' @noRd
+#' @keywords internal
+.check_prep <- function(df, metadata) {
+  if (metadata$is_timevar) {
+    if (n_distinct(df$time) == 1) {
+      stop("There is only one time index. Please use modules for cross-sectional data instead.")
+    }
+
+    if (n_distinct(df$time) == 2) {
+      stop("The time-varying module currently supports only data with more than two time indices.")
+    }
+  }
+}
+
 
 #' Validate poststratification data against sample data
 #'
@@ -1217,7 +1233,7 @@
   if (!is_aggregated) {
     # remove NAs
     check_cols <- setdiff(names(data), indiv_vars)
-    data <- data %>% tidyr::drop_na(dplyr::all_of(check_cols))
+    data <- data %>% tidyr::drop_na(all_of(check_cols))
 
     # convert date to time indices if necessary
     if (!is.null(metadata$time_freq)) {
@@ -1234,7 +1250,7 @@
     data <- .recode_values(data, levels, is_covid)
 
     # .impute missing demographic data based on frequency
-    data <- data %>% dplyr::mutate(dplyr::across(dplyr::all_of(indiv_vars), .impute))
+    data <- data %>% mutate(across(all_of(indiv_vars), .impute))
 
     if (metadata$family != "normal") {
       # aggregate test records based on combinations of factors
@@ -1245,20 +1261,22 @@
 
       # cross-tabulate data
       data <- data %>%
-        dplyr::group_by(!!!rlang::syms(group_vars)) %>%
-        dplyr::summarize(
-          dplyr::across(dplyr::any_of(geo_covars), dplyr::first),
-          date = if("date" %in% names(data)) dplyr::first(.data$date),
-          total = if("weight" %in% names(data)) sum(.data$weight) else dplyr::n(),
+        group_by(!!!rlang::syms(group_vars)) %>%
+        summarize(
+          across(any_of(geo_covars), first),
+          date = if("date" %in% names(data)) first(.data$date),
+          total = if("weight" %in% names(data)) sum(.data$weight) else n(),
           positive = sum(.data$positive)
 
         ) %>%
-        dplyr::ungroup()
+        ungroup()
     }
   }
 
   # append geographic areas at larger scales if missing
   data <- .append_geo(data, zip_county_state)
+
+  .check_prep(data, metadata)
 
   return(data)
 }
@@ -1308,7 +1326,7 @@
   # Helper function to process variables and add them to appropriate lists
   add_variables <- function(group_name, var_names, data_source, vars) {
     for (v in var_names) {
-      if (!is.null(data_source[[v]]) && dplyr::n_distinct(data_source[[v]]) > 1) {
+      if (!is.null(data_source[[v]]) && n_distinct(data_source[[v]]) > 1) {
         if (.data_type(data_source[[v]]) == "cat") {
           vars$varying[[group_name]] <- c(vars$varying[[group_name]], v)
         }
@@ -1375,47 +1393,47 @@
   if (is.null(link_geo)) {
 
     pstrat_data <- tract_data %>%
-      dplyr::mutate(geocode = "place_holder") %>%
-      dplyr::select(-"GEOID") %>%
-      dplyr::group_by(.data$geocode) %>%
-      dplyr::summarize_all(sum)
+      mutate(geocode = "place_holder") %>%
+      select(-"GEOID") %>%
+      group_by(.data$geocode) %>%
+      summarize_all(sum)
 
   } else if (link_geo == "zip") {
 
     # join tract-level data with zip-tract conversion table then group by zip
     by_zip <- zip_tract %>%
-      dplyr::select("geoid", "zip") %>%
-      dplyr::rename("GEOID" = "geoid") %>%
-      dplyr::inner_join(
+      select("geoid", "zip") %>%
+      rename("GEOID" = "geoid") %>%
+      inner_join(
         tract_data,
         by = "GEOID"
       ) %>%
-      dplyr::group_by(.data$zip)
+      group_by(.data$zip)
     
     # compute zip-level population size by aggregating across overlapping tracts
     all_colnames <- names(tract_data)
     pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
     pstrat_data <- by_zip %>%
-      dplyr::summarise(
-        dplyr::across(dplyr::all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
+      summarise(
+        across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
       ) %>%
-      dplyr::rename("geocode" = "zip")
+      rename("geocode" = "zip")
 
   } else if (link_geo == "county") {
 
     pstrat_data <- tract_data %>%
-      dplyr::mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
-      dplyr::select(-"GEOID") %>%
-      dplyr::group_by(.data$geocode) %>%
-      dplyr::summarize_all(sum)
+      mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
+      select(-"GEOID") %>%
+      group_by(.data$geocode) %>%
+      summarize_all(sum)
 
   } else if (link_geo == "state") {
 
     pstrat_data <- tract_data %>%
-      dplyr::mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
-      dplyr::select(-"GEOID") %>%
-      dplyr::group_by(.data$geocode) %>%
-      dplyr::summarize_all(sum)
+      mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
+      select(-"GEOID") %>%
+      group_by(.data$geocode) %>%
+      summarize_all(sum)
 
   }
 
@@ -1461,10 +1479,10 @@
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
     shared_geocodes <- intersect(unique(input_data[[link_geo]]), pstrat_data$geocode)
-    input_data <- input_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
-    pstrat_data <- pstrat_data %>% dplyr::filter(.data$geocode %in% shared_geocodes)
+    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+    pstrat_data <- pstrat_data %>% filter(.data$geocode %in% shared_geocodes)
   }
-  cell_counts <- pstrat_data %>% dplyr::select(-"geocode") %>% t() %>% c()
+  cell_counts <- pstrat_data %>% select(-"geocode") %>% t() %>% c()
 
   # create lists of all factor levels
   n_time_indices <- 1
@@ -1482,8 +1500,8 @@
     intersect(names(levels))
 
   new_data <- expand.grid(levels, stringsAsFactors = FALSE) %>%
-    dplyr::arrange(dplyr::across(dplyr::all_of(sort_vars))) %>% # IMPORTANT: To match the cell order of poststratification data
-    dplyr::mutate(total = rep(cell_counts, n_time_indices))
+    arrange(across(all_of(sort_vars))) %>% # IMPORTANT: To match the cell order of poststratification data
+    mutate(total = rep(cell_counts, n_time_indices))
 
   # append geographic predictors
   covariates <- NULL
@@ -1491,7 +1509,7 @@
     # find geographic covariates
     covariates <- .get_geo_predictors(input_data, link_geo)
     if(ncol(covariates) > 1) {
-      new_data <- dplyr::left_join(new_data, covariates, by = link_geo)
+      new_data <- left_join(new_data, covariates, by = link_geo)
     }
   }
 
@@ -1504,7 +1522,7 @@
 
   # add 'total' column to interface with plotting functions
   if (metadata$family == "normal") {
-    input_data <- input_data %>% dplyr::mutate(total = 1)
+    input_data <- input_data %>% mutate(total = 1)
   }
 
   # create variable lists for model specification
@@ -1552,8 +1570,8 @@
   shared_geocodes <- c()
   if(!is.null(link_geo)) {
     shared_geocodes <- intersect(unique(input_data[[link_geo]]), unique(new_data[[link_geo]]))
-    input_data <- input_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
-    new_data <- new_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
+    input_data <- input_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
+    new_data <- new_data %>% filter(!!sym(link_geo) %in% shared_geocodes)
   }
 
   # create lists of all factor levels
@@ -1585,12 +1603,12 @@
   # duplicate rows for each time index
   new_data <- purrr::map_dfr(
     seq_len(n_time_indices),
-    ~ new_data %>% dplyr::mutate(time = .x)
+    ~ new_data %>% mutate(time = .x)
   )
 
   # add 'total' column to interface with plotting functions
   if (metadata$family == "normal") {
-    input_data <- input_data %>% dplyr::mutate(total = 1)
+    input_data <- input_data %>% mutate(total = 1)
   }
 
   vars <- .create_variable_list(input_data, covariates)

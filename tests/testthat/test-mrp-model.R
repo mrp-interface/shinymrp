@@ -23,6 +23,8 @@ test_that("getter methods work correctly", {
 
 
 test_that("summary works correctly", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -40,6 +42,8 @@ test_that("summary works correctly", {
 })
 
 test_that("diagnostics works correctly", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -61,6 +65,8 @@ test_that("diagnostics works correctly", {
 })
 
 test_that("save works correctly", {
+  skip_on_cran()
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,

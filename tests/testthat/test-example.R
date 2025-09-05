@@ -9,6 +9,8 @@ read_qs_github <- function(url) {
 }
 
 test_that("example_sample_data retrieves the correct files", {
+  skip_on_cran()
+
   expect_equal(
     example_sample_data(
       is_timevar = TRUE,
@@ -132,6 +134,8 @@ test_that("example_sample_data retrieves the correct files", {
 
 
 test_that("example_pstrat_data retrieves the correct files", {
+  skip_on_cran()
+
   expect_equal(
     example_pstrat_data(),
     readr::read_csv("https://raw.githubusercontent.com/mrp-interface/shinymrp-data/refs/heads/main/example/data/pstrat.csv", show_col_types = FALSE)
@@ -139,6 +143,8 @@ test_that("example_pstrat_data retrieves the correct files", {
 })
 
 test_that("example_model returns a functional MRPModel object", {
+  skip_on_cran()
+
   model <- example_model()
 
   expect_s3_class(model, "MRPModel")

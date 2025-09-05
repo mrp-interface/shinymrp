@@ -359,7 +359,10 @@ mod_analyze_upload_server <- function(id, global){
       .show_waiter("wait")
 
       # Read and store the raw sample data
-      readr::read_csv(input$sample_upload$datapath) %>%
+      readr::read_csv(
+        input$sample_upload$datapath,
+        show_col_types = FALSE
+      ) %>%
         raw_sample_rv()
 
       # Overwrite default input values
@@ -529,7 +532,10 @@ mod_analyze_upload_server <- function(id, global){
     observeEvent(input$pstrat_upload, {
       .show_waiter("wait")
 
-      readr::read_csv(input$pstrat_upload$datapath) %>%
+      readr::read_csv(
+        input$pstrat_upload$datapath,
+        show_col_types = FALSE
+      ) %>%
         raw_pstrat_rv()
 
       global$workflow$load_pstrat(

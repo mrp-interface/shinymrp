@@ -140,7 +140,7 @@
 .create_interactions <- function(fixed_effects, varying_effects, dat) {
   main_effects <- c(fixed_effects, varying_effects)
   
-  if(dplyr::n_distinct(main_effects) <= 1) {
+  if(n_distinct(main_effects) <= 1) {
     return(list())
   }
   
@@ -150,7 +150,7 @@
     eff2 = main_effects,
     stringsAsFactors = FALSE
   ) %>%
-    dplyr::filter(.data$eff1 != .data$eff2)
+    filter(.data$eff1 != .data$eff2)
 
   df <- df[apply(df, 1, function(x) x[1] <= x[2]), ]
   int <- paste0(df$eff1, ":", df$eff2)
@@ -175,8 +175,8 @@
 #' @keywords internal
 #'
 .interaction_levels <- function(levels1, levels2) {
-  numcat1 <- dplyr::n_distinct(levels1)
-  numcat2 <- dplyr::n_distinct(levels2)
+  numcat1 <- n_distinct(levels1)
+  numcat2 <- n_distinct(levels2)
 
   if(numcat1 == 2 | numcat2 == 2) {
     levels_interaction <- levels1 * levels2

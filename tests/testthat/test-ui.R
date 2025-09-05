@@ -22,6 +22,8 @@ test_that(".create_guide works correctly", {
 })
 
 test_that(".create_model_tab works correctly", {
+  skip_on_cran()
+
   golem::expect_shinytag(
     .create_model_tab(
       ns = function(id) id,
@@ -32,6 +34,8 @@ test_that(".create_model_tab works correctly", {
 })
 
 test_that(".est_map_ui works correctly", {
+  skip_on_cran()
+  
   # County map with slider
   golem::expect_shinytaglist(
     .est_map_ui(

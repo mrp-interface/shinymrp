@@ -29,6 +29,8 @@ expect_equal_saved_prep <- function(
 }
 
 test_that("prepprocess is consistent", {
+  skip_on_cran()
+
   set.seed(123)
 
   # individual-level COVID data
@@ -160,6 +162,8 @@ test_that("prepprocess is consistent", {
 })
 
 test_that("link_acs works correctly with all linking geographies", {
+  skip_on_cran()
+
   # No linking geography
   expect_no_error(
     setup_test_workflow(
@@ -224,6 +228,8 @@ test_that("link_acs works correctly with all linking geographies", {
 
 
 test_that("load_pstrat works correctly", {
+  skip_on_cran()
+
   pstrat_data <- example_pstrat_data()
 
   # For general time-varying data
@@ -335,6 +341,8 @@ test_that("load_pstrat works correctly", {
 })
 
 test_that(".impute is consistent", {
+  skip_on_cran()
+
   set.seed(123)
 
   n <- 20
@@ -346,9 +354,9 @@ test_that(".impute is consistent", {
     special_case = NULL,
     family = "binomial"
   ) %>%
-    dplyr::mutate(
-      dplyr::across(all_of(cols),
-      ~ replace(., dplyr::row_number() <= n, NA))
+    mutate(
+      across(all_of(cols),
+      ~ replace(., row_number() <= n, NA))
     )
 
   workflow <- mrp_workflow()
