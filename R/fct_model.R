@@ -1643,7 +1643,7 @@ generated quantities { ${gq_code}
         total = input_data$total
       ) %>%
       group_by(.data$time) %>%
-      summarise_all(sum) %>%
+      summarize_all(sum) %>%
       ungroup() %>%
       mutate(
         across(
