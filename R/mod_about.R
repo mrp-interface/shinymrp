@@ -18,8 +18,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList fluidRow column tags
 mod_about_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -69,8 +67,6 @@ mod_about_ui <- function(id){
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer
 mod_about_server <- function(id){
   moduleServer( id, function(input, output, session){
     ns <- session$ns

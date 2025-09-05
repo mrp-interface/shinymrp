@@ -19,17 +19,6 @@ expect_equal_saved_estimates <- function(workflow, model_spec, file) {
     diagnostics = NULL
   )
 
-  path <- paste0(
-    "snapshots/model_fitting/",
-    file
-  ) %>%
-    testthat::test_path()
-
-  readr::write_csv(
-    get_test_data(model$fit_object()),
-    path
-  )
-
   saved <- paste0(
     "snapshots/model_fitting/",
     file

@@ -95,8 +95,6 @@
 #' }
 #'
 #' @export
-#' 
-#' @importFrom R6 R6Class
 MRPModel <- R6::R6Class(
   "MRPModel",
   private = list(

@@ -17,8 +17,6 @@
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny NS tagList conditionalPanel selectInput selectizeInput uiOutput plotOutput
 mod_analyze_result_ui <- function(id){
   ns <- NS(id)
   
@@ -99,15 +97,6 @@ mod_analyze_result_ui <- function(id){
 #'
 #' @noRd
 #' @keywords internal
-#'
-#' @importFrom shiny moduleServer reactive req isolate renderUI renderPlot observeEvent updateSelectInput updateTabsetPanel showModal modalDialog removeModal actionButton
-#' @importFrom dplyr mutate select filter
-#' @importFrom purrr keep map_chr
-#' @importFrom shinyjs reset
-#' @importFrom tools toTitleCase
-#' @importFrom dplyr mutate select filter
-#' @importFrom rlang .data
-#' @importFrom stats setNames
 mod_analyze_result_server <- function(id, global){
   moduleServer(id, function(input, output, session){
     ns <- session$ns

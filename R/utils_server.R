@@ -39,8 +39,6 @@
 #'
 #' @return No return value, called for side effect of resetting form inputs
 #'
-#' @importFrom shinyjs reset
-#'
 #' @noRd
 #' @keywords internal
 .reset_model_pg <- function(vars) {
@@ -84,9 +82,6 @@
 #'
 #' @return No return value, called for side effect of updating UI state
 #'
-#' @importFrom shiny updateActionButton icon
-#' @importFrom shinyjs disable
-#'
 #' @noRd
 #' @keywords internal
 .start_busy <- function(session, id, label) {
@@ -113,9 +108,6 @@
 #'   check icon, FALSE shows warning icon)
 #'
 #' @return No return value, called for side effect of updating UI state
-#'
-#' @importFrom shiny updateActionButton icon
-#' @importFrom shinyjs enable
 #'
 #' @noRd
 #' @keywords internal
@@ -162,8 +154,6 @@
 #'
 #' @return No return value, called for side effect of showing modal
 #'
-#' @importFrom shiny showModal modalDialog modalButton
-#'
 #' @noRd
 #' @keywords internal
 .show_guide <- function(open = NULL) {
@@ -205,8 +195,6 @@
 #'
 #' @return No return value, called for side effect of showing modal
 #'
-#' @importFrom shiny showModal modalDialog tagList icon
-#'
 #' @noRd
 #' @keywords internal
 .show_alert <- function(message) {
@@ -227,8 +215,6 @@
 #' @param session Shiny session object for displaying the modal
 #'
 #' @return No return value, called for side effect of showing modal
-#'
-#' @importFrom shiny showModal modalDialog tagList icon
 #'
 #' @noRd
 #' @keywords internal

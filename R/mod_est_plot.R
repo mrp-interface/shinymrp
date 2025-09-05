@@ -6,8 +6,6 @@
 #'
 #' @noRd
 #' @keywords internal 
-#'
-#' @importFrom shiny NS tagList 
 mod_est_plot_ui <- function(id) {
   ns <- NS(id)
   plotOutput(outputId = ns("plot"))
@@ -16,9 +14,7 @@ mod_est_plot_ui <- function(id) {
 #' est_plot Server Functions
 #'
 #' @noRd
-#' @keywords internal 
-#' @importFrom dplyr mutate
-#' @importFrom rlang .data
+#' @keywords internal
 mod_est_plot_server <- function(id, workflow, model, var) {
   moduleServer(id, function(input, output, session){
     ns <- session$ns
