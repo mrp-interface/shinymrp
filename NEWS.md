@@ -1,3 +1,21 @@
+# shinymrp 0.9.0
+
+## New features
+- Create package API for implementing MRP workflow in R scripts (#88)
+- Allow selecction of uncertainty intervals in estimate plots (API only) (#99)
+- Allow conversion of dates to month and year indices (#100)
+
+## Bugfixes
+- Fix non-character label of the button used for linking to ACS data (#87)
+- Fix filtering of interactions for structured prior (#96)
+- Prevent removal of 'date' column during data preprocessing (#97)
+
+## Other changes
+- Create pkgdown website (#81)
+- Change plot y-axis label and select input in "Visualize data" tab (#86)
+- Package data are either serialized or store in a separate data repository (#89, #101)
+
+
 # shinymrp 0.8.0
 
 ## New features

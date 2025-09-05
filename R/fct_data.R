@@ -1414,7 +1414,7 @@
     all_colnames <- names(tract_data)
     pstrat_colnames <- all_colnames[grepl("male|female", all_colnames)]
     pstrat_data <- by_zip %>%
-      summarise(
+      summarize(
         across(all_of(pstrat_colnames), ~ sum(.x, na.rm = TRUE))
       ) %>%
       rename("geocode" = "zip")
