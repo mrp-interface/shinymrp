@@ -283,7 +283,7 @@ prepare_indiv_agg <- function(
 
   if (extra$covid) {
     data_indiv <- data_indiv %>% 
-      rename(result_date = date) %>%
+      rename("result_date" = "date") %>%
       mutate(masked_id = purrr::map_chr(seq_len(n()), ~ .generate_id())) %>% 
       select(masked_id, everything())
   }

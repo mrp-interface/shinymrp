@@ -86,8 +86,8 @@
     }
     
     plot_df <- plot_df %>%
-      dplyr::select(-c(.data$fips, .data$perc, .data$state_name)) %>%
-      dplyr::select(-.data$count, .data$count) %>%
+      dplyr::select(-c("fips", "perc", "state_name")) %>%
+      dplyr::select(-"count", "count") %>%
       dplyr::arrange(dplyr::desc(.data$count))
   }
 
@@ -624,7 +624,7 @@
         median = .data$est,
         upper = .data$upper
       ) %>%
-      dplyr::select(.data$data, .data$lower, .data$median, .data$upper)
+      dplyr::select("data", "lower", "median", "upper")
 
     plot_df <- rbind(raw, yrep_est) %>%
       dplyr::mutate(data = factor(.data$data, levels = c("Raw", "Estimate")))

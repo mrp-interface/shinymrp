@@ -738,8 +738,8 @@
 
   # Prepare geographic crosswalk
   zip_county_state <- zip_county_state %>%
-    dplyr::select(.data$zip, .data$fips) %>%
-    dplyr::rename(county = .data$fips) %>%
+    dplyr::select("zip", "fips") %>%
+    dplyr::rename("county" = "fips") %>%
     dplyr::mutate(state = substr(.data$county, 1, 2)) %>%
     dplyr::select(dplyr::all_of(geo_vars)) %>%
     dplyr::distinct()
@@ -1376,7 +1376,7 @@
 
     pstrat_data <- tract_data %>%
       dplyr::mutate(geocode = "place_holder") %>%
-      dplyr::select(-.data$GEOID) %>%
+      dplyr::select(-"GEOID") %>%
       dplyr::group_by(.data$geocode) %>%
       dplyr::summarize_all(sum)
 
@@ -1384,7 +1384,7 @@
 
     # join tract-level data with zip-tract conversion table then group by zip
     by_zip <- zip_tract %>%
-      dplyr::select(.data$geoid, .data$zip) %>%
+      dplyr::select("geoid", "zip") %>%
       dplyr::rename("GEOID" = "geoid") %>%
       dplyr::inner_join(
         tract_data,
@@ -1405,7 +1405,7 @@
 
     pstrat_data <- tract_data %>%
       dplyr::mutate(geocode = substr(.data$GEOID, 1, 5)) %>%
-      dplyr::select(-.data$GEOID) %>%
+      dplyr::select(-"GEOID") %>%
       dplyr::group_by(.data$geocode) %>%
       dplyr::summarize_all(sum)
 
@@ -1413,7 +1413,7 @@
 
     pstrat_data <- tract_data %>%
       dplyr::mutate(geocode = substr(.data$GEOID, 1, 2)) %>%
-      dplyr::select(-.data$GEOID) %>%
+      dplyr::select(-"GEOID") %>%
       dplyr::group_by(.data$geocode) %>%
       dplyr::summarize_all(sum)
 
@@ -1464,7 +1464,7 @@
     input_data <- input_data %>% dplyr::filter(!!dplyr::sym(link_geo) %in% shared_geocodes)
     pstrat_data <- pstrat_data %>% dplyr::filter(.data$geocode %in% shared_geocodes)
   }
-  cell_counts <- pstrat_data %>% dplyr::select(-.data$geocode) %>% t() %>% c()
+  cell_counts <- pstrat_data %>% dplyr::select(-"geocode") %>% t() %>% c()
 
   # create lists of all factor levels
   n_time_indices <- 1

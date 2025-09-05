@@ -544,7 +544,7 @@ mod_analyze_model_server <- function(id, global){
           pareto_k_dfs()[[i]] %>%
             as.data.frame() %>%
             mutate(Count = as.integer(.data$Count)) %>%
-            select(.data$Count, .data$Proportion),
+            select("Count", "Proportion"),
           rownames = TRUE
         )
       })

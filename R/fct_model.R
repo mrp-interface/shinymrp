@@ -1584,7 +1584,7 @@ generated quantities { ${gq_code}
           lower = .data$est - out$n_sd * .data$std,
           upper = .data$est + out$n_sd * .data$std
         ) %>%
-        dplyr::select(-.data$std)
+        dplyr::select(-"std")
     }
   }
 
@@ -1651,7 +1651,7 @@ generated quantities { ${gq_code}
           ~ .x / .data$total
         )
       ) %>%
-      dplyr::select(-.data$total)
+      dplyr::select(-"total")
   } else {
     colSums(yrep_mat) / sum(input_data$total)
   }
