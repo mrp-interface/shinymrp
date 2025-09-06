@@ -8,10 +8,6 @@
 #'
 #' @export
 mrp_workflow <- function() {
-  if (is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-    stop("CmdStan is not installed. Please install CmdStan using `shinymrp::install_cmdstan()`.")
-  }
-
   MRPWorkflow$new()
 }
 

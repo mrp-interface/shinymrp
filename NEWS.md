@@ -2,7 +2,7 @@
 
 ## New features
 - Create package API for implementing MRP workflow in R scripts (#88)
-- Allow selecction of uncertainty intervals in estimate plots (API only) (#99)
+- Allow selection of uncertainty intervals in estimate plots (API only) (#99)
 - Allow conversion of dates to month and year indices (#100)
 
 ## Bugfixes
@@ -14,6 +14,7 @@
 - Create pkgdown website (#81)
 - Change plot y-axis label and select input in "Visualize data" tab (#86)
 - Package data are either serialized or store in a separate data repository (#89, #101)
+- Move cmdstanr to "Suggests" dependencies (#105)
 
 
 # shinymrp 0.8.0
@@ -83,7 +84,7 @@
 - Significantly speed up poststratification by running it through Stan (#21)
 
 ## Bugfixes
-- Fix errors thrown by renderPlot when users switch interface version (#25)
+- Fix errors thrown by `renderPlot` when users switch interface version (#25)
 - Conditional display of sections in table of estimates (#23)
 
 ## Other changes
@@ -121,7 +122,7 @@
 - Fix error in model comparison tab when users change interface version
 
 ## Other changes
-- Restrict categorical varibles to varying effects in model specification
+- Restrict categorical variables to varying effects in model specification
 - Explicitly set ggplot font to ensure consistency across platforms
 - Update Learn > Interface
 

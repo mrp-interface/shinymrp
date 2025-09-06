@@ -226,3 +226,44 @@
     )
   )
 }
+
+#' Show demo mode message
+#'
+#' @noRd 
+#' @keywords internal
+.show_demo_msg <- function() {
+  shinyWidgets::sendSweetAlert(
+    title = "Information",
+    text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
+    type = "info"
+  )
+}
+
+#' Show CmdStanR installation message
+#' 
+#' @noRd 
+#' @keywords internal
+.show_cmdstanr_alert <- function() {
+  .show_alert(
+    tags$p(
+      "The ",
+      tags$code("cmdstanr"),
+      " package is not installed or configured properly. Please refer to the installation instructions at ",
+      tags$a(
+        "https://mc-stan.org/cmdstanr/articles/cmdstanr.html.",
+        href = "https://mc-stan.org/cmdstanr/articles/cmdstanr.html",
+        target = "_blank"
+      )
+    )
+  )
+}
+
+#' Check if CmdStanR is installed and configured
+#' @noRd 
+#' @keywords internal
+.check_cmdstanr <- function() {
+  if (.get_config("require_cmdstanr") &&
+      .require_cmdstanr(error = FALSE)) {
+    .show_cmdstanr_alert()
+  }
+}
