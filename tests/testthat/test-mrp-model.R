@@ -22,7 +22,7 @@ test_that("getter methods work correctly", {
 })
 
 
-test_that("summary works correctly", {
+test_that("summary works", {
   skip_on_cran()
 
   workflow <- setup_test_workflow(
@@ -41,7 +41,7 @@ test_that("summary works correctly", {
   expect_named(summary, c("fixed", "varying", "other"))
 })
 
-test_that("diagnostics works correctly", {
+test_that("diagnostics works", {
   skip_on_cran()
 
   workflow <- setup_test_workflow(
@@ -64,7 +64,7 @@ test_that("diagnostics works correctly", {
   )
 })
 
-test_that("save works correctly", {
+test_that("save works", {
   skip_on_cran()
 
   workflow <- setup_test_workflow(

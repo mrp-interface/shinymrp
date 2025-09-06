@@ -1,4 +1,4 @@
-test_that(".waiter_ui works correctly", {
+test_that(".waiter_ui works", {
   # Valid types return tagList with 2 element
   for (type in .const()$ui$loading_types) {
     golem::expect_shinytaglist(.waiter_ui(type))
@@ -10,7 +10,7 @@ test_that(".waiter_ui works correctly", {
   )
 })
 
-test_that(".create_guide works correctly", {
+test_that(".create_guide works", {
   for (section in .const()$ui$guide_sections) {
     golem::expect_shinytag(.create_guide(section))
   }
@@ -21,7 +21,7 @@ test_that(".create_guide works correctly", {
   )
 })
 
-test_that(".create_model_tab works correctly", {
+test_that(".create_model_tab works", {
   skip_on_cran()
 
   golem::expect_shinytag(
@@ -33,7 +33,7 @@ test_that(".create_model_tab works correctly", {
   )
 })
 
-test_that(".est_map_ui works correctly", {
+test_that(".est_map_ui works", {
   skip_on_cran()
   
   # County map with slider
@@ -99,7 +99,7 @@ test_that(".est_map_ui works correctly", {
   )
 })
 
-test_that(".plot_height works correctly", {
+test_that(".plot_height works", {
   expect_equal(.plot_height(n = 3, is_timevar = TRUE), 900)
   expect_equal(.plot_height(n = 3, is_timevar = FALSE), 550)
   expect_equal(.plot_height(n = 1, is_timevar = TRUE), 550)
@@ -253,7 +253,7 @@ test_that(".vis_ui works", {
   ) 
 })
 
-test_that(".preview_table works correctly", {
+test_that(".preview_table works", {
   df <- data.frame(
     a = rnorm(10),
     b = runif(10),
@@ -270,7 +270,7 @@ test_that(".preview_table works correctly", {
 })
 
 
-test_that(".link_select works correctly", {
+test_that(".link_select works", {
   # Test if options for linking geography reflect data
 
   data <- data.frame(

@@ -589,85 +589,31 @@ mod_analyze_model_server <- function(id, global){
     # Add model
     #-----------------------------------------------------------------------
     observeEvent(input$add_model, {
-      # Check if in demo mode
-      if (.get_config("demo")) {
-        .show_notif(
-          tags$p(
-            "This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ",
-            tags$b("Upload Estimation Results"),
-            "."
-          )
-        )
-        return()
-      }
+      pass_checks <- FALSE
 
-      # Check if CmdStanR and CmdStan are installed
-      if(.require_cmdstanr(error = FALSE)) {
-        .show_alert(
-          tags$p(
-            "CmdStanR is not installed and configured to compile user-defined models. Try the example model estimation provided under ",
-            tags$b("Upload Estimation Results"),
-            "."
-          )
-        )
-        return()
-      }
-      
-      # Validate iteration and chain parameters
-      n_iter <- if(input$iter_select == "Custom") {
-        input$iter_kb
-      } else {
-        as.integer(strsplit(input$iter_select, " ")[[1]][1])
-      }
-      n_chains <- input$chain_select
-      seed <- input$seed_select
-      
-      check <- .check_iter_chain(
-        n_iter, .const()$ui$model$iter_range,
-        n_chains, .const()$ui$model$chain_range,
-        seed
-      )
-      
-      if(!check$valid) {
-        .show_alert(
-          tagList(
-            tags$ul(
-              purrr::map(check$msg, ~ tags$li(.x))
-            )
-          )
-        )
-        return()
-      }
-      
-      # Check if maximum number of models is reached
-      if(length(global$models) + 1 > .const()$ui$model$max_models) {
-        .show_alert("Maximum number of models reached. Please remove existing models to add more.")
-        return()
-      }
-      
-      # Check if the user selected any predictors
-      if(length(c(input$fixed, input$varying, input$interaction)) == 0) {
-        .show_alert("No predictor has been selected. Please include at least one.")
-        return()
-      }
-      
-      # Check if prior syntax is correct
-      valid_priors <- purrr::map(1:(length(prior_buffer()) + 1), function(i) {
-        input[[paste0("prior_dist_", i)]] %>%
-          .clean_prior_syntax() %>%
-          .check_prior_syntax()
-      }) %>% unlist()
-      
-      if(!all(valid_priors)) {
-        .show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.")
-        return()
-      }
-      
-      # All validation passed, show waiter and proceed
-      .show_waiter("fit")
-
-      # Try to fit the model
       tryCatch({
+        .show_waiter("fit")
+
+        n_iter <- .get_iter_num(input$iter_select, input$iter_kb)
+        n_chains <- input$chain_select
+        seed <- input$seed_select
+
+        .stop_if_fit_in_demo()
+        .stop_if_no_backend()
+        .stop_if_bad_mcmc_params(n_iter, n_chains, seed)
+        .stop_if_max_models(length(global$models))
+        .stop_if_no_effects(
+          length(input$fixed),
+          length(input$varying)
+        )
+        .stop_if_bad_priors(
+          purrr::map(
+            1:(length(prior_buffer()) + 1),
+            ~ input[[paste0("prior_dist_", .x)]]
+          )
+        )
+        pass_checks <- TRUE
+
         # assign default priors to all selected effects
         model_spec <- list(intercept = list(intercept = .const()$default_priors$intercept))
         for(type in .const()$args$effect_types) {
@@ -690,16 +636,14 @@ mod_analyze_model_server <- function(id, global){
         }
 
         # include sensitivity and specificity for COVID data
-        extra <- if (!is.null(global$workflow$metadata()$special_case) &&
-            global$workflow$metadata()$special_case == "covid") {
-          list(
+        extra <- list(
+          sens = 1,
+          spec = 1
+        )
+        if (identical(global$workflow$metadata()$special_case, "covid")) {
+          extra <- list(
             sens = input$sens_kb,
             spec = input$spec_kb
-          )
-        } else {
-          list(
-            sens = 1,
-            spec = 1
           )
         }
 
@@ -725,8 +669,10 @@ mod_analyze_model_server <- function(id, global){
         global$trigger_model_change()
 
       }, error = function(e) {
-        message(paste0("Error fitting model: ", e$message))
-        .show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.")
+        if(pass_checks) {
+          message(paste0("Error fitting model: ", e$message))
+          .show_alert("An error occurred during model fitting. Please report this as an issue on our GitHub page and we will resolve as soon as possible. Thank you for your patience.")
+        }
         waiter::waiter_hide()
       })
     })
@@ -746,19 +692,26 @@ mod_analyze_model_server <- function(id, global){
     })
 
     observeEvent(input$use_example, {
-      .show_waiter("wait")
+      tryCatch({
+        .stop_if_no_backend()
+        .stop_if_max_models(length(global$models))
 
-      file_name <- .create_example_filename(
-        global$workflow$metadata(),
-        suffix = "fit",
-        ext = ".qs"
-      )
+        .show_waiter("wait")
 
-      model_buffer(
-        .fetch_data(file_name, subdir = "example/fit")
-      )
+        file_name <- .create_example_filename(
+          global$workflow$metadata(),
+          suffix = "fit",
+          ext = ".qs"
+        )
 
-      global$trigger_model_change()
+        model_buffer(
+          .fetch_data(file_name, subdir = "example/fit")
+        )
+
+        global$trigger_model_change()
+      }, error = function(e) {
+        waiter::waiter_hide()
+      })
     })
     
     # create new model tab

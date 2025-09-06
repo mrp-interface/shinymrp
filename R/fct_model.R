@@ -1100,7 +1100,7 @@ generated quantities { ${gq_code}
     code_fout = NULL,
     ...
 ) {
-  .require_cmdstanr()
+  .require_cmdstanr_cmdstan()
 
   stan_code <- list()
   stan_code$mcmc <- .make_stancode_mcmc(effects, metadata)
@@ -1163,7 +1163,7 @@ generated quantities { ${gq_code}
     n_chains
   ) {
 
-  .require_cmdstanr()
+  .require_cmdstanr_cmdstan()
   
   utils::capture.output({
     mod_gq <- cmdstanr::cmdstan_model(
@@ -1369,7 +1369,7 @@ generated quantities { ${gq_code}
   input_data,
   metadata
 ) {
-  .require_cmdstanr()
+  .require_cmdstanr_cmdstan()
 
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
@@ -1472,7 +1472,7 @@ generated quantities { ${gq_code}
   summarize,
   max_depth = 10
 ) {
-  .require_cmdstanr()
+  .require_cmdstanr_cmdstan()
 
   # Get diagnostic summary
   diag_summary <- fit$diagnostic_summary(quiet = TRUE)
@@ -1546,7 +1546,7 @@ generated quantities { ${gq_code}
   metadata,
   interval = 0.95
 ) {
-  .require_cmdstanr()
+  .require_cmdstanr_cmdstan()
 
   out <- .check_interval(interval)
   
@@ -1633,7 +1633,7 @@ generated quantities { ${gq_code}
   metadata,
   N = 10
 ) {
-  .require_cmdstanr()
+  .require_cmdstanr_cmdstan()
 
   # get draws from cmdstanr fit
   yrep_mat <- fit$draws(
