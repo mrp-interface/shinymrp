@@ -49,7 +49,7 @@ jobs:
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # keep your original extras; adds local package
-          extra-packages: any::rcmdcheck, local::.
+          extra-packages: any::rcmdcheck, any::cmdstanr, local::.
           # Enable binary installs on Linux for speed
           needs: check
 
@@ -89,7 +89,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::covr, any::testthat
+          extra-packages: any::covr, any::cmdstanr, any::testthat
 
       - name: Install cmdstan
         run: |
