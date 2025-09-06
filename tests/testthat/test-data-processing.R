@@ -161,7 +161,7 @@ test_that("prepprocess is consistent", {
 
 })
 
-test_that("link_acs works correctly with all linking geographies", {
+test_that("link_acs works with all linking geographies", {
   skip_on_cran()
 
   # No linking geography
@@ -227,7 +227,7 @@ test_that("link_acs works correctly with all linking geographies", {
 })
 
 
-test_that("load_pstrat works correctly", {
+test_that("load_pstrat works", {
   skip_on_cran()
 
   pstrat_data <- example_pstrat_data()

@@ -330,20 +330,61 @@
   }
 }
 
+#' requireNamespace wrapper for mocking
+#' @noRd
+#' @keywords internal
+.require_ns <- function(pkg, quietly = TRUE) {
+  requireNamespace(pkg, quietly = quietly)
+}
+
+#' Wrapper for cmdstan_version for mocking
+#' @noRd
+#' @keywords internal
+.cmdstan_version <- function(error_on_NA) {
+  cmdstanr::cmdstan_version(error_on_NA = error_on_NA)
+}
+
 #' Ensure cmdstanr is installed
-#'
 #' @noRd
 #' @keywords internal
 .require_cmdstanr <- function(error = TRUE) {
-  installed <- TRUE
-  if (!requireNamespace("cmdstanr", quietly = TRUE) || 
-      is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-        
+  if (!.require_ns("cmdstanr", quietly = TRUE)) {
     if (error) {
-      stop("The 'cmdstanr' package is not installed or configured properly. Please refer to the installation instructions at https://mc-stan.org/cmdstanr/articles/cmdstanr.html.")
+      stop("CmdStanR is not installed. Please refer to the installation instructions at https://mc-stan.org/cmdstanr/articles/cmdstanr.html.")
     }
-    installed <- FALSE
+    return(FALSE)
   }
 
-  return(installed)
+  return(TRUE)
+}
+
+
+#' Ensure cmdstan is installed
+#' @noRd
+#' @keywords internal
+.require_cmdstan <- function(error = TRUE) {
+  if (.require_ns("cmdstanr", quietly = TRUE) &&
+      is.null(.cmdstan_version(error_on_NA = FALSE))) {
+
+    if (error) {
+      stop("CmdStan is not installed. Please refer to the installation instructions at https://mc-stan.org/cmdstanr/articles/cmdstanr.html.")
+    }
+    return(FALSE)
+  }
+
+  return(TRUE)
+}
+
+#' Ensure both CmdStanR and CmdStan are installed
+#' @noRd
+#' @keywords internal
+.require_cmdstanr_cmdstan <- function(error = TRUE) {
+  if (.get_config("require_cmdstanr")) {
+    if (!.require_cmdstanr(error = error)) return(FALSE)
+  }
+
+  if (.get_config("require_cmdstan")) {
+    if (!.require_cmdstan(error = error)) return(FALSE)
+  }
+  return(TRUE)
 }

@@ -12,7 +12,7 @@ test_that("getter and setter methods work correctly", {
 })
 
 
-test_that("compare_models works correctly", {
+test_that("compare_models works", {
 
   skip_on_cran()
 

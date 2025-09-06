@@ -188,6 +188,17 @@
   return(levels_interaction)
 }
 
+#' Format iteration selection
+#' @noRd
+#' @keywords internal
+.get_iter_num <- function(iter_select, iter_kb) {
+  if(iter_select == "Custom") {
+    iter_kb
+  } else {
+    as.integer(strsplit(iter_select, " ")[[1]][1])
+  }
+}
+
 #' Check MCMC iteration and chain parameters
 #'
 #' @description Validates MCMC sampling parameters including number of iterations,
@@ -195,9 +206,7 @@
 #' of correct numeric types.
 #'
 #' @param n_iter Numeric. Number of MCMC iterations to validate
-#' @param n_iter_range Numeric vector of length 2. Minimum and maximum allowed iterations
 #' @param n_chains Numeric. Number of MCMC chains to validate
-#' @param n_chains_range Numeric vector of length 2. Minimum and maximum allowed chains
 #' @param seed Numeric. Random seed value to validate
 #'
 #' @return A list containing:
@@ -206,18 +215,25 @@
 #'
 #' @noRd
 #' @keywords internal
-.check_iter_chain <- function(n_iter, n_iter_range, n_chains, n_chains_range, seed) {
+.check_mcmc_params <- function(n_iter, n_chains, seed) {
+  n_iter_range <- .const()$ui$model$iter_range
+  n_chains_range <- .const()$ui$model$chain_range
   flag <- TRUE
   msg <- c()
   
   if(is.numeric(n_iter) && is.numeric(n_chains) && is.numeric(seed)) {
-    if(n_iter < n_iter_range[1] | n_iter > n_iter_range[2]) {
+    if (n_iter < n_iter_range[1] | n_iter > n_iter_range[2]) {
       msg <- c(msg, paste0("The number of iterations must be between ", n_iter_range[1], " and ", n_iter_range[2], "."))
       flag <- FALSE
     }
     
-    if(n_chains < n_chains_range[1] | n_chains > n_chains_range[2]) {
+    if (n_chains < n_chains_range[1] | n_chains > n_chains_range[2]) {
       msg <- c(msg, paste0("The number of chains must be between ", n_chains_range[1], " and ", n_chains_range[2], "."))
+      flag <- FALSE
+    }
+
+    if (seed < 0) {
+      msg <- c(msg, "The seed must be a non-negative integer.")
       flag <- FALSE
     }
   } else {

@@ -231,7 +231,7 @@
 #'
 #' @noRd 
 #' @keywords internal
-.show_demo_msg <- function() {
+.show_demo_notif <- function() {
   shinyWidgets::sendSweetAlert(
     title = "Information",
     text = tags$p("The web version of the MRP interface currently serves as a demo. We are working to provide computation and memory support for Bayesian model estimation. The native version can be installed from ", tags$a("GitHub.", href = "https://github.com/mrp-interface/shinymrp", target = "_blank")),
@@ -239,11 +239,11 @@
   )
 }
 
-#' Show CmdStanR installation message
+#' Show CmdStanR installation alert
 #' 
 #' @noRd 
 #' @keywords internal
-.show_cmdstanr_alert <- function() {
+.show_backend_alert <- function() {
   .show_alert(
     tags$p(
       "The ",
@@ -258,12 +258,97 @@
   )
 }
 
-#' Check if CmdStanR is installed and configured
+#' Show an alert if CmdStanR and CmdStan are installed
+#' @noRd
+#' @keywords internal
+.stop_if_no_backend <- function() {
+  if (!.require_cmdstanr_cmdstan(error = FALSE)) {
+    .show_backend_alert()
+    stop()
+  }
+}
+
+#' Show alert when users try to fit model in demo mode
+#' 
 #' @noRd 
 #' @keywords internal
-.check_cmdstanr <- function() {
-  if (.get_config("require_cmdstanr") &&
-      .require_cmdstanr(error = FALSE)) {
-    .show_cmdstanr_alert()
+.stop_if_fit_in_demo <- function() {
+  if (.get_config("demo")) {
+    .show_notif(
+      tags$p(
+        "This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ",
+        tags$b("Upload Estimation Results"),
+        "."
+      )
+    )
+    stop()
+  }
+}
+
+#' Show an alert if MCMC parameters are invalid
+#' 
+#' @param n_iter Numeric. Number of MCMC iterations to validate
+#' @param n_chains Numeric. Number of MCMC chains to validate
+#' @param seed Numeric. Random seed value to validate
+#'
+#' @noRd 
+#' @keywords internal
+.stop_if_bad_mcmc_params <- function(n_iter, n_chains, seed) {
+  out <- .check_mcmc_params(n_iter, n_chains, seed)
+  if(!out$valid) {
+    .show_alert(
+      tagList(
+        tags$ul(
+          purrr::map(out$msg, ~ tags$li(.x))
+        )
+      )
+    )
+    stop()
+  }
+}
+
+#' Show an alert if maximum number of models is reached
+#' 
+#' @param n_models Numeric. Current number of models
+#' 
+#' @noRd 
+#' @keywords internal
+.stop_if_max_models <- function(n_models) { 
+  if(n_models + 1 > .const()$ui$model$max_models) {
+    .show_alert("Maximum number of models reached. Please remove existing models to add more.")
+    stop()
+  }
+}
+
+#' Show an alert if no predictors are selected
+#' 
+#' @param n_fix Numeric. Number of fixed effects selected
+#' @param n_vary Numeric. Number of varying effects selected
+#'
+#' @noRd
+#' @keywords internal
+.stop_if_no_effects <- function(n_fix, n_vary) {
+  if(n_fix + n_vary == 0) {
+    .show_alert("No predictor has been selected. Please include at least one.")
+    stop()
+  }
+}
+
+#' Show an alert if priors are invalid
+#' @param priors List of prior specifications to validate
+#' 
+#' @noRd
+#' @keywords internal
+.stop_if_bad_priors <- function(priors) {
+  valid_priors <- purrr::map(priors, function(prior) {
+    prior %>%
+      .clean_prior_syntax() %>%
+      .check_prior_syntax()
+  }) %>%
+    unlist()
+  
+  if(!all(valid_priors)) {
+    .show_alert("Invalid prior provided. Please check the User Guide for the list of available priors.")
+    stop()
   }
 }

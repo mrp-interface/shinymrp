@@ -104,11 +104,8 @@ mod_home_server <- function(id, global){
     
     # Show demo message if in demo mode
     if (.get_config("demo")) {
-      .show_demo_msg()
+      .show_demo_notif()
     }
-
-    # Check if CmdStanR and CmdStan are installed
-    .check_cmdstanr()
 
     output$left_panel_title <- renderText({
       req(panel_group_rv())

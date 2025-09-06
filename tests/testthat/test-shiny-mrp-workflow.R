@@ -58,7 +58,7 @@ test_that("methods that returns DT::datatable() work", {
   }
 })
 
-test_that("estimate_plot_geo works correctly", {
+test_that("estimate_plot_geo works", {
   skip_on_cran()
 
   workflow <- ShinyMRPWorkflow$new()
@@ -86,7 +86,7 @@ test_that("estimate_plot_geo works correctly", {
   )
 })
 
-test_that("estimate_map works correctly", {
+test_that("estimate_map works", {
   skip_on_cran()
 
   workflow <- ShinyMRPWorkflow$new()
@@ -114,7 +114,7 @@ test_that("estimate_map works correctly", {
   )
 })
 
-test_that("compare_models works correctly", {
+test_that("compare_models works", {
   skip_on_cran()
   
   workflow <- setup_test_workflow(
