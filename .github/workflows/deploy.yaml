@@ -35,11 +35,18 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rsconnect, any::usethis, any::pkgload, local::.
+          extra-packages: any::rsconnect, any::usethis, , any::desc, local::.
 
-      - name: Add pkgload to DESCRIPTION
+      - name: Update DESCRIPTION
         run: |
           usethis::use_package("pkgload")
+          # Move cmdstanr from Suggests to Imports and add 'Remotes' field
+          d <- desc::desc(file = "DESCRIPTION")
+          d$del_dep("cmdstanr", type = "Suggests")
+          d$set_dep("cmdstanr", type = "Imports")
+          d$set_remotes(c(d$get_remotes(), "stan-dev/cmdstanr"))
+          d$write(file = "DESCRIPTION")
+
         shell: Rscript {0}
 
       - name: Authenticate with shinyapps.io

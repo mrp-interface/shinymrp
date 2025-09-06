@@ -1,7 +1,7 @@
 default:
   demo: FALSE
-  install_cmdstan: TRUE
+  require_cmdstanr: TRUE
 
 shinyapps:
   demo: TRUE
-  install_cmdstan: FALSE
+  require_cmdstanr: FALSE

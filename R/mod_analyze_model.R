@@ -589,14 +589,27 @@ mod_analyze_model_server <- function(id, global){
     # Add model
     #-----------------------------------------------------------------------
     observeEvent(input$add_model, {
-      # Check if CmdStan is installed
-      if(is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
-        msg <- if(.get_config("demo")) {
-          tags$p("This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), ".")
-        } else {
-          tags$p("CmdStan is not installed to compile user-defined models. Try the example model estimation provided under ", tags$b("Upload Estimation Results"), ".")
-        }
-        .show_alert(msg)
+      # Check if in demo mode
+      if (.get_config("demo")) {
+        .show_notif(
+          tags$p(
+            "This functionality is currently not available for the web version of the MRP interface. Try the example model estimation provided under ",
+            tags$b("Upload Estimation Results"),
+            "."
+          )
+        )
+        return()
+      }
+
+      # Check if CmdStanR and CmdStan are installed
+      if(.require_cmdstanr(error = FALSE)) {
+        .show_alert(
+          tags$p(
+            "CmdStanR is not installed and configured to compile user-defined models. Try the example model estimation provided under ",
+            tags$b("Upload Estimation Results"),
+            "."
+          )
+        )
         return()
       }
       

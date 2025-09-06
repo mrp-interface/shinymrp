@@ -155,7 +155,7 @@ Code reference: [preprocess](https://github.com/mrp-interface/shinymrp/blob/main
 
 ### Geographic identifiers and covariates
 
-A major strength of MRP is small area estimation, so it is recommended to include as much geographic/geocovariate information as available.
+A major strength of MRP is small area estimation, so it is recommended to include as much geographic/geo-covariate information as available.
 
 First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that has the largest overlap with each ZIP code.
 

@@ -329,3 +329,21 @@
     message("No cache directory found at: ", cache_dir)
   }
 }
+
+#' Ensure cmdstanr is installed
+#'
+#' @noRd
+#' @keywords internal
+.require_cmdstanr <- function(error = TRUE) {
+  installed <- TRUE
+  if (!requireNamespace("cmdstanr", quietly = TRUE) || 
+      is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
+        
+    if (error) {
+      stop("The 'cmdstanr' package is not installed or configured properly. Please refer to the installation instructions at https://mc-stan.org/cmdstanr/articles/cmdstanr.html.")
+    }
+    installed <- FALSE
+  }
+
+  return(installed)
+}
