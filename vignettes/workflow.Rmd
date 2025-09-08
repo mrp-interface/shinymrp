@@ -8,7 +8,7 @@ vignette: >
 ---
 
 
-This vignette provides an in-depth walkthrough of the `MRPWorkflow` and `MRPModel` classes in the **shinymrp** package. You will find practical information about each method’s purpose, arguments, and caveats, enabling you to conduct MRP analyses programmatically.
+This vignette provides an in-depth walkthrough of the `MRPWorkflow` and `MRPModel` classes in the **shinymrp** package. You will find practical information about the purpose, arguments, and caveats of each method, enabling you to conduct MRP analyses programmatically.
 
 For an introduction to the package and workflow concepts, begin with the [Getting started with shinymrp](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
 
@@ -52,7 +52,7 @@ The `example_sample_data()` function demonstrates accepted structures and common
 
 - whether a time variable is included
 - whether the data are aggregated
-- whether the data follow a specific standard (e.g. medical records from the Epic system)
+- whether the data follow a specific standard (e.g., medical records from the Epic system)
 - whether the outcome measure is binary (modeled with binomial distributions) or continuous (modeled with Gaussian/normal distributions)
 
 ```{r}
@@ -238,7 +238,7 @@ workflow$compare_models(model1, model2)
 
 ## 3.4 Saving and loading models
 
-You can easily save and restore models using the `qs` package. The `$save()` gathers all posterior draws and diagnostics then calls `qs::qsave()` internally.
+You can easily save and restore models using the `qs` package. The `$save()` gathers all posterior draws and diagnostics, then calls `qs::qsave()` internally.
 
 ```{r, save_model, eval=FALSE}
 model1$save(file = "model1.qs")

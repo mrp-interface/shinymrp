@@ -39,7 +39,7 @@ example_sample_data <- function(
 #' Return example poststratification data
 #' 
 #' @description Return example poststratification data accepted by
-#' the `$load_pstrat()` method of a `MRPWorkflow` object.
+#' the `$load_pstrat()` method of an `MRPWorkflow` object.
 #' 
 #' @return A `data.frame` object.
 #' 
@@ -50,7 +50,7 @@ example_pstrat_data <- function() {
 
 #' Return example `MRPModel` object with estimation results.
 #'
-#' @description Return example `MRPModel` object with estimation results.
+#' @description Return an example `MRPModel` object with estimation results.
 #' 
 #' @param is_timevar Logical indicating whether the model is fitted
 #' to time-varying data.

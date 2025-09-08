@@ -32,12 +32,12 @@ remotes::install_github("mrp-interface/shinymrp")
 The package installation does not automatically install all prerequisites. Specifically, **shinymrp** uses [CmdStanR](https://mc-stan.org/cmdstanr/) as the bridge to run [Stan](https://mc-stan.org/), a state-of-the-art platform for Bayesian modeling. Stan requires a modern C++ toolchain (compiler and GNU Make build utility). 
 
 - For setting up your toolchain, see [Stan’s documentation](https://mc-stan.org/docs/cmdstan-guide/installation.html#cpp-toolchain).
-- Once ready, follow the [CmdStanR installation instructions](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStan.
+- Once ready, follow the [CmdStanR installation instructions](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStanR and CmdStan.
 
 
 ## Key steps
 
-The **shinymrp** R6-based interface is ideal for users who want full scripting control and have high-performance computing resources. The workflow is object-oriented, with your main point of interaction being the `MRPWorkflow` object. This object provides methods for every stage of your analysis.
+The **shinymrp** R6-based interface is ideal for users who want full scripting control and have access to high-performance computing resources. The workflow is object-oriented, with your main point of interaction being the `MRPWorkflow` object. This object provides methods for every stage of your analysis.
 
 Start by loading the package and creating your workflow object. 
 
@@ -52,7 +52,7 @@ Below is a typical workflow illustrated step by step.
 
 ### 1. Data preparation
 
-First, we preprocess a sample dataset and obtain poststratification data from the American Community Survey (ACS) or custom upload. Here’s an example using built-in sample data and linked ACS:
+First, we preprocess a sample dataset and obtain poststratification data from the American Community Survey (ACS) or custom uploads. Here’s an example using built-in sample data and linked ACS:
 
 ```{r eval=FALSE}
 # Load example data
@@ -140,7 +140,7 @@ workflow$estimate_map(model, geo = "county")
 
 ## Additional resources
 
-- For more details on input data requirements and preprocessing, see the vignette of [Data preprocessing](https://mrp-interface.github.io/shinymrp/articles/data-prep).
+- For more details on input data requirements and preprocessing, see the vignette on [Data preprocessing](https://mrp-interface.github.io/shinymrp/articles/data-prep).
 - For a more detailed walk-through of each method, output interpretation, and recommended practices, see the vignette of [Programmatic workflow demonstration](https://mrp-interface.github.io/shinymrp/articles/workflow.html).
 - For Shiny app users, launch the interactive GUI via `shinymrp::run_app()` or, to try it online without installation, visit the [demo](https://mrpinterface.shinyapps.io/shinymrp/).
 

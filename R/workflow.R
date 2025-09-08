@@ -116,7 +116,7 @@ mrp_workflow <- function() {
 #'
 #'  ### VISUALIZE RESULTS
 #'
-#'  # Plots of overall estimates, estimates for demographic groups and geographic areas
+#'  # Plots of overall estimates, estimates for demographic groups, and geographic areas
 #'  workflow$estimate_plot(model, group = "sex")
 #'
 #'  # Choropleth map of estimates for geographic areas
@@ -270,20 +270,20 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #'
 #' @description The `$preprocess()` method runs the preprocessing pipeline
 #' that includes data standardization, filtering, imputation, and aggregation.
+#' See the [More on data preparation](https://mrp-interface.github.io/shinymrp/articles/data-prep)
+#' vignette for more information.
 #'
 #' @param data An object of class `data.frame` (or one that can be coerced to that class) that satisfies
-#' the requirements specified in the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
+#' the requirements specified in the [More on data preparation](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette.
 #' @param is_timevar Logical indicating whether the data contains time-varying components.
 #' @param is_aggregated Logical indicating whether the data is already aggregated.
-#' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
 #' @param special_case Character string specifying special case handling. Options are `NULL` (the default), `"covid"`, and `"poll"`.
-#' See the ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep) vignette for more information.
 #' @param family Character string specifying the distribution family for the outcome variable. Options are `"binomial"` for binary outcome measures and `"normal"` for continuous outcome measures.
 #' @param time_freq Character string specifying the time indexing frequency or time length for grouping dates (YYYY-MM-DD) in the data.
 #' Options are `NULL` (the default), `"week"`, `"month"`, and `"year"`. This parameter must be `NULL` for cross-sectional data
 #' or time-varying data that already has time indices.
 #' @param freq_threshold Numeric value specifying the minimum frequency threshold for including observations.
-#' Values with lower frequency will cause the entire row to be removed. The default value is 0.
+#' Values with lower frequency will cause the entire row to be removed. The default value is 0 (no filtering).
 #'
 #' @examples
 #' if (FALSE) {
@@ -361,10 +361,12 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #'
 #' @description The `$link_acs()` method obtains poststratification data by
 #' linking the preprocessed sample data to the American Community Survey
-#' based on given geographic granularity and year.
+#' based on given geographic granularity and year. See the
+#' [More on data preparation](https://mrp-interface.github.io/shinymrp/articles/data-prep)
+#' vignette for more information.
 #'
 #' @param link_geo Character string specifying the geographic level for linking. Options are `"zip"`, `"county"`, and `"state"`.
-#' @param acs_year Numeric value specifying the last year of the 5-year period for the target ACS dataset.
+#' @param acs_year Numeric value specifying the last year of the data collection period for the target ACS dataset.
 #'
 #' @examples
 #' if (FALSE) {
@@ -523,7 +525,9 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #'
 #'
 #' @description The `$load_pstrat()` method processes and stores input poststratification data.
-#' The object is subject to the same data preprocessing steps as the sample data.
+#' The object is subject to the same data preprocessing steps as the sample data. See the
+#' [More on data preparation](https://mrp-interface.github.io/shinymrp/articles/data-prep)
+#' vignette for more information.
 #'
 #' @param pstrat_data An object of class `data.frame` (or one that can be coerced to that class).
 #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
@@ -652,7 +656,7 @@ MRPWorkflow$set("public", "load_pstrat", load_pstrat)
 #'
 #' @param demo Character string specifying the demographic variable to plot.
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave], such as `width` and `height`.
 #'
 #' @return A ggplot object showing demographic comparisons
 #'
@@ -738,13 +742,13 @@ MRPWorkflow$set("public", "demo_bars", demo_bars)
 #'
 #' @description The `covar_hist()` method creates histogram plots
 #' showing the distribution of geographic covariates across ZIP codes. Refer to the
-#' ["More on data preparation"](https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-covariates) for their definitions.
-#' *This method is only available for [COVID data](https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules)*.
+#' [More on data preparation](https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-and-covariates) for their definitions.
+#' This method is only available for [COVID data](https://mrp-interface.github.io/shinymrp/articles/data-prep#data-modules).
 #'
 #' @param covar Character string specifying the geographic covariate. Options are
-#' `"college"`, `"poverty"`, `"employment"`, `"income"`, `"urbanicity"`, and `"adi"`
+#' `"college"`, `"poverty"`, `"employment"`, `"income"`, `"urbanicity"`, and `"adi"`.
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave], such as `width` and `height`.
 #'
 #' @return A ggplot object showing the covariate distribution histogram.
 #'
@@ -888,7 +892,7 @@ MRPWorkflow$set("public", "covar_hist", covar_hist)
 #'
 #' @description The `$sample_size_map()` method creates interactive choropleth maps 
 #' showing data distribution with respect to geography. This method cannot be used
-#' if either the sample or poststratification data contains no geographic information.
+#' if either the sample or the poststratification data contains no geographic information.
 #'
 #' @param file Optional file path with .html extension to save the interactive map.
 #' Expand the hamburger menu in the top right corner of the map to access other export options.
@@ -973,10 +977,10 @@ MRPWorkflow$set("public", "sample_size_map", sample_size_map)
 #' @aliases outcome_plot
 #'
 #'
-#' @description The `$outcome_plot()` method creates average plots of the outcome measure.
+#' @description The `$outcome_plot()` method creates plots of the average outcome values.
 #'
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave], such as `width` and `height`.
 #'
 #' @return A ggplot object showing the outcome measure distribution.
 #' 
@@ -1050,9 +1054,9 @@ MRPWorkflow$set("public", "outcome_plot", outcome_plot)
 #' @name MRPWorkflow-method-outcome_map
 #' @aliases outcome_map
 #'
-#' @description The `$outcome_map()` method creates maps showing average outcome measure by geography for
-#' cross-sectional data, or highest/lowest temporal average for time-varying data. The sample and
-#' poststratification data must contain geographic information for this method to work.
+#' @description The `$outcome_map()` method creates maps showing the average outcome values
+#' by geography for cross-sectional data, or the highest/lowest temporal average for time-varying data.
+#' The sample and poststratification data must contain geographic information for this method to work.
 #'
 #' @param summary_type Character string, for time-varying data, indicating whether to display the
 #' highest (`"max"`) or lowest (`"min"`) temporal average. Leave as `NULL` for cross-sectional data.
@@ -1173,7 +1177,7 @@ MRPWorkflow$set("public", "outcome_map", outcome_map)
 #' standard deviation (`"1sd"` or `"2sd"`) for the estimates (default is 0.95).
 #' @param file Optional file path to save the plot.
 #' @param show_caption Logical indicating whether to show the caption in the plot (default is TRUE).
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave], such as `width` and `height`.
 #'
 #' @return A ggplot object showing MRP estimates.
 #'
@@ -1286,7 +1290,7 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' @name MRPWorkflow-method-estimate_map
 #' @aliases estimate_map
 #'
-#' @description The `$estimate_map()` method creates interactive choropleth maps showing MRP estimates by geographic regions.
+#' @description The `$estimate_map()` method creates interactive choropleth maps that show MRP estimates by geographic region.
 #'
 #' @param model Fitted MRPModel object
 #' @param geo Character string specifying the geographic level for mapping.
@@ -1393,7 +1397,7 @@ estimate_map <- function(
 }
 MRPWorkflow$set("public", "estimate_map", estimate_map)
 
-#' Create a MRPModel object
+#' Create a new MRPModel object
 #'
 #' @name MRPWorkflow-method-create_model
 #' @aliases create_model
@@ -1412,8 +1416,8 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' @param interaction List of the interactions in the model and their prior distributions. Interaction names are
 #' created by concatenating the names of the interacting variables with a colon (e.g., "sex:age"). Currently,
 #' only two-way interactions are supported. Check *Details* for more information about prior specification.
-#' @param sens Sensitivity adjustment in the COVID test results. Check *Details* for more information.
-#' @param spec Specificity adjustment in the COVID test results. Check *Details* for more information.
+#' @param sens Sensitivity adjustment in the COVID-19 test results. Check *Details* for more information.
+#' @param spec Specificity adjustment in the COVID-19 test results. Check *Details* for more information.
 #'
 #' @details
 #' #### Prior specification
@@ -1534,7 +1538,7 @@ MRPWorkflow$set("public", "create_model", create_model)
 #'
 #' @param model Fitted MRPModel object.
 #' @param file Optional file path to save the plot.
-#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave] such as `width` and `height`.
+#' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave], such as `width` and `height`.
 #'
 #' @examples
 #' if (FALSE) {

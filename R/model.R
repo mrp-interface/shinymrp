@@ -1,9 +1,9 @@
 #' MRPModel objects
 #'
-#' @description A `MRPModel` object is an [R6][R6::R6Class] object created by the
-#' [`$create_model()`][MRPWorkflow-method-create_model] method of a
+#' @description An `MRPModel` object is an [R6][R6::R6Class] object created by the
+#' [`$create_model()`][MRPWorkflow-method-create_model] method of an
 #' [`MRPWorkflow`][MRPWorkflow] object. Each `MRPModel` object represents a
-#' multilevel regression model with methods for sampling, diagnostics,
+#' multilevel regression model, providing methods for sampling, diagnostics,
 #' and poststratification.
 
 #' @section Methods: `MRPModel` objects have the following associated
@@ -122,13 +122,13 @@ MRPModel <- R6::R6Class(
   ),
   public = list(
     #' @description Creates a new instance of the `MRPModel` class. This method is called by the `$create_model()`
-    #' method of a `MRPWorkflow` object and does not need to be called directly by users.
+    #' method of an `MRPWorkflow` object and does not need to be called directly by users.
     #'
-    #' @param model_spec List containing model effects specification including intercept, fixed effects, varying effects, and interactions
+    #' @param model_spec List containing model effects specification, including intercept, fixed effects, varying effects, and interactions
     #' @param mrp_data List containing the MRP data structure with input sample data and new poststratification data
-    #' @param metadata List containing metadata about the analysis including family, time variables, and special cases
-    #' @param link_data List containing information about data linking including geography and ACS year
-    #' @param plot_data List containing data prepared for visualization including dates and geojson objects
+    #' @param metadata List containing metadata about the analysis, including family, time variables, and special cases
+    #' @param link_data List containing information about data linking, including geography and ACS year
+    #' @param plot_data List containing data prepared for visualization, including dates and GeoJSON objects
     #' @param extra List containing COVID test sensitivity and specificity
     #'
     #' @return A new `MRPModel` object initialized with the provided model specification and relevant data.
@@ -186,7 +186,7 @@ MRPModel <- R6::R6Class(
 #' @name MRPModel-method-model_spec
 #' @aliases model_spec
 #'
-#' @description The `$model_spec()` method of a `MRPModel` object
+#' @description The `$model_spec()` method of an `MRPModel` object
 #' returns the model specification list.
 #'
 #' @return A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
@@ -212,8 +212,8 @@ MRPModel$set("public", "model_spec", model_spec)
 #' @name MRPModel-method-formula
 #' @aliases formula
 #'
-#' @description The `$formula()` method of a `MRPModel` object
-#' returns the lme4-style formula constructed from the model specification list.
+#' @description The `$formula()` method of an `MRPModel` object
+#' returns the lme4-style formula constructed from the given model specification.
 #'
 #' @examples
 #' if (FALSE) {
@@ -237,7 +237,7 @@ MRPModel$set("public", "formula", formula)
 #' @aliases metadata
 #'
 #'
-#' @description The `$metadata()` method of a `MRPModel` object
+#' @description The `$metadata()` method of an `MRPModel` object
 #' returns the metadata associated with the model,
 #' including metadata inherited from a workflow object and model fitting parameters.
 #'
@@ -263,7 +263,7 @@ MRPModel$set("public", "metadata", metadata)
 #' @aliases stan_code
 #'
 #'
-#' @description The `$stan_code()` method of a `MRPModel` object
+#' @description The `$stan_code()` method of an `MRPModel` object
 #' returns the Stan code.
 #'
 #' @examples
@@ -288,12 +288,13 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @aliases fit
 #'
 #'
-#' @description The `$fit()` method of a `MRPModel` object fits the model using Stan.
+#' @description The `$fit()` method of an `MRPModel` object fits the model using
+#' Stan's main Markov chain Monte Carlo (MCMC) algorithm.
 #'
 #' @param n_iter Number of MCMC iterations per chain (including warmup iterations). Default is 2000.
 #' @param n_chains Number of MCMC chains to run. Default is 4.
 #' @param seed Random seed for reproducibility. Default is `NULL`.
-#' @param ... Additional arguments passed to CmdStanR `$sample()` method
+#' @param ... Additional arguments passed to CmdStanR `$sample()` method.
 #'
 #' @examples
 #' if (FALSE) {
@@ -377,7 +378,7 @@ MRPModel$set("public", "fit", fit)
 #' @aliases check_fit_exists
 #'
 #'
-#' @description The `$check_fit_exists()` method of a `MRPModel` object
+#' @description The `$check_fit_exists()` method of an `MRPModel` object
 #' checks whether the model has been fitted.
 #'
 #' @return Logical indicating whether the model has been fitted.
@@ -441,7 +442,7 @@ MRPModel$set("public", "check_fit_exists", check_fit_exists)
 #' @aliases check_estimate_exists
 #'
 #'
-#' @description The `$check_estimate_exists()` method of a `MRPModel` object
+#' @description The `$check_estimate_exists()` method of an `MRPModel` object
 #' checks whether poststratification has been performed.
 #'
 #' @return Logical indicating whether poststratification has been performed.
@@ -508,8 +509,8 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #' @name MRPModel-method-summary
 #' @aliases summary
 #'
-#' @description The `$summary()` method of a `MRPModel` object
-#' returns tables containing summary of posterior samples
+#' @description The `$summary()` method of an `MRPModel` object
+#' returns tables containing the summary of posterior samples
 #' for the model parameters and diagnostics.
 #'
 #' @return A list of `data.frame` objects containing posterior sample
@@ -560,9 +561,10 @@ MRPModel$set("public", "summary", summary)
 #' @aliases diagnostics
 #'
 #'
-#' @description The `$diagnostics()` method of a `MRPModel` object
-#' returns MCMC diagnostics including
-#' convergence statistics and sampling efficiency measures.
+#' @description The `$diagnostics()` method of an `MRPModel` object
+#' returns MCMC diagnostics, including convergence statistics and
+#' sampling efficiency measures. Check out this [official Stan guide](https://mc-stan.org/learn-stan/diagnostics-warnings)
+#' for more information on interpreting these metrics.
 #'
 #' @param summarize Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)
 #'
@@ -604,7 +606,7 @@ MRPModel$set("public", "diagnostics", diagnostics)
 #' @name MRPModel-method-ppc
 #' @aliases ppc
 #'
-#' @description The `$ppc()` method of a `MRPModel` object
+#' @description The `$ppc()` method of an `MRPModel` object
 #' runs Stan's standalone generated quantities
 #' to draw from the posterior predictive distribution. This method is called
 #' by the `$pp_check()` method of a `MRPWorkflow` object and does
@@ -644,10 +646,10 @@ MRPModel$set("public", "ppc", ppc)
 #' @aliases log_lik
 #'
 #'
-#' @description The `$log_lik()` method of a `MRPModel` object
+#' @description The `$log_lik()` method of an `MRPModel` object
 #' runs Stan's standalone generated quantities
 #' and extracts log-likelihood values for leave-one-out cross-validation. This
-#' method is called by the `$compare_models()` method of a `MRPWorkflow` object
+#' method is called by the `$compare_models()` method of an `MRPWorkflow` object
 #' and does not need to be called directly by users.
 #'
 #' @return A `data.frame` containing log-likelihood values.
@@ -677,7 +679,7 @@ MRPModel$set("public", "log_lik", log_lik)
 #' @aliases poststratify
 #'
 #'
-#' @description The `$poststratify()` method of a `MRPModel` object
+#' @description The `$poststratify()` method of an `MRPModel` object
 #' runs Stan's standalone generated quantities and extracts posterior samples
 #' for poststratified estimates. This method is called by the `$poststratify()`
 #' method of a `MRPWorkflow` object and does not need to be called directly by users.
@@ -725,9 +727,9 @@ MRPModel$set("public", "poststratify", poststratify)
 #' @name MRPModel-method-save
 #' @aliases save
 #'
-#' @description The `$save()` method of a `MRPModel` object
+#' @description The `$save()` method of an `MRPModel` object
 #' saves a fitted MRPModel object to a file for later use.
-#' `qs::qsave()` is used internally and it is customary
+#' `qs::qsave()` is used internally, and it is customary
 #' to use the `.qs` file extension.
 #'
 #' @param file File path where the model should be saved.
