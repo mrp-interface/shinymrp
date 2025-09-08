@@ -21,7 +21,7 @@ library(shinymrp)
 
 This vignette details the data requirements, implementation steps, and relevant code references for data preparation in **shinymrp**.
 
-MRP requires two main data components: the survey or test data, and a corresponding poststratification table. The workflow involves two stages:
+MRP requires two main data components: the survey or test data and a corresponding poststratification table. The workflow involves two stages:
 
 - **Multilevel regression (MR):** Modeling the relationship between the outcome and demographic/geographic predictors, optionally incorporating area-level covariates;
 - **Poststratification (P):** Aggregating estimates according to the population structure of the target.
@@ -155,13 +155,13 @@ Code reference: [preprocess](https://github.com/mrp-interface/shinymrp/blob/main
 
 ### Geographic identifiers and covariates
 
-A major strength of MRP is small area estimation, so it is recommended to include as much geographic/geo-covariate information as available.
+A major strength of MRP is small area estimation, so it is advisable to include as much geographic/geo-covariate information as possible.
 
 First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that has the largest overlap with each ZIP code.
 
 Quantitative measures associated with geographic units are sourced from your data or external datasets. For general use cases, the app scans the data to find quantities that have a one-to-one relationship with the geographic identifier of interest. 
 
-For the COVID-19 use case, we have identified certain ZIP code-level measures that are informative in modeling COVID-19 test results. We obtain these quantities at the tract level from the ACS and other sources, then aggregate over the tracts that overlap with each ZIP code based on the USPS crosswalk table.
+For the COVID-19 use case, we have identified specific ZIP code-level measures that are informative in modeling COVID-19 test results. We obtain these quantities at the tract level from the ACS and other sources, then aggregate over the tracts that overlap with each ZIP code based on the USPS crosswalk table.
 
 We obtain the following tract-level measures from the ACS and other sources:
 
@@ -174,7 +174,7 @@ We obtain the following tract-level measures from the ACS and other sources:
 
 Code reference: [get_tract_data](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/get_tract_data.R#L49).
 
-While the ACS reports geography at the levels of census tracts, counties, and states, ZIP codes are defined by the U.S. Postal Service (USPS). We use the ZIP code crosswalk table released by the U.S. Department of Housing and Urban Development and USPS to link ZIP codes to census tracts and calculate the ZIP-code-level measures by aggregating all available tract-level measures weighted by tract population counts. ZIP code level statistics are computed by combining the values across census tracts as follows:
+While the ACS reports geography at the levels of census tracts, counties, and states, ZIP codes are defined by the U.S. Postal Service (USPS). We use the ZIP code crosswalk table released by the U.S. Department of Housing and Urban Development and USPS to link ZIP codes to census tracts and calculate ZIP-code-level measures by aggregating all available tract-level measures weighted by tract population counts. ZIP code level statistics are computed by combining the values across census tracts as follows:
 
 - Urbanicity of a ZIP code is defined as the percentage of covered census tracts classified as urban, weighted by tract population counts;
 - Higher education measure of a ZIP code is defined as the percentage of the residing population who have earned an Associate's degree or higher;
@@ -187,6 +187,6 @@ Code reference: [combine_tracts_covid](https://github.com/mrp-interface/shinymrp
 
 ### Poststratification tables
 
-Poststratification tables are computed from ACS data via the `tidycensus` and `IPUMS` packages and summarize the size of every subpopulation defined by demographic and geographic cross-categories. For efficiency, tables are precomputed at the tract level and then aggregated for larger geographies. We select the county with the most-overlapping residential addresses for one ZIP code as the ZIP-linked county and sum over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
+Poststratification tables are computed from ACS data via the `tidycensus` and `IPUMS` packages and summarize the size of every subpopulation defined by demographic and geographic cross-categories. For efficiency, tables are precomputed at the tract level and then aggregated for larger geographies. We select the county with the most overlapping residential addresses for a given ZIP code as the ZIP-linked county and sum over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
 
 Code reference: [combine_tracts](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R#L1403) and [combine_tracts_covid](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97)
