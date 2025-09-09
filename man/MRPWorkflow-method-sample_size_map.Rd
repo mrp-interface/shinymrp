@@ -17,7 +17,7 @@ A highcharter map object showing sample size distribution.
 \description{
 The \verb{$sample_size_map()} method creates interactive choropleth maps
 showing data distribution with respect to geography. This method cannot be used
-if either the sample or poststratification data contains no geographic information.
+if either the sample or the poststratification data contains no geographic information.
 }
 \examples{
 if (FALSE) {

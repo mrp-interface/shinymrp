@@ -14,10 +14,11 @@ fit(n_iter = 2000, n_chains = 4, seed = NULL, ...)
 
 \item{seed}{Random seed for reproducibility. Default is \code{NULL}.}
 
-\item{...}{Additional arguments passed to CmdStanR \verb{$sample()} method}
+\item{...}{Additional arguments passed to CmdStanR \verb{$sample()} method.}
 }
 \description{
-The \verb{$fit()} method of a \code{MRPModel} object fits the model using Stan.
+The \verb{$fit()} method of an \code{MRPModel} object fits the model using
+Stan's main Markov chain Monte Carlo (MCMC) algorithm.
 }
 \examples{
 if (FALSE) {

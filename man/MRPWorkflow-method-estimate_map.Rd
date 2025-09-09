@@ -35,7 +35,7 @@ Expand the hamburger menu in the top right corner of the map to access other exp
 A highcharter map object showing MRP estimates by geography
 }
 \description{
-The \verb{$estimate_map()} method creates interactive choropleth maps showing MRP estimates by geographic regions.
+The \verb{$estimate_map()} method creates interactive choropleth maps that show MRP estimates by geographic region.
 }
 \examples{
 if (FALSE) {

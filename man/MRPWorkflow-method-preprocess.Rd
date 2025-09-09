@@ -17,15 +17,13 @@ preprocess(
 }
 \arguments{
 \item{data}{An object of class \code{data.frame} (or one that can be coerced to that class) that satisfies
-the requirements specified in the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{"More on data preparation"} vignette.}
+the requirements specified in the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{More on data preparation} vignette.}
 
 \item{is_timevar}{Logical indicating whether the data contains time-varying components.}
 
-\item{is_aggregated}{Logical indicating whether the data is already aggregated.
-See the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{"More on data preparation"} vignette for more information.}
+\item{is_aggregated}{Logical indicating whether the data is already aggregated.}
 
-\item{special_case}{Character string specifying special case handling. Options are \code{NULL} (the default), \code{"covid"}, and \code{"poll"}.
-See the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{"More on data preparation"} vignette for more information.}
+\item{special_case}{Character string specifying special case handling. Options are \code{NULL} (the default), \code{"covid"}, and \code{"poll"}.}
 
 \item{family}{Character string specifying the distribution family for the outcome variable. Options are \code{"binomial"} for binary outcome measures and \code{"normal"} for continuous outcome measures.}
 
@@ -34,11 +32,13 @@ Options are \code{NULL} (the default), \code{"week"}, \code{"month"}, and \code{
 or time-varying data that already has time indices.}
 
 \item{freq_threshold}{Numeric value specifying the minimum frequency threshold for including observations.
-Values with lower frequency will cause the entire row to be removed. The default value is 0.}
+Values with lower frequency will cause the entire row to be removed. The default value is 0 (no filtering).}
 }
 \description{
 The \verb{$preprocess()} method runs the preprocessing pipeline
 that includes data standardization, filtering, imputation, and aggregation.
+See the \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{More on data preparation}
+vignette for more information.
 }
 \examples{
 if (FALSE) {

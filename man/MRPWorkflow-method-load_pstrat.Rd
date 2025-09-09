@@ -14,7 +14,9 @@ load_pstrat(pstrat_data, is_aggregated = TRUE)
 }
 \description{
 The \verb{$load_pstrat()} method processes and stores input poststratification data.
-The object is subject to the same data preprocessing steps as the sample data.
+The object is subject to the same data preprocessing steps as the sample data. See the
+\href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{More on data preparation}
+vignette for more information.
 }
 \examples{
 if (FALSE) {

@@ -3,7 +3,7 @@
 \name{MRPWorkflow-method-create_model}
 \alias{MRPWorkflow-method-create_model}
 \alias{create_model}
-\title{Create a MRPModel object}
+\title{Create a new MRPModel object}
 \usage{
 create_model(
   intercept_prior = NULL,
@@ -28,9 +28,9 @@ Check \emph{Details} for more information about prior specification.}
 created by concatenating the names of the interacting variables with a colon (e.g., "sex:age"). Currently,
 only two-way interactions are supported. Check \emph{Details} for more information about prior specification.}
 
-\item{sens}{Sensitivity adjustment in the COVID test results. Check \emph{Details} for more information.}
+\item{sens}{Sensitivity adjustment in the COVID-19 test results. Check \emph{Details} for more information.}
 
-\item{spec}{Specificity adjustment in the COVID test results. Check \emph{Details} for more information.}
+\item{spec}{Specificity adjustment in the COVID-19 test results. Check \emph{Details} for more information.}
 }
 \value{
 A new MRPModel object

@@ -14,9 +14,10 @@ diagnostics(summarize = TRUE)
 A data.frame object if \code{summarize} is TRUE, otherwise a list of raw diagnostics
 }
 \description{
-The \verb{$diagnostics()} method of a \code{MRPModel} object
-returns MCMC diagnostics including
-convergence statistics and sampling efficiency measures.
+The \verb{$diagnostics()} method of an \code{MRPModel} object
+returns MCMC diagnostics, including convergence statistics and
+sampling efficiency measures. Check out this \href{https://mc-stan.org/learn-stan/diagnostics-warnings}{official Stan guide}
+for more information on interpreting these metrics.
 }
 \examples{
 if (FALSE) {
