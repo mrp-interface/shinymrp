@@ -1,15 +1,19 @@
 Package: shinymrp
-Title: MRP Interface
+Title: Interface for Multilevel Regression and Poststratification
 Version: 0.9.0
 Authors@R: c(
-    person("Toan", "Tran", email = "trannttoan97@gmail.com", role = c("cre", "aut")),
-    person("Jonah", "Gabry", email = "jgabry@gmail.com", role = "aut"),
-    person("Yajuan", "Si", email = "yajuan@umich.edu", role = "aut")
+    person("Toan", "Tran", email = "trannttoan97@gmail.com", role = c("cre", "aut", "cph")),
+    person("Jonah", "Gabry", email = "jgabry@gmail.com", role = c("aut", "cph")),
+    person("Yajuan", "Si", email = "yajuan@umich.edu", role = c("aut", "cph"))
   )
-Author: Toan Tran [cre, aut], Jonah Gabry [aut], Yajuan Si [aut]
-Maintainer: Toan Tran <tranntoan97@gmail.com>
-Description: A graphical and a programmatic interface designed for
+Author: Toan Tran [cre, aut, cph], Jonah Gabry [aut, cph], Yajuan Si [aut, cph]
+Maintainer: Toan Tran <trannttoan97@gmail.com>
+Description: Dual interfaces, graphical and programmatic, designed for
     intuitive applications of Multilevel Regression and Poststratification (MRP).
+    Users can apply the method to a variety of datasets, from electronic health records
+    to sample survey data, through an end-to-end Bayesian data analysis workflow.
+    The package provides robust tools for data cleaning, exploratory analysis,
+    flexible model building, and insightful result visualization.
 License: MIT + file LICENSE
 URL: https://mrp-interface.github.io/shinymrp/
 BugReports: https://github.com/mrp-interface/shinymrp/issues

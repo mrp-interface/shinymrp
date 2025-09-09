@@ -4,9 +4,9 @@
 \name{shinymrp-package}
 \alias{shinymrp}
 \alias{shinymrp-package}
-\title{shinymrp: MRP Interface}
+\title{shinymrp: Interface for MRP}
 \description{
-A graphical and a programmatic interface designed for intuitive applications of Multilevel Regression and Poststratification (MRP).
+Dual interfaces, graphical and programmatic, designed for intuitive applications of Multilevel Regression and Poststratification (MRP). Users can apply the method to a variety of datasets, from electronic health records to sample survey data, through an end-to-end Bayesian data analysis workflow. The package provides robust tools for data cleaning, exploratory analysis, flexible model building, and insightful result visualization.
 }
 \seealso{
 Useful links:
@@ -17,12 +17,12 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Toan Tran \email{trannttoan97@gmail.com}
+\strong{Maintainer}: Toan Tran \email{trannttoan97@gmail.com} [copyright holder]
 
 Authors:
 \itemize{
-  \item Jonah Gabry \email{jgabry@gmail.com}
-  \item Yajuan Si \email{yajuan@umich.edu}
+  \item Jonah Gabry \email{jgabry@gmail.com} [copyright holder]
+  \item Yajuan Si \email{yajuan@umich.edu} [copyright holder]
 }
 
 }

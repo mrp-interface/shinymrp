@@ -6,7 +6,7 @@
 <!-- badges: end -->
 
 
-**shinymrp** allowers users to apply Multilevel Regression and Poststratification (MRP) methods to a variety of datasets, from electronic health records to sample survey data, through an end-to-end Bayesian data analysis workflow. Whether you’re a researcher, analyst, or data engineer, **shinymrp** provides robust tools for data cleaning, exploratory analysis, flexible model building, and insightful result visualization.
+**shinymrp** allows users to apply Multilevel Regression and Poststratification (MRP) methods to a variety of datasets, from electronic health records to sample survey data, through an end-to-end Bayesian data analysis workflow. Whether you’re a researcher, analyst, or data engineer, **shinymrp** provides robust tools for data cleaning, exploratory analysis, flexible model building, and insightful result visualization.
 
 
 - **Data preparation**: Clean, preprocess and display the input data.
