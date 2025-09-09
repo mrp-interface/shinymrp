@@ -17,8 +17,8 @@ summary and diagnostics for model parameters:
 }
 }
 \description{
-The \verb{$summary()} method of a \code{MRPModel} object
-returns tables containing summary of posterior samples
+The \verb{$summary()} method of an \code{MRPModel} object
+returns tables containing the summary of posterior samples
 for the model parameters and diagnostics.
 }
 \examples{

@@ -8,8 +8,8 @@
 formula()
 }
 \description{
-The \verb{$formula()} method of a \code{MRPModel} object
-returns the lme4-style formula constructed from the model specification list.
+The \verb{$formula()} method of an \code{MRPModel} object
+returns the lme4-style formula constructed from the given model specification.
 }
 \examples{
 if (FALSE) {

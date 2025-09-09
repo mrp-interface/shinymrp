@@ -11,7 +11,7 @@ ppc()
 A \code{data.frame} containing samples from the posterior predictive distribution.
 }
 \description{
-The \verb{$ppc()} method of a \code{MRPModel} object
+The \verb{$ppc()} method of an \code{MRPModel} object
 runs Stan's standalone generated quantities
 to draw from the posterior predictive distribution. This method is called
 by the \verb{$pp_check()} method of a \code{MRPWorkflow} object and does

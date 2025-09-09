@@ -11,9 +11,9 @@ log_lik()
 A \code{data.frame} containing log-likelihood values.
 }
 \description{
-The \verb{$log_lik()} method of a \code{MRPModel} object
+The \verb{$log_lik()} method of an \code{MRPModel} object
 runs Stan's standalone generated quantities
 and extracts log-likelihood values for leave-one-out cross-validation. This
-method is called by the \verb{$compare_models()} method of a \code{MRPWorkflow} object
+method is called by the \verb{$compare_models()} method of an \code{MRPWorkflow} object
 and does not need to be called directly by users.
 }

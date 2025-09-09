@@ -11,5 +11,5 @@ A \code{data.frame} object.
 }
 \description{
 Return example poststratification data accepted by
-the \verb{$load_pstrat()} method of a \code{MRPWorkflow} object.
+the \verb{$load_pstrat()} method of an \code{MRPWorkflow} object.
 }

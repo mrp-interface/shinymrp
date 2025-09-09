@@ -10,12 +10,14 @@ link_acs(link_geo = NULL, acs_year = 2023)
 \arguments{
 \item{link_geo}{Character string specifying the geographic level for linking. Options are \code{"zip"}, \code{"county"}, and \code{"state"}.}
 
-\item{acs_year}{Numeric value specifying the last year of the 5-year period for the target ACS dataset.}
+\item{acs_year}{Numeric value specifying the last year of the data collection period for the target ACS dataset.}
 }
 \description{
 The \verb{$link_acs()} method obtains poststratification data by
 linking the preprocessed sample data to the American Community Survey
-based on given geographic granularity and year.
+based on given geographic granularity and year. See the
+\href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{More on data preparation}
+vignette for more information.
 }
 \examples{
 if (FALSE) {

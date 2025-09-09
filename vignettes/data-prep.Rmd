@@ -157,7 +157,7 @@ Code reference: [preprocess](https://github.com/mrp-interface/shinymrp/blob/main
 
 A major strength of MRP is small area estimation, so it is advisable to include as much geographic/geo-covariate information as possible.
 
-First, it identifies geographic units at larger scales that are not present in the data. The application automatically identifies the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that has the largest overlap with each ZIP code.
+First, the application identifies geographic units at larger scales that are not present in the data. It automatically determines the smallest geographic units in the data and infers corresponding units at larger scales. For example, if the data contains ZIP codes, the application will automatically find the county and state that has the largest overlap with each ZIP code.
 
 Quantitative measures associated with geographic units are sourced from your data or external datasets. For general use cases, the app scans the data to find quantities that have a one-to-one relationship with the geographic identifier of interest. 
 
@@ -182,11 +182,11 @@ While the ACS reports geography at the levels of census tracts, counties, and st
 - Employment rate of a ZIP code is defined as the percentage of the residing population who are employed as a part of the civilian labor force;
 - Income measure of a ZIP code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts;
 - ADI of a ZIP code is the average ADI across covered census tracts, weighted by tract population counts.
-
+ß
 Code reference: [combine_tracts_covid](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97).
 
 ### Poststratification tables
 
-Poststratification tables are computed from ACS data via the `tidycensus` and `IPUMS` packages and summarize the size of every subpopulation defined by demographic and geographic cross-categories. For efficiency, tables are precomputed at the tract level and then aggregated for larger geographies. We select the county with the most overlapping residential addresses for a given ZIP code as the ZIP-linked county and sum over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
+Poststratification tables are computed from ACS data via the `tidycensus` package and IPUMS and summarize the size of every subpopulation defined by demographic and geographic cross-categories. For efficiency, tables are precomputed at the tract level and then aggregated for larger geographies. We select the county with the most overlapping residential addresses for a given ZIP code as the ZIP-linked county and sum over the overlapping tracts for each ZIP code to obtain ZIP code-level population counts.
 
 Code reference: [combine_tracts](https://github.com/mrp-interface/shinymrp/blob/main/R/fct_data.R#L1403) and [combine_tracts_covid](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97)

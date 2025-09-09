@@ -11,7 +11,7 @@ model_spec()
 A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
 }
 \description{
-The \verb{$model_spec()} method of a \code{MRPModel} object
+The \verb{$model_spec()} method of an \code{MRPModel} object
 returns the model specification list.
 }
 \examples{

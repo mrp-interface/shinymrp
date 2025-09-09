@@ -11,9 +11,9 @@ save(file)
 \item{file}{File path where the model should be saved.}
 }
 \description{
-The \verb{$save()} method of a \code{MRPModel} object
+The \verb{$save()} method of an \code{MRPModel} object
 saves a fitted MRPModel object to a file for later use.
-\code{qs::qsave()} is used internally and it is customary
+\code{qs::qsave()} is used internally, and it is customary
 to use the \code{.qs} file extension.
 }
 \examples{

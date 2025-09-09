@@ -16,11 +16,11 @@
 #'
 #' @importFrom magrittr %>%
 #'
-#' @importFrom rlang .data
+#' @importFrom rlang .data %||%
 #'
 #' @importFrom R6 R6Class
 #'
-#' @importFrom shiny %||% HTML NS actionButton actionLink column conditionalPanel
+#' @importFrom shiny HTML NS actionButton actionLink column conditionalPanel
 #'   downloadButton downloadHandler fileInput fluidRow icon isolate modalButton
 #'   modalDialog moduleServer numericInput observeEvent outputOptions plotOutput
 #'   reactive reactiveVal removeModal renderPlot renderTable renderUI req

@@ -12,7 +12,7 @@ pp_check(model, file = NULL, ...)
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}, such as \code{width} and \code{height}.}
 }
 \description{
 The \verb{$pp_check()} method creates posterior predictive check plots

@@ -14,5 +14,5 @@ to time-varying data.}
 A \code{MRPModel} object.
 }
 \description{
-Return example \code{MRPModel} object with estimation results.
+Return an example \code{MRPModel} object with estimation results.
 }

@@ -9,11 +9,11 @@ covar_hist(covar, file = NULL, ...)
 }
 \arguments{
 \item{covar}{Character string specifying the geographic covariate. Options are
-\code{"college"}, \code{"poverty"}, \code{"employment"}, \code{"income"}, \code{"urbanicity"}, and \code{"adi"}}
+\code{"college"}, \code{"poverty"}, \code{"employment"}, \code{"income"}, \code{"urbanicity"}, and \code{"adi"}.}
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}, such as \code{width} and \code{height}.}
 }
 \value{
 A ggplot object showing the covariate distribution histogram.
@@ -21,8 +21,8 @@ A ggplot object showing the covariate distribution histogram.
 \description{
 The \code{covar_hist()} method creates histogram plots
 showing the distribution of geographic covariates across ZIP codes. Refer to the
-\href{https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-covariates}{"More on data preparation"} for their definitions.
-\emph{This method is only available for \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#data-categoriesmodules}{COVID data}}.
+\href{https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-and-covariates}{More on data preparation} for their definitions.
+This method is only available for \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#data-modules}{COVID data}.
 }
 \examples{
 if (FALSE) {

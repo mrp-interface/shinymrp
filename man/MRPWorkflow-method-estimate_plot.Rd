@@ -27,7 +27,7 @@ standard deviation (\code{"1sd"} or \code{"2sd"}) for the estimates (default is 
 
 \item{file}{Optional file path to save the plot.}
 
-\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}} such as \code{width} and \code{height}.}
+\item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}, such as \code{width} and \code{height}.}
 }
 \value{
 A ggplot object showing MRP estimates.

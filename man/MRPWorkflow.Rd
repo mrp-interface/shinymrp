@@ -112,7 +112,7 @@ methods with their own (linked) documentation pages:
 
  ### VISUALIZE RESULTS
 
- # Plots of overall estimates, estimates for demographic groups and geographic areas
+ # Plots of overall estimates, estimates for demographic groups, and geographic areas
  workflow$estimate_plot(model, group = "sex")
 
  # Choropleth map of estimates for geographic areas

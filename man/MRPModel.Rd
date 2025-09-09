@@ -4,15 +4,15 @@
 \alias{MRPModel}
 \title{MRPModel objects}
 \arguments{
-\item{model_spec}{List containing model effects specification including intercept, fixed effects, varying effects, and interactions}
+\item{model_spec}{List containing model effects specification, including intercept, fixed effects, varying effects, and interactions}
 
 \item{mrp_data}{List containing the MRP data structure with input sample data and new poststratification data}
 
-\item{metadata}{List containing metadata about the analysis including family, time variables, and special cases}
+\item{metadata}{List containing metadata about the analysis, including family, time variables, and special cases}
 
-\item{link_data}{List containing information about data linking including geography and ACS year}
+\item{link_data}{List containing information about data linking, including geography and ACS year}
 
-\item{plot_data}{List containing data prepared for visualization including dates and geojson objects}
+\item{plot_data}{List containing data prepared for visualization, including dates and GeoJSON objects}
 
 \item{extra}{List containing COVID test sensitivity and specificity}
 }
@@ -20,14 +20,14 @@
 A new \code{MRPModel} object initialized with the provided model specification and relevant data.
 }
 \description{
-A \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
-\code{\link[=MRPWorkflow-method-create_model]{$create_model()}} method of a
+An \code{MRPModel} object is an \link[R6:R6Class]{R6} object created by the
+\code{\link[=MRPWorkflow-method-create_model]{$create_model()}} method of an
 \code{\link{MRPWorkflow}} object. Each \code{MRPModel} object represents a
-multilevel regression model with methods for sampling, diagnostics,
+multilevel regression model, providing methods for sampling, diagnostics,
 and poststratification.
 
 Creates a new instance of the \code{MRPModel} class. This method is called by the \verb{$create_model()}
-method of a \code{MRPWorkflow} object and does not need to be called directly by users.
+method of an \code{MRPWorkflow} object and does not need to be called directly by users.
 }
 \section{Methods}{
  \code{MRPModel} objects have the following associated
