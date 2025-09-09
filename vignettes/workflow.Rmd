@@ -115,7 +115,7 @@ For analyzing COVID-19 test data with linked geographic predictors, the `$covar_
 workflow$covar_hist()
 ```
 
-`$sample_size_map()` visualizes sample sizes across geographic areas in an interactive choropleth map, powered by [highcharter](https://cran.r-project.org/web/packages/highcharter/index.html).
+`$sample_size_map()` visualizes sample sizes across geographic areas in an interactive choropleth map, powered by [highcharter](https://CRAN.R-project.org/package=highcharter).
 
 ```{r}
 workflow$sample_size_map()
