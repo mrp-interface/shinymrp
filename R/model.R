@@ -214,6 +214,8 @@ MRPModel$set("public", "model_spec", model_spec)
 #'
 #' @description The `$formula()` method of an `MRPModel` object
 #' returns the lme4-style formula constructed from the given model specification.
+#' 
+#' @return A character string of the model formula.
 #'
 #' @examples
 #' if (FALSE) {
@@ -231,7 +233,7 @@ formula = function() {
 }
 MRPModel$set("public", "formula", formula)
 
-#' Return model metadata
+#' Return model metadata.
 #'
 #' @name MRPModel-method-metadata
 #' @aliases metadata
@@ -240,6 +242,8 @@ MRPModel$set("public", "formula", formula)
 #' @description The `$metadata()` method of an `MRPModel` object
 #' returns the metadata associated with the model,
 #' including metadata inherited from a workflow object and model fitting parameters.
+#' 
+#' @return A list containing the model metadata.
 #'
 #' @examples
 #' if (FALSE) {
@@ -257,14 +261,15 @@ metadata = function() {
 }
 MRPModel$set("public", "metadata", metadata)
 
-#' Return Stan code
+#' Return model Stan code.
 #'
 #' @name MRPModel-method-stan_code
 #' @aliases stan_code
 #'
-#'
 #' @description The `$stan_code()` method of an `MRPModel` object
-#' returns the Stan code.
+#' returns the model Stan code.
+#'
+#' @return A character string containing the model Stan code.
 #'
 #' @examples
 #' if (FALSE) {
@@ -295,6 +300,8 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @param n_chains Number of MCMC chains to run. Default is 4.
 #' @param seed Random seed for reproducibility. Default is `NULL`.
 #' @param ... Additional arguments passed to CmdStanR `$sample()` method.
+#'
+#' @return No return value, called for side effects.
 #'
 #' @examples
 #' if (FALSE) {
@@ -513,7 +520,7 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #' returns tables containing the summary of posterior samples
 #' for the model parameters and diagnostics.
 #'
-#' @return A list of `data.frame` objects containing posterior sample
+#' @return A list of data.frame objects containing posterior sample
 #' summary and diagnostics for model parameters:
 #' - fixed effects (`fixed`)
 #' - standard deviations of varying effects (`varying`)
@@ -568,7 +575,7 @@ MRPModel$set("public", "summary", summary)
 #'
 #' @param summarize Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)
 #'
-#' @return A data.frame object if `summarize` is TRUE, otherwise a list of raw diagnostics
+#' @return A data.frame object if `summarize` is TRUE, otherwise a list of raw diagnostics.
 #'
 #' @examples
 #' if (FALSE) {
@@ -612,7 +619,7 @@ MRPModel$set("public", "diagnostics", diagnostics)
 #' by the `$pp_check()` method of a `MRPWorkflow` object and does
 #' not need to be called directly by users.
 #'
-#' @return A `data.frame` containing samples from the posterior predictive distribution.
+#' @return A data.frame object containing samples from the posterior predictive distribution.
 #'
 ppc <- function() {
   private$assert_fit_exists()
@@ -652,7 +659,7 @@ MRPModel$set("public", "ppc", ppc)
 #' method is called by the `$compare_models()` method of an `MRPWorkflow` object
 #' and does not need to be called directly by users.
 #'
-#' @return A `data.frame` containing log-likelihood values.
+#' @return A data.frame object containing log-likelihood values.
 #'
 log_lik <- function() {
   private$assert_fit_exists()
@@ -733,6 +740,8 @@ MRPModel$set("public", "poststratify", poststratify)
 #' to use the `.qs` file extension.
 #'
 #' @param file File path where the model should be saved.
+#'
+#' @return No return value, called for side effects.
 #'
 #' @examples
 #' if (FALSE) {

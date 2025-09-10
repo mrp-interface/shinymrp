@@ -8,7 +8,7 @@
 log_lik()
 }
 \value{
-A \code{data.frame} containing log-likelihood values.
+A data.frame object containing log-likelihood values.
 }
 \description{
 The \verb{$log_lik()} method of an \code{MRPModel} object

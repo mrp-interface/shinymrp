@@ -12,27 +12,65 @@ This vignette provides an in-depth walkthrough of the `MRPWorkflow` and `MRPMode
 
 For an introduction to the package and workflow concepts, begin with the [Getting started with shinymrp](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
 
-```{r, include = FALSE}
+
+```{r setup, include=FALSE}
+run_stan <- requireNamespace("cmdstanr", quietly = TRUE)
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
+knitr::opts_template$set(
+  tall_plot = list(
+    fig.width = 5,
+    fig.height = 3,
+    fig.align = "center",
+    out.width = "90%"
+  ),
+  long_plot = list(
+    fig.width = 6,
+    fig.height = 3,
+    fig.align = "center",
+    out.width = "100%"
+  ),
+  map = list(
+    fig.height = 4,
+    out.width = "100%"
+  )
+)
+```
+
+```{r  cache_setup, eval=!run_stan, include=FALSE}
+sample_data <- readr::read_csv(
+  "data/timevarying_binomial_prep.csv",
+  show_col_types = FALSE
+)
+workflow <- qs::qread("data/workflow.qs")
+model1 <- qs::qread("data/model.qs")
+compare_df <- readr::read_csv(
+  "data/loo.csv",
+  show_col_types = FALSE
+)
+```
+
+```{r theme_update, include=FALSE}
+
+ggplot2::theme_update(
+  text = ggplot2::element_text(size = 10),
+  plot.margin = ggplot2::margin(5, 10, 0, 0)
+)
+
+
 ```
 
 # Initializing the workflow
 
 MRP analysis begins by instantiating an `MRPWorkflow` object with `mrp_workflow()`. The object-oriented design efficiently manages your data and supports a reproducible workflow without requiring repeated user input. All workflow methods are accessed via the [R6](https://r6.r-lib.org/) `$` operator.
 
-```{r}
+```{r create_workflow, eval=run_stan}
 library(shinymrp)
 workflow <- mrp_workflow()
-```
-
-```{r theme_update, include=FALSE}
-ggplot2::theme_update(
-  text = ggplot2::element_text(size = 12),
-  plot.margin = ggplot2::margin(0, 0, 0, 0)
-)
 ```
 
 # 1. Data preparation
@@ -55,7 +93,7 @@ The `example_sample_data()` function demonstrates accepted structures and common
 - whether the data follow a specific standard (e.g., medical records from the Epic system)
 - whether the outcome measure is binary (modeled with binomial distributions) or continuous (modeled with Gaussian/normal distributions)
 
-```{r}
+```{r example_sample, eval=run_stan}
 sample_data <- example_sample_data(
   is_timevar = TRUE,
   is_aggregated = TRUE,
@@ -65,12 +103,16 @@ sample_data <- example_sample_data(
 head(sample_data)
 ```
 
+```{r example_sample_cached, eval=!run_stan, echo=FALSE}
+head(sample_data)
+```
+
 
 Data preprocessing is performed with the `$preprocess()` method, which standardizes formats (e.g., recodes age groups, creates time indices), removes duplicates, and prepares data for modeling.
 
 Note: Only basic cleaning is performed. Conduct preliminary data checks beforehand.
 
-```{r}
+```{r preprocess, eval=run_stan}
 workflow$preprocess(
   sample_data,
   is_timevar = TRUE,
@@ -86,7 +128,7 @@ workflow$preprocess(
 
 Use the `$link_acs()` method to retrieve poststratification data from the American Community Survey (ACS), specifying the desired geographic level and reference year (i.e., the last year of the five-year ACS data collection). Supported levels include ZIP code, county, and state. If not specified, poststratification data are aggregated for the U.S. population.
 
-```{r}
+```{r link_acs, eval=run_stan}
 workflow$link_acs(link_geo = "zip", acs_year = 2021)
 ```
 
@@ -94,7 +136,7 @@ workflow$link_acs(link_geo = "zip", acs_year = 2021)
 
 You can also import your own poststratification data using `$load_pstrat()`. [Requirements](https://mrp-interface.github.io/shinymrp/articles/data-prep#required-columns-and-categories) mirror those for sample data.
 
-```{r}
+```{r load_pstrat, eval=run_stan}
 pstrat_data <- example_pstrat_data()
 workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
 ```
@@ -105,31 +147,31 @@ The `MRPWorkflow` class provides methods for creating visualizations of demograp
 
 Use `$demo_bars()` to generate bar plots comparing demographic distributions in the sample and poststratification data.
 
-```{r}
+```{r demo_bars, opts.label="tall_plot"}
 workflow$demo_bars(demo = "sex")
 ```
 
 For analyzing COVID-19 test data with linked geographic predictors, the `$covar_hist()` method creates frequency histograms of the geographic predictors. This method will give the following error if it is called with incompatible data that do not include geographic predictors.
 
-```{r, error = TRUE}
-workflow$covar_hist()
+```{r covar_hist, error = TRUE}
+workflow$covar_hist(covar = "income")
 ```
 
 `$sample_size_map()` visualizes sample sizes across geographic areas in an interactive choropleth map, powered by [highcharter](https://CRAN.R-project.org/package=highcharter).
 
-```{r}
+```{r sample_size_map, opts.label="map"}
 workflow$sample_size_map()
 ```
 
 `$outcome_plot()` creates plots of average outcome values, including time variation if present.
 
-```{r}
+```{r outcome_plot, opts.label="long_plot"}
 workflow$outcome_plot()
 ```
 
 `$outcome_map()` visualizes outcome summaries by geography, with options for the maximum or minimum value across time.
 
-```{r}
+```{r outcome_map, opts.label="map"}
 workflow$outcome_map(summary_type = "max")
 ```
 
@@ -152,7 +194,7 @@ Default priors are used if `""` (empty string) is supplied:
 - Standard deviation (main effect): normal<sub>+</sub>(0, 3)
 - Standard deviation (interaction): normal<sub>+</sub>(0, 1)
 
-```{r}
+```{r create_model1, eval=run_stan}
 model1 <- workflow$create_model(
   intercept_prior = "normal(0, 4)",
   fixed = list(
@@ -170,7 +212,7 @@ model1 <- workflow$create_model(
 
 The `$fit()` method runs Stan's main Markov chain Monte Carlo algorithm via CmdStanR.
 
-```{r}
+```{r fit_model1, eval=run_stan}
 model1$fit(
   n_iter = 500,
   n_chains = 2,
@@ -178,7 +220,6 @@ model1$fit(
   show_messages = FALSE,
   show_exceptions = FALSE
 )
-
 ```
 
 ## 3.3 Posterior summaries and diagnostics
@@ -187,25 +228,25 @@ The fitted `MRPModel` object extracts draws from the internal `CmdStanMCMC` obje
 
 - **Posterior summary and convergence diagnostics**: Use `$summary()` for posterior statistics, effective sample sizes, and R-hat diagnostics.
 
-```{r}
+```{r summary}
 model1$summary()
 ```
 
 - **Additional diagnostics**: Use `$diagnostics()` for [detailed diagnostic information](https://mc-stan.org/learn-stan/diagnostics-warnings) about the MCMC process.
 
-```{r}
+```{r diagnostics}
 model1$diagnostics()
 ```
 
 - **Posterior predictive check**: Use `$pp_check()` to compare posterior predictive samples against observed data.
 
-```{r}
+```{r pp_check, opts.label="long_plot"}
 workflow$pp_check(model1)
 ```
 
 - **Model comparison**: Compare models via leave-one-out cross-validation with `$compare_models()`.
 
-```{r}
+```{r create_fit_model2, eval=run_stan}
 model2 <- workflow$create_model(
   intercept_prior = "normal(0, 4)",
   fixed = list(
@@ -232,8 +273,12 @@ model2$fit(
 )
 ```
 
-```{r, compare_models}
+```{r compare_models, eval=run_stan}
 workflow$compare_models(model1, model2)
+```
+
+```{r compare_models_cached, eval=!run_stan, echo=FALSE}
+compare_df
 ```
 
 ## 3.4 Saving and loading models
@@ -252,16 +297,15 @@ model1 <- qs::qread("model1.qs")
 
 Use `$estimate_plot()` to visualize the model estimates, either overall or by group, with a 95% credible interval by default. Users can specify alternative intervals.
 
-```{r, estimate_plot, fig.height=10}
+```{r, estimate_plot, opts.label="tall_plot", fig.width=7, fig.height=8}
 workflow$estimate_plot(model1, group = "sex", interval = 0.95)
 ```
 
 For time-varying data, `$estimate_map()` creates snapshots of geography-based estimates at specific time points. `time_index` is irrelevant for cross-sectional data.
 
-```{r, estimate_map}
+```{r estimate_map, opts.label="map"}
 workflow$estimate_map(model1, geo = "county", interval = 0.95, time_index = 1)
 ```
-
 
 # Further reading
 

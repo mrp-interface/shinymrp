@@ -32,7 +32,7 @@ standard deviation (\code{"1sd"} or \code{"2sd"}) for the estimates (default is 
 Expand the hamburger menu in the top right corner of the map to access other export options.}
 }
 \value{
-A highcharter map object showing MRP estimates by geography
+A highcharter map object showing MRP estimates by geography.
 }
 \description{
 The \verb{$estimate_map()} method creates interactive choropleth maps that show MRP estimates by geographic region.

@@ -253,6 +253,7 @@ test_that("outcome_map works", {
 # Test pp_check method
 test_that("pp_check works", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   # For time-varying data
   workflow <- setup_test_workflow(
@@ -299,6 +300,7 @@ test_that("pp_check works", {
 
 test_that("estimate_plot works", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   ### For time-varying data
   workflow <- setup_test_workflow(
@@ -388,6 +390,7 @@ test_that("estimate_plot works", {
 # Test estimate_map method
 test_that("estimate_map works", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   ### For time-varying data
   workflow <- setup_test_workflow(
@@ -511,6 +514,7 @@ test_that("model-dependent methods fail appropriately without fitted models", {
 
 test_that("map-generating methods fail without linking geography", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   workflow <- setup_test_workflow(
     metadata = list(

@@ -1100,8 +1100,8 @@
 #'
 #' @noRd
 #' @keywords internal
-.check_prep <- function(df, metadata) {
-  if (metadata$is_timevar) {
+.check_prep <- function(df, metadata, is_sample) {
+  if (is_sample && metadata$is_timevar) {
     if (n_distinct(df$time) == 1) {
       stop("There is only one time index. Please use modules for cross-sectional data instead.")
     }
@@ -1276,7 +1276,7 @@
   # append geographic areas at larger scales if missing
   data <- .append_geo(data, zip_county_state)
 
-  .check_prep(data, metadata)
+  .check_prep(data, metadata, is_sample)
 
   return(data)
 }

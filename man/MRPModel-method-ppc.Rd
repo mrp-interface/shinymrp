@@ -8,7 +8,7 @@
 ppc()
 }
 \value{
-A \code{data.frame} containing samples from the posterior predictive distribution.
+A data.frame object containing samples from the posterior predictive distribution.
 }
 \description{
 The \verb{$ppc()} method of an \code{MRPModel} object

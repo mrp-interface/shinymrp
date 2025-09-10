@@ -11,7 +11,7 @@ diagnostics(summarize = TRUE)
 \item{summarize}{Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)}
 }
 \value{
-A data.frame object if \code{summarize} is TRUE, otherwise a list of raw diagnostics
+A data.frame object if \code{summarize} is TRUE, otherwise a list of raw diagnostics.
 }
 \description{
 The \verb{$diagnostics()} method of an \code{MRPModel} object

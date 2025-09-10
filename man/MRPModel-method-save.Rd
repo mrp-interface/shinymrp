@@ -10,6 +10,9 @@ save(file)
 \arguments{
 \item{file}{File path where the model should be saved.}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 The \verb{$save()} method of an \code{MRPModel} object
 saves a fitted MRPModel object to a file for later use.
