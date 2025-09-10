@@ -34,6 +34,9 @@ or time-varying data that already has time indices.}
 \item{freq_threshold}{Numeric value specifying the minimum frequency threshold for including observations.
 Values with lower frequency will cause the entire row to be removed. The default value is 0 (no filtering).}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 The \verb{$preprocess()} method runs the preprocessing pipeline
 that includes data standardization, filtering, imputation, and aggregation.

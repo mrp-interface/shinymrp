@@ -232,6 +232,8 @@ MRPWorkflow <- R6::R6Class(
 #'
 #'
 #' @description The `$preprocessed_data()` method returns the preprocessed sample data.
+#' 
+#' @return A data.frame object containing the preprocessed sample data.
 #'
 #' @examples
 #' if (FALSE) {
@@ -284,6 +286,8 @@ MRPWorkflow$set("public", "preprocessed_data", preprocessed_data)
 #' or time-varying data that already has time indices.
 #' @param freq_threshold Numeric value specifying the minimum frequency threshold for including observations.
 #' Values with lower frequency will cause the entire row to be removed. The default value is 0 (no filtering).
+#' 
+#' @return No return value, called for side effects.
 #'
 #' @examples
 #' if (FALSE) {
@@ -358,7 +362,6 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #' @name MRPWorkflow-method-link_acs
 #' @aliases link_acs
 #'
-#'
 #' @description The `$link_acs()` method obtains poststratification data by
 #' linking the preprocessed sample data to the American Community Survey
 #' based on given geographic granularity and year. See the
@@ -367,6 +370,8 @@ MRPWorkflow$set("public", "preprocess", preprocess)
 #'
 #' @param link_geo Character string specifying the geographic level for linking. Options are `"zip"`, `"county"`, and `"state"`.
 #' @param acs_year Numeric value specifying the last year of the data collection period for the target ACS dataset.
+#'
+#' @return No return value, called for side effects.
 #'
 #' @examples
 #' if (FALSE) {
@@ -523,7 +528,6 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #' @name MRPWorkflow-method-load_pstrat
 #' @aliases load_pstrat
 #'
-#'
 #' @description The `$load_pstrat()` method processes and stores input poststratification data.
 #' The object is subject to the same data preprocessing steps as the sample data. See the
 #' [More on data preparation](https://mrp-interface.github.io/shinymrp/articles/data-prep)
@@ -531,6 +535,8 @@ MRPWorkflow$set("public", "link_acs", link_acs)
 #'
 #' @param pstrat_data An object of class `data.frame` (or one that can be coerced to that class).
 #' @param is_aggregated Logical indicating whether the poststratification data is already aggregated.
+#'
+#' @return No return value, called for side effects.
 #'
 #' @examples
 #' if (FALSE) {
@@ -1306,7 +1312,7 @@ MRPWorkflow$set("public", "estimate_plot", estimate_plot)
 #' @param file Optional file path with .html extension to save the interactive map.
 #' Expand the hamburger menu in the top right corner of the map to access other export options.
 #'
-#' @return A highcharter map object showing MRP estimates by geography
+#' @return A highcharter map object showing MRP estimates by geography.
 #'
 #' @examples
 #' if (FALSE) {
@@ -1446,7 +1452,7 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' specificity \eqn{\gamma}, and the true incidence \eqn{\pi_k} for individuals in group \eqn{k}:
 #' \deqn{p_k=(1-\gamma)(1-\pi_k )+\delta \pi_k.}
 #'
-#' @return A new MRPModel object
+#' @return A new MRPModel object.
 #'
 #' @examples
 #' if (FALSE) {
@@ -1539,6 +1545,8 @@ MRPWorkflow$set("public", "create_model", create_model)
 #' @param model Fitted MRPModel object.
 #' @param file Optional file path to save the plot.
 #' @param ... Additional arguments passed to [`ggsave`][ggplot2::ggsave], such as `width` and `height`.
+#' 
+#' @return A ggplot object showing the posterior predictive check result.
 #'
 #' @examples
 #' if (FALSE) {
@@ -1593,7 +1601,7 @@ MRPWorkflow$set("public", "pp_check", pp_check)
 #' @param ... Multiple MRPModel objects to compare.
 #' @param suppress Character string specifying output to suppress during comparison.
 #'
-#' @return A data frame summarizing the comparison results
+#' @return A data.frame object containing the comparison results.
 #'
 #' @examples
 #' if (FALSE) {

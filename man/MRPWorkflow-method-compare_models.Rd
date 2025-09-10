@@ -13,7 +13,7 @@ compare_models(..., suppress = NULL)
 \item{suppress}{Character string specifying output to suppress during comparison.}
 }
 \value{
-A data frame summarizing the comparison results
+A data.frame object containing the comparison results.
 }
 \description{
 The \verb{$compare_models()} method compares multiple fitted \code{MRPModel} objects

@@ -16,6 +16,9 @@ fit(n_iter = 2000, n_chains = 4, seed = NULL, ...)
 
 \item{...}{Additional arguments passed to CmdStanR \verb{$sample()} method.}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 The \verb{$fit()} method of an \code{MRPModel} object fits the model using
 Stan's main Markov chain Monte Carlo (MCMC) algorithm.

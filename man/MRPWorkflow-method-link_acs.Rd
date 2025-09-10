@@ -12,6 +12,9 @@ link_acs(link_geo = NULL, acs_year = 2023)
 
 \item{acs_year}{Numeric value specifying the last year of the data collection period for the target ACS dataset.}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 The \verb{$link_acs()} method obtains poststratification data by
 linking the preprocessed sample data to the American Community Survey

@@ -38,6 +38,7 @@ expect_equal_saved_estimates <- function(workflow, model_spec, file) {
 
 test_that("estimated parameters match saved values", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   workflow <- setup_test_workflow(
     metadata = list(

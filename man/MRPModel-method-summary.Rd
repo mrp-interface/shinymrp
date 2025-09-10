@@ -8,7 +8,7 @@
 summary()
 }
 \value{
-A list of \code{data.frame} objects containing posterior sample
+A list of data.frame objects containing posterior sample
 summary and diagnostics for model parameters:
 \itemize{
 \item fixed effects (\code{fixed})

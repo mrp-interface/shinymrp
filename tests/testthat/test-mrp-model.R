@@ -1,4 +1,7 @@
 test_that("getter methods work correctly", {
+  skip_on_cran()
+  skip_if_not_installed("cmdstanr")
+
   workflow <- setup_test_workflow(
     metadata = list(
       is_timevar = FALSE,
@@ -24,6 +27,7 @@ test_that("getter methods work correctly", {
 
 test_that("summary works", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   workflow <- setup_test_workflow(
     metadata = list(
@@ -43,6 +47,7 @@ test_that("summary works", {
 
 test_that("diagnostics works", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   workflow <- setup_test_workflow(
     metadata = list(
@@ -66,6 +71,7 @@ test_that("diagnostics works", {
 
 test_that("save works", {
   skip_on_cran()
+  skip_if_not_installed("cmdstanr")
 
   workflow <- setup_test_workflow(
     metadata = list(

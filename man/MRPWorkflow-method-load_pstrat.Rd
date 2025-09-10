@@ -12,6 +12,9 @@ load_pstrat(pstrat_data, is_aggregated = TRUE)
 
 \item{is_aggregated}{Logical indicating whether the poststratification data is already aggregated.}
 }
+\value{
+No return value, called for side effects.
+}
 \description{
 The \verb{$load_pstrat()} method processes and stores input poststratification data.
 The object is subject to the same data preprocessing steps as the sample data. See the

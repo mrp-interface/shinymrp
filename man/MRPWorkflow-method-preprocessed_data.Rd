@@ -7,6 +7,9 @@
 \usage{
 preprocessed_data()
 }
+\value{
+A data.frame object containing the preprocessed sample data.
+}
 \description{
 The \verb{$preprocessed_data()} method returns the preprocessed sample data.
 }

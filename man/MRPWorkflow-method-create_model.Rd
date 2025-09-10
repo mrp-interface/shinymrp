@@ -33,7 +33,7 @@ only two-way interactions are supported. Check \emph{Details} for more informati
 \item{spec}{Specificity adjustment in the COVID-19 test results. Check \emph{Details} for more information.}
 }
 \value{
-A new MRPModel object
+A new MRPModel object.
 }
 \description{
 The \verb{$create_model()} method creates a new MRPModel object

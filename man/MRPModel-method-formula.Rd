@@ -7,6 +7,9 @@
 \usage{
 formula()
 }
+\value{
+A character string of the model formula.
+}
 \description{
 The \verb{$formula()} method of an \code{MRPModel} object
 returns the lme4-style formula constructed from the given model specification.

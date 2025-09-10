@@ -3,9 +3,12 @@
 \name{MRPModel-method-metadata}
 \alias{MRPModel-method-metadata}
 \alias{metadata}
-\title{Return model metadata}
+\title{Return model metadata.}
 \usage{
 metadata()
+}
+\value{
+A list containing the model metadata.
 }
 \description{
 The \verb{$metadata()} method of an \code{MRPModel} object

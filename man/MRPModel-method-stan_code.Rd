@@ -3,13 +3,16 @@
 \name{MRPModel-method-stan_code}
 \alias{MRPModel-method-stan_code}
 \alias{stan_code}
-\title{Return Stan code}
+\title{Return model Stan code.}
 \usage{
 stan_code()
 }
+\value{
+A character string containing the model Stan code.
+}
 \description{
 The \verb{$stan_code()} method of an \code{MRPModel} object
-returns the Stan code.
+returns the model Stan code.
 }
 \examples{
 if (FALSE) {

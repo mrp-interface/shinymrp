@@ -14,6 +14,9 @@ pp_check(model, file = NULL, ...)
 
 \item{...}{Additional arguments passed to \code{\link[ggplot2:ggsave]{ggsave}}, such as \code{width} and \code{height}.}
 }
+\value{
+A ggplot object showing the posterior predictive check result.
+}
 \description{
 The \verb{$pp_check()} method creates posterior predictive check plots
 to assess model fit by comparing observed data to replicated data from
