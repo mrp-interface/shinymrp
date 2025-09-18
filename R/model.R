@@ -43,6 +43,7 @@
 #'   [`$save()`][MRPModel-method-save] | Save model object to file. |
 #'
 #' @examplesIf requireNamespace("cmdstanr", quietly = TRUE)
+#'  \donttest{
 #'    library(shinymrp)
 #'
 #'    # Initialize workflow
@@ -87,6 +88,7 @@
 #'
 #'    # Sampling diagnostics
 #'    model_diagnostics <- model$diagnostics()
+#'  }
 #'
 #' @export
 MRPModel <- R6::R6Class(

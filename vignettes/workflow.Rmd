@@ -23,16 +23,16 @@ knitr::opts_chunk$set(
 
 knitr::opts_template$set(
   tall_plot = list(
-    fig.width = 5,
-    fig.height = 3,
+    fig.width = 10,
+    fig.height = 6,
     fig.align = "center",
     out.width = "90%"
   ),
   long_plot = list(
-    fig.width = 6,
-    fig.height = 3,
+    fig.width = 13,
+    fig.height = 6,
     fig.align = "center",
-    out.width = "100%"
+    out.width = "90%"
   ),
   map = list(
     fig.height = 4,
@@ -52,16 +52,6 @@ compare_df <- readr::read_csv(
   "data/loo.csv",
   show_col_types = FALSE
 )
-```
-
-```{r theme_update, include=FALSE}
-
-ggplot2::theme_update(
-  text = ggplot2::element_text(size = 8),
-  plot.margin = ggplot2::margin(5, 10, 0, 0)
-)
-
-
 ```
 
 # Initializing the workflow
@@ -297,7 +287,7 @@ model1 <- qs::qread("model1.qs")
 
 Use `$estimate_plot()` to visualize the model estimates, either overall or by group, with a 95% credible interval by default. Users can specify alternative intervals.
 
-```{r, estimate_plot, opts.label="tall_plot", fig.width=7, fig.height=8}
+```{r, estimate_plot, opts.label="tall_plot", fig.width=13, fig.height=14}
 workflow$estimate_plot(model1, group = "sex", interval = 0.95)
 ```
 

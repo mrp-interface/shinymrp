@@ -1,3 +1,12 @@
+## Resubmission
+
+This is a resubmission addressing CRAN’s feedback.
+
+- Add references to the description field of the DESCRIPTION file
+- Reduced package size to less than 5MB
+- Removed examples for unexported functions
+- Replaced `if (FALSE)` with \donttest{} in examples and gated them with `requireNamespace("cmdstanr", quietly = TRUE)`
+
 ## Test environments
 - macOS (local): R 4.5.1
 - Ubuntu 22.04 (GitHub Actions): R-devel, R-release, R-oldrel-1
@@ -9,13 +18,11 @@
   Maintainer: ‘Toan Tran <trannttoan97@gmail.com>’
   
   New submission
-  
+
   Suggests or Enhances not in mainstream repositories:
     cmdstanr
   Availability using Additional_repositories specification:
     cmdstanr   yes   https://stan-dev.r-universe.dev/
-  
-  Size of tarball: 7031849 bytes
 
 ## Optional dependency
 - The package optionally uses `cmdstanr` (not on CRAN). It is listed in Suggests only.
