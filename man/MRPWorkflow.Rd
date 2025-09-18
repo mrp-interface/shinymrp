@@ -46,6 +46,7 @@ methods with their own (linked) documentation pages:
 
 \examples{
 \dontshow{if (requireNamespace("cmdstanr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+ \donttest{
    library(shinymrp)
 
    # Initialize the MRP workflow
@@ -117,5 +118,6 @@ methods with their own (linked) documentation pages:
 
    # Choropleth map of estimates for geographic areas
    workflow$estimate_map(model, geo = "county")
+ }
 \dontshow{\}) # examplesIf}
 }

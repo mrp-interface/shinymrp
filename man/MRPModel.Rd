@@ -78,6 +78,7 @@ methods, many of which have their own (linked) documentation pages:
 
 \examples{
 \dontshow{if (requireNamespace("cmdstanr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+ \donttest{
    library(shinymrp)
 
    # Initialize workflow
@@ -122,5 +123,6 @@ methods, many of which have their own (linked) documentation pages:
 
    # Sampling diagnostics
    model_diagnostics <- model$diagnostics()
+ }
 \dontshow{\}) # examplesIf}
 }

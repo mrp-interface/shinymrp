@@ -263,9 +263,9 @@
 
     tryCatch({
       # GitHub Contents API
-      resp <- httr2::request(api_url) |>
-        httr2::req_url_query(ref = branch) |>
-        httr2::req_user_agent("shinymrp-fetch/1.0") |>
+      resp <- httr2::request(api_url) %>%
+        httr2::req_url_query(ref = branch) %>%
+        httr2::req_user_agent("shinymrp-fetch/1.0") %>%
         httr2::req_perform()
 
       if (httr2::resp_status(resp) == 200) {

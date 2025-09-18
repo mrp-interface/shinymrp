@@ -49,6 +49,7 @@ mrp_workflow <- function() {
 #'  [`$estimate_map()`][MRPWorkflow-method-estimate_map] | Visualize estimates for geographic areas. |
 #'
 #' @examplesIf requireNamespace("cmdstanr", quietly = TRUE)
+#'  \donttest{
 #'    library(shinymrp)
 #'
 #'    # Initialize the MRP workflow
@@ -120,6 +121,7 @@ mrp_workflow <- function() {
 #'
 #'    # Choropleth map of estimates for geographic areas
 #'    workflow$estimate_map(model, geo = "county")
+#'  }
 #'
 #' @export
 MRPWorkflow <- R6::R6Class(
