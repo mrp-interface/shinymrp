@@ -12,28 +12,6 @@ A data.frame object containing the preprocessed sample data.
 }
 \description{
 The \verb{$preprocessed_data()} method returns the preprocessed sample data.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Get the preprocessed data
- preprocessed <- workflow$preprocessed_data()
-}
-
+Check out the \href{https://mrp-interface.github.io/shinymrp/articles/example#preprocessed_data}{More examples of R6 classes}
+vignette for usage examples.
 }

@@ -39,7 +39,9 @@ A new MRPModel object.
 The \verb{$create_model()} method creates a new MRPModel object
 with Stan code generated from the model specification list.
 CmdStanR objects are used internally to interface with Stan to
-compile the code and run its MCMC algorithm.
+compile the code and run its MCMC algorithm. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#create_model}{More examples of R6 classes}
+vignette for usage examples.
 }
 \details{
 \subsection{Prior specification}{
@@ -74,49 +76,4 @@ that person \eqn{i} in group \eqn{k} tests positive. The analytic incidence \eqn
 specificity \eqn{\gamma}, and the true incidence \eqn{\pi_k} for individuals in group \eqn{k}:
 \deqn{p_k=(1-\gamma)(1-\pi_k )+\delta \pi_k.}
 }
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create a new model object
- model <- workflow$create_model(
-   intercept_prior = "normal(0, 4)",
-   fixed = list(
-     sex = "normal(0, 2)"
-   ),
-   varying = list(
-     race = "normal(0, 2)",
-     age = "normal(0, 2)",
-     time = "normal(0, 2)"
-   ),
-   interaction = list(
-     `sex:time` = "normal(0, 2)",
-     `race:time` = "normal(0, 2)",
-     `age:time` = "normal(0, 2)"
-   )
- )
-}
-
 }

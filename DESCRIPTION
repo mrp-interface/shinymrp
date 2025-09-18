@@ -13,7 +13,9 @@ Description: Dual interfaces, graphical and programmatic, designed for
     Users can apply the method to a variety of datasets, from electronic health records
     to sample survey data, through an end-to-end Bayesian data analysis workflow.
     The package provides robust tools for data cleaning, exploratory analysis,
-    flexible model building, and insightful result visualization.
+    flexible model building, and insightful result visualization. For more details, see
+    Si et al. (2020) <https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh>
+    and Si (2025) <doi:10.1214/24-STS932>.
 License: MIT + file LICENSE
 URL: https://mrp-interface.github.io/shinymrp/
 BugReports: https://github.com/mrp-interface/shinymrp/issues

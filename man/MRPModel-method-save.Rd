@@ -17,23 +17,7 @@ No return value, called for side effects.
 The \verb{$save()} method of an \code{MRPModel} object
 saves a fitted MRPModel object to a file for later use.
 \code{qs::qsave()} is used internally, and it is customary
-to use the \code{.qs} file extension.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example model
- example_model <- example_model()
-
- # Save model to file
- # example_model$save("model.qs")
-
- # Load model later
- # loaded_model <- qs::qread("model.qs")
-}
-
+to use the \code{.qs} file extension. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#save}{More examples of R6 classes}
+vignette for usage examples.
 }

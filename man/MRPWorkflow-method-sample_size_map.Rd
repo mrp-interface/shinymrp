@@ -18,34 +18,6 @@ A highcharter map object showing sample size distribution.
 The \verb{$sample_size_map()} method creates interactive choropleth maps
 showing data distribution with respect to geography. This method cannot be used
 if either the sample or the poststratification data contains no geographic information.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and (optionally) save an interactive sample size map
- ss_map <- workflow$sample_size_map(file ="path/to/sample_size_map.html")
-}
-
+Check out the \href{https://mrp-interface.github.io/shinymrp/articles/example#sample_size_map}{More examples of R6 classes}
+vignette for usage examples.
 }

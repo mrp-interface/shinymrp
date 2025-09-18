@@ -12,17 +12,7 @@ A list containing the model specification including intercept, fixed effects, va
 }
 \description{
 The \verb{$model_spec()} method of an \code{MRPModel} object
-returns the model specification list.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Load example data
- example_model <- example_model()
-
- # Get model specification list
- spec <- example_model$model_spec()
-}
-
+returns the model specification list. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#model_spec}{More examples of R6 classes}
+vignette for usage examples.
 }

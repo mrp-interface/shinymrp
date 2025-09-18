@@ -45,78 +45,77 @@ methods with their own (linked) documentation pages:
 }
 
 \examples{
- if (FALSE) {
- library(shinymrp)
+\dontshow{if (requireNamespace("cmdstanr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+   library(shinymrp)
 
- # Initialize the MRP workflow
- workflow <- mrp_workflow()
+   # Initialize the MRP workflow
+   workflow <- mrp_workflow()
 
- # Load example data
- sample_data <- example_sample_data()
+   # Load example data
+   sample_data <- example_sample_data()
 
- ### DATA PREPARATION
+   ### DATA PREPARATION
 
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link data to the ACS
- # and obtain poststratification data
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- ### DESCRIPTIVE STATISTICS
-
- # Visualize demographic distribution of data
- workflow$demo_bars(demo = "sex")
-
- # Visualize geographic distribution of data
- workflow$sample_size_map()
-
- # Visualize outcome measure
- workflow$outcome_plot()
-
- ### MODEL BUILDING
-
- # Create new model objects
- model <- workflow$create_model(
-   intercept_prior = "normal(0, 4)",
-   fixed = list(
-     sex = "normal(0, 2)",
-     race = "normal(0, 2)"
-   ),
-   varying = list(
-     age = "",
-     time = ""
+   # Preprocess sample data
+   workflow$preprocess(
+     sample_data,
+     is_timevar = TRUE,
+     is_aggregated = TRUE,
+     special_case = NULL,
+     family = "binomial"
    )
- )
 
- # Run MCMC
- model$fit(n_iter = 500, n_chains = 2, seed = 123)
+   # Link data to the ACS
+   # and obtain poststratification data
+   workflow$link_acs(
+     link_geo = "zip",
+     acs_year = 2021
+   )
 
- # Estimates summary and diagnostics
- model$summary()
+   ### DESCRIPTIVE STATISTICS
 
- # Sampling diagnostics
- model$diagnostics()
+   # Visualize demographic distribution of data
+   sex_bars <- workflow$demo_bars(demo = "sex")
 
- # Posterior predictive check
- workflow$pp_check(model)
+   # Visualize geographic distribution of data
+   ss_map <- workflow$sample_size_map()
 
- ### VISUALIZE RESULTS
+   # Visualize outcome measure
+   raw_outcome_plot <- workflow$outcome_plot()
 
- # Plots of overall estimates, estimates for demographic groups, and geographic areas
- workflow$estimate_plot(model, group = "sex")
+   ### MODEL BUILDING
 
- # Choropleth map of estimates for geographic areas
- workflow$estimate_map(model, geo = "county")
- }
+   # Create new model objects
+   model <- workflow$create_model(
+     intercept_prior = "normal(0, 4)",
+     fixed = list(
+       sex = "normal(0, 2)",
+       race = "normal(0, 2)"
+     ),
+     varying = list(
+       age = "",
+       time = ""
+     )
+   )
 
+   # Run MCMC
+   model$fit(n_iter = 500, n_chains = 2, seed = 123)
+
+   # Estimates summary and diagnostics
+   model$summary()
+
+   # Sampling diagnostics
+   model$diagnostics()
+
+   # Posterior predictive check
+   workflow$pp_check(model)
+
+   ### VISUALIZE RESULTS
+
+   # Plots of overall estimates, estimates for demographic groups, and geographic areas
+   workflow$estimate_plot(model, group = "sex")
+
+   # Choropleth map of estimates for geographic areas
+   workflow$estimate_map(model, geo = "county")
+\dontshow{\}) # examplesIf}
 }

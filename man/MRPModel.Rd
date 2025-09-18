@@ -77,7 +77,7 @@ methods, many of which have their own (linked) documentation pages:
 }
 
 \examples{
-if (FALSE) {
+\dontshow{if (requireNamespace("cmdstanr", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
    library(shinymrp)
 
    # Initialize workflow
@@ -118,13 +118,9 @@ if (FALSE) {
    model$fit(n_iter = 500, n_chains = 2, seed = 123)
 
    # Estimates summary and diagnostics
-   model$summary()
+   posterior_summary <- model$summary()
 
    # Sampling diagnostics
-   model$diagnostics()
-
-   # Save model object
-   model$save("/path/to/model.qs")
-}
-
+   model_diagnostics <- model$diagnostics()
+\dontshow{\}) # examplesIf}
 }

@@ -34,33 +34,7 @@ A ggplot object showing MRP estimates.
 }
 \description{
 The \verb{$estimate_plot()} method creates plots showing overall MRP estimates or
-estimates for different demographic groups.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- example_model <- example_model()
-
- # Create and (optionally) save a plot of overall estimates
- # with dimensions in inches
- p_est_overall <- workflow$estimate_plot(
-   example_model,
-   width = 18,
-   height = 8,
-   units = "in"
- )
-
- # Create estimate plots for sex with 90 percent confidence intervals
- p_est_sex <- workflow$estimate_plot(
-   example_model,
-   group = "sex",
-   interval = 0.9
- )
-}
-
+estimates for different demographic groups. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#estimate_plot}{More examples of R6 classes}
+vignette for usage examples.
 }

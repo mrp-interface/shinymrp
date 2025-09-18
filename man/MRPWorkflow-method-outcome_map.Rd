@@ -21,38 +21,6 @@ A highcharter map object showing average outcome measure by geography.
 The \verb{$outcome_map()} method creates maps showing the average outcome values
 by geography for cross-sectional data, or the highest/lowest temporal average for time-varying data.
 The sample and poststratification data must contain geographic information for this method to work.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and (optionally) save an interactive map
- # of average outcome measure
- oc_map <- workflow$outcome_map(
-   summary_type = "max",
-   file = "path/to/outcome_map.html"
- )
-}
-
+Check out the \href{https://mrp-interface.github.io/shinymrp/articles/example#outcome_map}{More examples of R6 classes}
+vignette for usage examples.
 }

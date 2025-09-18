@@ -21,48 +21,7 @@ No return value, called for side effects.
 }
 \description{
 The \verb{$fit()} method of an \code{MRPModel} object fits the model using
-Stan's main Markov chain Monte Carlo (MCMC) algorithm.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and fit multiple models
- model <- workflow$create_model(
-   intercept_prior = "normal(0, 4)",
-   fixed = list(
-     sex = "normal(0, 2)"
-   ),
-   varying = list(
-     race = "normal(0, 2)",
-     age = "normal(0, 2)",
-     time = "normal(0, 2)"
-   )
- )
-
- # Run MCMC
- model$fit(n_iter = 500, n_chains = 2, seed = 123)
-}
-
+Stan's main Markov chain Monte Carlo (MCMC) algorithm. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#fit}{More examples of R6 classes}
+vignette for usage examples.
 }

@@ -20,20 +20,7 @@ A ggplot object showing the posterior predictive check result.
 \description{
 The \verb{$pp_check()} method creates posterior predictive check plots
 to assess model fit by comparing observed data to replicated data from
-the posterior predictive distribution.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- example_model <- example_model()
-
- # Perform posterior predictive check and (optionally) save the plot
- ppc_plot <- workflow$pp_check(example_model, file = "/path/to/ppc_plot.png")
-}
-
+the posterior predictive distribution. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#pp_check}{More examples of R6 classes}
+vignette for usage examples.
 }

@@ -17,40 +17,6 @@ A ggplot object showing the outcome measure distribution.
 }
 \description{
 The \verb{$outcome_plot()} method creates plots of the average outcome values.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and (optionally) save outcome plots
- # with dimensions in inches
- oc_plot <- workflow$outcome_plot(
-   file = "path/to/outcome_plot.png",
-   width = 18,
-   height = 8,
-   units = "in"
- )
-}
-
+Check out the \href{https://mrp-interface.github.io/shinymrp/articles/example#outcome_plot}{More examples of R6 classes}
+vignette for usage examples.
 }

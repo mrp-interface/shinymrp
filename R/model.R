@@ -42,9 +42,7 @@
 #'   |:----------|:---------------|
 #'   [`$save()`][MRPModel-method-save] | Save model object to file. |
 #'
-#'
-#' @examples
-#' if (FALSE) {
+#' @examplesIf requireNamespace("cmdstanr", quietly = TRUE)
 #'    library(shinymrp)
 #'
 #'    # Initialize workflow
@@ -85,14 +83,10 @@
 #'    model$fit(n_iter = 500, n_chains = 2, seed = 123)
 #'
 #'    # Estimates summary and diagnostics
-#'    model$summary()
+#'    posterior_summary <- model$summary()
 #'
 #'    # Sampling diagnostics
-#'    model$diagnostics()
-#'
-#'    # Save model object
-#'    model$save("/path/to/model.qs")
-#' }
+#'    model_diagnostics <- model$diagnostics()
 #'
 #' @export
 MRPModel <- R6::R6Class(
@@ -187,21 +181,11 @@ MRPModel <- R6::R6Class(
 #' @aliases model_spec
 #'
 #' @description The `$model_spec()` method of an `MRPModel` object
-#' returns the model specification list.
+#' returns the model specification list. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#model_spec)
+#' vignette for usage examples.
 #'
 #' @return A list containing the model specification including intercept, fixed effects, varying effects, and interactions.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Load example data
-#'  example_model <- example_model()
-#'
-#'  # Get model specification list
-#'  spec <- example_model$model_spec()
-#' }
-#'
 model_spec = function() {
   return(private$model_spec_)
 }
@@ -214,20 +198,11 @@ MRPModel$set("public", "model_spec", model_spec)
 #'
 #' @description The `$formula()` method of an `MRPModel` object
 #' returns the lme4-style formula constructed from the given model specification.
-#' 
+#' Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#formula)
+#' vignette for usage examples.
+#'
 #' @return A character string of the model formula.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Load example data
-#'  example_model <- example_model()
-#' 
-#'  # Get model formula
-#'  formula <- example_model$formula()
-#' }
-#'
 formula = function() {
   return(private$formula_)
 }
@@ -238,24 +213,14 @@ MRPModel$set("public", "formula", formula)
 #' @name MRPModel-method-metadata
 #' @aliases metadata
 #'
-#'
 #' @description The `$metadata()` method of an `MRPModel` object
 #' returns the metadata associated with the model,
 #' including metadata inherited from a workflow object and model fitting parameters.
-#' 
+#' Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#metadata)
+#' vignette for usage examples.
+#'
 #' @return A list containing the model metadata.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Load example data
-#'  example_model <- example_model()
-#'
-#'  # Get model metadata
-#'  metadata <- example_model$metadata()
-#' }
-#'
 metadata = function() {
   return(private$metadat_)
 }
@@ -267,21 +232,11 @@ MRPModel$set("public", "metadata", metadata)
 #' @aliases stan_code
 #'
 #' @description The `$stan_code()` method of an `MRPModel` object
-#' returns the model Stan code.
+#' returns the model Stan code. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#stan_code)
+#' vignette for usage examples.
 #'
 #' @return A character string containing the model Stan code.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Load example data
-#'  example_model <- example_model()
-#'
-#'  # Get Stan code
-#'  stan_code <- example_model$stan_code()
-#' }
-#'
 stan_code = function() {
   return(private$stancode_$mcmc)
 }
@@ -292,9 +247,10 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @name MRPModel-method-fit
 #' @aliases fit
 #'
-#'
 #' @description The `$fit()` method of an `MRPModel` object fits the model using
-#' Stan's main Markov chain Monte Carlo (MCMC) algorithm.
+#' Stan's main Markov chain Monte Carlo (MCMC) algorithm. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#fit)
+#' vignette for usage examples.
 #'
 #' @param n_iter Number of MCMC iterations per chain (including warmup iterations). Default is 2000.
 #' @param n_chains Number of MCMC chains to run. Default is 4.
@@ -302,49 +258,6 @@ MRPModel$set("public", "stan_code", stan_code)
 #' @param ... Additional arguments passed to CmdStanR `$sample()` method.
 #'
 #' @return No return value, called for side effects.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Initialize workflow
-#'  workflow <- mrp_workflow()
-#'
-#'  # Load example data
-#'  sample_data <- example_sample_data()
-#'
-#'  # Preprocess sample data
-#'  workflow$preprocess(
-#'    sample_data,
-#'    is_timevar = TRUE,
-#'    is_aggregated = TRUE,
-#'    special_case = NULL,
-#'    family = "binomial"
-#'  )
-#'
-#'  # Link to ACS data at ZIP code level
-#'  workflow$link_acs(
-#'    link_geo = "zip",
-#'    acs_year = 2021
-#'  )
-#'
-#'  # Create and fit multiple models
-#'  model <- workflow$create_model(
-#'    intercept_prior = "normal(0, 4)",
-#'    fixed = list(
-#'      sex = "normal(0, 2)"
-#'    ),
-#'    varying = list(
-#'      race = "normal(0, 2)",
-#'      age = "normal(0, 2)",
-#'      time = "normal(0, 2)"
-#'    )
-#'  )
-#'
-#'  # Run MCMC
-#'  model$fit(n_iter = 500, n_chains = 2, seed = 123)
-#' }
-#'
 fit <- function(
   n_iter = 2000,
   n_chains = 4,
@@ -384,60 +297,12 @@ MRPModel$set("public", "fit", fit)
 #' @name MRPModel-method-check_fit_exists
 #' @aliases check_fit_exists
 #'
-#'
 #' @description The `$check_fit_exists()` method of an `MRPModel` object
-#' checks whether the model has been fitted.
+#' checks whether the model has been fitted. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#check_fit_exists)
+#' vignette for usage examples.
 #'
 #' @return Logical indicating whether the model has been fitted.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Initialize workflow
-#'  workflow <- mrp_workflow()
-#'
-#'  # Load example data
-#'  sample_data <- example_sample_data()
-#'
-#'  # Preprocess sample data
-#'  workflow$preprocess(
-#'    sample_data,
-#'    is_timevar = TRUE,
-#'    is_aggregated = TRUE,
-#'    special_case = NULL,
-#'    family = "binomial"
-#'  )
-#'
-#'  # Link to ACS data at ZIP code level
-#'  workflow$link_acs(
-#'    link_geo = "zip",
-#'    acs_year = 2021
-#'  )
-#'
-#'  # Create and fit multiple models
-#'  model <- workflow$create_model(
-#'    intercept_prior = "normal(0, 4)",
-#'    fixed = list(
-#'      sex = "normal(0, 2)"
-#'    ),
-#'    varying = list(
-#'      race = "normal(0, 2)",
-#'      age = "normal(0, 2)",
-#'      time = "normal(0, 2)"
-#'    )
-#'  )
-#'
-#'  # Check if model is fitted (should be FALSE)
-#'  model$check_fit_exists()
-#'
-#'  # Fit the model
-#'  model$fit(n_iter = 500, n_chains = 2, seed = 123)
-#'
-#'  # Check again (should be TRUE)
-#'  model$check_fit_exists()
-#' }
-#'
 check_fit_exists <- function() {
   return(!is.null(private$fit_))
 }
@@ -448,64 +313,12 @@ MRPModel$set("public", "check_fit_exists", check_fit_exists)
 #' @name MRPModel-method-check_estimate_exists
 #' @aliases check_estimate_exists
 #'
-#'
 #' @description The `$check_estimate_exists()` method of an `MRPModel` object
-#' checks whether poststratification has been performed.
+#' checks whether poststratification has been performed. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#check_estimate_exists)
+#' vignette for usage examples.
 #'
 #' @return Logical indicating whether poststratification has been performed.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Initialize workflow
-#'  workflow <- mrp_workflow()
-#'
-#'  # Load example data
-#'  sample_data <- example_sample_data()
-#'
-#'  # Preprocess sample data
-#'  workflow$preprocess(
-#'    sample_data,
-#'    is_timevar = TRUE,
-#'    is_aggregated = TRUE,
-#'    special_case = NULL,
-#'    family = "binomial"
-#'  )
-#'
-#'  # Link to ACS data at ZIP code level
-#'  workflow$link_acs(
-#'    link_geo = "zip",
-#'    acs_year = 2021
-#'  )
-#'
-#'  # Create and fit multiple models
-#'  model <- workflow$create_model(
-#'    intercept_prior = "normal(0, 4)",
-#'    fixed = list(
-#'      sex = "normal(0, 2)"
-#'    ),
-#'    varying = list(
-#'      race = "normal(0, 2)",
-#'      age = "normal(0, 2)",
-#'      time = "normal(0, 2)"
-#'    )
-#'  )
-#'
-#'  # Fit the model
-#'  model$fit(n_iter = 500, n_chains = 2, seed = 123)
-#'
-#'  # Check if estimates exist (should be FALSE)
-#'  model$check_estimate_exists()
-#'
-#'  # Run poststratification
-#'  # NOTE: $poststratify() is called by $estimate_plot() of a MRPWorkflow object
-#'  workflow$estimate_plot(model)
-#'
-#'  # Check again (should be TRUE)
-#'  model$check_estimate_exists()
-#' }
-#'
 check_estimate_exists <- function() {
   return(!is.null(private$est_))
 }
@@ -518,34 +331,15 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #'
 #' @description The `$summary()` method of an `MRPModel` object
 #' returns tables containing the summary of posterior samples
-#' for the model parameters and diagnostics.
+#' for the model parameters and diagnostics. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#summary)
+#' vignette for usage examples.
 #'
 #' @return A list of data.frame objects containing posterior sample
 #' summary and diagnostics for model parameters:
 #' - fixed effects (`fixed`)
 #' - standard deviations of varying effects (`varying`)
 #' - standard deviations of residuals (`other`)
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Load example data
-#'  example_model <- example_model()
-#'
-#'  # Get parameter summaries
-#'  parameter_summary <- example_model$summary()
-#'
-#'  # Fixed effects
-#'  parameter_summary$fixed
-#'
-#'  # Standard deviation of varying effects
-#'  parameter_summary$varying
-#'
-#'  # Standard deviation of residuals
-#'  parameter_summary$other
-#' }
-#'
 summary <- function() {
   private$assert_fit_exists()
 
@@ -567,30 +361,16 @@ MRPModel$set("public", "summary", summary)
 #' @name MRPModel-method-diagnostics
 #' @aliases diagnostics
 #'
-#'
 #' @description The `$diagnostics()` method of an `MRPModel` object
 #' returns MCMC diagnostics, including convergence statistics and
 #' sampling efficiency measures. Check out this [official Stan guide](https://mc-stan.org/learn-stan/diagnostics-warnings)
-#' for more information on interpreting these metrics.
+#' for more information on interpreting these metrics. For usage examples, refer to the 
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#diagnostics)
+#' vignette.
 #'
 #' @param summarize Logical indicating whether to return a summarized version of the diagnostics (default is TRUE)
 #'
 #' @return A data.frame object if `summarize` is TRUE, otherwise a list of raw diagnostics.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Load example data
-#'  example_model <- example_model()
-#'
-#'  # Get diagnostics summary
-#'  diagnostics_summary <- example_model$diagnostics(summarize = TRUE)
-#'
-#'  # Get raw diagnostics of individual chains
-#'  diagnostics_detailed <- example_model$diagnostics(summarize = FALSE)
-#' }
-#'
 diagnostics <- function(summarize = TRUE) {
   private$assert_fit_exists()
 
@@ -620,7 +400,6 @@ MRPModel$set("public", "diagnostics", diagnostics)
 #' not need to be called directly by users.
 #'
 #' @return A data.frame object containing samples from the posterior predictive distribution.
-#'
 ppc <- function() {
   private$assert_fit_exists()
 
@@ -652,7 +431,6 @@ MRPModel$set("public", "ppc", ppc)
 #' @name MRPModel-method-log_lik
 #' @aliases log_lik
 #'
-#'
 #' @description The `$log_lik()` method of an `MRPModel` object
 #' runs Stan's standalone generated quantities
 #' and extracts log-likelihood values for leave-one-out cross-validation. This
@@ -660,7 +438,6 @@ MRPModel$set("public", "ppc", ppc)
 #' and does not need to be called directly by users.
 #'
 #' @return A data.frame object containing log-likelihood values.
-#'
 log_lik <- function() {
   private$assert_fit_exists()
 
@@ -696,7 +473,6 @@ MRPModel$set("public", "log_lik", log_lik)
 #'
 #' @return A data.frame object containing the poststratified estimates and their
 #' corresponding uncertainty intervals.
-#'
 poststratify <- function(interval = 0.95) {
   private$assert_fit_exists()
 
@@ -737,29 +513,13 @@ MRPModel$set("public", "poststratify", poststratify)
 #' @description The `$save()` method of an `MRPModel` object
 #' saves a fitted MRPModel object to a file for later use.
 #' `qs::qsave()` is used internally, and it is customary
-#' to use the `.qs` file extension.
+#' to use the `.qs` file extension. Check out the
+#' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#save)
+#' vignette for usage examples.
 #'
 #' @param file File path where the model should be saved.
 #'
 #' @return No return value, called for side effects.
-#'
-#' @examples
-#' if (FALSE) {
-#'  library(shinymrp)
-#'
-#'  # Initialize workflow
-#'  workflow <- mrp_workflow()
-#' 
-#'  # Load example model
-#'  example_model <- example_model()
-#'
-#'  # Save model to file
-#'  # example_model$save("model.qs")
-#'
-#'  # Load model later
-#'  # loaded_model <- qs::qread("model.qs")
-#' }
-#'
 save <- function(file) {
   checkmate::assert_path_for_output(
     file,
