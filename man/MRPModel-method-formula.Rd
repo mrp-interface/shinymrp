@@ -13,16 +13,7 @@ A character string of the model formula.
 \description{
 The \verb{$formula()} method of an \code{MRPModel} object
 returns the lme4-style formula constructed from the given model specification.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Load example data
- example_model <- example_model()
-
- # Get model formula
- formula <- example_model$formula()
-}
-
+Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#formula}{More examples of R6 classes}
+vignette for usage examples.
 }

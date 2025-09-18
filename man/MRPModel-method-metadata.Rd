@@ -14,16 +14,7 @@ A list containing the model metadata.
 The \verb{$metadata()} method of an \code{MRPModel} object
 returns the metadata associated with the model,
 including metadata inherited from a workflow object and model fitting parameters.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Load example data
- example_model <- example_model()
-
- # Get model metadata
- metadata <- example_model$metadata()
-}
-
+Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#metadata}{More examples of R6 classes}
+vignette for usage examples.
 }

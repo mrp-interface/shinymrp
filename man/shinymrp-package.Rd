@@ -6,7 +6,7 @@
 \alias{shinymrp-package}
 \title{shinymrp: Interface for Multilevel Regression and Poststratification}
 \description{
-Dual interfaces, graphical and programmatic, designed for intuitive applications of Multilevel Regression and Poststratification (MRP). Users can apply the method to a variety of datasets, from electronic health records to sample survey data, through an end-to-end Bayesian data analysis workflow. The package provides robust tools for data cleaning, exploratory analysis, flexible model building, and insightful result visualization.
+Dual interfaces, graphical and programmatic, designed for intuitive applications of Multilevel Regression and Poststratification (MRP). Users can apply the method to a variety of datasets, from electronic health records to sample survey data, through an end-to-end Bayesian data analysis workflow. The package provides robust tools for data cleaning, exploratory analysis, flexible model building, and insightful result visualization. For more details, see Si et al. (2020) \url{https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh} and Si (2025) \doi{10.1214/24-STS932}.
 }
 \seealso{
 Useful links:

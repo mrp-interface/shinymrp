@@ -12,17 +12,7 @@ A character string containing the model Stan code.
 }
 \description{
 The \verb{$stan_code()} method of an \code{MRPModel} object
-returns the model Stan code.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Load example data
- example_model <- example_model()
-
- # Get Stan code
- stan_code <- example_model$stan_code()
-}
-
+returns the model Stan code. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#stan_code}{More examples of R6 classes}
+vignette for usage examples.
 }

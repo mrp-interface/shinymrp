@@ -19,26 +19,7 @@ summary and diagnostics for model parameters:
 \description{
 The \verb{$summary()} method of an \code{MRPModel} object
 returns tables containing the summary of posterior samples
-for the model parameters and diagnostics.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Load example data
- example_model <- example_model()
-
- # Get parameter summaries
- parameter_summary <- example_model$summary()
-
- # Fixed effects
- parameter_summary$fixed
-
- # Standard deviation of varying effects
- parameter_summary$varying
-
- # Standard deviation of residuals
- parameter_summary$other
-}
-
+for the model parameters and diagnostics. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#summary}{More examples of R6 classes}
+vignette for usage examples.
 }

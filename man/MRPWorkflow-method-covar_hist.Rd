@@ -23,42 +23,6 @@ The \code{covar_hist()} method creates histogram plots
 showing the distribution of geographic covariates across ZIP codes. Refer to the
 \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#geographic-identifiers-and-covariates}{More on data preparation} for their definitions.
 This method is only available for \href{https://mrp-interface.github.io/shinymrp/articles/data-prep#data-modules}{COVID data}.
-}
-\examples{
-if (FALSE) {
-library(shinymrp)
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = "covid",
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and (optionally) save a covariate distribution histogram
- # with dimensions in inches
- college_hist <- workflow$covar_hist(
-   "college",
-   file = "path/to/college_hist.png",
-   width = 18,
-   height = 8,
-   units = "in"
- )
-}
-
+Check out the \href{https://mrp-interface.github.io/shinymrp/articles/example#covar_hist}{More examples of R6 classes}
+vignette for usage examples.
 }

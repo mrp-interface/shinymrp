@@ -57,7 +57,7 @@ compare_df <- readr::read_csv(
 ```{r theme_update, include=FALSE}
 
 ggplot2::theme_update(
-  text = ggplot2::element_text(size = 10),
+  text = ggplot2::element_text(size = 8),
   plot.margin = ggplot2::margin(5, 10, 0, 0)
 )
 

@@ -19,42 +19,7 @@ A ggplot object showing demographic comparisons
 }
 \description{
 Creates bar plots for comparing demographic distributions between
-sample data and poststratification data.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Link to ACS data at ZIP code level
- workflow$link_acs(
-   link_geo = "zip",
-   acs_year = 2021
- )
-
- # Create and (optionally) save a demographic comparison plot
- # with dimensions in inches
- sex_bar <- workflow$demo_bars(
-   demo = "sex",
-   file = "path/to/sex_bar.png",
-   width = 18,
-   height = 8,
-   units = "in"
- )
-}
-
+sample data and poststratification data. Check out the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#demo_bars}{More examples of R6 classes}
+vignette for usage examples.
 }

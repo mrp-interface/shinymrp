@@ -19,34 +19,7 @@ No return value, called for side effects.
 The \verb{$load_pstrat()} method processes and stores input poststratification data.
 The object is subject to the same data preprocessing steps as the sample data. See the
 \href{https://mrp-interface.github.io/shinymrp/articles/data-prep}{More on data preparation}
-vignette for more information.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Initialize workflow
- workflow <- mrp_workflow()
-
- # Load example sample data
- sample_data <- example_sample_data()
-
- # Preprocess sample data
- workflow$preprocess(
-   sample_data,
-   is_timevar = TRUE,
-   is_aggregated = TRUE,
-   special_case = NULL,
-   family = "binomial"
- )
-
- # Load example poststratification data
- pstrat_data <- example_pstrat_data()
-
- # Read in poststratification data
- workflow$load_pstrat(
-   pstrat_data = pstrat_data,
-   is_aggregated = TRUE
- )
-}
+vignette for more information on data processing. For usage examples, refer to the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#load_pstrat}{More examples of R6 classes}
+vignette.
 }

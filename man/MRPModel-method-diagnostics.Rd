@@ -17,20 +17,7 @@ A data.frame object if \code{summarize} is TRUE, otherwise a list of raw diagnos
 The \verb{$diagnostics()} method of an \code{MRPModel} object
 returns MCMC diagnostics, including convergence statistics and
 sampling efficiency measures. Check out this \href{https://mc-stan.org/learn-stan/diagnostics-warnings}{official Stan guide}
-for more information on interpreting these metrics.
-}
-\examples{
-if (FALSE) {
- library(shinymrp)
-
- # Load example data
- example_model <- example_model()
-
- # Get diagnostics summary
- diagnostics_summary <- example_model$diagnostics(summarize = TRUE)
-
- # Get raw diagnostics of individual chains
- diagnostics_detailed <- example_model$diagnostics(summarize = FALSE)
-}
-
+for more information on interpreting these metrics. For usage examples, refer to the
+\href{https://mrp-interface.github.io/shinymrp/articles/example#diagnostics}{More examples of R6 classes}
+vignette.
 }
