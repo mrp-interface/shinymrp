@@ -9,6 +9,7 @@ run_app(
   options = list(),
   enableBookmarking = NULL,
   uiPattern = "/",
+  launch.browser = TRUE,
   ...
 )
 }
@@ -33,8 +34,11 @@ request to determine whether the \code{ui} should be used to handle the
 request. Note that the entire request path must match the regular
 expression in order for the match to be considered successful.}
 
-\item{...}{arguments to pass to golem_opts.
-See \code{?golem::get_golem_options} for more details.}
+\item{launch.browser}{Logical; if TRUE (default) open in an external browser
+even when running inside RStudio. If FALSE, use RStudio Viewer (when available).}
+
+\item{...}{arguments passed into golem options via \code{with_golem_options()}.
+See \code{?golem::get_golem_options} for details.}
 }
 \description{
 Run the Shiny Application

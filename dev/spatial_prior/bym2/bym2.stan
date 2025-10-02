@@ -1,31 +1,3 @@
-// BYM2-like binomial model with ICAR (multi-component) on ZIP/ZCTA lattice.
-
-functions {
-  // ICAR log-density with a soft mean/sum-to-zero constraint per component.
-  real icar_normal_components_lpdf(vector phi,
-                                   int N_nodes,
-                                   int N_edges,
-                                   array[] int node1,
-                                   array[] int node2,
-                                   int C,
-                                   array[] int comp_sizes,
-                                   array[,] int comp_index) {
-    // Edge-difference penalty over all edges
-    real lp = -0.5 * dot_self(phi[node1] - phi[node2]);
-
-    // Soft per-component centering (identifiability in the null space)
-    for (c in 1:C) {
-      int nc = comp_sizes[c];
-      vector[nc] phi_c;
-      for (j in 1:nc)
-        phi_c[j] = phi[ comp_index[c, j] ];
-      // Using a lattice-wide scale so tiny components aren’t over-constrained.
-      lp += normal_lpdf( sum(phi_c) | 0, 0.001 * N_nodes );
-    }
-    return lp;
-  }
-}
-
 data {
   // Rows and design
   int<lower=1> N;                 // number of (race,zip) observations
@@ -52,19 +24,6 @@ data {
   int<lower=0> N_edges;
   array[N_edges] int<lower=1, upper=N_zip> node1;
   array[N_edges] int<lower=1, upper=N_zip> node2;
-
-  // Per-node ICAR scaling (constant within each component; 1 for isolates)
-  vector<lower=0>[N_zip] inv_sqrt_scale_factor;
-
-  // Connected components (for per-component centering)
-  int<lower=1> C;                              // number of components
-  int<lower=1> max_comp_size;
-  array[C] int<lower=1, upper=max_comp_size> comp_sizes;
-  array[C, max_comp_size] int<lower=0, upper=N_zip> comp_index; // 0 = padding
-
-  // Indices of non-isolated nodes (degree > 0)
-  int<lower=0> N_noniso;
-  array[N_noniso] int<lower=1, upper=N_zip> noniso_idx;
 }
 
 parameters {

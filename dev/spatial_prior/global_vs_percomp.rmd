@@ -1,0 +1,713 @@
+---
+title: "global_vs_percomp"
+output: html_document
+date: "2025-10-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+```{r}
+# packages
+suppressPackageStartupMessages({
+  library(cmdstanr)
+  library(posterior)
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+  library(purrr)
+  library(Matrix)
+})
+
+# Set your stan files (adjust paths as needed)
+stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/"
+stan_A_path <- paste0(stan_dir, "icar_global.stan")
+stan_B_path <- paste0(stan_dir, "icar_percomp.stan")
+```
+
+## Simulator (component-controlled)
+
+```{r}
+# ---------- helpers ----------
+edges_to_sparseW <- function(node1, node2, n) {
+  if (length(node1) == 0L) return(Matrix(0, n, n, sparse = TRUE))
+  i <- c(node1, node2); j <- c(node2, node1)
+  x <- rep.int(1, length(i))
+  sparseMatrix(i = i, j = j, x = x, dims = c(n, n))
+}
+components_from_comp_index <- function(comp_index, comp_sizes) {
+  list(
+    C = nrow(comp_index),
+    comp_sizes = comp_sizes,
+    comp_index = comp_index
+  )
+}
+
+.draw_icar_component <- function(Wc, tol = 1e-10) {
+  n <- nrow(Wc)
+  if (n == 1L) return(0)
+  d <- Matrix::rowSums(Wc)
+  Q <- Diagonal(n, d) - Wc
+  ev <- eigen(as.matrix(Q), symmetric = TRUE)
+  lam <- ev$values; V <- ev$vectors
+  keep <- which(lam > tol)
+  z <- rnorm(length(keep))
+  phi <- V[, keep, drop = FALSE] %*% (z / sqrt(lam[keep]))
+  as.numeric(phi - mean(phi))
+}
+draw_icar_percomp <- function(W, comp_index, comp_sizes) {
+  N <- nrow(W); phi <- numeric(N)
+  for (c in seq_len(nrow(comp_index))) {
+    cs <- comp_sizes[c]
+    idx <- comp_index[c, seq_len(cs)]
+    if (cs == 1L) phi[idx] <- 0 else phi[idx] <- .draw_icar_component(as.matrix(W[idx, idx]))
+  }
+  phi
+}
+
+# ---------- graph builder w/ explicit components ----------
+build_graph_from_components <- function(comp_sizes,
+                                        comp_topology = "chain",
+                                        queen = TRUE,
+                                        erdos_p = 0.1) {
+  comp_sizes <- as.integer(comp_sizes)
+  C <- length(comp_sizes)
+  comp_topology <- rep_len(tolower(comp_topology), C)
+
+  comp_edges <- function(m, topo) {
+    if (m == 1L) return(matrix(integer(), ncol = 2))
+    switch(topo,
+      "chain" = cbind(1:(m - 1L), 2:m),
+      "ring"  = if (m == 2L) cbind(1L, 2L) else rbind(cbind(1:(m - 1L), 2:m), c(m, 1L)),
+      "star"  = cbind(rep(1L, m - 1L), 2:m),
+      "grid"  = {
+        r <- floor(sqrt(m)); c <- ceiling(m / r)
+        ids <- matrix(1:(r * c), nrow = r, byrow = TRUE); ids[ids > m] <- NA_integer_
+        E <- list()
+        for (i in seq_len(r)) {
+          row_ids <- ids[i, ]; row_ids <- row_ids[!is.na(row_ids)]
+          if (length(row_ids) >= 2) E[[length(E)+1]] <- cbind(row_ids[-length(row_ids)], row_ids[-1])
+        }
+        for (j in seq_len(c)) {
+          col_ids <- ids[, j]; col_ids <- col_ids[!is.na(col_ids)]
+          if (length(col_ids) >= 2) E[[length(E)+1]] <- cbind(col_ids[-length(col_ids)], col_ids[-1])
+        }
+        if (queen) for (i in seq_len(r - 1L)) for (j in seq_len(c - 1L)) {
+          a <- ids[i, j]; b <- ids[i+1L, j+1L]
+          if (!is.na(a) && !is.na(b)) E[[length(E)+1]] <- cbind(a, b)
+          a <- ids[i+1L, j]; b <- ids[i, j+1L]
+          if (!is.na(a) && !is.na(b)) E[[length(E)+1]] <- cbind(a, b)
+        }
+        if (!length(E)) matrix(integer(), ncol = 2) else do.call(rbind, E)
+      },
+      "erdos" = {
+        E <- cbind(1:(m - 1L), 2:m) # ensure connected
+        P <- t(combn(m, 2)); keep <- !(P[,1] + 1 == P[,2]); P <- P[keep,,drop=FALSE]
+        if (nrow(P)) {
+          add <- P[runif(nrow(P)) < erdos_p,,drop=FALSE]
+          if (nrow(add)) E <- rbind(E, add)
+        }
+        E
+      },
+      stop(sprintf("Unknown topology '%s'", topo))
+    )
+  }
+
+  N_zip <- sum(comp_sizes)
+  node1 <- integer(); node2 <- integer()
+  comp_index <- matrix(0L, nrow = C, ncol = max(comp_sizes))
+  off <- 0L
+  for (c in seq_len(C)) {
+    m <- comp_sizes[c]
+    comp_index[c, seq_len(m)] <- (off + 1L):(off + m)
+    E <- comp_edges(m, comp_topology[c])
+    if (nrow(E)) { node1 <- c(node1, E[,1] + off); node2 <- c(node2, E[,2] + off) }
+    off <- off + m
+  }
+  list(N_zip = N_zip, node1 = as.integer(node1), node2 = as.integer(node2),
+       comp_index = comp_index, comp_sizes = as.integer(comp_sizes), N_comps = as.integer(C))
+}
+
+simulate_icar_data <- function(
+  comp_sizes,
+  comp_topology = "chain",
+  queen = TRUE,
+  erdos_p = 0.08,
+  N_race = 4, K = 3,
+  intercept = -0.3,
+  beta = rnorm(K, 0, 0.7),
+  sigma_race = 0.6,
+  sigma_zip  = 0.8,
+  N = NULL,
+  n_sample_mean = 60,
+  seed = 42
+) {
+  set.seed(seed)
+  gspec <- build_graph_from_components(comp_sizes, comp_topology, queen, erdos_p)
+  N_zip <- gspec$N_zip
+  W     <- edges_to_sparseW(gspec$node1, gspec$node2, N_zip)
+  comp  <- components_from_comp_index(gspec$comp_index, gspec$comp_sizes)
+
+  z_race <- rnorm(N_race); a_race <- sigma_race * z_race
+  phi_zip <- draw_icar_percomp(W, comp$comp_index, comp$comp_sizes)
+  a_zip   <- sigma_zip * phi_zip
+
+  if (is.null(N)) N <- N_zip
+  J_zip  <- sample.int(N_zip, N, replace = (N != N_zip))
+  J_race <- sample.int(N_race, N, replace = TRUE)
+  X <- matrix(rnorm(N*K), nrow = N, ncol = K)
+
+  eta <- as.numeric(intercept + X %*% beta + a_race[J_race] + a_zip[J_zip])
+  p   <- 1/(1+exp(-eta))
+  n_sample <- rpois(N, n_sample_mean); n_sample[n_sample == 0] <- 1L
+  y <- rbinom(N, n_sample, p)
+
+  list(
+    stan_data_A = list(
+      N = as.integer(N), K = as.integer(K), X = X, y = as.integer(y), n_sample = as.integer(n_sample),
+      N_race = as.integer(N_race), J_race = as.integer(J_race),
+      N_zip = as.integer(N_zip), J_zip = as.integer(J_zip),
+      N_edges = as.integer(length(gspec$node1)), node1 = as.integer(gspec$node1), node2 = as.integer(gspec$node2)
+    ),
+    stan_data_B = list(
+      N = as.integer(N), K = as.integer(K), X = X, y = as.integer(y), n_sample = as.integer(n_sample),
+      N_race = as.integer(N_race), J_race = as.integer(J_race),
+      N_zip = as.integer(N_zip), J_zip = as.integer(J_zip),
+      N_edges = as.integer(length(gspec$node1)), node1 = as.integer(gspec$node1), node2 = as.integer(gspec$node2),
+      N_comps = as.integer(gspec$N_comps), comp_sizes = as.integer(gspec$comp_sizes),
+      comp_index = array(as.integer(gspec$comp_index),
+                         dim = c(nrow(gspec$comp_index), max(gspec$comp_sizes)))
+    ),
+    truth = list(
+      intercept = intercept, beta = beta, sigma_race = sigma_race, sigma_zip = sigma_zip,
+      a_race = a_race, a_zip = a_zip, phi_zip = phi_zip,
+      comp_sizes = comp$comp_sizes, comp_index = comp$comp_index
+    )
+  )
+}
+```
+
+## Simulate a “stress test” dataset
+We create heterogeneous components (isolates + tiny chains + one big grid). This is where global centering breaks down most clearly.
+
+```{r}
+sim <- simulate_icar_data(
+  comp_sizes    = c(1, 1, 2, 3, 4, 6, 25, 64),     # two isolates, several small comps, one big comp
+  comp_topology = c("isolate","isolate","chain","ring","star","chain","erdos","grid"),
+  queen = TRUE, erdos_p = 0.05,
+  N_race = 5, K = 4,
+  intercept = -0.2,
+  beta = c(0.5, -0.6, 0.2, 0.4),
+  sigma_race = 0.6,
+  sigma_zip  = 0.8,
+  n_sample_mean = 60,
+  seed = 123
+)
+```
+
+## Fit both models
+```{r}
+modA <- cmdstan_model(stan_A_path)
+modB <- cmdstan_model(stan_B_path)
+
+fitA <- modA$sample(
+  data = sim$stan_data_A,
+  chains = 4, parallel_chains = 4, iter_warmup = 1000, iter_sampling = 1000,
+  adapt_delta = 0.9, max_treedepth = 12, seed = 329
+)
+fitB <- modB$sample(
+  data = sim$stan_data_B,
+  chains = 4, parallel_chains = 4, iter_warmup = 1000, iter_sampling = 1000,
+  adapt_delta = 0.9, max_treedepth = 12, seed = 771
+)
+```
+
+## Derived quantities from posterior draws
+We’ll reconstruct a_zip = sigma_zip * phi_zip from draws and then compute:
+
+- Per-component mean of a_zip (the “component shift”),
+- Intercept bias,
+- Isolate behavior,
+- Cross-component trade-off (correlation among component shifts).
+
+```{r}
+# helper to build a_zip draws from draws_df
+# helper to build a_zip draws from posterior draws
+extract_a_zip <- function(fit) {
+  # get draws for sigma_zip and phi_zip[*]
+  dr <- posterior::as_draws_df(fit$draws(variables = c("sigma_zip", "phi_zip")))
+  
+  # find and numerically sort phi_zip columns: phi_zip[1], phi_zip[2], ...
+  phi_cols <- grep("^phi_zip\\[", names(dr), value = TRUE)
+  if (!length(phi_cols)) stop("No phi_zip[...] columns found in draws.")
+  ord <- order(as.integer(gsub(".*\\[|\\]", "", phi_cols)))
+  phi_cols <- phi_cols[ord]
+  
+  # S x N_zip numeric matrix of phi draws
+  phi_mat <- as.matrix(dr[, phi_cols, drop = FALSE])
+  # S-length numeric vector of sigma draws
+  sigma   <- as.numeric(dr[["sigma_zip"]])
+  
+  # element-wise multiply each row by its sigma: returns S x N_zip
+  a_zip_draws <- sweep(phi_mat, 1, sigma, `*`)
+  a_zip_draws
+}
+
+
+# per-component mean operator
+component_means <- function(a_zip_draws, comp_index, comp_sizes) {
+  S <- dim(a_zip_draws)[1]  # draws
+  C <- nrow(comp_index)
+  out <- matrix(NA_real_, nrow = S, ncol = C)
+  for (c in seq_len(C)) {
+    idx <- comp_index[c, seq_len(comp_sizes[c])]
+    out[,c] <- rowMeans(a_zip_draws[, idx, drop = FALSE])
+  }
+  colnames(out) <- paste0("comp", seq_len(C))
+  out
+}
+
+# Extract
+A_a_zip <- extract_a_zip(fitA)
+B_a_zip <- extract_a_zip(fitB)
+
+comp_index <- sim$truth$comp_index
+comp_sizes <- sim$truth$comp_sizes
+A_comp_mean <- component_means(A_a_zip, comp_index, comp_sizes)
+B_comp_mean <- component_means(B_a_zip, comp_index, comp_sizes)
+
+# Intercepts
+postA_intercept <- as_draws_df(fitA$draws("intercept"))$intercept
+postB_intercept <- as_draws_df(fitB$draws("intercept"))$intercept
+truth_intercept <- sim$truth$intercept
+
+# Sigma_zip
+postA_sigmaz <- as_draws_df(fitA$draws("sigma_zip"))$sigma_zip
+postB_sigmaz <- as_draws_df(fitB$draws("sigma_zip"))$sigma_zip
+truth_sigmaz  <- sim$truth$sigma_zip
+
+# Identify isolates (components with size == 1)
+iso_comps <- which(comp_sizes == 1L)
+iso_nodes <- as.integer(comp_index[cbind(iso_comps, rep(1, length(iso_comps)))])
+```
+
+
+## What to look at & plots/tables
+### Component shift pathology (Model A)
+Theory in one line:
+ICAR only penalizes differences along edges. A constant shift within a connected component is unpenalized.
+
+- Global constraint sum(phi) ≈ 0 pins only the weighted sum across all components. Each component can drift by its own constant offset, as long as those offsets add up (weighted by component sizes) to ~0.
+- This creates a ridge: component means move in opposite directions, and the intercept compensates—especially when component sizes are imbalanced or isolates exist.
+
+Per-component constraints add the missing anchors: sum(phi_c) ≈ 0 inside every component, killing that ridge.
+
+Plot the posterior 95% intervals of per-component means
+
+```{r}
+make_comp_df <- function(M_comp_mean, label) {
+  as_tibble(M_comp_mean) |>
+    mutate(draw = row_number()) |>
+    pivot_longer(-draw, names_to = "component", values_to = "mean_shift") |>
+    group_by(component) |>
+    summarize(
+      mean = mean(mean_shift),
+      lo = quantile(mean_shift, 0.025),
+      hi = quantile(mean_shift, 0.975),
+      .groups = "drop"
+    ) |>
+    mutate(model = label, comp_id = as.integer(sub("comp","",component)))
+}
+
+dfA <- make_comp_df(A_comp_mean, "Global")
+dfB <- make_comp_df(B_comp_mean, "Per-component")
+
+comp_sizes_df <- tibble(comp_id = seq_along(comp_sizes), size = comp_sizes)
+
+p_comp <- bind_rows(dfA, dfB) |>
+  left_join(comp_sizes_df, by = "comp_id") |>
+  ggplot(aes(x = reorder(paste0("C",comp_id," (n=",size,")"), comp_id),
+             y = mean, ymin = lo, ymax = hi, color = model)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_pointrange(position = position_dodge(width = 0.5)) +
+  labs(x = "Component (size)", y = "Posterior mean of a_zip (component mean)",
+       title = "Component shifts: Global vs Per-component constraints") +
+  theme_minimal(base_size = 12)
+print(p_comp)
+```
+
+Expected outcome
+
+- Model B (per-component): intervals tightly straddle 0 for every component.
+- Model A (global): intervals are not centered at 0 component-wise; they often show opposite-signed offsets across components that roughly satisfy the global sum-to-zero. Small components (esp. isolates) can have large apparent offset because nothing pins them locally.
+
+### Intercept bias & compensation
+```{r}
+summ <- function(x) c(mean = mean(x), sd = sd(x),
+                      q05 = quantile(x, .05), q95 = quantile(x, .95))
+cbind(
+  truth_intercept = truth_intercept,
+  ModelA = t(summ(postA_intercept)),
+  ModelB = t(summ(postB_intercept))
+)
+```
+
+Expected outcome
+
+- Model A’s intercept is pulled toward the negative of the (size-weighted) average of component drifts—it absorbs the arbitrary offsets.
+- Model B’s intercept centers near the truth because each component is locally anchored.
+
+You can verify compensation directly by correlating Model A’s intercept with the size-weighted average component mean:
+```{r}
+A_weighted_comp_mean <- rowSums(A_comp_mean * matrix(comp_sizes, nrow = nrow(A_comp_mean), ncol = length(comp_sizes), byrow = TRUE)) /
+                        sum(comp_sizes)
+cor(postA_intercept, -A_weighted_comp_mean)
+```
+High positive correlation ⇒ classic compensating ridge.
+
+### Isolates: should be ~0
+In the data, isolates have true a_zip = 0 (ICAR cannot vary on a singleton).
+
+- Model B enforces sum(phi_c) ≈ 0 for that singleton, which effectively pins the isolate at ~0.
+- Model A lets the isolate drift if another component offsets it.
+
+```{r}
+# Posterior for isolates' a_zip
+iso_df <- tibble(
+  node = iso_nodes,
+  A_mean = colMeans(A_a_zip[, iso_nodes, drop = FALSE]),
+  B_mean = colMeans(B_a_zip[, iso_nodes, drop = FALSE])
+)
+iso_df
+```
+You should see A_mean noticeably away from 0 for some isolates, while B_mean ≈ 0.
+
+### Cross-component trade-offs (covariance of component means)
+Under Model A, component means are strongly negatively correlated (if one drifts up, others drift down to satisfy global centering).
+
+```{r}
+corA <- cor(A_comp_mean)
+round(corA[1:min(6,ncol(corA)), 1:min(6,ncol(corA))], 2)
+# Compare to Model B:
+corB <- cor(B_comp_mean)
+round(corB[1:min(6,ncol(corB)), 1:min(6,ncol(corB))], 2)
+```
+
+You’ll typically see substantial off-diagonal negative correlations in A, but near-zero in B.
+
+### Within-component contrasts are fine in both
+A useful sanity check: if you subtract each draw’s component mean (i.e., center within component), both models should agree closely on contrasts (because the ICAR penalty identifies differences along edges).
+```{r}
+center_within_comp <- function(a_zip_draws, comp_index, comp_sizes) {
+  D <- a_zip_draws
+  C <- nrow(comp_index)
+  for (c in seq_len(C)) {
+    idx <- comp_index[c, seq_len(comp_sizes[c])]
+    cm  <- rowMeans(D[, idx, drop = FALSE])
+    D[, idx] <- sweep(D[, idx, drop = FALSE], 1, cm, "-")
+  }
+  D
+}
+A_contrast <- center_within_comp(A_a_zip, comp_index, comp_sizes)
+B_contrast <- center_within_comp(B_a_zip, comp_index, comp_sizes)
+
+# Compare node-wise posterior means of the centered fields
+contr_comp <- tibble(
+  node = seq_len(ncol(A_contrast)),
+  A = colMeans(A_contrast),
+  B = colMeans(B_contrast)
+)
+ggplot(contr_comp, aes(A, B)) +
+  geom_abline(linetype = 2) +
+  geom_point(size = 1.2) +
+  coord_equal() +
+  labs(title = "Within-component contrasts agree across models",
+       x = "Model A centered a_zip mean", y = "Model B centered a_zip mean") +
+  theme_minimal(base_size = 12)
+```
+
+You should see points hugging the diagonal: differences inside a component are identified either way; it’s the component means that cause trouble under global centering.
+
+### sigma_zip recovery (optional check)
+```{r}
+cbind(
+  truth_sigma_zip = truth_sigmaz,
+  ModelA = t(summ(postA_sigmaz)),
+  ModelB = t(summ(postB_sigmaz))
+)
+```
+When Model A’s ridge is severe (many small/isolated components), you’ll often see slower mixing and wider dispersion for sigma_zip. Model B tends to mix better and recover amplitude more cleanly because the field is fully anchored.
+
+## Interpretation—why per-component constraints matter (tied to the simulated data)
+Your simulated graph deliberately mixes two isolates, several tiny components (sizes 2–6), a medium ER component (25), and a large grid (64).
+
+In the ICAR prior, only edge differences are penalized; constant offsets on each connected component are unpenalized directions.
+Model A (global sum-to-zero) pins only the overall average. That leaves C-1 unconstrained “component-shift” directions that the likelihood struggles to identify when components don’t share edges (they don’t!). The sampler “slides” mass along that ridge:
+
+- Small components (and especially isolates) can float with large offsets.
+- Offsets cancel across components to maintain the global sum ≈ 0.
+- The intercept adjusts to partially absorb these drifts, biasing it away from the truth.
+- Component mean posteriors become strongly negatively correlated.
+
+Model B (per-component sums) adds exactly the missing anchors: sum(phi_c) ≈ 0 for every component (including isolates). This:
+
+- Eliminates the ridge (no unpenalized offsets remain).
+- Centers each component at 0, so intercept is free to represent the true global level.
+- Yields well-behaved posteriors for isolates (≈0) and improved mixing for sigma_zip.
+
+Within-component contrasts (differences between neighboring ZIPs) are identified under both models; you saw that by centering each draw per component—the two models agree. The problem in Model A is not gradients, it’s the component means.
+
+## Minimal report table (handy to print)
+```{r}
+report <- list(
+  intercept = tibble(
+    param = "intercept",
+    truth = sim$truth$intercept,
+    A_mean = mean(postA_intercept), A_sd = sd(postA_intercept),
+    B_mean = mean(postB_intercept), B_sd = sd(postB_intercept)
+  ),
+  comp_means = bind_rows(
+    dfA |> select(component, mean, lo, hi) |> mutate(model = "A (global)"),
+    dfB |> select(component, mean, lo, hi) |> mutate(model = "B (per-comp)")
+  ),
+  isolates = iso_df,
+  sigma_zip = tibble(
+    param = "sigma_zip",
+    truth = truth_sigmaz,
+    A_mean = mean(postA_sigmaz), A_sd = sd(postA_sigmaz),
+    B_mean = mean(postB_sigmaz), B_sd = sd(postB_sigmaz)
+  ),
+  cor_comp_means = list(A = corA, B = corB)
+)
+report$intercept
+report$sigma_zip
+head(report$comp_means)
+report$isolates
+```
+
+TL;DR (what you’ll see)
+Model A: per-component mean of a_zip not centered at 0; large negative correlations between component means; intercept biased; isolates drift.
+Model B: per-component means tightly around 0 (including isolates); intercept near truth; better sigma_zip behavior.
+Both: within-component contrasts agree once you center by component.
+This is exactly the identifiability issue per-component constraints were designed to fix.
+
+## Helpers to build an adjacency matrix
+
+```{r}
+# Edges -> dense/sparse adjacency matrices for brms::car()
+adjacency_from_edges <- function(N_zip, node1, node2, labels = NULL, sparse = FALSE) {
+  stopifnot(length(node1) == length(node2))
+  if (is.null(labels)) labels <- as.character(seq_len(N_zip))
+  stopifnot(length(labels) == N_zip)
+
+  # build symmetric adjacency as a Matrix::dgCMatrix first
+  if (!requireNamespace("Matrix", quietly = TRUE)) stop("Please install 'Matrix'.")
+  i <- c(node1, node2); j <- c(node2, node1)
+  W <- Matrix::sparseMatrix(i = i, j = j, x = 1, dims = c(N_zip, N_zip))
+  Matrix::diag(W) <- 0
+  # ensure binary (in case of duplicates)
+  W@x[] <- 1
+  rownames(W) <- colnames(W) <- labels
+
+  if (sparse) return(W)                      # dgCMatrix for type='esicar'
+  as.matrix(W)                               # dense matrix for type='icar'
+}
+
+# Build the brms-ready data.frame from your simulated 'sim' object
+make_brms_data <- function(sim) {
+  N <- sim$stan_data_A$N
+  K <- sim$stan_data_A$K
+  X <- sim$stan_data_A$X
+  df <- data.frame(
+    y         = sim$stan_data_A$y,
+    n_sample  = sim$stan_data_A$n_sample,
+    race      = factor(sim$stan_data_A$J_race),
+    zip       = factor(sim$stan_data_A$J_zip)
+  )
+  # add columns X1..XK
+  for (k in seq_len(K)) df[[paste0("X", k)]] <- X[, k]
+  df
+}
+
+```
+
+## Fit brms with car()
+
+```{r}
+# deps
+suppressPackageStartupMessages({
+  library(brms)
+  library(posterior)
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+})
+
+# Helper: build the RHS with the X1..XK columns actually present in df
+make_fixed_rhs <- function(df, K_hint = NULL) {
+  Xcols <- grep("^X\\d+$", names(df), value = TRUE)
+  if (!is.null(K_hint)) {
+    Xcols <- Xcols[seq_len(min(length(Xcols), K_hint))]
+  }
+  if (length(Xcols)) paste(Xcols, collapse = " + ") else "0"
+}
+
+# Build data and adjacency from your existing 'sim'
+df <- make_brms_data(sim)
+
+# Make sure zip is a factor and levels match adjacency row/colnames
+lbl <- levels(df$zip)
+
+M_dense  <- adjacency_from_edges(sim$stan_data_A$N_zip,
+                                 sim$stan_data_A$node1,
+                                 sim$stan_data_A$node2,
+                                 labels = lbl, sparse = FALSE)
+
+M_sparse <- adjacency_from_edges(sim$stan_data_A$N_zip,
+                                 sim$stan_data_A$node1,
+                                 sim$stan_data_A$node2,
+                                 labels = lbl, sparse = TRUE)
+
+# Build the fixed part programmatically (uses however many X's exist)
+rhs <- make_fixed_rhs(df)   # e.g., "X1 + X2 + X3 + X4"
+
+# IMPORTANT: In the formula, refer to the matrix by a SYMBOL that you'll pass via data2
+# Use 'M' in the formula, and pass data2 = list(M = <your matrix>)
+form_car_icar <- bf(
+  as.formula(paste0("y | trials(n_sample) ~ 1 + ", rhs, " + (1|race) + car(M, gr = zip, type = 'icar')"))
+)
+
+pri <- c(
+  set_prior("normal(0,5)", class = "Intercept"),
+  set_prior("normal(0,3)", class = "b"),
+  set_prior("normal(0,1)", class = "sd", group = "race"),
+  set_prior("normal(0,1)", class = "sdcar")
+)
+
+writeLines(
+  stancode(form_car_icar, data = df, data2 = list(M = M_dense), family = binomial(), prior = pri),
+  paste0(stan_dir, "brms_icar.stan")
+)
+
+fit_brms_icar <- brm(
+  formula = form_car_icar,
+  data    = df,
+  data2   = list(M = M_dense),   # <<< HERE
+  family  = binomial(),
+  prior   = pri,
+  chains  = 4, cores = 4, iter = 2000,
+  control = list(adapt_delta = 0.9, max_treedepth = 12)
+)
+
+
+```
+
+
+## Extract the CAR field from brms
+brms names the latent CAR coefficients with a car[...] prefix (and exposes the overall scale via sdcar). We’ll auto-detect & order those columns so you can compare them directly to your a_zip from Stan.
+
+
+```{r}
+# --- PATCH: robust extraction + checks before plotting ---
+
+# 1) Extract the CAR latent field from brms (ICAR)
+brms_extract_car <- function(fit, zip_levels = NULL) {
+  dr <- posterior::as_draws_df(fit)
+  car_cols <- grep("^(car|rcar)\\[", names(dr), value = TRUE)
+  if (!length(car_cols)) stop("Could not find car[...] (or rcar[...]) parameters in brms fit.")
+  ord <- order(as.integer(gsub(".*\\[|\\]", "", car_cols)))
+  car_cols <- car_cols[ord]
+  car_mat <- as.matrix(dr[, car_cols, drop = FALSE])
+  if (!is.null(zip_levels)) colnames(car_mat) <- zip_levels
+  car_mat
+}
+
+# 2) Make sure we really have a fitted brms model in this environment
+stopifnot(exists("fit_brms_icar"), inherits(fit_brms_icar, "brmsfit"))
+
+# You set this earlier as: lbl <- levels(df$zip)
+stopifnot(exists("lbl"))
+
+# Create BRMS_car (ICAR)
+BRMS_car <- brms_extract_car(fit_brms_icar, zip_levels = lbl)
+
+# If you ALSO fitted a sparse model and want it:
+if (exists("fit_brms_esicar") && inherits(fit_brms_esicar, "brmsfit")) {
+  # For sparse fits where isolates were excluded, you may have used a reduced gr factor.
+  # If so, pass the used levels (e.g., levels(sparse$df[[sparse$gr_var]])).
+  BRMS_car_sparse <- brms_extract_car(fit_brms_esicar)  # add zip_levels arg if needed
+}
+
+# 3) Ensure component index objects from your simulator are present
+stopifnot(exists("comp_index"), exists("comp_sizes"))
+
+# 4) Compute component means for brms CAR
+BRMS_comp_mean <- component_means(BRMS_car, comp_index, comp_sizes)
+
+# 5) Summarize for plotting
+dfBRMS <- tibble::as_tibble(BRMS_comp_mean) |>
+  dplyr::mutate(draw = dplyr::row_number()) |>
+  tidyr::pivot_longer(-draw, names_to = "component", values_to = "mean_shift") |>
+  dplyr::group_by(component) |>
+  dplyr::summarize(
+    mean = mean(mean_shift),
+    lo = quantile(mean_shift, 0.025),
+    hi = quantile(mean_shift, 0.975),
+    .groups = "drop"
+  ) |>
+  dplyr::mutate(model = "brms-ICAR",
+                comp_id = as.integer(gsub("\\D", "", component)))
+
+# 6) brms intercept & sdcar from posterior draws (brms style)
+dr_brms <- posterior::as_draws_df(fit_brms_icar)
+brms_intercept <- dr_brms[["b_Intercept"]]
+post_sdcar     <- dr_brms[["sdcar"]]
+
+# --- Plot comparing Stan A / Stan B / brms ---
+# Assumes you've already built dfA and dfB earlier via make_comp_df(A_comp_mean, ...) etc.
+comp_sizes_df <- tibble::tibble(comp_id = seq_along(comp_sizes), size = comp_sizes)
+
+p_comp_all <- dplyr::bind_rows(
+  dfA,  # Stan-Global
+  dfB,  # Stan-PerComp
+  dfBRMS
+) |>
+  dplyr::left_join(comp_sizes_df, by = "comp_id") |>
+  ggplot2::ggplot(ggplot2::aes(
+    x = reorder(paste0("C", comp_id, " (n=", size, ")"), comp_id),
+    y = mean, ymin = lo, ymax = hi, color = model
+  )) +
+  ggplot2::geom_hline(yintercept = 0, linetype = 2) +
+  ggplot2::geom_pointrange(position = ggplot2::position_dodge(width = 0.6)) +
+  ggplot2::labs(
+    x = "Component (size)", y = "Posterior mean of spatial effect (component mean)",
+    title = "Component shifts: Stan (Global vs Per-comp) vs brms (ICAR)"
+  ) +
+  ggplot2::theme_minimal(base_size = 12)
+
+print(p_comp_all)
+
+# --- Intercept comparison table ---
+cbind(
+  truth_intercept = sim$truth$intercept,
+  Stan_Global = c(mean = mean(postA_intercept), sd = sd(postA_intercept)),
+  Stan_PerComp = c(mean = mean(postB_intercept), sd = sd(postB_intercept)),
+  BRMS_ICAR   = c(mean = mean(brms_intercept),  sd = sd(brms_intercept))
+)
+
+# --- Isolates (should be ~0 under per-component constraints) ---
+# Assumes iso_nodes defined earlier
+stopifnot(exists("iso_nodes"))
+BRMS_iso_means <- colMeans(BRMS_car[, iso_nodes, drop = FALSE])
+
+tibble::tibble(
+  node = iso_nodes,
+  Stan_Global   = colMeans(A_a_zip[, iso_nodes, drop = FALSE]),
+  Stan_PerComp  = colMeans(B_a_zip[, iso_nodes, drop = FALSE]),
+  BRMS_ICAR     = BRMS_iso_means
+)
+
+```
+
