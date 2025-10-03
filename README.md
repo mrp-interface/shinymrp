@@ -44,7 +44,7 @@ Import **shinymrp** in scripts or R Markdown documents just like any other R pac
 library(shinymrp)
 ```
 
-### Installation
+## Installation
 
 To get started, install the latest development version of **shinymrp** from [GitHub](https://github.com/mrp-interface/shinymrp) using `remotes`:
 
@@ -58,7 +58,6 @@ The package installation does not automatically install all prerequisites. Speci
 
 - For setting up your toolchain, see [Stan’s documentation](https://mc-stan.org/docs/cmdstan-guide/installation.html#cpp-toolchain).
 - Once ready, follow the [CmdStanR installation instructions](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStanR and CmdStan.
-
 
 ## Learn More
 
