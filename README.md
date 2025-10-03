@@ -16,47 +16,49 @@
 
 ## Getting Started
 
+You can use **shinymrp** in two flexible ways:
 
-You can use **shinymrp** in two flexible ways, both available through a single easy installation:
-
-1. Shiny App
+### Shiny App
 
 The graphical user interface (GUI), built with the Shiny framework, is designed for newcomers and those looking for an interactive, code-free analysis experience.
 
-2. Object-Oriented Programming Interface
+Launch the app locally in R with:
 
-Leverage the full flexibility of the exported R6 classes for a programmatic workflow, ideal for advanced users and those integrating MRP into larger R projects.
-
-### Installation 
-
-To get started, install the latest development version from [GitHub](https://github.com/mrp-interface/shinymrp):
-
-```R
-# If you don't have 'remotes', install it first:
-install.packages('remotes')
-remotes::install_github('mrp-interface/shinymrp')
-```
-### Launch the Shiny App
-
-New to **shinymrp**? We recommend starting with the Shiny app:
-
-```R
+```r
 shinymrp::run_app()
 ```
 
-### Import programmatic components
+#### Try the Demo
 
-For those experienced with R and object-oriented programming, use the package in scripts or R Markdown documents:
+Explore the Shiny app without installation via our [online demo](https://mrpinterface.shinyapps.io/shinymrp/).
 
-```R
+Need a walkthrough? Watch our step-by-step [video tutorial](https://youtu.be/CUcRYn92fmU?si=EhcAbuwuG2XM-0N0).
+
+### Object-Oriented Programming Interface
+
+Leverage the full flexibility of the exported R6 classes for a programmatic workflow, ideal for advanced users and those integrating MRP into larger R projects.
+
+Import **shinymrp** in scripts or R Markdown documents just like any other R package:
+
+```r
 library(shinymrp)
 ```
 
-## Try the Demo
+### Installation
 
-Explore the **shinymrp** features instantly, no installation required, via our [online demo](https://mrpinterface.shinyapps.io/shinymrp/). 
+To get started, install the latest development version of **shinymrp** from [GitHub](https://github.com/mrp-interface/shinymrp) using `remotes`:
 
-Need a walkthrough? Watch our step-by-step [video tutorial](https://youtu.be/CUcRYn92fmU?si=EhcAbuwuG2XM-0N0).
+```r
+# If 'remotes' is not installed:
+install.packages("remotes") 
+remotes::install_github("mrp-interface/shinymrp")
+```
+
+The package installation does not automatically install all prerequisites. Specifically, **shinymrp** uses [CmdStanR](https://mc-stan.org/cmdstanr/) as the bridge to run [Stan](https://mc-stan.org/), a state-of-the-art platform for Bayesian modeling. Stan requires a modern C++ toolchain (compiler and GNU Make build utility). 
+
+- For setting up your toolchain, see [Stan’s documentation](https://mc-stan.org/docs/cmdstan-guide/installation.html#cpp-toolchain).
+- Once ready, follow the [CmdStanR installation instructions](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStanR and CmdStan.
+
 
 ## Learn More
 

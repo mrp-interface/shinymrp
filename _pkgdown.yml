@@ -4,6 +4,7 @@ url: https://mrp-interface.github.io/shinymrp/
 template:
   bootstrap: 5
   bootswatch: cosmo
+  math-rendering: mathjax
 
 navbar:
   logo:
@@ -47,8 +48,9 @@ articles:
       - getting-started
   - title: "More details"
     desc: >
-      A deeper dive into the programmatic interface and data preprocessing in shinymrp.
+      A deeper dive into the programmatic interface, the methodology, and data preprocessing in shinymrp.
     contents:
       - workflow
       - data-prep
+      - method
       - example

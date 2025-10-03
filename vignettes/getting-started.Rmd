@@ -18,22 +18,7 @@ vignette: >
 
 ![](./figures/workflow.png)
 
-If you prefer a graphical and interactive experience, you can launch the Shiny app with `shinymrp::run_app()`, which includes a built-in user guide. Users interested in using the programmatic interface can follow examples in the vignettes, starting with the [Key steps](https://mrp-interface.github.io/shinymrp/articles/getting-started#key-steps) section below. Regardless of the interface you choose, please follow the instructions below to install the package prerequisites.
-
-## Installation
-
-To get started, install the latest development version of **shinymrp** from [GitHub](https://github.com/mrp-interface/shinymrp):
-
-```{r, eval = FALSE}
-# If 'remotes' is not installed:
-install.packages("remotes") 
-remotes::install_github("mrp-interface/shinymrp")
-```
-The package installation does not automatically install all prerequisites. Specifically, **shinymrp** uses [CmdStanR](https://mc-stan.org/cmdstanr/) as the bridge to run [Stan](https://mc-stan.org/), a state-of-the-art platform for Bayesian modeling. Stan requires a modern C++ toolchain (compiler and GNU Make build utility). 
-
-- For setting up your toolchain, see [Stan’s documentation](https://mc-stan.org/docs/cmdstan-guide/installation.html#cpp-toolchain).
-- Once ready, follow the [CmdStanR installation instructions](https://mc-stan.org/cmdstanr/articles/cmdstanr.html#installing-cmdstan) to install CmdStanR and CmdStan.
-
+If you prefer a graphical and interactive experience, you can launch the Shiny app with `shinymrp::run_app()`, which includes a built-in user guide. Users interested in using the programmatic interface can follow examples in the vignettes, starting with the [Key steps](https://mrp-interface.github.io/shinymrp/articles/getting-started#key-steps) section below.
 
 ## Key steps
 
