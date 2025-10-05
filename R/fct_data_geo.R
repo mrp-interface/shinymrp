@@ -1,8 +1,6 @@
 # ---------- order helper ----------
 unique_in_order <- function(x) x[!duplicated(x)]
 
-# ---------- unchanged: subset_edges_for_ids / components_from_edges / append_isolates / comp_index_from_comp_id ----------
-# (your originals work as long as we feed them ids in the desired order)
 
 # ---------- ZCTA-specific helper (ORDER-PRESERVING) ----------
 derive_targets_zcta <- function(zip_vec, xwalk, zip_col, zcta_col, join_col, isolate_when_join_is_na) {

@@ -154,6 +154,7 @@ module_ids <- list(
       interaction = "normal(0, 1)",
       global_scale = "cauchy(0 , 1)",
       local_scale = "normal(0, 1)"
-    )
+    ),
+    custom_priors = c("structured", "icar")
   )
 }

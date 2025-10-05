@@ -155,14 +155,20 @@ MRPWorkflow <- R6::R6Class(
     assert_model_spec = function(model_spec) {
       private$assert_mrp_exists()
 
+
+
       # check if model_spec$intercept is a list with a single element
       if (!is.list(model_spec$intercept) || names(model_spec$intercept) != "intercept") {
         stop("model_spec$intercept must be a list with a single element named 'intercept'.")
       }
 
-
       # check prior syntax for all effects
       effects_w_priors <- unlist(model_spec)
+      names(effects_w_priors) <- purrr::map_chr(
+        names(effects_w_priors),
+        ~ strsplit(.x, split = "\\.")[[1]][2]
+      )
+
       bools <- effects_w_priors %>%
         purrr::map_lgl(function(s) .clean_prior_syntax(s) %>% .check_prior_syntax())
 
@@ -194,17 +200,27 @@ MRPWorkflow <- R6::R6Class(
             paste(omit_vars$nested, collapse = ", ")))
       }
 
-      # check if interactions can be assigned structured prior
-      ints_w_struct <- names(model_spec$interaction[model_spec$interaction == "structured"])
-      valid_ints_w_struct <- .filter_interactions(
+      # check if effects can be assigned structured prior
+      ints_w_struct <- names(effects_w_priors[effects_w_priors == "structured"])
+      valid_ints_w_struct <- .interactions_for_structured(
         interactions = ints_w_struct,
         fixed_effects = names(model_spec$fixed),
         data = private$mrpdat_$input
       )
       invalid_ints_w_struct <- setdiff(ints_w_struct, valid_ints_w_struct)
       if (length(invalid_ints_w_struct) > 0) {
-        stop(paste0("The following interactions cannot be assigned structured prior: ",
+        stop(paste0("The following effects cannot be assigned structured prior: ",
             paste(invalid_ints_w_struct, collapse = ", ")))
+      }
+
+      # check if effects can be assigned ICAR prior
+      vars_w_icar <- names(effects_w_priors[effects_w_priors == "icar"])
+      valid_vars_w_icar <- intersect(vars_w_icar, .const()$vars$geo) %>%
+        setdiff(names(model_spec$fixed))
+      invalid_vars_w_icar <- setdiff(vars_w_icar, valid_vars_w_icar)
+      if (length(invalid_vars_w_icar) > 0) {
+        stop(paste0("The following effects cannot be assigned ICAR prior: ",
+            paste(invalid_vars_w_icar, collapse = ", ")))
       }
     },
 

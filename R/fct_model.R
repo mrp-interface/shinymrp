@@ -50,16 +50,17 @@
   signed_decimal <- "-?[0-9]+(?:\\.[0-9]+)?" # e.g. -1,  0.5, -2.718
 
   patterns <- list(
-    normal    = paste0("^normal\\(",
-                       signed_decimal, ",",    # mean can be negative or positive decimal
-                       decimal,                # sd must be non-negative decimal
-                       "\\)$"),
+    normal = paste0("^normal\\(",
+                    signed_decimal, ",",    # mean can be negative or positive decimal
+                    decimal,                # sd must be non-negative decimal
+                    "\\)$"),
     student_t = paste0("^student_t\\(",
                        "[1-9][0-9]*,",         # df: positive integer
                        signed_decimal, ",",    # location (μ): signed decimal
                        decimal,                # scale (σ): non-negative decimal
                        "\\)$"),
-    structured = "^structured$"
+    structured = "^structured$",
+    icar = "^icar$"
   )
 
   dist <- strsplit(s, "\\(", fixed = FALSE)[[1]][1]
@@ -94,7 +95,10 @@
 #' @keywords internal
 .set_default_priors <- function(effects) {
   for (type in c("intercept", .const()$args$effect_types)) {
-    effects[[type]] <- purrr::map(effects[[type]], ~ .nullify(.x) %||% .const()$default_priors[[type]])
+    effects[[type]] <- purrr::map(
+      effects[[type]],
+      ~ .nullify(.x) %||% .const()$default_priors[[type]]
+    )
   }
 
   return(effects)
@@ -133,6 +137,27 @@
     } else {
       out$bincont[[s]] <- fixed[[s]]
     }
+  }
+  
+  return(out)
+}
+
+# ' Group Varying Effects
+#'
+#' @description Simply returns the varying effects as is. Placeholder for
+#' potential future processing or validation of varying effects.
+#' 
+#' @param varying Named list of varying effects with prior specifications
+#' @param dat Data frame containing the variables to determine types (not used currently)
+#'
+#' @return Named list of varying effects unchanged.
+#' @noRd
+#' @keywords internal 
+.group_varying <- function(varying, dat) {
+  out <- list()
+  
+  if (length(varying) > 0) {
+    out <- varying
   }
   
   return(out)
@@ -230,23 +255,30 @@
   # fixed main effects
   out$fixed <- .group_fixed(effects$fixed, dat)
   
-  # varying main effects
-  out$varying <- if(is.null(effects$varying)) list() else effects$varying
-  
+  # varying main effects with "regular" priors
+  cond <- !effects$varying %in% .const()$custom_priors
+  var_reg <- effects$varying[cond]
+  out$varying <- .group_varying(var_reg, dat)
+
+  # varying main effects with ICAR prior
+  var_icar <- effects$varying[effects$varying == "icar"]
+  out$varying_icar <- .group_varying(var_icar, dat)
+
   # reorder terms in interactions
   if(!is.null(effects$interaction)) {
     names(effects$interaction) <- .sort_interactions(names(effects$interaction), dat) 
   }
   
-  # interactions without structured priors
-  wo_struct <- effects$interaction[effects$interaction != "structured"]
-  out$interaction <- .group_interactions(wo_struct, dat)
-  
+  # interactions with "regular" priors
+  cond <- !effects$interaction %in% .const()$custom_priors
+  itr_reg <- effects$interaction[cond]
+  out$interaction <- .group_interactions(itr_reg, dat)
+
   # interactions with structured priors
-  w_struct <- effects$interaction[effects$interaction == "structured"]
-  out$structured <- .group_interactions(w_struct, dat)
-  
-  
+  itr_struct <- effects$interaction[effects$interaction == "structured"]
+  out$interaction_structured <- .group_interactions(itr_struct, dat)
+
+
   return(out)
 }
 
@@ -267,9 +299,9 @@
 #'     \item i_varsl: Varying-slope interactions
 #'     \item i_varit: Varying-intercept interactions
 #'     \item i_varits: Special varying-intercept interactions
-#'     \item s_varsl: Structured varying-slope interactions
-#'     \item s_varit: Structured varying-intercept interactions
-#'     \item s_varits: Special structured varying-intercept interactions
+#'     \item i_varsl_str: Structured varying-slope interactions
+#'     \item i_varit_str: Structured varying-intercept interactions
+#'     \item i_varits_str: Special structured varying-intercept interactions
 #'   }
 #' @noRd
 #' @keywords internal
@@ -280,15 +312,16 @@
     m_fix_bc = effects$fixed$bincont,
     m_fix_c = effects$fixed$cat,
     m_var = effects$varying,
+    m_var_icar = effects$varying_icar,
     i_fixsl = effects$interaction$fixed_slope,
     i_varsl = effects$interaction$varying_slope,
     i_varit = effects$interaction$varying_intercept,
     i_varits = effects$interaction$varying_intercept_special,
-    s_varsl = effects$structured$varying_slope,
-    s_varit = effects$structured$varying_intercept,
-    s_varits = effects$structured$varying_intercept_special
+    i_varsl_str = effects$interaction_structured$varying_slope,
+    i_varit_str = effects$interaction_structured$varying_intercept,
+    i_varits_str = effects$interaction_structured$varying_intercept_special
   )
-  
+  View(out)
   return(out)
 }
 
@@ -331,7 +364,7 @@
   }
   
   # interactions
-  int <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  int <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
   for(s in gsub(':', '', names(int))) {
     scode <- paste0(scode, stringr::str_interp("
   int<lower=1> N_${s};
@@ -404,14 +437,14 @@
   }
   
   # varying-intercept interaction with structured prior
-  for(s in names(c(effects$s_varit, effects$s_varits))) {
+  for(s in names(c(effects$i_varit_str, effects$i_varits_str))) {
     s <- gsub(':', '', s)
     scode <- paste0(scode, stringr::str_interp("
   vector[N_${s}] z_${s};"))
   }
   
   # varying-slope interaction with structured prior
-  for(s in names(effects$s_varsl)) {
+  for(s in names(effects$i_varsl_str)) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
     scode <- paste0(scode, stringr::str_interp("
@@ -425,7 +458,7 @@
   }
   
   # include the parameters below if structured prior is used
-  int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
+  int_struct <- c(effects$i_varsl_str, effects$i_varit_str, effects$i_varits_str)
   if(length(int_struct) > 0) {
     scode <- paste0(scode, "
   real<lower=0> tau;
@@ -439,9 +472,9 @@
   scode <- ""
   
   struct_effects <- c(
-    names(effects$s_varsl) %>%
+    names(effects$i_varsl_str) %>%
       purrr::map(function(s) strsplit(s, ':')[[1]][1]),
-    names(c(effects$s_varit, effects$s_varits)) %>%
+    names(c(effects$i_varit_str, effects$i_varits_str)) %>%
       purrr::map(function(s) strsplit(s, ':')[[1]]) %>%
       do.call(c, .)
   ) %>%
@@ -478,7 +511,7 @@
   }
   
   # varying-intercept interaction with structured prior
-  for(s in names(c(effects$s_varit))) {
+  for(s in names(c(effects$i_varit_str))) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
     scode <- paste0(scode, stringr::str_interp("
@@ -487,7 +520,7 @@
   }
   
   # varying-intercept interaction with structured prior (with binary variable)
-  for(s in names(c(effects$s_varits))) {
+  for(s in names(c(effects$i_varits_str))) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
     scode <- paste0(scode, stringr::str_interp("
@@ -496,7 +529,7 @@
   }
   
   # varying-slope interaction with structured prior
-  for(s in names(effects$s_varsl)) {
+  for(s in names(effects$i_varsl_str)) {
     ss <- strsplit(s, split = ':')[[1]]
     s <- paste0(ss[1], ss[2])
     scode <- paste0(scode, stringr::str_interp("
@@ -505,8 +538,8 @@
   }
   
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
-  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
-  int_varsl <- c(effects$i_varsl, effects$s_varsl)
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
+  int_varsl <- c(effects$i_varsl, effects$i_varsl_str)
   s_formula <- if (metadata$family == "binomial") {
     "
   vector<lower=0, upper=1>[N] p = inv_logit(intercept%s%s%s%s);
@@ -554,9 +587,9 @@
 .model_stan <- function(effects, metadata) {
   # group effects
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
-  int_varsl <- c(effects$i_varsl, effects$s_varsl)
+  int_varsl <- c(effects$i_varsl, effects$i_varsl_str)
   int_varsl_wo_struct <- effects$i_varsl
-  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
   int_varit_wo_struct <- c(effects$i_varit, effects$i_varits)
 
   # outcome distribution
@@ -582,7 +615,7 @@
   )
   
   # include the parameters below if structured prior is used
-  int_struct <- c(effects$s_varsl, effects$s_varit, effects$s_varits)
+  int_struct <- c(effects$i_varsl_str, effects$i_varit_str, effects$i_varits_str)
   if(length(int_struct) > 0) {
     scode <- paste0(scode, stringr::str_interp("
   tau ~ ${.const()$default_priors$global_scale};
@@ -660,8 +693,8 @@
 #' @keywords internal
 .gq_pstrat <- function(effects, metadata) {
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
-  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
-  int_varsl <- c(effects$i_varsl, effects$s_varsl)
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
+  int_varsl <- c(effects$i_varsl, effects$i_varsl_str)
   scode <- ""
   
   # sample from posterior for parameters of new levels
@@ -1010,7 +1043,7 @@ generated quantities { ${gq_code}
     }
     
     # interactions
-    int <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
+    int <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
     for(s in names(int)) {
       ss <- strsplit(s, split = ':')[[1]]
       s <- paste0(ss[1], ss[2])
@@ -1372,8 +1405,8 @@ generated quantities { ${gq_code}
   .require_cmdstanr_cmdstan()
 
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
-  int_varit <- c(effects$i_varit, effects$i_varits, effects$s_varit, effects$s_varits)
-  int_varsl <- c(effects$i_varsl, effects$s_varsl)
+  int_varit <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
+  int_varsl <- c(effects$i_varsl, effects$i_varsl_str)
 
   ### fixed main effects & fixed-slope interaction
   df_fixed <- data.frame()

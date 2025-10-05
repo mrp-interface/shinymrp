@@ -8,7 +8,7 @@ make_filename <- function(
     fixed = c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl),
     varying = effects$m_var,
     interaction = c(effects$i_varsl, effects$i_varit, effects$i_varits,
-                    effects$s_varsl, effects$s_varit, effects$s_varits)
+                    effects$i_varsl_str, effects$i_varit_str, effects$i_varits_str)
   )
 
 
