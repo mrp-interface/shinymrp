@@ -29,6 +29,8 @@ parameters {
 
   real<lower=0> sigma_zip;
   vector[N_zip] phi_zip;
+
+  real<lower=0> tau;
 }
 transformed parameters {
   vector[N_race] a_race = sigma_race * z_race;
@@ -45,13 +47,8 @@ model {
   sigma_zip  ~ normal(0, 1);
 
   if (N_edges > 0)
-    target += -0.5 * dot_self(phi_zip[node1] - phi_zip[node2]);
+    target += -0.5 * tau * dot_self(phi_zip[node1] - phi_zip[node2]);
 
-  // *** Per-component soft sum-to-zero constraints ***
-  for (c in 1:N_comps) {
-    int nc = comp_sizes[c];
-    vector[nc] phi_c;
-    for (i in 1:nc) phi_c[i] = phi_zip[ comp_index[c, i] ];
-    sum(phi_c) ~ normal(0, 0.001 * nc);
-  }
+  // *** Single global soft sum-to-zero ***
+  sum(phi_zip) ~ normal(0, 0.001 * N_zip);
 }
