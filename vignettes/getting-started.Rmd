@@ -106,7 +106,7 @@ model$diagnostics()
 workflow$pp_check(model)
 
 # Compare different models using leave-one-out cross-validation
-#workflow$compare_models(model1, model2)
+# workflow$compare_models(model, another_model)
 ```
 
 ### 4. Result visualization
@@ -127,7 +127,7 @@ workflow$estimate_map(model, geo = "county")
 
 - For more details on input data requirements and preprocessing, see the vignette on [Data preprocessing](https://mrp-interface.github.io/shinymrp/articles/data-prep).
 - For a more detailed walk-through of each method, output interpretation, and recommended practices, see the [Programmatic workflow demonstration](https://mrp-interface.github.io/shinymrp/articles/workflow.html) vignette.
-- For elaboration onß the theoretical background of MRP, see the [Methodological guide](https://mrp-interface.github.io/shinymrp/articles/method.html) vignette.
+- For elaboration on the theoretical background of MRP, see the [Methodological guide](https://mrp-interface.github.io/shinymrp/articles/method.html) vignette.
 - For Shiny app users, launch the interactive GUI via `shinymrp::run_app()` or, to try it online without installation, visit the [demo](https://mrpinterface.shinyapps.io/shinymrp/).
 
 

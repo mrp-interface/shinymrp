@@ -117,7 +117,7 @@ workflow$link_acs(
 # with dimensions in inches
 college_hist <- workflow$covar_hist(
   "college",
-  file = "path/to/college_hist.png",
+  file = "college_hist.png",
   width = 18,
   height = 8,
   units = "in"
@@ -199,7 +199,7 @@ workflow$link_acs(
 # with dimensions in inches
 sex_bar <- workflow$demo_bars(
   demo = "sex",
-  file = "path/to/sex_bar.png",
+  file = "sex_bar.png",
   width = 18,
   height = 8,
   units = "in"
@@ -221,7 +221,7 @@ example_model <- example_model()
 est_map <- workflow$estimate_map(
   example_model,
   geo = "county",
-  file = "/path/to/est_map.html"
+  file = "est_map.html"
 )
 ```
 
@@ -340,7 +340,7 @@ workflow$link_acs(
 # of average outcome measure
 oc_map <- workflow$outcome_map(
   summary_type = "max",
-  file = "path/to/outcome_map.html"
+  file = "outcome_map.html"
 )
 ```
 
@@ -373,7 +373,7 @@ workflow$link_acs(
 # Create and (optionally) save outcome plots
 # with dimensions in inches
 oc_plot <- workflow$outcome_plot(
-  file = "path/to/outcome_plot.png",
+  file = "outcome_plot.png",
   width = 18,
   height = 8,
   units = "in"
@@ -392,7 +392,7 @@ workflow <- mrp_workflow()
 example_model <- example_model()
 
 # Perform posterior predictive check and (optionally) save the plot
-ppc_plot <- workflow$pp_check(example_model, file = "/path/to/ppc_plot.png")
+ppc_plot <- workflow$pp_check(example_model, file = "ppc_plot.png")
 ```
 
 ### preprocess()
@@ -467,7 +467,7 @@ workflow$link_acs(
 )
 
 # Create and (optionally) save an interactive sample size map
-ss_map <- workflow$sample_size_map(file ="path/to/sample_size_map.html")
+ss_map <- workflow$sample_size_map(file ="sample_size_map.html")
 ```
 
 ## MRPModel
@@ -646,7 +646,7 @@ formula <- example_model$formula()
 ### metadata()
 Return model metadata
 ```{r}
-library(shinymrp}
+library(shinymrp)
 
 # Load example data
 example_model <- example_model()
@@ -679,10 +679,10 @@ workflow <- mrp_workflow()
 example_model <- example_model()
 
 # Save model to file
-example_model$save("/path/to/model.qs")
+example_model$save("model.qs")
 
 # Load model later
-loaded_model <- qs::qread("/path/to/model.qs")
+loaded_model <- qs::qread("model.qs")
 ```
 
 ### stan_code()
