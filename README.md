@@ -32,7 +32,7 @@ shinymrp::run_app()
 
 Explore the Shiny app without installation via our [online demo](https://mrpinterface.shinyapps.io/shinymrp/).
 
-Need a walkthrough? Watch our step-by-step [video tutorial](https://youtu.be/CUcRYn92fmU?si=EhcAbuwuG2XM-0N0).
+Need a walk-through? Watch our step-by-step [video tutorial](https://youtu.be/CUcRYn92fmU?si=EhcAbuwuG2XM-0N0).
 
 ### Object-Oriented Programming Interface
 

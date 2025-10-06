@@ -182,7 +182,7 @@ While the ACS reports geography at the levels of census tracts, counties, and st
 - Employment rate of a ZIP code is defined as the percentage of the residing population who are employed as a part of the civilian labor force;
 - Income measure of a ZIP code is defined as the average value of tract-level median household income in the past 12 months, weighted by tract population counts;
 - ADI of a ZIP code is the average ADI across covered census tracts, weighted by tract population counts.
-ß
+
 Code reference: [combine_tracts_covid](https://github.com/mrp-interface/shinymrp/blob/main/dev/scripts/create_data.R#L97).
 
 ### Poststratification tables

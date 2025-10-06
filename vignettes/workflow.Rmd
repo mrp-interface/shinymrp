@@ -8,7 +8,7 @@ vignette: >
 ---
 
 
-This vignette provides an in-depth walkthrough of the `MRPWorkflow` and `MRPModel` classes in the **shinymrp** package. You will find practical information about the purpose, arguments, and caveats of each method, enabling you to conduct MRP analyses programmatically.
+This vignette provides an in-depth walk-through of the `MRPWorkflow` and `MRPModel` classes in the **shinymrp** package. You will find practical information about the purpose, arguments, and caveats of each method, enabling you to conduct MRP analyses programmatically.
 
 For an introduction to the package and workflow concepts, begin with the [Getting started with shinymrp](https://mrp-interface.github.io/shinymrp/articles/getting-started.html) vignette.
 

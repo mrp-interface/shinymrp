@@ -43,13 +43,13 @@ where $e_s$ is a ZIP-code-level random error.
 
 The interface allows users to specify alternative priors, including structured priors for high-order interaction terms developed by [Si et al. (2020)](https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh).
 
-Because the outcome model assumes that the people in the same poststratification cell share the same response probability, we can replace the microdata with cellwise aggregates and employ a binomial model for the sum of the responses in cell $j$ as $y^*_j \sim \textrm{binomial}(n_j, \theta_j)$, where $n_j$ is the sample cell size and $\theta_j=\textrm{logit}^{-1}(
+Because the outcome model assumes that the people in the same poststratification cell share the same response probability, we can replace the microdata with cell-wise aggregates and employ a binomial model for the sum of the responses in cell $j$ as $y^*_j \sim \textrm{binomial}(n_j, \theta_j)$, where $n_j$ is the sample cell size and $\theta_j=\textrm{logit}^{-1}(
 \beta_1+\beta_2{\rm male}_j +
 \alpha_{\rm a[j]}^{\rm age}
 + \alpha_{\rm r[j]}^{\rm race}
 + \alpha_{\rm s[j]}^{\rm ZIP}
 )
-$ using the cellwise effects of all factors. The interface thus allows users to upload microdata or cellwise aggregates as the input data. 
+$ using the cell-wise effects of all factors. The interface thus allows users to upload microdata or cell-wise aggregates as the input data. 
 
 To generate overall population or subgroup estimates, we combine model predictions within the poststratification cells---in the contingency table of sex, age, race, and ZIP---weighted by the population cell frequencies $N_j$, which are derived from the linked ACS data in our application. Additionally, users may choose to upload custom poststratification data for specific target populations (e.g., a different country, rather than the U.S.). If we write the expected outcome in cell $j$ as $\hat{\theta}_j$ in cell $j$, the population average from MRP is then:
 $$
@@ -67,7 +67,7 @@ When the outcome is continuous, we specify linear regression models and estimate
 
 As an example of time-varying data, we model weekly PCR testing results. We use a Bayesian framework to account for the PCR testing sensitivity and specificity. Here, MRP proceeds in two steps: (1) fit a multilevel model to the testing data for incidence incorporating time and covariates, and (2) poststratify using the population distribution of the adjustment variables: sex, age, race, and ZIP codes, where we assume the population distribution is the same during the study period. Hence, the poststratification cell is defined by the cross-tabulation of sex, age, race, ZIP code, and indicators of time in weeks based on the test result dates.
 
-We denote the PCR test result for individual $i$ as $y_i$, where $y_i=1$ indicates a positive result and $y_i=0$ indicates negative. Similarly, with poststratification cells, we assume that people in the same cell have the same infection rate and can directly model cellwise summaries. We obtain aggregated counts as the number of tests $n_j$ and the number of positive cases $y^*_j$ in cell $j$. Let $p_j=\textrm{Pr}(y_{j[i]}=1)$ be the probability that person $i$ in cell $j$ tests positive. We account for the PCR testing sensitivity and specificity, where the positivity $p_j$ is a function of the test sensitivity $\delta$, specificity $\gamma$, and the true incidence $\pi_j$ for people in cell $j$:  
+We denote the PCR test result for individual $i$ as $y_i$, where $y_i=1$ indicates a positive result and $y_i=0$ indicates negative. Similarly, with poststratification cells, we assume that people in the same cell have the same infection rate and can directly model cell-wise summaries. We obtain aggregated counts as the number of tests $n_j$ and the number of positive cases $y^*_j$ in cell $j$. Let $p_j=\textrm{Pr}(y_{j[i]}=1)$ be the probability that person $i$ in cell $j$ tests positive. We account for the PCR testing sensitivity and specificity, where the positivity $p_j$ is a function of the test sensitivity $\delta$, specificity $\gamma$, and the true incidence $\pi_j$ for people in cell $j$:  
 \begin{align}
 \label{positivity}
 p_j=(1-\gamma)(1-\pi_j )+\delta \pi_j.
