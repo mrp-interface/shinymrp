@@ -1,19 +1,110 @@
-# ---------- order helper ----------
-unique_in_order <- function(x) x[!duplicated(x)]
+#' @noRd 
+#' @keywords internal
+.pad2 <- function(x) stringr::str_pad(as.character(x), 2, pad = "0")
 
+#' @noRd 
+#' @keywords internal
+.pad5 <- function(x) stringr::str_pad(as.character(x), 5, pad = "0")
+
+# ---------- shared utilities (no sf/spdep required) ----------
+
+#' @noRd 
+#' @keywords internal
+.subset_edges_for_ids <- function(ids_keep, nat) {
+  # ids_keep must be character and comparable to nat$ids (already zero-padded by Step 1)
+  gidx <- match(ids_keep, nat$ids)
+  gidx <- gidx[!is.na(gidx)]
+  if (!length(gidx)) {
+    return(list(node1 = integer(), node2 = integer(), ids_local = character()))
+  }
+  keep_flag <- logical(length(nat$ids)); keep_flag[gidx] <- TRUE
+  sel <- keep_flag[nat$node1] & keep_flag[nat$node2]
+  n1g <- nat$node1[sel]; n2g <- nat$node2[sel]
+  map <- integer(length(nat$ids)); map[gidx] <- seq_along(gidx)
+  list(
+    node1     = map[n1g],
+    node2     = map[n2g],
+    ids_local = nat$ids[gidx]
+  )
+}
+
+#' @noRd 
+#' @keywords internal
+.components_from_edges <- function(n, node1, node2) {
+  if (n == 0L) return(list(comp_id = integer(), N_comps = 0L))
+  adj <- vector("list", n)
+  for (i in seq_len(n)) adj[[i]] <- integer(0)
+  if (length(node1)) {
+    for (k in seq_along(node1)) {
+      a <- node1[k]; b <- node2[k]
+      adj[[a]] <- c(adj[[a]], b)
+      adj[[b]] <- c(adj[[b]], a)
+    }
+  }
+  comp_id <- integer(n)
+  comp <- 0L
+  for (i in seq_len(n)) if (comp_id[i] == 0L) {
+    comp <- comp + 1L
+    q <- i
+    while (length(q)) {
+      v <- q[[1]]; q <- q[-1]
+      if (comp_id[v] == 0L) {
+        comp_id[v] <- comp
+        if (length(adj[[v]])) q <- c(q, adj[[v]][comp_id[adj[[v]]] == 0L])
+      }
+    }
+  }
+  list(comp_id = as.integer(comp_id), N_comps = as.integer(comp))
+}
+
+#' @noRd 
+#' @keywords internal
+.append_isolates <- function(n_sel, comp_id_sel, N_comps_sel, isolate_ids) {
+  m_iso <- length(isolate_ids)
+  if (m_iso == 0L) {
+    return(list(
+      comp_id_all   = comp_id_sel,
+      N_comps_all   = N_comps_sel,
+      N_nodes_total = n_sel
+    ))
+  }
+  comp_id_iso <- seq.int(from = N_comps_sel + 1L, length.out = m_iso)
+  list(
+    comp_id_all   = c(comp_id_sel, comp_id_iso),
+    N_comps_all   = N_comps_sel + m_iso,
+    N_nodes_total = n_sel + m_iso
+  )
+}
+
+#' @noRd 
+#' @keywords internal
+.comp_index_from_comp_id <- function(comp_id_all) {
+  if (!length(comp_id_all)) {
+    return(list(N_comps = 0L, comp_sizes = integer(), comp_index = matrix(0L, 0, 0)))
+  }
+  C <- max(comp_id_all)
+  comp_sizes <- tabulate(comp_id_all, nbins = C)
+  max_sz <- max(comp_sizes)
+  M <- matrix(0L, nrow = max_sz, ncol = C)
+  for (c in seq_len(C)) {
+    idx <- which(comp_id_all == c)
+    M[seq_along(idx), c] <- as.integer(idx)
+  }
+  list(N_comps = as.integer(C), comp_sizes = as.integer(comp_sizes), comp_index = M)
+}
 
 # ---------- ZCTA-specific helper (ORDER-PRESERVING) ----------
-derive_targets_zcta <- function(zip_vec, xwalk, zip_col, zcta_col, join_col, isolate_when_join_is_na) {
-  zip_vec <- pad5(zip_vec)
-  zip_order <- unique_in_order(zip_vec)  # <- preserve caller order
+.derive_targets_zcta <- function(zip_vec, xwalk, zip_col, zcta_col, join_col, isolate_when_join_is_na) {
+  zip_vec <- .pad5(zip_vec)
+  zip_order <- unique(zip_vec)  # <- preserve caller order
   
   req <- c(zip_col, zcta_col, join_col)
   if (!all(req %in% names(xwalk))) stop("xwalk must contain: ", paste(req, collapse = ", "))
   
   xw <- xwalk %>%
-    transmute(
-      ZIP      = pad5(.data[[zip_col]]),
-      ZCTA     = pad5(.data[[zcta_col]]),
+    mutate(
+      ZIP      = .pad5(.data[[zip_col]]),
+      ZCTA     = .pad5(.data[[zcta_col]]),
       ZIP_JOIN = as.character(.data[[join_col]])
     ) %>%
     filter(!is.na(ZIP), !is.na(ZCTA)) %>%
@@ -48,42 +139,42 @@ derive_targets_zcta <- function(zip_vec, xwalk, zip_col, zcta_col, join_col, iso
   need$.is_isolate <- (!is_match) | is_unknown
   
   list(
-    zctas_keep   = unique_in_order(need$ZCTA[!need$.is_isolate & !is.na(need$ZCTA)]),  # <- order from input
-    zips_isolate = unique_in_order(need$ZIP[need$.is_isolate]),                        # <- order from input
+    zctas_keep   = unique(need$ZCTA[!need$.is_isolate & !is.na(need$ZCTA)]),  # <- order from input
+    zips_isolate = unique(need$ZIP[need$.is_isolate]),                        # <- order from input
     need_df      = need,
     zip_order    = zip_order
   )
 }
 
 # ---------- Generic (county/state) builder — ORDER-PRESERVING ----------
-build_graph_data_for_stan_other <- function(
+.build_graph_other <- function(
     ids_vec,
     nat,                   # from create_static_edges_one(geo="county"/"state")
     pad_width = NULL,      # 5 for county, 2 for state, NULL if already clean
-    verbose   = TRUE
+    verbose   = FALSE
 ) {
   ids_vec <- as.character(ids_vec)
-  if (!is.null(pad_width)) ids_vec <- str_pad(ids_vec, pad_width, pad = "0")
-  ids_vec_u <- unique_in_order(ids_vec)   # keep caller order
+  if (!is.null(pad_width)) ids_vec <- stringr::str_pad(ids_vec, pad_width, pad = "0")
+  ids_vec_u <- unique(ids_vec)   # keep caller order
   
   present_flag <- ids_vec_u %in% nat$ids
   ids_present  <- ids_vec_u[present_flag]       # in caller order
   ids_isolate  <- ids_vec_u[!present_flag]      # in caller order
   
-  # Subset the static edges to the present IDs (subset_edges_for_ids preserves the order it receives)
-  sub <- subset_edges_for_ids(ids_present, nat)
+  # Subset the static edges to the present IDs (.subset_edges_for_ids preserves the order it receives)
+  sub <- .subset_edges_for_ids(ids_present, nat)
   n_sel  <- length(sub$ids_local)
   node1  <- sub$node1
   node2  <- sub$node2
   
   # Components on the selected block
-  cc <- components_from_edges(n_sel, node1, node2)
+  cc <- .components_from_edges(n_sel, node1, node2)
   
   # Append isolates in caller order
-  ext <- append_isolates(n_sel, cc$comp_id, cc$N_comps, ids_isolate)
+  ext <- .append_isolates(n_sel, cc$comp_id, cc$N_comps, ids_isolate)
   
   # Components -> (sizes, index)
-  cm <- comp_index_from_comp_id(ext$comp_id_all)
+  cm <- .comp_index_from_comp_id(ext$comp_id_all)
   
   # Build lookup (present first, then isolates), all in caller order
   id_to_index_present <- setNames(seq_len(n_sel), sub$ids_local)
@@ -113,7 +204,7 @@ build_graph_data_for_stan_other <- function(
 }
 
 # ---------- ZCTA wrapper — ORDER-PRESERVING ----------
-build_graph_data_for_stan_zcta <- function(
+.build_graph_zcta <- function(
     zip_vec,
     xwalk,
     nat,                    # from create_static_edges_one(geo="zcta", ...)
@@ -121,37 +212,37 @@ build_graph_data_for_stan_zcta <- function(
     zcta_col          = "ZCTA",
     zip_join_type_col = "zip_join_type",
     isolate_when_join_is_na = TRUE,
-    verbose = TRUE
+    verbose = FALSE
 ) {
   # 1) ZIP→ZCTA targets & isolates (unknown ZIPs ⇒ isolates), preserving caller order
-  tgt <- derive_targets_zcta(zip_vec, xwalk, zip_col, zcta_col, zip_join_type_col, isolate_when_join_is_na)
+  tgt <- .derive_targets_zcta(zip_vec, xwalk, zip_col, zcta_col, zip_join_type_col, isolate_when_join_is_na)
   zip_order <- tgt$zip_order
   
   # 2) Ensure non-isolate ZCTAs actually exist in the national set; else treat their ZIPs as isolates (preserve order)
   missing_zcta <- setdiff(tgt$zctas_keep, nat$ids)
   if (length(missing_zcta)) {
-    move <- unique_in_order(tgt$need_df$ZIP[tgt$need_df$ZCTA %in% missing_zcta & !tgt$need_df$.is_isolate])
+    move <- unique(tgt$need_df$ZIP[tgt$need_df$ZCTA %in% missing_zcta & !tgt$need_df$.is_isolate])
     if (length(move)) {
-      tgt$zips_isolate <- unique_in_order(c(tgt$zips_isolate, move))
+      tgt$zips_isolate <- unique(c(tgt$zips_isolate, move))
       tgt$zctas_keep   <- setdiff(tgt$zctas_keep, missing_zcta)
       tgt$need_df$.is_isolate[tgt$need_df$ZIP %in% move] <- TRUE
     }
   }
   
   # 3) Subset static edges to ZCTAs we need (in the order of zctas_keep)
-  sub <- subset_edges_for_ids(tgt$zctas_keep, nat)
+  sub <- .subset_edges_for_ids(tgt$zctas_keep, nat)
   n_sel  <- length(sub$ids_local)
   node1  <- sub$node1
   node2  <- sub$node2
   
   # 4) Components on ZCTA block
-  cc <- components_from_edges(n_sel, node1, node2)
+  cc <- .components_from_edges(n_sel, node1, node2)
   
   # 5) Append ZIP isolates as singleton components (in caller order)
-  ext <- append_isolates(n_sel, cc$comp_id, cc$N_comps, tgt$zips_isolate)
+  ext <- .append_isolates(n_sel, cc$comp_id, cc$N_comps, tgt$zips_isolate)
   
   # 6) Components -> (sizes, index)
-  cm <- comp_index_from_comp_id(ext$comp_id_all)
+  cm <- .comp_index_from_comp_id(ext$comp_id_all)
   
   # 7) Build named ZIP -> node lookup (for J_zip) preserving input order
   zcta_to_index <- setNames(seq_len(n_sel), sub$ids_local)
@@ -159,7 +250,7 @@ build_graph_data_for_stan_zcta <- function(
     setNames(n_sel + seq_along(tgt$zips_isolate), tgt$zips_isolate)
   else setNames(integer(0), character(0))
   
-  uniq_zips <- unique_in_order(pad5(zip_vec))
+  uniq_zips <- unique(.pad5(zip_vec))
   zip_to_node <- setNames(rep.int(NA_integer_, length(uniq_zips)), uniq_zips)
   for (z in uniq_zips) {
     if (z %in% names(iso_to_index)) {
@@ -167,7 +258,7 @@ build_graph_data_for_stan_zcta <- function(
     } else {
       rows <- which(tgt$need_df$ZIP == z & !tgt$need_df$.is_isolate)
       if (length(rows)) {
-        zcands <- unique_in_order(tgt$need_df$ZCTA[rows])
+        zcands <- unique(tgt$need_df$ZCTA[rows])
         zhit   <- zcands[zcands %in% names(zcta_to_index)]
         if (length(zhit)) zip_to_node[[z]] <- zcta_to_index[[zhit[1]]]
       }
@@ -194,7 +285,13 @@ build_graph_data_for_stan_zcta <- function(
   )
 }
 
-build_graph_data_for_stan <- function(geo_units, geo_scale) {
+.build_graph <- function(geo_units, geo_scale, ...) {
+  checkmate::assert_choice(
+    geo_scale,
+    choices = .const()$vars$geo,
+    null.ok = FALSE
+  )
+
   nat <- switch(geo_scale,
     "zip" = .fetch_data("zcta_adj.qs", subdir = "geo"),
     "county" = .fetch_data("county_adj.qs", subdir = "geo"),
@@ -202,14 +299,16 @@ build_graph_data_for_stan <- function(geo_units, geo_scale) {
   )
   
   switch(geo_scale,
-    "zip" = build_graph_data_for_stan_zcta(
+    "zip" = .build_graph_zcta(
       zip_vec = geo_units,
       xwalk = .fetch_data("zip_zcta_2020.csv", subdir = "geo"),
-      nat = nat
+      nat = nat,
+      ...
     ),
-    build_graph_data_for_stan_other(
+    .build_graph_other(
       ids_vec = geo_units,
-      nat = nat
+      nat = nat,
+      ...
     )
   )
   

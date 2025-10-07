@@ -1,5 +1,5 @@
 # zero-pad to 5 characters
-.pad5 <- function(x) {
+..pad5 <- function(x) {
   x <- as.character(x)
   n <- nchar(x)
   x[n < 5] <- paste0(strrep("0", 5 - n[n < 5]), x[n < 5])
@@ -55,13 +55,13 @@ build_bym2_inputs_with_isolates <- function(
     verbose             = TRUE
 ) {
   # normalize inputs (no dplyr)
-  zip_vec <- .pad5(zip_vec)
+  zip_vec <- ..pad5(zip_vec)
   if (!all(c(zip_col, zcta_col, zip_join_type_col) %in% names(xwalk))) {
     stop("xwalk must contain columns: ", paste(c(zip_col, zcta_col, zip_join_type_col), collapse=", "))
   }
   xw <- data.frame(
-    ZIP  = .pad5(xwalk[[zip_col]]),
-    ZCTA = .pad5(xwalk[[zcta_col]]),
+    ZIP  = ..pad5(xwalk[[zip_col]]),
+    ZCTA = ..pad5(xwalk[[zcta_col]]),
     ZIP_JOIN = as.character(xwalk[[zip_join_type_col]]),
     stringsAsFactors = FALSE
   )

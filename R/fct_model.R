@@ -34,6 +34,7 @@
 #'     \item normal(mean, sd): e.g., "normal(0,1)" - mean can be 0, sd must be positive
 #'     \item student_t(df, location, scale): e.g., "student_t(3,0,1)" - df must be positive
 #'     \item structured: "structured" - for hierarchical structured priors
+#'     \item icar: "icar" - for intrinsic conditional autoregressive priors
 #'   }
 #'
 #' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE).
@@ -255,7 +256,7 @@
   # fixed main effects
   out$fixed <- .group_fixed(effects$fixed, dat)
   
-  # varying main effects with "regular" priors
+  # varying main effects with Stan built-in priors
   cond <- !effects$varying %in% .const()$custom_priors
   var_reg <- effects$varying[cond]
   out$varying <- .group_varying(var_reg, dat)
@@ -269,7 +270,7 @@
     names(effects$interaction) <- .sort_interactions(names(effects$interaction), dat) 
   }
   
-  # interactions with "regular" priors
+  # interactions with Stan built-in priors
   cond <- !effects$interaction %in% .const()$custom_priors
   itr_reg <- effects$interaction[cond]
   out$interaction <- .group_interactions(itr_reg, dat)
@@ -295,6 +296,7 @@
 #'     \item m_fix_bc: Binary/continuous fixed main effects
 #'     \item m_fix_c: Categorical fixed main effects
 #'     \item m_var: Varying main effects
+#'     \item m_var_icar: Varying main effects with ICAR prior
 #'     \item i_fixsl: Fixed-slope interactions
 #'     \item i_varsl: Varying-slope interactions
 #'     \item i_varit: Varying-intercept interactions
@@ -321,11 +323,24 @@
     i_varit_str = effects$interaction_structured$varying_intercept,
     i_varits_str = effects$interaction_structured$varying_intercept_special
   )
-  View(out)
+
   return(out)
 }
 
 # Stan code and data generation functions
+.functions_stan <- function(effects, metadata) {
+  scode <- ""
+
+  if (length(effects$m_var_icar) > 0) {
+    scode <- paste0(scode, "
+  real icar_normal_lpdf(vector phi, int N_nodes, array[] int node1, array[] int node2) {
+    return -0.5 * dot_self(phi[node1] - phi[node2]) + normal_lpdf(sum(phi) | 0, 0.001 * N_nodes);
+  }")
+  }
+
+  return(scode)
+}
+
 .data_stan <- function(effects, metadata) {
   scode <- "
   int<lower=1> N;
@@ -354,7 +369,7 @@
     function(s) strsplit(s, split = "\\.")[[1]][1]
   ) %>% 
     unique()
-  for(s in union(m_fix_c_names, names(effects$m_var))) {
+  for(s in c(m_fix_c_names, names(effects$m_var), names(effects$m_var_icar))) {
     scode <- paste0(scode, stringr::str_interp("
   int<lower=1> N_${s};
   array[N] int<lower=1, upper=N_${s}> J_${s};
@@ -374,7 +389,16 @@
   array[N_${s}] int<lower=1, upper=N_${s}_pop> I_${s};
   "))
   }
-  
+
+  # ICAR graph
+  for (s in names(effects$m_var_icar)) {
+    scode <- paste0(scode, stringr::str_interp("
+  int<lower=0> N_edges_${s};
+  array[N_edges_${s}] int<lower=1, upper=N_${s}> node1_${s};
+  array[N_edges_${s}] int<lower=1, upper=N_${s}> node2_${s};
+  "))
+  }
+
   # for poststratification
   scode <- paste0(scode, "
   vector<lower=0, upper=1>[N_pop] P_overall_pstrat;
@@ -413,7 +437,7 @@
   }
   
   # varying main effect
-  for(s in names(effects$m_var)) {
+  for(s in c(names(effects$m_var), names(effects$m_var_icar))) {
     scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${s};
   vector[N_${s}] z_${s};"))
@@ -482,7 +506,7 @@
     unique()
   
   # varying main effects
-  for(s in names(effects$m_var)) {
+  for(s in c(names(effects$m_var), names(effects$m_var_icar))) {
     if(s %in% struct_effects) {
       scode <- paste0(scode, stringr::str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s} * tau;"))
@@ -538,6 +562,7 @@
   }
   
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
+  mvar <- c(effects$m_var, effects$m_var_icar)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
   int_varsl <- c(effects$i_varsl, effects$i_varsl_str)
   s_formula <- if (metadata$family == "binomial") {
@@ -549,7 +574,7 @@
   vector[N] mu = intercept%s%s%s%s;"
   }
   s_fixed <- if(length(fixed) > 0) " + X * beta" else ""
-  s_mvar <- paste(purrr::map(names(effects$m_var), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
+  s_mvar <- paste(purrr::map(names(mvar), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
   s_int_varit <- paste(purrr::map(gsub(':', '', names(int_varit)), ~ stringr::str_interp(" + a_${.x}[J_${.x}]")), collapse = "")
   s_int_varsl <- paste(purrr::map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -607,9 +632,11 @@
     stringr::str_interp("\n  intercept ~ ${effects$intercept$intercept};"),
     if(length(fixed) > 0) paste(purrr::map(1:length(fixed), ~ stringr::str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  z_${.x} ~ icar_normal(N_${.x}, node1_${.x}, node2_${.x});")), collapse = ""),
     paste(purrr::map(names(int_varit), ~ stringr::str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(int_varsl), ~ stringr::str_interp("\n  z2_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  lambda_${.x} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(int_varit_wo_struct), ~ stringr::str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varit[[.x]]};")), collapse = ""),
     paste(purrr::map(names(int_varsl_wo_struct), ~ stringr::str_interp("\n  lambda2_${gsub(':', '', .x)} ~ ${int_varsl[[.x]]};")), collapse = "")
   )
@@ -734,7 +761,7 @@
   }
 
   s_fixed <- if(length(fixed) > 0) " + X_pop * beta" else ""
-  s_mvar <- paste(purrr::map(names(effects$m_var), ~ stringr::str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = "")
+  s_mvar <- paste(purrr::map(c(names(effects$m_var), names(effects$m_var_str)), ~ stringr::str_interp(" + a_${.x}[J_${.x}_pop]")), collapse = "")
   s_int_varit <- paste(purrr::map(gsub(':', '', names(int_varit)), ~ stringr::str_interp(" + a_${.x}_pop[J_${.x}_pop]")), collapse = "")
   s_int_varsl <- paste(purrr::map(names(int_varsl), function(s) {
     ss <- strsplit(s, split = ':')[[1]]
@@ -808,6 +835,9 @@
 .make_stancode_mcmc <- function(effects, metadata=NULL) {
   
   scode <- stringr::str_interp("
+functions { ${.functions_stan(effects, metadata)}
+}
+
 data { ${.data_stan(effects, metadata)}
 }
 
@@ -1030,17 +1060,19 @@ generated quantities { ${gq_code}
     X <- cbind(X_cont, X_cat, X_int)
     stan_data[[paste0('X', subfix)]] <- X
     stan_data[[paste0('K', subfix)]] <- ncol(X)
-    
-    # varying effects & fixed effects of categorical variables
+
+    # varying effects and
+    # fixed effects of categorical variables (for structured prior)
     m_fix_c_names <- purrr::map_chr(
       names(effects$m_fix_c),
       function(s) strsplit(s, split = "\\.")[[1]][1]
     ) %>% 
       unique()
-    for(s in union(m_fix_c_names, names(effects$m_var))) {
+    for(s in c(m_fix_c_names, names(effects$m_var), names(effects$m_var_icar))) {
       stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
       stan_data[[stringr::str_interp("J_${s}${subfix}")]] <- dat[[s]]
     }
+
     
     # interactions
     int <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
@@ -1058,6 +1090,15 @@ generated quantities { ${gq_code}
       }
     }
   }
+
+  # ICAR graph
+  for (s in names(effects$m_var_icar)) {
+    out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
+    g <- out$stan_graph[c("N_edges", "node1", "node2")]
+    names(g) <- paste0(names(g), "_", s)
+    stan_data <- modifyList(stan_data, g)
+  }
+
 
   # poststratification
   if (!is.null(metadata)) {
@@ -1425,12 +1466,13 @@ generated quantities { ${gq_code}
   df_varying <- data.frame()
   row_names <- c()
 
-  if(length(effects$m_var) > 0) {
+  m_var_names <- c(names(effects$m_var), names(effects$m_var_icar))
+  if(length(m_var_names) > 0) {
     df_varying <- rbind(
       df_varying,
-      .get_params_summary(fit, variables = paste0("scaled_lambda_", names(effects$m_var)))
+      .get_params_summary(fit, variables = paste0("scaled_lambda_", m_var_names))
     )
-    row_names <- c(row_names, paste0(names(effects$m_var), " (intercept)"))
+    row_names <- c(row_names, paste0(m_var_names, " (intercept)"))
   }
 
   if(length(int_varit) > 0) {

@@ -1,5 +1,5 @@
 # Pad ZIP codes to 5 characters with leading zeros if needed
-.pad5 <- function(x) {
+..pad5 <- function(x) {
   x <- as.character(x)
   n <- nchar(x)
   x[n < 5] <- paste0(strrep("0", 5 - n[n < 5]), x[n < 5])
@@ -68,7 +68,7 @@ simulate_bym2_binomial_data <- function(
 
   # 1) Build BYM2 inputs (edges, per-node scaling, component IDs, mapping)
   bym <- build_bym2_inputs_with_isolates(
-    zip_vec = .pad5(zip_vec),
+    zip_vec = ..pad5(zip_vec),
     xwalk   = xwalk,
     zcta_sf = zcta_sf,
     queen   = queen,

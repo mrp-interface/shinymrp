@@ -1,4 +1,10 @@
 // file: icar_percomp.stan
+functions {
+  real icar_normal_lpdf(vector phi, int N_nodes, array[] int node1, array[] int node2) {
+    return -0.5 * dot_self(phi[node1] - phi[node2]) + normal_lpdf(sum(phi) | 0, 0.001 * N_nodes);
+  }
+}
+
 data {
   int<lower=1> N;
   int<lower=0> K;
@@ -29,8 +35,6 @@ parameters {
 
   real<lower=0> sigma_zip;
   vector[N_zip] phi_zip;
-
-  real<lower=0> tau;
 }
 transformed parameters {
   vector[N_race] a_race = sigma_race * z_race;
@@ -45,10 +49,5 @@ model {
   z_race     ~ std_normal();
   sigma_race ~ normal(0, 1);
   sigma_zip  ~ normal(0, 1);
-
-  if (N_edges > 0)
-    target += -0.5 * tau * dot_self(phi_zip[node1] - phi_zip[node2]);
-
-  // *** Single global soft sum-to-zero ***
-  sum(phi_zip) ~ normal(0, 0.001 * N_zip);
+  phi_zip ~ icar_normal(N_zip, node1, node2);
 }

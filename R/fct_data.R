@@ -1507,7 +1507,9 @@
   covariates <- NULL
   if(!is.null(link_geo)) {
     # find geographic covariates
-    covariates <- .get_geo_predictors(input_data, link_geo)
+    covariates <- .get_geo_predictors(input_data, link_geo) %>%
+      select(-any_of(.const()$vars$ignore)) # drop ignore vars if present
+
     if(ncol(covariates) > 1) {
       new_data <- left_join(new_data, covariates, by = link_geo)
     }

@@ -1146,6 +1146,7 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' - normal(mu, sigma)
 #' - student_t(nu, mu, sigma)
 #' - structured*
+#' - icar
 #'
 #' The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
 #'

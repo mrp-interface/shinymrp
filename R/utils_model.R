@@ -376,7 +376,9 @@
 
   fixed <- c(names(effects$m_fix_bc), m_fix_c, names(effects$i_fixsl))
   varsl <- c(names(effects$i_varsl), names(effects$i_varsl_str))
-  varit <- c(names(effects$m_var), names(effects$i_varit), names(effects$i_varits), names(effects$i_varit_str), names(effects$i_varits_str))
+  varit <- c(names(effects$m_var), names(effects$m_var_icar),
+             names(effects$i_varit), names(effects$i_varits),
+             names(effects$i_varit_str), names(effects$i_varits_str))
   
 
   s_fixed <- if(length(fixed) > 0) paste(paste0(" + ", fixed), collapse = '') else ''
