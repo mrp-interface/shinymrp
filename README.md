@@ -45,8 +45,12 @@ library(shinymrp)
 ```
 
 ## Installation
+Install the latest release from **CRAN**:
+```r
+install.packages("shinymrp")
+```
 
-To get started, install the latest development version of **shinymrp** from [GitHub](https://github.com/mrp-interface/shinymrp) using `remotes`:
+Install the latest development version from **GitHub**:
 
 ```r
 # If 'remotes' is not installed:
