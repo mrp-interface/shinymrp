@@ -51,6 +51,8 @@ The syntax for the prior distributions is similar to that of Stan. The following
 \item normal(mu, sigma)
 \item student_t(nu, mu, sigma)
 \item structured*
+\item icar
+\item bym2
 }
 
 The last one is a custom prior syntax for the structured prior distribution developed by \href{https://arxiv.org/abs/1707.08220}{Si et al. (2020)}.

@@ -193,7 +193,8 @@ mod_learn_interface_ui <- function(id){
         tags$li("normal(mu, sigma)"),
         tags$li("student_t(nu, mu, sigma)"),
         tags$li("structured**"),
-        tags$li("icar")
+        tags$li("icar"),
+        tags$li("bym2")
       ),
       tags$p("These mimic ", tags$a("Stan distribution syntax", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), ". In addition, we provide the structured prior distribution developed by ", tags$a("Si et al. (2020)", href = "https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh", target = "_blank"), ", which can be assigned to three types of two-way interactions:"),
       tags$ul(

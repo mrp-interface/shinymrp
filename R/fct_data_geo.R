@@ -146,6 +146,54 @@
   )
 }
 
+.bym2_scale <- function(node1, node2, N) {
+  stopifnot(length(node1) == length(node2))
+  E <- length(node1)
+
+  # Build sparse adjacency (binary, symmetric)
+  # Note: add both (i,j) and (j,i) then coerce to 0/1.
+  i <- c(node1, node2)
+  j <- c(node2, node1)
+  x <- rep(1, 2 * E)
+
+  # Base R sparse via Matrix
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Please install the 'Matrix' package.")
+  }
+  W <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N))
+  W@x[] <- 1  # ensure binary
+
+  d <- Matrix::rowSums(W)
+  Q <- Matrix::Diagonal(x = as.numeric(d)) - W  # graph Laplacian
+
+  # Eigen-decompose Q (connected graph => one zero eigenvalue)
+  # Use base eigen on dense if N is small; for larger N, consider RSpectra.
+  Qd <- as.matrix(Q)
+  eig <- eigen(Qd, symmetric = TRUE, only.values = FALSE)
+  lam <- eig$values
+  U   <- eig$vectors
+
+  # Exclude the zero eigen (index 1 for connected graph)
+  ord <- order(lam)
+  lam <- lam[ord]
+  U <- U[, ord, drop = FALSE]
+  keep <- lam > 1e-12 * max(lam)         # drop all zeros/near-zeros
+  lam_pos <- lam[keep]
+  U_pos  <- U[, keep, drop = FALSE]
+
+  # Moore–Penrose inverse: Q^+ = U_pos diag(1/lam_pos) U_pos^T
+  # only need the diagonal entries of Q^+.
+  inv_lam <- 1 / lam_pos
+  # diag(Q^+) = row-wise dot of U_pos * inv_lam with U_pos
+  # (efficient computation without forming the full matrix)
+  v <- rowSums((U_pos^2) %*% diag(inv_lam, nrow = length(inv_lam)))
+
+  # Geometric-mean scaling: s = exp(mean(log(diag(Q^+))))
+  s <- exp(mean(log(v)))
+
+  return(as.numeric(s))
+}
+
 # ---------- Generic (county/state) builder — ORDER-PRESERVING ----------
 .build_graph_other <- function(
     ids_vec,
@@ -197,7 +245,8 @@
       node2        = if (length(node2)) as.integer(node2) else integer(0),
       N_comps      = as.integer(cm$N_comps),
       comp_sizes   = as.integer(cm$comp_sizes),
-      comp_index   = cm$comp_index
+      comp_index   = cm$comp_index,
+      bym2_scale   = .bym2_scale(node1, node2, ext$N_nodes_total)
     ),
     ids_local = c(sub$ids_local, ids_isolate)   # local node order (present then isolates) in caller order
   )
@@ -279,7 +328,8 @@
       node2        = if (length(node2)) as.integer(node2) else integer(0),
       N_comps      = as.integer(cm$N_comps),
       comp_sizes   = as.integer(cm$comp_sizes),
-      comp_index   = cm$comp_index
+      comp_index   = cm$comp_index,
+      bym2_scale   = .bym2_scale(node1, node2, ext$N_nodes_total)
     ),
     ids_local = c(sub$ids_local, tgt$zips_isolate)  # local node order (ZCTAs then ZIP isolates) in caller order
   )

@@ -214,7 +214,7 @@ MRPWorkflow <- R6::R6Class(
       }
 
       # check if effects can be assigned ICAR prior
-      vars_w_icar <- names(effects_w_priors[effects_w_priors == "icar"])
+      vars_w_icar <- names(effects_w_priors[effects_w_priors %in% c("icar", "bym2")])
       valid_vars_w_icar <- intersect(vars_w_icar, .const()$vars$geo) %>%
         setdiff(names(model_spec$fixed))
       invalid_vars_w_icar <- setdiff(vars_w_icar, valid_vars_w_icar)
@@ -1147,6 +1147,7 @@ MRPWorkflow$set("public", "estimate_map", estimate_map)
 #' - student_t(nu, mu, sigma)
 #' - structured*
 #' - icar
+#' - bym2
 #'
 #' The last one is a custom prior syntax for the structured prior distribution developed by [Si et al. (2020)](https://arxiv.org/abs/1707.08220).
 #'

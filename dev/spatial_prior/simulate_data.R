@@ -1,278 +1,212 @@
-# deps: dplyr, tidyr, tibble, purrr, lubridate, Matrix
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(tidyr)
-  library(tibble)
-  library(purrr)
-  library(lubridate)
-  library(Matrix)
-})
+library(Matrix)
 
-.pad5 <- function(x) stringr::str_pad(as.character(x), 5, pad = "0")
-
-# ---- ICAR helpers ------------------------------------------------------------
-.laplacian_from_edges <- function(n, node1, node2) {
-  if (n == 0L) stop("n must be > 0")
-  if (!length(node1)) {
-    return(Diagonal(n)) # isolates only → degree=0; keep a tiny ridge later when sampling
+make_lattice_adj <- function(nx = 20, ny = 20) {
+  K <- nx * ny
+  lab <- sprintf("Z%04d", seq_len(K))
+  W <- Matrix(0, K, K, sparse = FALSE)
+  idx <- function(x, y) (y - 1L) * nx + x
+  for (x in 1:nx) for (y in 1:ny) {
+    i <- idx(x, y)
+    if (x > 1)  W[i, idx(x - 1, y)] <- 1
+    if (x < nx) W[i, idx(x + 1, y)] <- 1
+    if (y > 1)  W[i, idx(x, y - 1)] <- 1
+    if (y < ny) W[i, idx(x, y + 1)] <- 1
   }
-  i <- c(node1, node2); j <- c(node2, node1)
-  W <- sparseMatrix(i = i, j = j, x = 1, dims = c(n, n))
+  W <- (W + t(W)) > 0
+  W <- Matrix(as.numeric(W), nrow = K, ncol = K, sparse = FALSE)
+  rownames(W) <- colnames(W) <- lab
+  
+  # undirected edge list (upper triangle, 1-based for Stan)
+  E <- which(upper.tri(W) & (W == 1), arr.ind = TRUE)
+  node1 <- as.integer(E[, 1])
+  node2 <- as.integer(E[, 2])
+  list(W = W, labels = lab, node1 = node1, node2 = node2)
+}
+
+icar_sample_sum_to_zero <- function(W, alpha = 1) {
+  L <- diag(rowSums(W)) - as.matrix(W)
+  eig <- eigen(L, symmetric = TRUE)
+  lam <- pmax(eig$values, 1e-12)     # numerical guard
+  U   <- eig$vectors
+  lam_pos <- lam[-1]
+  U_pos   <- U[, -1, drop = FALSE]
+  z <- rnorm(length(lam_pos))
+  phi <- as.numeric(U_pos %*% (z / (lam_pos^(alpha / 2))))
+  phi <- phi - mean(phi)
+  phi <- phi / sd(phi)               # unit sd; scale externally by lambda_zip
+  phi
+}
+
+# bym2_scale.R
+# Compute BYM2 scaling factor s from a 1-based adjacency list (connected graph).
+# node1, node2: integer vectors of length E (1..N); each pair is an undirected edge.
+# N: number of nodes.
+#
+# Returns: a single number s so that GM(diag(Q^+)) == 1 when precision is s*Q.
+
+bym2_scale <- function(node1, node2, N) {
+  stopifnot(length(node1) == length(node2))
+  E <- length(node1)
+
+  # Build sparse adjacency (binary, symmetric)
+  # Note: add both (i,j) and (j,i) then coerce to 0/1.
+  i <- c(node1, node2)
+  j <- c(node2, node1)
+  x <- rep(1, 2 * E)
+
+  # Base R sparse via Matrix
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Please install the 'Matrix' package.")
+  }
+  W <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N))
+  W@x[] <- 1  # ensure binary
+
   d <- Matrix::rowSums(W)
-  L <- Diagonal(n, d) - W
-  L
+  Q <- Matrix::Diagonal(x = as.numeric(d)) - W  # graph Laplacian
+
+  # Eigen-decompose Q (connected graph => one zero eigenvalue)
+  # Use base eigen on dense if N is small; for larger N, consider RSpectra.
+  Qd <- as.matrix(Q)
+  eig <- eigen(Qd, symmetric = TRUE, only.values = FALSE)
+  lam <- eig$values
+  U   <- eig$vectors
+
+  # Drop the first (near-zero) eigenvalue/eigenvector
+  # Sort ascending just in case (eigen usually returns descending).
+  ord <- order(lam)
+  lam <- lam[ord]
+  U   <- U[, ord, drop = FALSE]
+
+  # Exclude the zero eigen (index 1 for connected graph)
+  lam_pos <- lam[-1]
+  U_pos   <- U[, -1, drop = FALSE]
+
+  # Moore–Penrose inverse: Q^+ = U_pos diag(1/lam_pos) U_pos^T
+  # only need the diagonal entries of Q^+.
+  inv_lam <- 1 / lam_pos
+  # diag(Q^+) = row-wise dot of U_pos * inv_lam with U_pos
+  # (efficient computation without forming the full matrix)
+  v <- rowSums((U_pos^2) %*% diag(inv_lam, nrow = length(inv_lam)))
+
+  # Geometric-mean scaling: s = exp(mean(log(diag(Q^+))))
+  s <- exp(mean(log(v)))
+  return(as.numeric(s))
 }
 
-# Draw one ICAR vector with per-component sum-to-zero using eigen decomposition.
-# Returns a unit-scale intrinsic draw z (lambda multiplies it in the Stan model).
-.ricar_eigen <- function(n, node1, node2) {
-  L <- .laplacian_from_edges(n, node1, node2)
-  # Symmetrize and convert to base matrix for eigen():
-  Ld <- as.matrix((L + t(L)) * 0.5)
-  ee <- eigen(Ld, symmetric = TRUE, only.values = FALSE)
-  vals <- ee$values
-  U    <- ee$vectors
-  keep <- vals > 1e-8  # drop one zero eigen per connected component
-  if (!any(keep)) return(rep(0, n))
-  z <- as.numeric(U[, keep, drop = FALSE] %*% (rnorm(sum(keep)) / sqrt(vals[keep])))
-  # Optional: normalize to SD 1 (helps set lambda on the same scale across graphs)
-  sd_z <- sd(z)
-  if (is.finite(sd_z) && sd_z > 0) z <- z / sd_z
-  z
-}
-
-# ---- Main simulator -----------------------------------------------------------
-
-#' Simulate data for the given Stan ICAR model
-#'
-#' @param zips Character vector of 5-digit ZIPs (order is preserved). If NULL, create synthetic.
-#' @param n_weeks Integer number of weeks.
-#' @param n_per_zip_week Individuals per (zip,week) cell (each row has n_sample=1).
-#' @param zip_graph Optional: result of `.build_graph(geo_units=…, geo_scale="zip")`.
-#' @param family "binomial" (default, with sens/spec) or "gaussian".
-#' @param sens,spec Sensitivity/specificity (used only for binomial).
-#' @param seed RNG seed.
-#' @param start_date character "YYYY-MM-DD". First day of week 1.
-#' @param prob_sex,race,age Optional probability vectors for demographics.
-#' @param beta,intercept,lambdas Optional true parameters; otherwise sensible defaults are used.
-#' @return list(data, stan_data, truth)
-simulate_icar_dataset <- function(
-  zips                   = NULL,
-  n_weeks                = 12L,
-  n_per_zip_week         = 20L,
-  zip_graph              = NULL,
-  family                 = c("binomial", "gaussian"),
-  sens                   = 1,
-  spec                   = 1,
-  seed                   = 123,
-  start_date             = "2024-01-01",
-  prob_sex               = c(male = 0.48, female = 0.52),
-  prob_race              = c(white = 0.6, black = 0.2, other = 0.2),
-  prob_age               = c(`0-17` = 0.2, `18-34` = 0.25, `35-64` = 0.35, `65-74` = 0.12, `75+` = 0.08),
-  beta                   = -0.2,
-  intercept              = -1.5,
-  lambdas                = list(race = 0.35, age = 0.40, time = 0.30, zip = 0.60)
+simulate_stan_equiv <- function(
+    nx = 20, ny = 20, N_per_zip = 2,
+    N_race = 3, N_age = 5, N_time = 6, K = 1,
+    beta = c(-0.2),
+    intercept = 0.0,
+    lambda_race = 0.3, lambda_age = 0.5, lambda_time = 0.6,
+    lambda_zip = 0.8, alpha_icar = 1.8,
+    n_trials = 30
 ) {
-  set.seed(seed)
-  family <- match.arg(family)
-
-  # --- Levels
-  sex_lv  <- c("male", "female")
-  race_lv <- c("white", "black", "other")
-  age_lv  <- c("0-17","18-34","35-64","65-74","75+")
-  time_lv <- seq_len(n_weeks)
-
-  # --- ZIPs and graph
-  if (is.null(zips)) {
-    # Create synthetic, ordered ZIPs if not provided
-    zips <- .pad5(48101 + seq_len(50))  # 50 ZIPs by default
-  } else {
-    zips <- .pad5(zips)
-  }
-  if (is.null(zip_graph)) {
-    # Fallback: simple ring graph in caller order (works w/out external data)
-    nZ <- length(unique(zips))
-    node1 <- if (nZ > 1) seq_len(nZ) else integer(0)
-    node2 <- if (nZ > 1) c(2:nZ, 1) else integer(0)
-    zip_to_node <- setNames(seq_len(nZ), unique(zips))
-    zip_graph <- list(
-      zip_to_node = zip_to_node,
-      stan_graph = list(
-        N_nodes    = as.integer(nZ),
-        N_edges    = as.integer(length(node1)),
-        node1      = as.integer(node1),
-        node2      = as.integer(node2),
-        N_comps    = as.integer(1L),
-        comp_sizes = as.integer(nZ),
-        comp_index = matrix(seq_len(nZ), nrow = nZ, ncol = 1)
-      ),
-      ids_local = names(zip_to_node)
-    )
-  }
-
-  # --- True parameters
-  K <- 1L  
-  if (is.null(beta)) beta <- c(sex_male = 0.6)
-
-  N_race <- length(race_lv)
-  N_age  <- length(age_lv)
-  N_time <- length(time_lv)
-  N_zip  <- as.integer(zip_graph$stan_graph$N_nodes)
-
-  # Random-effect standard-normals (unit), scaled by lambdas
-  z_race <- rnorm(N_race)
-  z_age  <- rnorm(N_age)
-  z_time <- rnorm(N_time)
-
-  # ICAR unit draw for ZIP (sum-to-zero per component)
-  z_zip  <- .ricar_eigen(
-    n     = N_zip,
-    node1 = zip_graph$stan_graph$node1,
-    node2 = zip_graph$stan_graph$node2
+  adj <- make_lattice_adj(nx, ny)
+  W <- adj$W
+  node1 <- adj$node1
+  node2 <- adj$node2
+  zip_levels <- adj$labels
+  N_zip <- length(zip_levels)
+  
+  J_zip  <- rep(seq_len(N_zip), each = N_per_zip)
+  N      <- length(J_zip)
+  J_race <- sample.int(N_race, N, TRUE)
+  J_age  <- sample.int(N_age,  N, TRUE)
+  J_time <- sample.int(N_time, N, TRUE)
+  
+  X <- matrix(rnorm(N * K), N, K); colnames(X) <- paste0("x", 1:K)
+  
+  a_race <- lambda_race * rnorm(N_race)
+  a_age  <- lambda_age  * rnorm(N_age)
+  a_time <- lambda_time * rnorm(N_time)
+  z_zip  <- icar_sample_sum_to_zero(W, alpha = alpha_icar)
+  a_zip  <- lambda_zip * z_zip
+  
+  eta <- intercept + as.numeric(X %*% beta) +
+    a_race[J_race] + a_age[J_age] + a_time[J_time] + a_zip[J_zip]
+  p <- plogis(eta)
+  n_sample <- rep(n_trials, N)
+  y <- rbinom(N, n_sample, p)
+  
+  dat <- data.frame(
+    y = y,
+    n_sample = n_sample,
+    X,
+    race = factor(J_race),
+    age  = factor(J_age),
+    time = factor(J_time),
+    zip  = factor(zip_levels[J_zip], levels = zip_levels)
   )
-
-  a_race <- lambdas$race * z_race
-  a_age  <- lambdas$age  * z_age
-  a_time <- lambdas$time * z_time
-  a_zip  <- lambdas$zip  * z_zip
-
-  # --- Build individuals
-  dates <- as.character(as.Date(start_date) + weeks(time_lv - 1L))
-
-  # sample (zip, week) cells
-  base <- tidyr::crossing(
-    zip  = unique(zips),
-    time = time_lv
-  ) %>%
-    mutate(n = n_per_zip_week) %>%
-    uncount(n)
-
-  # draw demographics per row
-  draw_levels <- function(n, probs, lv) lv[as.integer(sample.int(length(lv), n, replace = TRUE, prob = probs))]
-  base <- base %>%
-    mutate(
-      sex  = draw_levels(n(), prob_sex,  sex_lv),
-      race = draw_levels(n(), prob_race, race_lv),
-      age  = draw_levels(n(), prob_age,  age_lv),
-      date = dates[time]
-    ) %>%
-    select(sex, race, age, time, date, zip)
-
-  # --- Convert to numeric factors for Stan
-  J_race <- match(base$race, race_lv)
-  J_age  <- match(base$age,  age_lv)
-  J_time <- base$time
-  # map ZIP → local node
-  J_zip  <- as.integer(unname(zip_graph$zip_to_node[base$zip]))
-  if (anyNA(J_zip)) stop("Some ZIPs not in zip_graph$zip_to_node (NA indices).")
-
-  # Fixed effects matrix X (N x K). Here K=1: sex_male indicator
-  X <- matrix(as.integer(base$sex == "male"), ncol = 1L)
-  colnames(X) <- "sex_male"
-
-  # Linear predictor
-  eta <- as.numeric(
-    intercept +
-      X %*% beta +
-      a_race[J_race] +
-      a_age[J_age] +
-      a_time[J_time] +
-      a_zip[J_zip]
-  )
-
-  out_df <-
-    if (family == "binomial") {
-      p <- plogis(eta)
-      p_obs <- p * sens + (1 - p) * (1 - spec)  # misclassification
-      tibble(positive = rbinom(length(p_obs), size = 1L, prob = p_obs))
-    } else {
-      # Gaussian outcome with unit noise (you can change sigma_y)
-      tibble(outcome = rnorm(length(eta), mean = eta, sd = 1))
-    }
-
-  data <- bind_cols(base, out_df)
-
-  # --- Stan data
-  # Note: Placeholder for population data (only used for poststratification)
-  N      <- nrow(data)
-  K_pop  <- 0L
-  N_pop  <- 1L
-  X_pop  <- array(0, dim = c(N_pop, K_pop))
-
+  
   stan_data <- list(
-    N = N,
-    K = K,
+    N = as.integer(N),
+    K = as.integer(K),
     X = X,
-    N_pop = N_pop,
-    K_pop = K_pop,
-    X_pop = X_pop,
-
-    y = if (family == "binomial") data$positive else integer(N),
-    n_sample = rep.int(1L, N),
-
-    N_race = N_race,
-    J_race = J_race,
-    N_race_pop = 1L,
-    J_race_pop = 1L,
-
-    N_age = N_age,
-    J_age = J_age,
-    N_age_pop = 1L,
-    J_age_pop = 1L,
-
-    N_time = N_time,
-    J_time = J_time,
-    N_time_pop = 1L,
-    J_time_pop = 1L,
-
-    N_zip = N_zip,
-    J_zip = J_zip,
-    N_zip_pop = 1L,
-    J_zip_pop = 1L,
-
-    N_edges_zip = as.integer(length(zip_graph$stan_graph$node1)),
-    node1_zip   = as.integer(zip_graph$stan_graph$node1),
-    node2_zip   = as.integer(zip_graph$stan_graph$node2),
-
-    sens = sens,
-    spec = spec
+    y = as.array(as.integer(y)),
+    n_sample = as.array(as.integer(n_sample)),
+    N_race = as.integer(N_race),
+    J_race = as.array(as.integer(J_race)),
+    N_age  = as.integer(N_age),
+    J_age  = as.array(as.integer(J_age)),
+    N_time = as.integer(N_time),
+    J_time = as.array(as.integer(J_time)),
+    N_zip  = as.integer(N_zip),
+    J_zip  = as.array(as.integer(J_zip)),
+    N_edges_zip = as.integer(length(node1)),
+    node1_zip = as.array(as.integer(node1)),
+    node2_zip = as.array(as.integer(node2)),
+    scale_factor = bym2_scale(as.integer(node1), as.integer(node2), N_zip)
   )
-
-  truth <- list(
-    intercept = intercept,
-    beta      = beta,
-    z_race    = z_race, a_race = a_race,
-    z_age     = z_age,  a_age  = a_age,
-    z_time    = z_time, a_time = a_time,
-    z_zip     = z_zip,  a_zip  = a_zip,
-    lambdas   = lambdas,
-    levels    = list(sex = sex_lv, race = race_lv, age = age_lv, time = time_lv, zip = unique(zips))
+  
+  list(
+    data = dat,
+    stan_data = stan_data,
+    W = W,
+    true = list(
+      beta = beta,
+      intercept = intercept,
+      a_race = a_race,
+      a_age = a_age,
+      a_time = a_time,
+      a_zip = a_zip,
+      lambda_race = lambda_race,
+      lambda_age = lambda_age,
+      lambda_time = lambda_time,
+      lambda_zip = lambda_zip
+    )
   )
-
-  list(data = data, stan_data = stan_data, truth = truth)
 }
 
-# ---- Example usage -----------------------------------------------------------
-zips <- c("48103","48104","48105","48108","48109","48197","48198")
-zip_graph <- .build_graph(geo_units = zips, geo_scale = "zip", verbose = TRUE)
-sim <- simulate_icar_dataset(
-  zips = zips,
-  n_weeks = 16,
-  n_per_zip_week = 25,
-  zip_graph = zip_graph,
-  family = "binomial",
-  sens = 1,
-  spec = 1,
-  seed = 42,
-  beta = -0.2,
-  intercept = -1.5,
-  lambdas = list(race = 0.65, age = 0.40, time = 0.30, zip = 0.50)
+format_for_mrp <- function(sim) {
+  dat <- sim$data |>
+    dplyr::mutate(
+      sex = factor(as.numeric(x1 > 0), labels = c("female", "male")),
+      race = factor(as.numeric(race), labels = c("white", "black", "other")),
+      age = factor(as.numeric(age), labels = c("18-29", "30-44", "45-59", "60-74", "75+")),
+      zip = 
+      time = factor
+      positive = y,
+      total = n_sample
+    )
+  dat |> select(all_of(c("sex", "race", "age", "time", "zip", "positive", "total")))
+}
+
+nx <- 10
+ny <- 10
+sim <- simulate_stan_equiv(
+  nx = nx, ny = ny,
+  N_per_zip = 2,
+  K = 1, beta = c(-0.2),
+  intercept = 0.0,
+  lambda_race = 0.2,
+  lambda_age = 0.15,
+  lambda_time = 0.3,
+  lambda_zip = 1.8,
+  alpha_icar = 1.0,
+  n_trials = 30
 )
 
-# Or, with the fallback ring graph (no external geo data needed):
-sim <- simulate_icar_dataset(n_weeks = 12, n_per_zip_week = 20, family = "binomial")
-
-# The dataframe you asked for:
-head(sim$data)
-readr::write_csv(sim$data, "/Users/tntoan/Downloads/simulated_data.csv")
+df <- format_for_mrp(sim)
+View(df)
 

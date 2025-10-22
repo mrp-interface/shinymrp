@@ -139,7 +139,7 @@
         effects$interaction
       )
     }
-  } else if (prior == "icar") {
+  } else if (prior == "icar" || prior == "bym2") {
     effects$varying <- intersect(
       varying_effects,
       .const()$vars$geo

@@ -35,6 +35,7 @@
 #'     \item student_t(df, location, scale): e.g., "student_t(3,0,1)" - df must be positive
 #'     \item structured: "structured" - for hierarchical structured priors
 #'     \item icar: "icar" - for intrinsic conditional autoregressive priors
+#'     \item bym2: "bym2" - for BYM2 priors
 #'   }
 #'
 #' @return Logical value indicating whether the syntax is valid (TRUE) or invalid (FALSE).
@@ -61,7 +62,8 @@
                        decimal,                # scale (σ): non-negative decimal
                        "\\)$"),
     structured = "^structured$",
-    icar = "^icar$"
+    icar = "^icar$",
+    bym2 = "^bym2$"
   )
 
   dist <- strsplit(s, "\\(", fixed = FALSE)[[1]][1]
@@ -265,6 +267,10 @@
   var_icar <- effects$varying[effects$varying == "icar"]
   out$varying_icar <- .group_varying(var_icar, dat)
 
+  # varying main effects with BYM2 prior
+  var_bym2 <- effects$varying[effects$varying == "bym2"]
+  out$varying_bym2 <- .group_varying(var_bym2, dat)
+
   # reorder terms in interactions
   if(!is.null(effects$interaction)) {
     names(effects$interaction) <- .sort_interactions(names(effects$interaction), dat) 
@@ -297,6 +303,7 @@
 #'     \item m_fix_c: Categorical fixed main effects
 #'     \item m_var: Varying main effects
 #'     \item m_var_icar: Varying main effects with ICAR prior
+#'     \item m_var_bym2: Varying main effects with BYM2 prior
 #'     \item i_fixsl: Fixed-slope interactions
 #'     \item i_varsl: Varying-slope interactions
 #'     \item i_varit: Varying-intercept interactions
@@ -315,6 +322,7 @@
     m_fix_c = effects$fixed$cat,
     m_var = effects$varying,
     m_var_icar = effects$varying_icar,
+    m_var_bym2 = effects$varying_bym2,
     i_fixsl = effects$interaction$fixed_slope,
     i_varsl = effects$interaction$varying_slope,
     i_varit = effects$interaction$varying_intercept,
@@ -327,20 +335,66 @@
   return(out)
 }
 
-# Stan code and data generation functions
+
+#' Check if Higher Precision is Needed for Stan
+#' 
+#' @noRd 
+#' @keywords internal
+.check_if_needs_higher_precision <- function(effects) {
+  if (length(effects$m_var_icar) +
+      length(effects$m_var_bym2) > 0) {
+    return(TRUE)
+  }
+
+  return(FALSE)
+}
+
+#' Return numerical precision for Stan
+#' 
+#' @noRd
+#' @keywords internal
+.get_stan_precision <- function(effects) {
+  if (.check_if_needs_higher_precision(effects)) {
+    return(15)
+  }
+
+  return(NULL)
+}
+
+#' Stan code generation helper for "functions" block
+#' 
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
+#'  all model specifications.
+#' @param metadata List containing model specifications including family type
+#' for determining the likelihood function and poststratification details.
+#'
+#' @noRd 
+#' @keywords internal
 .functions_stan <- function(effects, metadata) {
   scode <- ""
 
-  if (length(effects$m_var_icar) > 0) {
+  if (length(effects$m_var_icar) +
+      length(effects$m_var_bym2) > 0) {
     scode <- paste0(scode, "
-  real icar_normal_lpdf(vector phi, int N_nodes, array[] int node1, array[] int node2) {
-    return -0.5 * dot_self(phi[node1] - phi[node2]) + normal_lpdf(sum(phi) | 0, 0.001 * N_nodes);
+  real icar_normal_lpdf(vector phi, array[] int node1, array[] int node2) {
+    return -0.5 * dot_self(phi[node1] - phi[node2]);
   }")
   }
 
   return(scode)
 }
 
+#' Stan code generation helper for "data" block
+#' 
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
+#'  all model specifications.
+#' @param metadata List containing model specifications including family type
+#' for determining the likelihood function and poststratification details.
+#' 
+#' @return Character string containing Stan "data" block code.
+#' 
+#' @noRd
+#' @keywords internal
 .data_stan <- function(effects, metadata) {
   scode <- "
   int<lower=1> N;
@@ -369,7 +423,10 @@
     function(s) strsplit(s, split = "\\.")[[1]][1]
   ) %>% 
     unique()
-  for(s in c(m_fix_c_names, names(effects$m_var), names(effects$m_var_icar))) {
+  for(s in c(m_fix_c_names,
+             names(effects$m_var),
+             names(effects$m_var_icar),
+             names(effects$m_var_bym2))) {
     scode <- paste0(scode, stringr::str_interp("
   int<lower=1> N_${s};
   array[N] int<lower=1, upper=N_${s}> J_${s};
@@ -390,12 +447,20 @@
   "))
   }
 
-  # ICAR graph
-  for (s in names(effects$m_var_icar)) {
+  # neighborhood graph for ICAR/BYM2 priors
+  for (s in c(names(effects$m_var_icar),
+              names(effects$m_var_bym2))) {
     scode <- paste0(scode, stringr::str_interp("
   int<lower=0> N_edges_${s};
   array[N_edges_${s}] int<lower=1, upper=N_${s}> node1_${s};
   array[N_edges_${s}] int<lower=1, upper=N_${s}> node2_${s};
+  "))
+  }
+
+  # scaling factor for BYM2 priors
+  for (s in names(effects$m_var_bym2)) {
+    scode <- paste0(scode, stringr::str_interp("
+  real<lower=0> bym2_scale_${s};
   "))
   }
 
@@ -421,13 +486,23 @@
 
   # sensitivity and specificity
   scode <- paste0(scode, "
-  real<lower=0> sens;
-  real<lower=0> spec;")
-  
+  real<lower=0, upper=1> sens;
+  real<lower=0, upper=1> spec;")
+
   return(scode)
 }
 
-
+#' Stan code generation helper for "parameters" block
+#' 
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
+#' all model specifications.
+#' @param metadata List containing model specifications including family type
+#' for determining the likelihood function and poststratification details.
+#' 
+#' @return Character string containing Stan "parameters" block code.
+#' 
+#' @noRd
+#' @keywords internal
 .parameters_stan <- function(effects, metadata) {
   scode <- "
   real intercept;"
@@ -436,13 +511,29 @@
     scode <- paste0(scode, "\n  vector[K] beta;")
   }
   
-  # varying main effect
-  for(s in c(names(effects$m_var), names(effects$m_var_icar))) {
+  # varying main effect with Stan built-in prior
+  for(s in names(effects$m_var)) {
     scode <- paste0(scode, stringr::str_interp("
   real<lower=0> lambda_${s};
   vector[N_${s}] z_${s};"))
   }
-  
+
+  # varying main effect with ICAR prior
+  for(s in names(effects$m_var_icar)) {
+    scode <- paste0(scode, stringr::str_interp("
+  real<lower=0> lambda_${s};
+  sum_to_zero_vector[N_${s}] z_${s};"))
+  }
+
+  # varying main effect with BYM2 prior
+  for(s in names(effects$m_var_bym2)) {
+    scode <- paste0(scode, stringr::str_interp("
+  real<lower=0> lambda_${s};
+  real<lower=0, upper=1> rho_${s};
+  vector[N_${s}] theta_${s};
+  sum_to_zero_vector[N_${s}] phi_${s};"))
+  }
+
   # varying-intercept interaction without structured prior
   for(s in names(c(effects$i_varit, effects$i_varits))) {
     s <- gsub(':', '', s)
@@ -492,6 +583,17 @@
   return(scode)
 }
 
+#' Stan code generation helper for "transformed_parameters" block
+#' 
+#' @param effects Ungrouped effects structure from .ungroup_effects() containing
+#' all model specifications.
+#' @param metadata List containing model specifications including family type
+#' for determining the likelihood function and poststratification details.
+#' 
+#' @return Character string containing Stan "transformed_parameters" block code.
+#' 
+#' @noRd
+#' @keywords internal
 .transformed_parameters_stan <- function(effects, metadata) {
   scode <- ""
   
@@ -505,8 +607,10 @@
     unlist() %>%
     unique()
   
-  # varying main effects
-  for(s in c(names(effects$m_var), names(effects$m_var_icar))) {
+  # scale of varying main effects
+  for(s in c(names(effects$m_var),
+             names(effects$m_var_icar),
+             names(effects$m_var_bym2))) {
     if(s %in% struct_effects) {
       scode <- paste0(scode, stringr::str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s} * tau;"))
@@ -514,8 +618,18 @@
       scode <- paste0(scode, stringr::str_interp("
   real<lower=0> scaled_lambda_${s} = lambda_${s};"))
     }
-    
+  }
+
+  # varying main effects with Stan built-in and ICAR priors
+  for(s in c(names(effects$m_var), names(effects$m_var_icar))) {
     scode <- paste0(scode, stringr::str_interp("
+  vector[N_${s}] a_${s} = z_${s} * scaled_lambda_${s};"))
+  }
+
+  # varying main effects with BYM2 prior
+  for(s in names(effects$m_var_bym2)) {
+    scode <- paste0(scode, stringr::str_interp("
+  vector[N_${s}] z_${s} = sqrt(rho_${s} / bym2_scale_${s}) * phi_${s} + sqrt(1 - rho_${s}) * theta_${s};
   vector[N_${s}] a_${s} = z_${s} * scaled_lambda_${s};"))
   }
   
@@ -561,8 +675,9 @@
   vector[N_${ss[1]}] b_${s} = z2_${s} * lambda2_${s};"))
   }
   
+  # build predictor
   fixed <- c(effects$m_fix_bc, effects$m_fix_c, effects$i_fixsl)
-  mvar <- c(effects$m_var, effects$m_var_icar)
+  mvar <- c(effects$m_var, effects$m_var_icar, effects$m_var_bym2)
   int_varit <- c(effects$i_varit, effects$i_varits, effects$i_varit_str, effects$i_varits_str)
   int_varsl <- c(effects$i_varsl, effects$i_varsl_str)
   s_formula <- if (metadata$family == "binomial") {
@@ -587,26 +702,15 @@
   return(scode)
 }
 
-#' Generate Stan Model Block Code
-#'
-#' @description Creates the model block section of Stan code, specifying the
-#' likelihood function and prior distributions. Combines outcome distribution
-#' with hierarchical priors for all model parameters.
-#'
+#' Stan code generation helper for "model" block
+#' 
 #' @param effects Ungrouped effects structure from .ungroup_effects() containing
 #'   all model specifications and prior distributions.
 #' @param metadata List containing model specifications including family type
 #'   for determining the likelihood function.
 #'
-#' @return Character string containing Stan model block code with:
-#'   \itemize{
-#'     \item Likelihood: Outcome distribution (binomial or normal)
-#'     \item intercept prior: Global intercept distribution
-#'     \item Fixed effects priors: Individual coefficient priors
-#'     \item Varying effects priors: Hierarchical structure with scale parameters
-#'     \item Standardized effects: Standard normal priors for z parameters
-#'     \item Structured priors: Global and local scale parameters (if used)
-#'   }
+#' @return Character string containing Stan "model" block code.
+#'
 #' @noRd
 #' @keywords internal
 .model_stan <- function(effects, metadata) {
@@ -627,16 +731,21 @@
   y ~ normal(mu, sigma);"
   }
   
+
+  dp <- .const()$default_priors
+
   scode <- paste0(
     scode, 
     stringr::str_interp("\n  intercept ~ ${effects$intercept$intercept};"),
     if(length(fixed) > 0) paste(purrr::map(1:length(fixed), ~ stringr::str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
-    paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  z_${.x} ~ icar_normal(N_${.x}, node1_${.x}, node2_${.x});")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  z_${.x} ~ icar_normal(node1_${.x}, node2_${.x});")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_bym2), ~ stringr::str_interp("\n  theta_${.x} ~ std_normal();\n  phi_${.x} ~ icar_normal(node1_${.x}, node2_${.x});")), collapse = ""),
     paste(purrr::map(names(int_varit), ~ stringr::str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(int_varsl), ~ stringr::str_interp("\n  z2_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
-    paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  lambda_${.x} ~ std_normal();")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  lambda_${.x} ~ ${dp$icar_scale};")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_bym2), ~ stringr::str_interp("\n  lambda_${.x} ~ ${dp$bym2_scale};\n  rho_${.x} ~ ${dp$bym2_rho};")), collapse = ""),
     paste(purrr::map(names(int_varit_wo_struct), ~ stringr::str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varit[[.x]]};")), collapse = ""),
     paste(purrr::map(names(int_varsl_wo_struct), ~ stringr::str_interp("\n  lambda2_${gsub(':', '', .x)} ~ ${int_varsl[[.x]]};")), collapse = "")
   )
@@ -645,8 +754,8 @@
   int_struct <- c(effects$i_varsl_str, effects$i_varit_str, effects$i_varits_str)
   if(length(int_struct) > 0) {
     scode <- paste0(scode, stringr::str_interp("
-  tau ~ ${.const()$default_priors$global_scale};
-  delta ~ ${.const()$default_priors$local_scale};"))
+  tau ~ ${dp$global_scale};
+  delta ~ ${dp$local_scale};"))
   }
   
   return(scode)
@@ -1068,7 +1177,10 @@ generated quantities { ${gq_code}
       function(s) strsplit(s, split = "\\.")[[1]][1]
     ) %>% 
       unique()
-    for(s in c(m_fix_c_names, names(effects$m_var), names(effects$m_var_icar))) {
+    for(s in c(m_fix_c_names,
+               names(effects$m_var),
+               names(effects$m_var_icar),
+               names(effects$m_var_bym2))) {
       stan_data[[stringr::str_interp("N_${s}${subfix}")]] <- n_distinct(dat[[s]])
       stan_data[[stringr::str_interp("J_${s}${subfix}")]] <- dat[[s]]
     }
@@ -1092,9 +1204,17 @@ generated quantities { ${gq_code}
   }
 
   # ICAR graph
-  for (s in names(effects$m_var_icar)) {
+  for (s in c(names(effects$m_var_icar))) {
     out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
     g <- out$stan_graph[c("N_edges", "node1", "node2")]
+    names(g) <- paste0(names(g), "_", s)
+    stan_data <- modifyList(stan_data, g)
+  }
+
+  # BYM2 graph
+  for (s in c(names(effects$m_var_bym2))) {
+    out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
+    g <- out$stan_graph[c("N_edges", "node1", "node2", "bym2_scale")]
     names(g) <- paste0(names(g), "_", s)
     stan_data <- modifyList(stan_data, g)
   }
@@ -1193,6 +1313,8 @@ generated quantities { ${gq_code}
     cpp_options = list(stan_threads = TRUE)
   )
 
+  sig_figs <- .get_stan_precision(effects)
+
   fit <- mod_mcmc$sample(
     data = stan_data,
     iter_warmup = n_iter/2,
@@ -1202,6 +1324,7 @@ generated quantities { ${gq_code}
     threads_per_chain = 1,
     refresh = n_iter / 10,
     seed = seed,
+    sig_figs = sig_figs,
     ...
   )
 
@@ -1466,7 +1589,9 @@ generated quantities { ${gq_code}
   df_varying <- data.frame()
   row_names <- c()
 
-  m_var_names <- c(names(effects$m_var), names(effects$m_var_icar))
+  m_var_names <- c(names(effects$m_var),
+                   names(effects$m_var_icar),
+                   names(effects$m_var_bym2))
   if(length(m_var_names) > 0) {
     df_varying <- rbind(
       df_varying,
