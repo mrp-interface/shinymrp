@@ -23,6 +23,7 @@
 
   # reset popover states
   shinyjs::show("sample_spec_popover")
+  shinyjs::hide("example_popover")
   shinyjs::show("link_acs_popover")
   shinyjs::hide("pstrat_upload_popover")
 }

@@ -89,31 +89,27 @@ mod_analyze_upload_ui <- function(id) {
           ),
           # Example data label
           tags$div(class = "mt-4",
-            conditionalPanel(
-              condition = "output.special_case == 'covid'",
-              tags$p(tags$u("Example"), ": COVID-19 hospital test records")
+            actionButton(
+              inputId = ns("example_popover_btn"),
+              label = "Example Data",
+              icon = icon("chevron-down"),
+              class = "btn btn-sm btn-secondary"
             ),
-            conditionalPanel(
-              condition = "output.special_case == 'poll'",
-              tags$p(tags$u("Example"), ": 2018 Cooperative Congressional Election Study")
-            ),
-            conditionalPanel(
-              condition = "output.special_case === null",
-              tags$p(tags$u("Example data"))
-            ),
-            conditionalPanel(
-              condition = "output.family != 'normal'",
-              tags$div(
-                class = "d-flex gap-2 mb-3",
-                actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
-                actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
+            tags$div(id = ns("example_popover"),
+              class = "mt-2",
+              conditionalPanel(
+                condition = "output.family != 'normal'",
+                tags$div(
+                  class = "d-flex gap-2 mb-3",
+                  actionButton(ns("use_indiv_example"), "Individual-level", icon("table")),
+                  actionButton(ns("use_agg_example"), "Aggregated", icon("table"))
+                )
+              ),
+              conditionalPanel(
+                condition = "output.family == 'normal'",
+                actionButton(ns("use_indiv_example"), "Individual-level", icon("table"), class = "w-100")
               )
-            ),
-            conditionalPanel(
-              condition = "output.family == 'normal'",
-              actionButton(ns("use_indiv_example"), "Individual-level", icon("table"), class = "w-100")
-            ),
-
+            )
           )
         ),
         bslib::accordion_panel(
@@ -134,13 +130,18 @@ mod_analyze_upload_ui <- function(id) {
           ),
           conditionalPanel(
             condition = "output.special_case !== null",
-            tags$p("Provide information for linking the input data to the ACS data.",
+            tags$p("Provide information for linking the input data to the American Community Survey (ACS) data. Poststratification data upload is not supported for this special",
+              actionLink(
+                inputId = ns("show_pstrat_guide"),
+                label = "module"
+              ),
+              ".",
               class = "small"
-            ),
+            )
           ),
           conditionalPanel(
             condition = "output.special_case === null",
-            tags$p("Provide information for linking the input data to the ACS data or upload poststratification data.",
+            tags$p("Provide information for linking the input data to the American Community Survey (ACS) data or upload poststratification data.",
               class = "small"
             ),
           ),
@@ -307,6 +308,10 @@ mod_analyze_upload_server <- function(id, global){
 
     observeEvent(input$sample_spec_popover_btn, {
       shinyjs::toggle(id = "sample_spec_popover")
+    })
+
+    observeEvent(input$example_popover_btn, {
+      shinyjs::toggle(id = "example_popover")
     })
 
 
@@ -577,6 +582,9 @@ mod_analyze_upload_server <- function(id, global){
       .show_guide("upload")
     })
 
+    observeEvent(input$show_pstrat_guide, {
+      .show_guide("upload")
+    })
 
     # navigate to Learn > Preprocess
     observeEvent(input$to_preprocess, {
