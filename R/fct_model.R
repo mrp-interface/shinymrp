@@ -373,8 +373,7 @@
 .functions_stan <- function(effects, metadata) {
   scode <- ""
 
-  if (length(effects$m_var_icar) +
-      length(effects$m_var_bym2) > 0) {
+  if (length(effects$m_var_icar) > 0) {
     scode <- paste0(scode, "
   real icar_normal_lpdf(vector phi, array[] int node1, array[] int node2) {
     return -0.5 * dot_self(phi[node1] - phi[node2]);
@@ -448,8 +447,7 @@
   }
 
   # neighborhood graph for ICAR/BYM2 priors
-  for (s in c(names(effects$m_var_icar),
-              names(effects$m_var_bym2))) {
+  for (s in names(effects$m_var_icar)) {
     scode <- paste0(scode, stringr::str_interp("
   int<lower=0> N_edges_${s};
   array[N_edges_${s}] int<lower=1, upper=N_${s}> node1_${s};
@@ -460,7 +458,8 @@
   # scaling factor for BYM2 priors
   for (s in names(effects$m_var_bym2)) {
     scode <- paste0(scode, stringr::str_interp("
-  real<lower=0> bym2_scale_${s};
+  int<lower=0> N_pos_${s};
+  matrix[N_${s}, N_pos_${s}] R_${s};
   "))
   }
 
@@ -531,7 +530,7 @@
   real<lower=0> lambda_${s};
   real<lower=0, upper=1> rho_${s};
   vector[N_${s}] theta_${s};
-  sum_to_zero_vector[N_${s}] phi_${s};"))
+  vector[N_pos_${s}] eta_${s};"))
   }
 
   # varying-intercept interaction without structured prior
@@ -629,7 +628,7 @@
   # varying main effects with BYM2 prior
   for(s in names(effects$m_var_bym2)) {
     scode <- paste0(scode, stringr::str_interp("
-  vector[N_${s}] z_${s} = sqrt(rho_${s} / bym2_scale_${s}) * phi_${s} + sqrt(1 - rho_${s}) * theta_${s};
+  vector[N_${s}] z_${s} = sqrt(rho_${s}) * R_${s} * eta_${s} + sqrt(1 - rho_${s}) * theta_${s};
   vector[N_${s}] a_${s} = z_${s} * scaled_lambda_${s};"))
   }
   
@@ -731,7 +730,6 @@
   y ~ normal(mu, sigma);"
   }
   
-
   dp <- .const()$default_priors
 
   scode <- paste0(
@@ -740,7 +738,7 @@
     if(length(fixed) > 0) paste(purrr::map(1:length(fixed), ~ stringr::str_interp("\n  beta[${.x}] ~ ${fixed[[.x]]};")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  z_${.x} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  z_${.x} ~ icar_normal(node1_${.x}, node2_${.x});")), collapse = ""),
-    paste(purrr::map(names(effects$m_var_bym2), ~ stringr::str_interp("\n  theta_${.x} ~ std_normal();\n  phi_${.x} ~ icar_normal(node1_${.x}, node2_${.x});")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_bym2), ~ stringr::str_interp("\n  theta_${.x} ~ std_normal();\n  eta_${.x} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(int_varit), ~ stringr::str_interp("\n  z_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(int_varsl), ~ stringr::str_interp("\n  z2_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
@@ -1214,7 +1212,7 @@ generated quantities { ${gq_code}
   # BYM2 graph
   for (s in c(names(effects$m_var_bym2))) {
     out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
-    g <- out$stan_graph[c("N_edges", "node1", "node2", "bym2_scale")]
+    g <- out$stan_graph[c("N_edges", "node1", "node2", "N_pos", "R")]
     names(g) <- paste0(names(g), "_", s)
     stan_data <- modifyList(stan_data, g)
   }

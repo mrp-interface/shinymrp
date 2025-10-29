@@ -58,7 +58,6 @@ icar_sample_sum_to_zero <- function(W, alpha = 1) {
   phi
 }
 
-# bym2_scale.R
 # Compute BYM2 scaling factor s from a 1-based adjacency list (connected graph).
 # node1, node2: integer vectors of length E (1..N); each pair is an undirected edge.
 # N: number of nodes.

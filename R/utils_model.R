@@ -128,28 +128,30 @@
             
   # filter effects for structred prior
   if (prior == "structured") {
-    if(length(interactions) > 0) {
-      effects$interaction <- .interactions_for_structured(
-        interactions,
-        fixed_effects,
-        data
-      )
+    filtered <- .interactions_for_structured(
+      interactions,
+      fixed_effects,
+      data
+    )
+    if (length(filtered) > 0) {
       effects$interaction <- stats::setNames(
-        paste0("interaction_", effects$interaction),
-        effects$interaction
+        paste0("interaction_", filtered),
+        filtered
       )
     }
   } else if (prior == "icar" || prior == "bym2") {
-    effects$varying <- intersect(
+    filtered <- intersect(
       varying_effects,
       .const()$vars$geo
     ) %>%
       setdiff(fixed_effects)
 
-    effects$varying <- stats::setNames(
-      paste0("varying_", effects$varying),
-      effects$varying
-    )
+    if (length(filtered) > 0) {
+      effects$varying <- stats::setNames(
+        paste0("varying_", filtered),
+        filtered
+      )
+    }
   } else {
     effects$intercept <- stats::setNames(
       c("intercept_intercept"),
