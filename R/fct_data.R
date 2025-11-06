@@ -1065,8 +1065,6 @@
     } else {
       if (!("positive" %in% names(df))) {
         stop("Individual-level data must contain a 'positive' column for data with binary outcome ('binomial' family).")
-      } else if (n_distinct(df$positive) != 2) {
-        stop("Individual-level data must have 'positive' column with binary values.")
       }
     }
   } else {
