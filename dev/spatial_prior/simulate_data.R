@@ -71,6 +71,62 @@ make_disconnected_lattices <- function(components = list(c(20, 20)),
   list(comp_id = as.integer(comp_id), N_comps = as.integer(comp))
 }
 
+# bym2_scale.R
+# Compute BYM2 scaling factor s from a 1-based adjacency list (connected graph).
+# node1, node2: integer vectors of length E (1..N); each pair is an undirected edge.
+# N: number of nodes.
+#
+# Returns: a single number s so that GM(diag(Q^+)) == 1 when precision is s*Q.
+
+bym2_scale <- function(node1, node2, N) {
+  stopifnot(length(node1) == length(node2))
+  E <- length(node1)
+  
+  # Build sparse adjacency (binary, symmetric)
+  # Note: add both (i,j) and (j,i) then coerce to 0/1.
+  i <- c(node1, node2)
+  j <- c(node2, node1)
+  x <- rep(1, 2 * E)
+  
+  # Base R sparse via Matrix
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Please install the 'Matrix' package.")
+  }
+  W <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N))
+  W@x[] <- 1  # ensure binary
+  
+  d <- Matrix::rowSums(W)
+  Q <- Matrix::Diagonal(x = as.numeric(d)) - W  # graph Laplacian
+  
+  # Eigen-decompose Q (connected graph => one zero eigenvalue)
+  # Use base eigen on dense if N is small; for larger N, consider RSpectra.
+  Qd <- as.matrix(Q)
+  eig <- eigen(Qd, symmetric = TRUE, only.values = FALSE)
+  lam <- eig$values
+  U   <- eig$vectors
+  
+  # Drop the first (near-zero) eigenvalue/eigenvector
+  # Sort ascending just in case (eigen usually returns descending).
+  ord <- order(lam)
+  lam <- lam[ord]
+  U   <- U[, ord, drop = FALSE]
+  
+  # Exclude the zero eigen (index 1 for connected graph)
+  lam_pos <- lam[-1]
+  U_pos   <- U[, -1, drop = FALSE]
+  
+  # Moore–Penrose inverse: Q^+ = U_pos diag(1/lam_pos) U_pos^T
+  # only need the diagonal entries of Q^+.
+  inv_lam <- 1 / lam_pos
+  # diag(Q^+) = row-wise dot of U_pos * inv_lam with U_pos
+  # (efficient computation without forming the full matrix)
+  v <- rowSums((U_pos^2) %*% diag(inv_lam, nrow = length(inv_lam)))
+  
+  # Geometric-mean scaling: s = exp(mean(log(diag(Q^+))))
+  s <- exp(mean(log(v)))
+  return(as.numeric(s))
+}
+
 bym2_basis <- function(node1, node2, N, alpha = 1, tol = 1e-10) {
   stopifnot(alpha > 0, N >= 0)
   
@@ -164,7 +220,8 @@ simulate_stan_equiv_disconnected <- function(
   # Reduced-rank ICAR basis (disconnected-aware) + BYM2 scaling
   basis <- bym2_basis(node1, node2, N_zip, alpha)
   R <- basis$R; N_pos <- basis$N_pos
-
+  scale_factor <- bym2_scale(node1, node2, N_zip)
+  
   # Structured + iid pieces for BYM2
   phi   <- icar_sample(R)                       # GM(marg var) ≈ 1
   theta <- rnorm(N_zip)                         # iid N(0,1)
@@ -222,7 +279,11 @@ simulate_stan_equiv_disconnected <- function(
     N_zip  = as.integer(N_zip),
     J_zip  = as.array(as.integer(J_zip)),
     N_pos  = as.integer(N_pos),
-    R      = R
+    R      = R,
+    N_edges_zip  = length(node1),
+    node1_zip    = node1,
+    node2_zip    = node2,
+    scale_factor = scale_factor
   )
 
   list(
@@ -246,11 +307,72 @@ simulate_stan_equiv_disconnected <- function(
   )
 }
 
-# ---- Example usage -----------------------------------------------------------
 
+fit_model <- function(
+    data,
+    stan_path,
+    chains = 4, parallel_chains = 4,
+    iter_warmup = 1000, iter_sampling = 1000,
+    threads_per_chain = 1,
+    refresh = 200,
+    max_treedepth = 12,
+    adapt_delta = 0.95,
+    seed = NULL
+) {
+  mod <- cmdstan_model(
+    stan_path,
+    cpp_options = list(stan_threads = TRUE)
+  )
+
+  fit <- mod$sample(
+    data = data,
+    chains = chains,
+    parallel_chains = parallel_chains,
+    iter_warmup = iter_warmup,
+    iter_sampling = iter_sampling,
+    threads_per_chain = threads_per_chain,
+    refresh = refresh,
+    max_treedepth = max_treedepth,
+    adapt_delta = adapt_delta,
+    seed = seed
+  )
+  
+  return(fit)
+}
+
+check_recovery <- function(fit, sim) {
+  # ---- Recovery plots (robust + aligned) -------------------------------------
+  params <- c("intercept", "beta[1]",
+              "lambda_race", "lambda_age", "lambda_time",
+              "lambda_zip")
+  
+  # Draws matrix (numeric); add derived columns for sigma_struct/iid
+  dm <- as_draws_matrix(fit$draws(variables = params))
+  
+  # Build TRUE vector aligned to colnames(dm)
+  true_vals <- c(
+    intercept     = sim$true$intercept,
+    `beta[1]`     = sim$true$beta[1],
+    lambda_race   = sim$true$lambda_race,
+    lambda_age    = sim$true$lambda_age,
+    lambda_time   = sim$true$lambda_time,
+    lambda_zip    = sim$true$lambda_zip
+    # rho_zip       = sim$true$rho_zip
+  )[colnames(dm)]  # reorder to match dm
+  
+  stopifnot(is.numeric(true_vals), length(true_vals) == ncol(dm))
+  
+  print(mcmc_recover_hist(x = dm, true = true_vals))
+  print(mcmc_recover_intervals(x = dm, true = true_vals))
+}
+
+
+# ---- Example usage -----------------------------------------------------------
+seed_data <- sample(1e6, 1)
+seed_model <- sample(1e6, 1)
 sim <- simulate_stan_equiv_disconnected(
-  components = list(c(20, 15), c(5, 10)),
-  n_isolates = 10,
+  components = list(c(20, 20)),
+  n_isolates = 0,
   N_per_zip = 5,
   beta = c(-0.2),
   intercept = 1.0,
@@ -258,52 +380,30 @@ sim <- simulate_stan_equiv_disconnected(
   lambda_age  = 0.4,
   lambda_time = 0.5,
   lambda_zip  = 0.8,
-  rho_zip     = 0.5,
-  seed = 123
+  rho_zip     = 0.8,
+  seed = seed_data
 )
 
 stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/"
-mod <- cmdstan_model(file.path(stan_dir, "bym2_multicomp.stan"),
-                     cpp_options = list(stan_threads = TRUE))
-
-fit <- mod$sample(
+fit_iid <- fit_bym2 <- fit_model(
   data = sim$stan_data,
-  chains = 4, parallel_chains = 4,
-  iter_warmup = 1000, iter_sampling = 1000,
-  threads_per_chain = 1,
-  refresh = 200,
-  max_treedepth = 12,
-  adapt_delta = 0.95
+  stan_path = file.path(stan_dir, "iid.stan"),
+  seed = seed_model
 )
 
-# ---- Recovery plots (robust + aligned) --------------------------------------
-
-params <- c("intercept", "beta[1]",
-            "lambda_race", "lambda_age", "lambda_time",
-            "lambda_zip", "rho_zip")
-View(fit$summary(variables = params))
-# Draws matrix (numeric); add derived columns for sigma_struct/iid
-dm <- as_draws_matrix(fit$draws(variables = params))
-dm <- cbind(
-  dm,
-  sigma_struct = dm[, "lambda_zip"] * sqrt(dm[, "rho_zip"]),
-  sigma_iid    = dm[, "lambda_zip"] * sqrt(1 - dm[, "rho_zip"])
+fit_bym2 <- fit_model(
+  data = sim$stan_data,
+  stan_path = file.path(stan_dir, "bym2.stan"),
+  seed = seed_model
 )
 
-# Build TRUE vector aligned to colnames(dm)
-true_vals <- c(
-  intercept     = sim$true$intercept,
-  `beta[1]`     = sim$true$beta[1],
-  lambda_race   = sim$true$lambda_race,
-  lambda_age    = sim$true$lambda_age,
-  lambda_time   = sim$true$lambda_time,
-  lambda_zip    = sim$true$lambda_zip,
-  rho_zip       = sim$true$rho_zip,
-  sigma_struct  = sim$true$lambda_zip * sqrt(sim$true$rho_zip),
-  sigma_iid     = sim$true$lambda_zip * sqrt(1 - sim$true$rho_zip)
-)[colnames(dm)]  # reorder to match dm
-
-stopifnot(is.numeric(true_vals), length(true_vals) == ncol(dm))
-
-print(mcmc_recover_hist(x = dm, true = true_vals))
-print(mcmc_recover_intervals(x = dm, true = true_vals))
+fit_bym2_mc <- fit_model(
+  data = sim$stan_data,
+  stan_path = file.path(stan_dir, "bym2_multicomp.stan"),
+  seed = seed_model
+)
+compare_df <- loo::loo_compare(list(
+  iid = loo::loo(fit_iid$draws("log_lik")),
+  bym2 = loo::loo(fit_bym2$draws("log_lik")),
+  bym2_mc = loo::loo(fit_bym2_mc$draws("log_lik"))
+))

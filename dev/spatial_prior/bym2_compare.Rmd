@@ -1,0 +1,150 @@
+---
+title: "Equivalence of BYM2 Implementations: ICAR+Constraint vs Reduced-Rank Basis"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(Matrix)
+# (Optional) library(RSpectra) # for scalable eigen if you later increase N
+```
+
+## 1. The objects and the claim
+
+Let \(W\) be the symmetric \(0/1\) adjacency and \(L = D - W\) the graph Laplacian on a **connected** graph; \(D = \mathrm{diag}(W\mathbf 1)\).  
+The ICAR prior on the constrained subspace \(\{\mathbf 1^\top \phi = 0\}\) has density
+\[
+\pi(\phi)\ \propto\ \exp\Big(-\tfrac12\,\phi^\top Q\,\phi\Big),\qquad Q := L.
+\]
+Its (singular) covariance is the Moore–Penrose inverse \(Q^+\) on \(\mathbf 1^\perp\).  
+Let the eigen-decomposition be \(L = U \Lambda U^\top\) with \(\Lambda = \mathrm{diag}(0,\lambda_2,\ldots,\lambda_N)\) and \(U = [u_1=\tfrac{\mathbf 1}{\sqrt N},\ U_+]\). Then
+\[
+Q^+ \;=\; U_+ \,\mathrm{diag}\!\big(\lambda_2^{-1},\ldots,\lambda_N^{-1}\big)\, U_+^\top.
+\]
+
+The BYM2 **geometric-mean** scale is
+\[
+s \ :=\ \operatorname{GM}\!\big(\operatorname{diag}(Q^+)\big)
+     \ =\ \exp\!\left(\frac{1}{N}\sum_{i=1}^N \log (Q^+)_{ii}\right).
+\]
+
+Define the reduced-rank basis (size \(N\times(N-1)\))
+\[
+R \ :=\ \frac{1}{\sqrt{s}}\ U_+\,\mathrm{diag}\!\big(\lambda_2^{-1/2},\ldots,\lambda_N^{-1/2}\big).
+\]
+
+**Key properties**:
+1. \( \mathbf 1^\top R = 0 \) (each column lies in \(\mathbf 1^\perp\)).
+2. \( R R^\top = Q^+ / s \).
+3. \( \operatorname{GM}\{\operatorname{diag}(R R^\top)\} = 1 \).
+
+Hence if \(\eta \sim \mathcal N(0,I_{N-1})\), then \(\phi := R\eta\) has covariance \(Q^+/s\) and geometric-mean marginal variance \(=1\). This is exactly the structured BYM2 piece used in both parameterizations:
+- **ICAR + constraint (Stan Model 1)**: sample \(\phi\) on \(\mathbf 1^\perp\) with precision \(Q\) and scale by \(1/\sqrt{s}\) (via `scale_factor`).
+- **Reduced-rank basis (Stan Model 2)**: set \(\phi = R\eta\) with \(\eta\sim \mathcal N(0,I)\).
+
+## 2. Build a connected grid and its Laplacian
+
+```{r}
+# 4-neighbor grid adjacency (connected if nx>1 and ny>1)
+make_grid_adj <- function(nx, ny) {
+  stopifnot(nx >= 1L, ny >= 1L)
+  if (nx*ny == 1L) return(Matrix(0,1,1, sparse = TRUE))
+  Tx <- bandSparse(nx, k=c(-1,1), diag = list(rep(1, nx-1), rep(1, nx-1)))
+  Ty <- bandSparse(ny, k=c(-1,1), diag = list(rep(1, ny-1), rep(1, ny-1)))
+  W  <- kronecker(Diagonal(ny), Tx) + kronecker(Ty, Diagonal(nx))
+  W@x[] <- 1
+  forceSymmetric(drop0(W), uplo = "U")
+}
+
+nx <- 20; ny <- 20
+W  <- make_grid_adj(nx, ny)
+N  <- nrow(W)
+d  <- Matrix::rowSums(W)
+L  <- Diagonal(x = as.numeric(d)) - W  # Laplacian
+```
+
+## 3. Compute \(Q^+\), BYM2 scale \(s\), and the reduced-rank basis \(R\)
+
+```{r}
+# Dense eigendecomp is fine for N=400; for larger N consider RSpectra::eigs_sym
+Ee  <- eigen(as.matrix(L), symmetric = TRUE)
+lam <- Ee$values
+U   <- Ee$vectors
+
+# Sort ascending (defensive)
+o        <- order(lam)
+lam      <- lam[o]
+U        <- U[, o, drop = FALSE]
+lam_pos  <- lam[-1]                    # drop the single zero eigen
+U_pos    <- U[, -1, drop = FALSE]
+
+# diag(Q^+) = rowSums(U_pos^2 %*% (1/lam_pos))
+diag_Qp  <- as.numeric((U_pos^2) %*% (1/lam_pos))
+s_bym2   <- exp(mean(log(diag_Qp)))    # geometric-mean scale
+
+# Reduced-rank BYM2 basis: R = (1/sqrt(s)) * U_pos * diag(lam_pos^(-1/2))
+R <- sweep(U_pos, 2L, lam_pos^(-1/2), `*`) / sqrt(s_bym2)
+
+# Sanity checks
+RRt <- R %*% t(R)
+
+c(
+  one_is_orthogonal = max(abs(drop(crossprod(rep(1, N), R)))),
+  gmvar_RRt         = exp(mean(log(diag(RRt)))),
+  max_abs_diff_diag = max(abs(diag(RRt) - diag_Qp / s_bym2))
+)
+```
+
+You should see `one_is_orthogonal` ≈ 0, `gmvar_RRt` ≈ 1, and `max_abs_diff_diag` near machine precision.
+
+Optionally, a stronger matrix-level check:
+
+```{r}
+# Frobenius relative error between RR^T and Q^+/s
+Qp_over_s <- U_pos %*% (t(U_pos) / lam_pos)
+Qp_over_s <- Qp_over_s / s_bym2
+
+num <- norm(RRt - Qp_over_s, type = "F")
+den <- norm(Qp_over_s,       type = "F")
+num / den
+```
+
+## 4. Deterministic equality of the two phi constructions
+
+Define two **deterministic** constructions of the structured field:
+- **ICAR–spectral**: \(\phi_A = \frac{1}{\sqrt{s}}\,U_+\,\mathrm{diag}(\lambda_+^{-1/2})\,z\)
+- **Reduced-rank basis**: \(\phi_B = R\,z\)
+
+Using the **same fixed** \(z\), these are **algebraically identical**.
+
+```{r}
+set.seed(42)
+z <- seq_len(ncol(R)) / ncol(R)   # deterministic vector (any fixed z works)
+
+phi_A <- (U_pos %*% (z / sqrt(lam_pos))) / sqrt(s_bym2)  # ICAR–spectral
+phi_B <- R %*% z                                         # Reduced-rank basis
+
+c(
+  max_abs_diff      = max(abs(phi_A - phi_B)),
+  mean_abs_diff     = mean(abs(phi_A - phi_B)),
+  sum_to_zero_A     = sum(phi_A),
+  sum_to_zero_B     = sum(phi_B)
+)
+```
+
+Visual comparison:
+
+```{r}
+par(mfrow=c(1,2), mar=c(2,2,2,1))
+image(matrix(phi_A, nx, ny), main="phi_A (ICAR–spectral)"); box()
+image(matrix(phi_B, nx, ny), main="phi_B (Reduced-rank)"); box()
+```
+
+## 5. Takeaways for the Stan appendix
+
+- With a **single connected** graph, the structured BYM2 component is the **same object** whether you:
+  1) parameterize \(\phi\) directly with an ICAR prior on \(\mathbf 1^\perp\) and scale by \(1/\sqrt{s}\), or  
+  2) use a reduced-rank basis \(R\) with \(\phi = R\eta\), \(\eta\sim \mathcal N(0,I)\).  
+- The identity \(\phi = R\eta = \frac{1}{\sqrt{s}}\,U_+\,\Lambda_+^{-1/2}\,\eta\) shows the two paths are **literally identical** for any fixed score vector \(\eta\).
+- BYM2’s **geometric-mean scaling** must match between implementations (`scale_factor` in the ICAR path and the scaling inside \(R\) in the basis path). Mismatched scaling is the most common reason two supposedly “equivalent” codes disagree.
+```
+

@@ -823,20 +823,18 @@
 
 #' Infer simple data type of a column
 #'
-#' Internal helper to classify a vector as binary, categorical, or continuous
-#' using simple heuristics. Returns either labels ("bin", "cat", "cont")
-#' or numeric codes (1, 2, 3) if `num = TRUE`.
+#' Classify a vector as binary ("bin"), categorical ("cat"), or continuous ("cont")
+#' using simple, robust heuristics. Optionally return numeric codes 1,2,3.
 #'
 #' @param col A vector (typically a data frame column).
-#' @param num Logical; if `TRUE` return numeric codes instead of labels.
+#' @param num Logical; if TRUE return numeric codes instead of labels.
 #' @param max_levels_cat Max distinct integer-like values to treat as categorical.
 #' @param uniq_prop_cat Proportion of unique values below which to call categorical.
 #' @param singleton_thr Fraction of singleton values below which to call categorical.
-#' @param tol Numeric tolerance for integer-like check.
-#' @param use_round_probe Logical; try rounding probe for numeric categories.
+#' @param tol Numeric tolerance for integer-like and decimal checks.
+#' @param use_sturges Logical; if TRUE, compare distinct-count to Sturges bins.
 #'
 #' @noRd
-#' @keywords internal 
 #' @keywords internal
 .data_type <- function(col,
                        num = FALSE,
@@ -844,41 +842,56 @@
                        uniq_prop_cat = 0.10,
                        singleton_thr  = 0.10,
                        tol = 1e-8,
-                       use_round_probe = TRUE) {
+                       use_sturges = TRUE) {
   lbl <- c("bin", "cat", "cont")
 
+  # Early exits for empty / all-NA
   non_na <- col[!is.na(col)]
-  n <- length(non_na); ndist <- n_distinct(non_na)
+  n <- length(non_na)
+  if (n == 0L) return(if (num) 2L else lbl[2])
 
-  if (n == 0) return(if (num) 2L else lbl[2])
+  # Binary: logical or exactly two distinct non-NA values
+  ndist <- length(unique(non_na))
   if (is.logical(col) || ndist == 2L) return(if (num) 1L else lbl[1])
+
+  # Character/factor → categorical
   if (is.character(col) || is.factor(col)) return(if (num) 2L else lbl[2])
 
-  if (is.numeric(col)) {
-    intish <- all(abs(non_na - round(non_na)) <= tol)
-    uniq_prop <- ndist / n
-    singleton_rate <- mean(table(non_na) == 1)
+  # Dates/times: treat as continuous scale
+  if (inherits(col, "Date") || inherits(col, "POSIXct") || inherits(col, "POSIXlt")) {
+    return(if (num) 3L else lbl[3])
+  }
 
-    looks_discrete <- FALSE
-    if (use_round_probe && ndist > max_levels_cat) {
-      nd0 <- n_distinct(round(non_na, 0))
-      nd1 <- n_distinct(round(non_na, 1))
-      looks_discrete <- nd0 <= max_levels_cat || nd1 <= max_levels_cat ||
-                        nd0/ndist <= 0.5 || nd1/ndist <= 0.5
+  # Numeric handling
+  if (is.numeric(col)) {
+    # If any decimal present (beyond tol) → continuous
+    has_decimal <- any(abs(non_na - round(non_na)) > tol)
+    if (has_decimal) return(if (num) 3L else lbl[3])
+
+    # Integer-like: decide cat vs cont by discreteness signals
+    # 1) small distinct-count shortcut
+    if (ndist <= max_levels_cat) return(if (num) 2L else lbl[2])
+
+    # 2) uniqueness and singleton rate
+    tab <- table(non_na)
+    uniq_prop <- ndist / n
+    singleton_rate <- mean(tab == 1L)
+
+    looks_cat <- (uniq_prop <= uniq_prop_cat) && (singleton_rate <= singleton_thr)
+
+    # 3) Optional: Sturges-like sanity check—few distinct values relative to n
+    if (use_sturges) {
+      k_sturges <- 1L + floor(log2(n))  # target bin count for continuous histograms
+      looks_cat <- looks_cat || (ndist <= max(max_levels_cat, k_sturges))
     }
 
-    code <- if (intish && ndist <= max_levels_cat) 2L
-      else if (n < 10) if (intish) 2L else 3L
-      else if (intish && uniq_prop <= uniq_prop_cat && singleton_rate <= singleton_thr) 2L
-      else if (looks_discrete) 2L
-      else 3L
-
+    code <- if (looks_cat) 2L else 3L
     return(if (num) code else lbl[code])
   }
 
+  # Fallback: treat unknowns as categorical
   if (num) 2L else lbl[2]
 }
-
 
 
 #' Create expected data types for variables
@@ -1065,8 +1078,6 @@
     } else {
       if (!("positive" %in% names(df))) {
         stop("Individual-level data must contain a 'positive' column for data with binary outcome ('binomial' family).")
-      } else if (n_distinct(df$positive) != 2) {
-        stop("Individual-level data must have 'positive' column with binary values.")
       }
     }
   } else {
