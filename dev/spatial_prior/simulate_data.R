@@ -4,7 +4,6 @@ library(cmdstanr)
 library(bayesplot)
 library(posterior)
 
-# ---- FIXED: fast grid adjacency (numeric, no deprecated coercions) ----------
 .make_grid_adj <- function(nx, ny) {
   stopifnot(nx >= 1L, ny >= 1L)
   if (nx * ny == 1L) return(Matrix::Matrix(0, 1, 1, sparse = TRUE))
@@ -18,7 +17,6 @@ library(posterior)
   Matrix::drop0(W)
 }
 
-# ---- FIXED: disconnected lattices + edge list (upper triangle only) ---------
 make_disconnected_lattices <- function(components = list(c(20, 20)),
                                        n_isolates = 0L) {
   stopifnot(all(vapply(components, length, 1L) == 2L), n_isolates >= 0L)
@@ -127,53 +125,89 @@ bym2_scale <- function(node1, node2, N) {
   return(as.numeric(s))
 }
 
-bym2_basis <- function(node1, node2, N, alpha = 1, tol = 1e-10) {
-  stopifnot(alpha > 0, N >= 0)
+#' BYM2 basis (scaled ICAR eigen-basis) per connected component
+#'
+#' Builds an orthonormal basis R such that, within each connected component,
+#'   R R^T approximates the Moore–Penrose inverse of the ICAR precision (graph
+#'   Laplacian) and is BYM2-scaled so that
+#'   geometric_mean(diag(Q^+)) = 1 in that component.
+#'
+#' @param node1,node2 Integer vectors of equal length with 1-based endpoints of undirected edges.
+#' @param N Integer number of nodes.
+#' @param tol Numeric tolerance to decide strictly-positive eigenvalues.
+#' @return A list with:
+#'   - R: (N x K) numeric basis matrix, K = sum_{components} (size_c - 1)
+#'   - N_pos: K
+#'   - comp_id: integer vector of component IDs per node (1..ncomp; isolates are size 1)
+bym2_basis <- function(node1, node2, N, tol = 1e-10) {
+  stopifnot(N >= 0, length(node1) == length(node2))
   
-  # --- sanitize edges (1..N, no self-loops)
-  node1 <- as.integer(node1); node2 <- as.integer(node2)
-  keep  <- node1 >= 1L & node1 <= N & node2 >= 1L & node2 <= N & node1 != node2
-  node1 <- node1[keep]; node2 <- node2[keep]
-  
-  # --- components from edges (works whether the helper returns a vector or a list)
+  # ---- components (helper may return vector or list)
   comp_res <- .components_from_edges(N, node1, node2)
-  comp  <- if (is.list(comp_res)) comp_res$comp_id else comp_res
-  ncomp <- if (is.list(comp_res)) comp_res$N_comps else if (length(comp)) max(comp) else 0L
+  comp     <- if (is.list(comp_res)) comp_res$comp_id else comp_res
+  ncomp    <- if (is.list(comp_res)) comp_res$N_comps else if (length(comp)) max(comp) else 0L
   
-  # --- symmetric numeric sparse adjacency and Laplacian
-  Wg <- Matrix::sparseMatrix(i = c(node1, node2), j = c(node2, node1), x = 1, dims = c(N, N))
-  Wg@x[] <- 1
-  W <- Matrix::forceSymmetric(Wg, uplo = "U")
-  d <- as.numeric(Matrix::rowSums(W))
-  Q <- Matrix::Diagonal(x = d) - W
-  
-  # --- per-component eigen basis with BYM2 scaling: GM(diag((Q^α)^+)) = 1
-  Rblocks <- list(); rows <- list()
-  for (c in seq_len(ncomp)) {
-    idx <- which(comp == c)
-    if (length(idx) <= 1L) next  # isolates: all-zero rows in R
-    Qc <- as.matrix(Q[idx, idx, drop = FALSE])
-    ee <- eigen(Qc, symmetric = TRUE)
-    lam <- ee$values; U <- ee$vectors
-    pos <- lam > tol
-    if (!any(pos)) next
-    lam <- lam[pos]; U <- U[, pos, drop = FALSE]
-    
-    w   <- lam^(-alpha)
-    v   <- rowSums(U^2 * rep(w, each = nrow(U)))  # diag((Q^α)^+)
-    s_c <- exp(mean(log(v)))                      # BYM2 scale per component
-    Rc  <- U %*% diag(lam^(-alpha / 2), nrow = length(lam))
-    Rc  <- Rc / sqrt(s_c)
-    
-    Rblocks[[length(Rblocks) + 1L]] <- Rc
-    rows[[length(rows) + 1L]]       <- idx
+  if (N == 0L || ncomp == 0L) {
+    return(list(R = matrix(numeric(), nrow = N, ncol = 0L),
+                N_pos = 0L,
+                comp_id = if (length(comp)) comp else integer(N)))
   }
   
-  Npos <- if (length(Rblocks)) sum(vapply(Rblocks, ncol, 1L)) else 0L
-  R <- matrix(0, N, Npos); off <- 0L
-  for (k in seq_along(Rblocks)) {
-    idx <- rows[[k]]; p <- ncol(Rblocks[[k]])
-    R[idx, (off + 1L):(off + p)] <- Rblocks[[k]]
+  # ---- sparse symmetric adjacency and Laplacian Q
+  Wg <- Matrix::sparseMatrix(
+    i = c(node1, node2),
+    j = c(node2, node1),
+    x = 1,
+    dims = c(N, N)
+  )
+  W  <- Matrix::forceSymmetric(Wg, uplo = "U")
+  d  <- as.numeric(Matrix::rowSums(W))
+  Q  <- Matrix::Diagonal(x = d) - W
+  
+  # ---- loop over components, build BYM2-scaled blocks
+  Rblocks <- vector("list", ncomp)
+  rows    <- vector("list", ncomp)
+  
+  for (c in seq_len(ncomp)) {
+    idx <- which(comp == c)
+    if (length(idx) <= 1L) next  # isolate: contributes no columns
+    
+    # Dense eigendecomposition (Qc is small per component in typical spatial graphs)
+    Qc <- as.matrix(Q[idx, idx, drop = FALSE])
+    ee <- eigen(Qc, symmetric = TRUE)
+    lam <- ee$values
+    U   <- ee$vectors
+    
+    # Keep strictly positive eigenvalues (drop the single zero EV per component)
+    keep <- lam > tol
+    if (!any(keep)) next
+    
+    lam  <- lam[keep]
+    Upos <- U[, keep, drop = FALSE]
+    
+    # diag(Q^+) = rowSums(U * (1/lam) * U), BYM2 scale s = GM(diag(Q^+))
+    lam_inv   <- 1 / lam
+    diag_Qpin <- rowSums(Upos^2 * rep(lam_inv, each = nrow(Upos)))
+    s_c       <- exp(mean(log(diag_Qpin)))
+    
+    # R_c = Upos %*% diag(1/sqrt(lam)) / sqrt(s_c)
+    Rc <- Upos %*% diag(1 / sqrt(lam), nrow = length(lam))
+    Rc <- Rc / sqrt(s_c)
+    
+    Rblocks[[c]] <- Rc
+    rows[[c]]    <- idx
+  }
+  
+  # ---- assemble R
+  ncols <- sum(vapply(Rblocks, function(M) if (is.null(M)) 0L else ncol(M), integer(1)))
+  R     <- matrix(0.0, nrow = N, ncol = ncols)
+  
+  off <- 0L
+  for (c in seq_len(ncomp)) {
+    Rc <- Rblocks[[c]]
+    if (is.null(Rc)) next
+    p <- ncol(Rc)
+    R[rows[[c]], (off + 1L):(off + p)] <- Rc
     off <- off + p
   }
   
@@ -367,11 +401,15 @@ check_recovery <- function(fit, sim) {
 }
 
 
-# ---- Example usage -----------------------------------------------------------
 seed_data <- sample(1e6, 1)
 seed_model <- sample(1e6, 1)
+
+# ---- Example usage -----------------------------------------------------------
+# Use components to specify the graph structure
+# components = list(c(5, 5)) creates two 5x5 grid components (total 25 nodes)
+# Add more vectors to the list for more components
 sim <- simulate_stan_equiv_disconnected(
-  components = list(c(20, 20)),
+  components = list(c(5, 5)),
   n_isolates = 0,
   N_per_zip = 5,
   beta = c(-0.2),
@@ -384,7 +422,7 @@ sim <- simulate_stan_equiv_disconnected(
   seed = seed_data
 )
 
-stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/"
+stan_dir <- "/path/to/stan/models/"
 fit_iid <- fit_bym2 <- fit_model(
   data = sim$stan_data,
   stan_path = file.path(stan_dir, "iid.stan"),
