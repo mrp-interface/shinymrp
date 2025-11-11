@@ -378,5 +378,32 @@ test_that(".impute is consistent", {
     workflow$preprocessed_data(),
     saved
   )
+})
 
+test_that(".data_type defaults classify common cases correctly", {
+  # binary
+  expect_equal(.data_type(c(TRUE, FALSE, NA)), "bin")
+  expect_equal(.data_type(c(0, 1), num = TRUE), 1)
+
+  # categorical (character / factor)
+  expect_equal(.data_type(c("a", "b", "c", NA)), "cat")
+  expect_equal(.data_type(factor(c("x", "y", "z")), num = TRUE), 2)
+
+  # integer-like with few distinct values → categorical
+  expect_equal(.data_type(c(1,1,2,2,3,3,NA)), "cat")
+
+  # numeric with any decimal → continuous
+  expect_equal(.data_type(c(1.0, 2.5, 3.0)), "cont")
+  expect_equal(.data_type(c(1, 2.2), num = TRUE), 3) # even with only 2 values
+
+  # integer-like with many distinct values → continuous
+  expect_equal(.data_type(1:100), "cont")
+
+  # dates/times → continuous
+  expect_equal(.data_type(as.Date("2024-01-01") + 0:5), "cont")
+  expect_equal(.data_type(as.POSIXct("2024-01-01 00:00:00", tz = "UTC") + 0:5), "cont")
+
+  # empty or all-NA → categorical
+  expect_error(.data_type(c(NA, NA)), "Column does not contain any non-NA values.")
+  expect_error(.data_type(logical()), "Column does not contain any non-NA values.")
 })

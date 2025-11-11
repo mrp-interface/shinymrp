@@ -92,7 +92,7 @@ mod_analyze_model_ui <- function(id) {
         bslib::accordion_panel(
           title = "Estimation Result Upload",
           value = "model_upload",
-          fileInput(ns("fit_upload"), "Select .qs file with model estimation", accept = ".qs"),
+          fileInput(ns("fit_upload"), "Select .qs2 file with model estimation", accept = ".qs2"),
           uiOutput(ns("model_feedback")),
           tags$p("Or use example result", class = "mt-2 mb-1"),
           actionButton(ns("use_example"), "Example Estimation Result", icon("table"), class = "w-100")
@@ -681,7 +681,7 @@ mod_analyze_model_server <- function(id, global){
       .show_waiter("wait")
 
       model_buffer(
-        qs::qread(input$fit_upload$datapath)
+        qs2::qs_read(input$fit_upload$datapath)
       )
 
       model_uploaded(TRUE)
@@ -701,7 +701,7 @@ mod_analyze_model_server <- function(id, global){
         file_name <- .create_example_filename(
           global$workflow$metadata(),
           suffix = "fit",
-          ext = ".qs"
+          ext = ".qs2"
         )
 
         model_buffer(
@@ -815,7 +815,7 @@ mod_analyze_model_server <- function(id, global){
         # download fit result after postprocessing
         output[[model$get_id("save_fit_btn")]] <- downloadHandler(
           filename = function() { 
-            paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
+            paste0("estimation_w_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs2")
           },
           content = function(file) {
             .show_waiter("wait")
@@ -836,7 +836,7 @@ mod_analyze_model_server <- function(id, global){
       # download fit result before postprocessing
       output[[model$get_id("save_fit_btn")]] <- downloadHandler(
         filename = function() {
-          paste0("estimation_wo_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs")
+          paste0("estimation_wo_postprocess_", format(Sys.Date(), "%Y%m%d"), ".qs2")
         },
         content = function(file) {
           .show_waiter("wait")

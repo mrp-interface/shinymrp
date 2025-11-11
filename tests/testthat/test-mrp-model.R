@@ -83,7 +83,7 @@ test_that("save works", {
 
   model <- setup_test_model(workflow)
 
-  expect_save_file(model$save, ext = ".qs")
+  expect_save_file(model$save, ext = ".qs2")
 })
 
 

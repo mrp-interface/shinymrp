@@ -20,7 +20,7 @@ workflow$link_acs(link_geo = "zip", acs_year = 2021)
 
 pstrat_data <- example_pstrat_data()
 workflow$load_pstrat(pstrat_data, is_aggregated = TRUE)
-qs::qsave(workflow, paste0(path, "workflow.qs"))
+qs2::qs_save(workflow, paste0(path, "workflow.qs2"))
 
 model1 <- workflow$create_model(
   intercept_prior = "normal(0, 4)",
@@ -48,7 +48,7 @@ model1$log_lik()
 model1$ppc()
 model1$poststratify()
 
-model1$save(file = paste0(path, "model.qs"))
+model1$save(file = paste0(path, "model.qs2"))
 
 model2 <- workflow$create_model(
   intercept_prior = "normal(0, 4)",

@@ -16,8 +16,8 @@ No return value, called for side effects.
 \description{
 The \verb{$save()} method of an \code{MRPModel} object
 saves a fitted MRPModel object to a file for later use.
-\code{qs::qsave()} is used internally, and it is customary
-to use the \code{.qs} file extension. Check out the
+\code{qs2::qs_save()} is used internally, and it is customary
+to use the \code{.qs2} file extension. Check out the
 \href{https://mrp-interface.github.io/shinymrp/articles/example#save}{More examples of R6 classes}
 vignette for usage examples.
 }

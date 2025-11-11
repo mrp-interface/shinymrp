@@ -848,11 +848,13 @@
   # Early exits for empty / all-NA
   non_na <- col[!is.na(col)]
   n <- length(non_na)
-  if (n == 0L) return(if (num) 2L else lbl[2])
+  if (n == 0L) stop("Column does not contain any non-NA values.")
+
+  has_decimal <- is.numeric(col) && any(abs(non_na - round(non_na)) > tol)
 
   # Binary: logical or exactly two distinct non-NA values
   ndist <- length(unique(non_na))
-  if (is.logical(col) || ndist == 2L) return(if (num) 1L else lbl[1])
+  if (is.logical(col) || (!has_decimal && ndist == 2L)) return(if (num) 1L else lbl[1])
 
   # Character/factor → categorical
   if (is.character(col) || is.factor(col)) return(if (num) 2L else lbl[2])
@@ -865,7 +867,7 @@
   # Numeric handling
   if (is.numeric(col)) {
     # If any decimal present (beyond tol) → continuous
-    has_decimal <- any(abs(non_na - round(non_na)) > tol)
+
     if (has_decimal) return(if (num) 3L else lbl[3])
 
     # Integer-like: decide cat vs cont by discreteness signals

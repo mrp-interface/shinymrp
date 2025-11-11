@@ -540,7 +540,7 @@ check_simulation_result <- function(
 
 path <- "dev/data/simulation/timevarying_normal_sim.RDS"
 
-sim_inputs <- qs::qread(path)
+sim_inputs <- qs2::qs_read(path)
 
 
 

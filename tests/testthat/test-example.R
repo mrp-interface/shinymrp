@@ -1,11 +1,11 @@
 read_qs_github <- function(url) {
   # Create temporary file
-  temp_file <- tempfile(fileext = ".qs")
+  temp_file <- tempfile(fileext = ".qs2")
   on.exit(unlink(temp_file))
   
   # Download and read
   utils::download.file(url, destfile = temp_file, mode = "wb", quiet = TRUE)
-  qs::qread(temp_file)
+  qs2::qs_read(temp_file)
 }
 
 test_that("example_sample_data retrieves the correct files", {

@@ -60,8 +60,8 @@ example_pstrat_data <- function() {
 #' @export
 example_model <- function(is_timevar = TRUE) {
   if (is_timevar) {
-    .fetch_data("timevarying_binomial_fit.qs", subdir = "example/fit")
+    .fetch_data("timevarying_binomial_fit.qs2", subdir = "example/fit")
   } else {
-    .fetch_data("crosssectional_binomial_fit.qs", subdir = "example/fit")
+    .fetch_data("crosssectional_binomial_fit.qs2", subdir = "example/fit")
   }
 }

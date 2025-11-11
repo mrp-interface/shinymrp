@@ -14,8 +14,8 @@ fips_ <- list(
 
 # geojson files for counties and states
 geojson_ <- list(
-    county = qs::qread(paste0(path, "geojson_county.qs")),
-    state  = qs::qread(paste0(path, "geojson_state.qs"))
+    county = qs2::qs_read(paste0(path, "geojson_county.qs2")),
+    state  = qs2::qs_read(paste0(path, "geojson_state.qs2"))
 )
 
 

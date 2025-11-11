@@ -301,7 +301,7 @@
   ext <- tolower(tools::file_ext(file))
   switch(ext,
     csv = readr::read_csv(dest, show_col_types = FALSE),
-    qs  = qs::qread(dest),
+    qs2  = qs2::qs_read(dest),
     r   = readLines(dest, warn = FALSE),
     rds = readRDS(dest),
     stop("Unsupported file extension: ", ext)

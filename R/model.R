@@ -514,8 +514,8 @@ MRPModel$set("public", "poststratify", poststratify)
 #'
 #' @description The `$save()` method of an `MRPModel` object
 #' saves a fitted MRPModel object to a file for later use.
-#' `qs::qsave()` is used internally, and it is customary
-#' to use the `.qs` file extension. Check out the
+#' `qs2::qs_save()` is used internally, and it is customary
+#' to use the `.qs2` file extension. Check out the
 #' [More examples of R6 classes](https://mrp-interface.github.io/shinymrp/articles/example#save)
 #' vignette for usage examples.
 #'
@@ -526,7 +526,7 @@ save <- function(file) {
   checkmate::assert_path_for_output(
     file,
     overwrite = TRUE,
-    extension = "qs"
+    extension = "qs2"
   )
 
   # load CmdStan output files into the fitted model object
@@ -534,6 +534,6 @@ save <- function(file) {
     private$fit_$draws()
   }
 
-  qs::qsave(self, file = file)
+  qs2::qs_save(self, file = file)
 }
 MRPModel$set("public", "save", save)

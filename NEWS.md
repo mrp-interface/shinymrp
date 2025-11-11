@@ -1,3 +1,12 @@
+# shinymrp 0.9.1
+
+## Bugfixes
+- Fix variable misclassification (#107)
+
+## Other changes
+- Upgrade to qs2 (#108)
+- Minor UI improvements (#109)
+
 # shinymrp 0.9.0
 
 ## New features

@@ -46,8 +46,8 @@ sample_data <- readr::read_csv(
   "data/timevarying_binomial_prep.csv",
   show_col_types = FALSE
 )
-workflow <- qs::qread("data/workflow.qs")
-model1 <- qs::qread("data/model.qs")
+workflow <- qs2::qs_read("data/workflow.qs2")
+model1 <- qs2::qs_read("data/model.qs2")
 compare_df <- readr::read_csv(
   "data/loo.csv",
   show_col_types = FALSE
@@ -273,13 +273,13 @@ compare_df
 
 ## 3.4 Saving and loading models
 
-You can easily save and restore models using the `qs` package. The `$save()` gathers all posterior draws and diagnostics, then calls `qs::qsave()` internally.
+You can easily save and restore models using the `qs2` package. The `$save()` gathers all posterior draws and diagnostics, then calls `qs2::qs_save()` internally.
 
 ```{r, save_model, eval=FALSE}
-model1$save(file = "model1.qs")
+model1$save(file = "model1.qs2")
 
 # load back into workspace
-model1 <- qs::qread("model1.qs")
+model1 <- qs2::qs_read("model1.qs2")
 ```
 
 
