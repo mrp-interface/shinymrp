@@ -54,4 +54,8 @@ inst/.DS_Store
 inst/extdata/.DS_Store
 .vscode/
 
+# CRAN release files
+cran-comments.md
+CRAN-SUBMISSION
+
 inst/doc
