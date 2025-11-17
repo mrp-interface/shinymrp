@@ -252,7 +252,7 @@ simulate_stan_equiv_disconnected <- function(
   N_zip <- length(zip_levels)
 
   # Reduced-rank ICAR basis (disconnected-aware) + BYM2 scaling
-  basis <- bym2_basis(node1, node2, N_zip, alpha)
+  basis <- bym2_basis(node1, node2, N_zip)
   R <- basis$R; N_pos <- basis$N_pos
   scale_factor <- bym2_scale(node1, node2, N_zip)
   
@@ -408,8 +408,9 @@ seed_model <- sample(1e6, 1)
 # Use components to specify the graph structure
 # components = list(c(5, 5)) creates two 5x5 grid components (total 25 nodes)
 # Add more vectors to the list for more components
+cp0 <- Sys.time()
 sim <- simulate_stan_equiv_disconnected(
-  components = list(c(5, 5)),
+  components = list(c(20, 20)),
   n_isolates = 0,
   N_per_zip = 5,
   beta = c(-0.2),
@@ -422,12 +423,18 @@ sim <- simulate_stan_equiv_disconnected(
   seed = seed_data
 )
 
-stan_dir <- "/path/to/stan/models/"
+cp1 <- Sys.time()
+print(paste0("Simulation: ", cp1 - cp0))
+
+stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/"
 fit_iid <- fit_bym2 <- fit_model(
   data = sim$stan_data,
   stan_path = file.path(stan_dir, "iid.stan"),
   seed = seed_model
 )
+
+cp2 <- Sys.time()
+print(paste0("IID: ", cp2 - cp1))
 
 fit_bym2 <- fit_model(
   data = sim$stan_data,
@@ -435,13 +442,23 @@ fit_bym2 <- fit_model(
   seed = seed_model
 )
 
+cp3 <- Sys.time()
+print(paste0("BYM2: ", cp3 - cp2))
+
 fit_bym2_mc <- fit_model(
   data = sim$stan_data,
   stan_path = file.path(stan_dir, "bym2_multicomp.stan"),
   seed = seed_model
 )
+
+cp4 <- Sys.time()
+print(paste0("BYM2 multicomp: ", cp4 - cp3))
+
 compare_df <- loo::loo_compare(list(
   iid = loo::loo(fit_iid$draws("log_lik")),
   bym2 = loo::loo(fit_bym2$draws("log_lik")),
   bym2_mc = loo::loo(fit_bym2_mc$draws("log_lik"))
 ))
+
+cp5 <- Sys.time()
+print(paste0("LOO: ", cp5 - cp4))

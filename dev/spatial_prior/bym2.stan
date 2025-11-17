@@ -80,4 +80,7 @@ generated quantities {
   for (n in 1:N) {
     log_lik[n] = binomial_lpmf(y[n] | n_sample[n], p[n]);
   }
+  real sigma_struct = lambda_zip * sqrt(rho_zip);
+  real sigma_iid    = lambda_zip * sqrt(1 - rho_zip);
+  real phi_sum = sum(phi_zip);
 }
