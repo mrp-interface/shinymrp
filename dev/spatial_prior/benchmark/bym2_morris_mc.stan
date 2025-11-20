@@ -73,25 +73,25 @@ data {
   array[N_edges_zip] int<lower=1, upper=N_zip> node2_zip;
 
   int<lower=0, upper=N_zip> N_components;
-  array[N_components] int<lower=1, upper=N_zip> component_size;
-  vector<lower=0>[N_components] scaling_factor;
+  array[N_components] int<lower=1, upper=N_zip> component_sizes;
+  vector<lower=0>[N_components] scaling_factors;
 }
 
 transformed data {
-  int N_zip_connected = sum(component_size);
+  int N_zip_connected = sum(component_sizes);
   int N_zip_singletons = N_zip - N_zip_connected;
   if (N_zip_singletons < 0) {
-    reject("Inconsistent inputs: sum(component_size) > N");
+    reject("Inconsistent inputs: sum(component_sizes) > N");
   }
   vector<lower=0>[N_zip_connected] taus;
   array[N_components, 2] int component_idxs;
   int idx = 1;
   for (n in 1:N_components) {
-    taus[idx: component_size[n] + idx - 1]
-      = rep_vector(scaling_factor[n], component_size[n]);
+    taus[idx: component_sizes[n] + idx - 1]
+      = rep_vector(scaling_factors[n], component_sizes[n]);
     component_idxs[n, 1] = idx;
-    component_idxs[n, 2] = component_size[n] + idx - 1;
-    idx += component_size[n];
+    component_idxs[n, 2] = component_sizes[n] + idx - 1;
+    idx += component_sizes[n];
   }
 }
 
@@ -119,7 +119,7 @@ transformed parameters {
   real<lower=0> scaled_lambda_time = lambda_time;
   vector[N_time] a_time = z_time * scaled_lambda_time;
   real<lower=0> scaled_lambda_zip = lambda_zip;
-  vector[N_zip_connected] phi_zip = zero_sum_components_lp(phi_zip_raw, component_idxs, component_size);
+  vector[N_zip_connected] phi_zip = zero_sum_components_lp(phi_zip_raw, component_idxs, component_sizes);
   vector[N_zip] z_zip;
   z_zip[1:N_zip_connected] = sqrt(1 - rho_zip) * theta_zip + sqrt(rho_zip * inv(taus)) .* phi_zip;
   z_zip[N_zip_connected + 1 : N_zip] = singletons_re;
@@ -136,7 +136,7 @@ model {
   z_time ~ std_normal();
   theta_zip ~ std_normal();
   phi_zip ~ icar_normal(node1_zip, node2_zip);
-  rho_zip ~ beta(0.5, 0.5);
+  // rho_zip ~ beta(0.5, 0.5);
   lambda_race ~ normal(0, 1);
   lambda_age ~ normal(0, 1);
   lambda_time ~ normal(0, 1);

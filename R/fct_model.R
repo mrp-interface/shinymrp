@@ -341,8 +341,7 @@
 #' @noRd 
 #' @keywords internal
 .check_if_needs_higher_precision <- function(effects) {
-  if (length(effects$m_var_icar) +
-      length(effects$m_var_bym2) > 0) {
+  if (length(effects$m_var_icar) > 0) {
     return(TRUE)
   }
 
@@ -455,11 +454,13 @@
   "))
   }
 
-  # scaling factor for BYM2 priors
+  # ICAR-basis matrices and indices of isolates for BYM2 priors
   for (s in names(effects$m_var_bym2)) {
     scode <- paste0(scode, stringr::str_interp("
   int<lower=0> N_pos_${s};
   matrix[N_${s}, N_pos_${s}] R_${s};
+  int<lower=0> N_iso_${s};
+  array[N_iso_${s}] int<lower=1, upper=N_${s}> iso_idx_${s};
   "))
   }
 
@@ -629,6 +630,7 @@
   for(s in names(effects$m_var_bym2)) {
     scode <- paste0(scode, stringr::str_interp("
   vector[N_${s}] z_${s} = sqrt(rho_${s}) * R_${s} * eta_${s} + sqrt(1 - rho_${s}) * theta_${s};
+  z_${s}[iso_idx_${s}] = theta_${s}[iso_idx_${s}];
   vector[N_${s}] a_${s} = z_${s} * scaled_lambda_${s};"))
   }
   
@@ -1212,7 +1214,8 @@ generated quantities { ${gq_code}
   # BYM2 graph
   for (s in c(names(effects$m_var_bym2))) {
     out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
-    g <- out$stan_graph[c("N_edges", "node1", "node2", "N_pos", "R")]
+    g <- out$stan_graph[c("N_edges", "node1", "node2",
+                          "N_pos", "R", "N_iso", "iso_idx")]
     names(g) <- paste0(names(g), "_", s)
     stan_data <- modifyList(stan_data, g)
   }

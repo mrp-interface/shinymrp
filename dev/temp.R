@@ -25,11 +25,24 @@ workflow$link_acs(
 )
 
 # Create and fit multiple models
-model <- workflow$create_model(
+model1 <- workflow$create_model(
   varying = list(
     zip = "bym2"
   )
 )
+model2 <- workflow$create_model(
+  varying = list(
+    zip = ""
+  )
+)
 
 # Run MCMC
-model$fit(n_iter = 500, n_chains = 2, seed = 123, max_treedepth = 15)
+model1$fit(n_iter = 1000, n_chains = 4, seed = 123, max_treedepth = 15)
+model2$fit(n_iter = 1000, n_chains = 4, seed = 123, max_treedepth = 15)
+
+print(model1$summary())
+print(model2$summary())
+
+# Compare model results
+comparison <- workflow$compare_models(model1, model2)
+print(comparison)

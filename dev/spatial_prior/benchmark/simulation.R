@@ -151,6 +151,40 @@ library(posterior)
   )
 }
 
+.bym2_full_scaling <- function(node1, node2, N, tol = 1e-10) {
+  stopifnot(length(node1) == length(node2))
+  
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Please install the 'Matrix' package.")
+  }
+  
+  # Build binary symmetric adjacency
+  i <- c(node1, node2)
+  j <- c(node2, node1)
+  W <- Matrix::sparseMatrix(i = i, j = j, x = 1, dims = c(N, N))
+  W@x[] <- 1  # ensure binary in case of duplicates
+  
+  d <- Matrix::rowSums(W)
+  Q <- Matrix::Diagonal(x = d) - W  # graph Laplacian
+  
+  eig <- eigen(as.matrix(Q), symmetric = TRUE)
+  lam <- eig$values
+  U   <- eig$vectors
+  
+  # keep only positive eigenvalues (drop all zero / near-zero)
+  keep <- lam > tol
+  lam_pos <- lam[keep]
+  U_pos   <- U[, keep, drop = FALSE]
+  
+  inv_lam <- 1 / lam_pos
+  
+  # diag(Q^+) = row-wise sum of U_pos^2 * 1/lam
+  v <- rowSums(U_pos^2 * rep(inv_lam, each = N))
+  
+  # BYM2 scaling factor: geometric mean of diag(Q^+)
+  exp(mean(log(v)))
+}
+
 
 #' BYM2 component sizes and scaling factors (non-singleton components only)
 #'
@@ -170,7 +204,6 @@ library(posterior)
 #' @return A list with:
 #'   - component_sizes: integer vector of length N_components
 #'   - scaling_factors: numeric vector of length N_components
-
 #'
 #' @details
 #' For each non-singleton component c, we:
@@ -179,8 +212,6 @@ library(posterior)
 #'   - drop the (near)-zero eigenvalue
 #'   - compute diag(Q_c^+) from the positive part of the spectrum
 #'   - set s_c = exp(mean(log(diag(Q_c^+))))
-#'
-#' This is exactly the same scaling logic as in your \code{bym2_basis()} helper.
 .bym2_component_scaling <- function(node1, node2, N, tol = 1e-10) {
   stopifnot(N >= 0L, length(node1) == length(node2))
 
@@ -411,6 +442,7 @@ simulate_stan_equiv_disconnected <- function(
   start_basis <- Sys.time()
   basis <- .bym2_basis(node1, node2, N_zip)
   end_basis <- Sys.time()
+  full_scale <- .bym2_full_scaling(node1, node2, N_zip)
   comp_scale <- .bym2_component_scaling(node1, node2, N_zip)
   
   # Structured + iid pieces for BYM2
@@ -480,8 +512,9 @@ simulate_stan_equiv_disconnected <- function(
     N_iso   = length(comp$singleton),
     iso_idx = comp$singleton, 
     N_components   = sum(comp$comp_sizes > 1),
-    component_size = comp_scale$component_sizes,
-    scaling_factor = comp_scale$scaling_factors
+    scaling_factor = full_scale,
+    component_sizes = comp_scale$component_sizes,
+    scaling_factors = comp_scale$scaling_factors
   )
   
   list(
@@ -573,6 +606,105 @@ check_recovery <- function(fit, sim) {
   )
 }
 
+plot_timing_by_nodes <- function(
+    models,
+    impl_labels = names(models),
+    basis_title = "Average R construction time",
+    fit_title   = "Average model fitting time"
+) {
+  
+  stopifnot(length(models) == length(impl_labels))
+  
+  # ---- helper to summarize one implementation ----
+  summarize_impl <- function(impl_res, impl_label) {
+    sizes <- names(impl_res)
+    
+    do.call(
+      rbind,
+      lapply(seq_along(impl_res), function(j) {
+        size_name <- sizes[j]
+        
+        # extract number of nodes from names like "25_nodes"
+        n_nodes <- suppressWarnings(as.integer(sub("_.*$", "", size_name)))
+        
+        runs <- impl_res[[j]]
+        
+        basis_times <- vapply(
+          runs,
+          function(run) run$time$basis,
+          numeric(1)
+        )
+        fit_times <- vapply(
+          runs,
+          function(run) run$time$fit,
+          numeric(1)
+        )
+        
+        data.frame(
+          implementation = impl_label,
+          nodes = n_nodes,
+          basis = mean(basis_times, na.rm = TRUE),
+          fit   = mean(fit_times,   na.rm = TRUE),
+          stringsAsFactors = FALSE
+        )
+      })
+    )
+  }
+  
+  # ---- build summary data frame for all implementations ----
+  df_list <- lapply(seq_along(models), function(i) {
+    summarize_impl(models[[i]], impl_labels[i])
+  })
+  df <- do.call(rbind, df_list)
+  
+  # ---- plots ----
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop("Package 'ggplot2' is required for this function.")
+  }
+  library(ggplot2)
+  
+  # Left: basis times
+  p_basis <- ggplot(df, aes(x = nodes, y = basis, color = implementation)) +
+    geom_line() +
+    geom_point() +
+    scale_x_continuous(breaks = sort(unique(df$nodes))) +
+    labs(
+      x = "Number of nodes",
+      y = "Time (s)",
+      color = "Model implementation",
+      title = basis_title
+    ) +
+    theme_bw() +
+    theme(
+      legend.position = "none"
+    )
+  
+  # Right: fit times
+  p_fit <- ggplot(df, aes(x = nodes, y = fit, color = implementation)) +
+    geom_line() +
+    geom_point() +
+    scale_x_continuous(breaks = sort(unique(df$nodes))) +
+    labs(
+      x = "Number of nodes",
+      y = "Time (s)",
+      color = "Model implementation",
+      title = fit_title
+    ) +
+    theme_bw()
+  
+  # ---- arrange side-by-side with whatever is available ----
+  if (requireNamespace("patchwork", quietly = TRUE)) {
+    # preferred if you have patchwork
+    p <- p_basis + p_fit
+    return(p)
+  } else {
+    # fallback: just print both, and return them
+    print(p_basis)
+    print(p_fit)
+    invisible(list(basis = p_basis, fit = p_fit))
+  }
+}
+
 run_sim <- function(
     seed = NULL,
     components = list(c(20, 20)),
@@ -603,7 +735,7 @@ run_sim <- function(
     show_exceptions = FALSE
 ) {
   
-    
+  
   sim_data <- simulate_stan_equiv_disconnected(
     components = components,
     n_isolates = n_isolates,
@@ -642,7 +774,7 @@ run_sim <- function(
   var_vec <- c("intercept", "beta[1]",
                "lambda_race", "lambda_age", "lambda_time",
                "lambda_zip", "rho_zip")
-
+  
   list(
     sim_data = sim_data,
     fit_summary = fit$summary(variables = var_vec),
@@ -651,8 +783,7 @@ run_sim <- function(
 }
 
 repeat_sim <- function(
-    n_rep = 10,
-    seed = NULL,
+    seeds = NULL,
     components = list(c(20, 20)),
     n_isolates = 0,
     N_per_zip = 2,
@@ -680,9 +811,10 @@ repeat_sim <- function(
     show_messages = FALSE,
     show_exceptions = FALSE
 ) {
+  if (is.null(seeds)) return(list())
 
-  purrr::map(seq_len(n_rep), function(i) {
-    cat("---- Simulation fit ", i, " / ", n_rep, " ----\n")
+  purrr::map(seeds, function(seed) {
+    cat("---- Simulation started (seed =", seed, ") ----\n")
 
     sim <- simulate_stan_equiv_disconnected(
       components = components,
@@ -730,12 +862,13 @@ repeat_sim <- function(
       ),
       fit_summary = fit$summary(variables = var_vec)
     )
-  })
+  }) |>
+    setNames(paste0("s", seeds))
 }
 
-repeat_sim_multi_graph <- function(n_rep = 10, n_nodes = c(5), stan_path = NULL) {
+repeat_sim_multi_graph <- function(n_nodes = c(5), seeds = c(123), stan_path = NULL) {
   purrr::map(n_nodes, ~ repeat_sim(
-    n_rep = n_rep,
+    seeds = seeds,
     components = list(c(.x, .x)),
     stan_path = stan_path
   )) |>

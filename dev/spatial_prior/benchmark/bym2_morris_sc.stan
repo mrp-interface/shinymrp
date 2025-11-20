@@ -68,7 +68,7 @@ model {
   z_time ~ std_normal();
   theta_zip ~ std_normal();
   phi_zip ~ icar_normal(node1_zip, node2_zip);
-  rho_zip ~ beta(0.5, 0.5);
+  // rho_zip ~ beta(0.5, 0.5);
   lambda_race ~ normal(0, 1);
   lambda_age ~ normal(0, 1);
   lambda_time ~ normal(0, 1);
