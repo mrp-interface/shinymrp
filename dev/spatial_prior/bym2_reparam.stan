@@ -58,8 +58,7 @@ transformed parameters {
   // ZIP effect with global scale
   vector[N_zip] a_zip = lambda_zip * z_zip;
 
-  vector<lower=0, upper=1>[N] p =
-    inv_logit(intercept + X * beta
+  vector<lower=0, upper=1>[N] p = inv_logit(intercept + X * beta
               + a_race[J_race] + a_age[J_age] + a_time[J_time] + a_zip[J_zip]);
 }
 
@@ -80,10 +79,10 @@ model {
 
   rho_zip ~ beta(0.5, 0.5);
 
-  lambda_race ~ normal(0, 3);
-  lambda_age  ~ normal(0, 3);
-  lambda_time ~ normal(0, 3);
-  lambda_zip  ~ std_normal();
+  lambda_race ~ normal(0, 1);
+  lambda_age  ~ normal(0, 1);
+  lambda_time ~ normal(0, 1);
+  lambda_zip  ~ normal(0, 1);
 }
 
 generated quantities {

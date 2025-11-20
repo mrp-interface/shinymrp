@@ -219,7 +219,7 @@ add_diffs <- function(cmp_tbl) {
 run_bym2_sim_and_compare <- function(
     components = list(c(5, 5)), n_isolates = 0L, N_per_zip = 5L,
     N_race = 3L, N_age = 5L, N_time = 6L, K = 1L,
-    alpha = 1, beta = c(-0.2), intercept = 1.0,
+    beta = c(-0.2), intercept = 1.0,
     lambda_race = 0.3, lambda_age = 0.4, lambda_time = 0.5,
     lambda_zip = 0.8, rho_zip = 0.8, n_trials = 30L,
     seed_data = NULL, seed_model = NULL,
@@ -231,7 +231,7 @@ run_bym2_sim_and_compare <- function(
   sim <- simulate_stan_equiv_disconnected(
     components = components, n_isolates = n_isolates, N_per_zip = N_per_zip,
     N_race = N_race, N_age = N_age, N_time = N_time, K = K,
-    alpha = alpha, beta = beta, intercept = intercept,
+    beta = beta, intercept = intercept,
     lambda_race = lambda_race, lambda_age = lambda_age, lambda_time = lambda_time,
     lambda_zip = lambda_zip, rho_zip = rho_zip,
     n_trials = n_trials, seed = seed_data
@@ -269,9 +269,9 @@ run_bym2_sim_and_compare <- function(
 # =====================
 # Example usage
 # =====================
-stan_path <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/bym2_multicomp.stan"
+stan_path <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/benchmark/bym2_reparam.stan"
 res <- run_bym2_sim_and_compare(
-  components = list(c(5,5)),
+  components = list(c(10, 10)),
   n_isolates = 0,
   N_per_zip  = 5,
   K = 1,

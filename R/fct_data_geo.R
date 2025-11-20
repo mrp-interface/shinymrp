@@ -59,25 +59,6 @@
 
 #' @noRd 
 #' @keywords internal
-.append_isolates <- function(n_sel, comp_id_sel, N_comps_sel, isolate_ids) {
-  m_iso <- length(isolate_ids)
-  if (m_iso == 0L) {
-    return(list(
-      comp_id_all   = comp_id_sel,
-      N_comps_all   = N_comps_sel,
-      N_nodes_total = n_sel
-    ))
-  }
-  comp_id_iso <- seq.int(from = N_comps_sel + 1L, length.out = m_iso)
-  list(
-    comp_id_all   = c(comp_id_sel, comp_id_iso),
-    N_comps_all   = N_comps_sel + m_iso,
-    N_nodes_total = n_sel + m_iso
-  )
-}
-
-#' @noRd 
-#' @keywords internal
 .comp_index_from_comp_id <- function(comp_id_all) {
   if (!length(comp_id_all)) {
     return(list(N_comps = 0L, comp_sizes = integer(), comp_index = matrix(0L, 0, 0)))
@@ -146,59 +127,100 @@
   )
 }
 
-#' @noRd
+#' BYM2 basis (scaled ICAR eigen-basis) per connected component
+#'
+#' Builds an orthonormal basis R such that, within each connected component,
+#'   R R^T approximates the Moore–Penrose inverse of the ICAR precision (graph
+#'   Laplacian) and is BYM2-scaled so that
+#'   geometric_mean(diag(Q^+)) = 1 in that component.
+#'
+#' @param node1,node2 Integer vectors of equal length with 1-based endpoints of undirected edges.
+#' @param N Integer number of nodes.
+#' @param tol Numeric tolerance to decide strictly-positive eigenvalues.
+#' @noRd 
 #' @keywords internal
-.bym2_basis <- function(node1, node2, N, alpha = 1, tol = 1e-10) {
-  stopifnot(alpha > 0, N >= 0)
+.bym2_basis <- function(node1, node2, N, tol = 1e-10) {
+  stopifnot(N >= 0L, length(node1) == length(node2))
   
-  # --- sanitize edges (1..N, no self-loops)
-  node1 <- as.integer(node1); node2 <- as.integer(node2)
-  keep  <- node1 >= 1L & node1 <= N & node2 >= 1L & node2 <= N & node1 != node2
-  node1 <- node1[keep]; node2 <- node2[keep]
+  # ---- components (returns comp_id, N_comps, etc.)
+  comp <- .components_from_edges(N, node1, node2)
   
-  # --- components from edges (works whether the helper returns a vector or a list)
-  comp_res <- .components_from_edges(N, node1, node2)
-  comp  <- if (is.list(comp_res)) comp_res$comp_id else comp_res
-  ncomp <- if (is.list(comp_res)) comp_res$N_comps else if (length(comp)) max(comp) else 0L
-  
-  # --- symmetric numeric sparse adjacency and Laplacian
-  Wg <- Matrix::sparseMatrix(i = c(node1, node2), j = c(node2, node1), x = 1, dims = c(N, N))
-  Wg@x[] <- 1
-  W <- Matrix::forceSymmetric(Wg, uplo = "U")
-  d <- as.numeric(Matrix::rowSums(W))
-  Q <- Matrix::Diagonal(x = d) - W
-  
-  # --- per-component eigen basis with BYM2 scaling: GM(diag((Q^α)^+)) = 1
-  Rblocks <- list(); rows <- list()
-  for (c in seq_len(ncomp)) {
-    idx <- which(comp == c)
-    if (length(idx) <= 1L) next  # isolates: all-zero rows in R
-    Qc <- as.matrix(Q[idx, idx, drop = FALSE])
-    ee <- eigen(Qc, symmetric = TRUE)
-    lam <- ee$values; U <- ee$vectors
-    pos <- lam > tol
-    if (!any(pos)) next
-    lam <- lam[pos]; U <- U[, pos, drop = FALSE]
-    
-    w   <- lam^(-alpha)
-    v   <- rowSums(U^2 * rep(w, each = nrow(U)))  # diag((Q^α)^+)
-    s_c <- exp(mean(log(v)))                      # BYM2 scale per component
-    Rc  <- U %*% diag(lam^(-alpha / 2), nrow = length(lam))
-    Rc  <- Rc / sqrt(s_c)
-    
-    Rblocks[[length(Rblocks) + 1L]] <- Rc
-    rows[[length(rows) + 1L]]       <- idx
+  if (N == 0L || comp$N_comps == 0L) {
+    return(list(
+      R     = matrix(numeric(), nrow = N, ncol = 0L),
+      N_pos = 0L,
+      comp  = comp
+    ))
   }
   
-  Npos <- if (length(Rblocks)) sum(vapply(Rblocks, ncol, 1L)) else 0L
-  R <- matrix(0, N, Npos); off <- 0L
-  for (k in seq_along(Rblocks)) {
-    idx <- rows[[k]]; p <- ncol(Rblocks[[k]])
-    R[idx, (off + 1L):(off + p)] <- Rblocks[[k]]
+  # ---- sparse symmetric adjacency and Laplacian Q
+  Wg <- Matrix::sparseMatrix(
+    i    = c(node1, node2),
+    j    = c(node2, node1),
+    x    = 1,
+    dims = c(N, N)
+  )
+  W  <- Matrix::forceSymmetric(Wg, uplo = "U")
+  d  <- as.numeric(Matrix::rowSums(W))
+  Q  <- Matrix::Diagonal(x = d) - W
+  
+  # Precompute node indices per component
+  indices_by_comp <- split(seq_len(N), comp$comp_id)
+  
+  # ---- loop over components, build BYM2-scaled blocks
+  Rblocks <- vector("list", comp$N_comps)
+  rows    <- vector("list", comp$N_comps)
+  
+  for (c in seq_len(comp$N_comps)) {
+    idx <- indices_by_comp[[c]]
+    n_c <- length(idx)
+    if (n_c <= 1L) next  # isolate: contributes no columns
+    
+    # Dense eigendecomposition (Qc is small per component in typical spatial graphs)
+    Qc <- as.matrix(Q[idx, idx, drop = FALSE])
+    ee <- eigen(Qc, symmetric = TRUE)
+    lam <- ee$values
+    U   <- ee$vectors
+    
+    # Keep strictly positive eigenvalues (drop the single zero EV per component)
+    keep <- lam > tol
+    if (!any(keep)) next
+    
+    lam  <- lam[keep]
+    Upos <- U[, keep, drop = FALSE]
+    
+    # diag(Q^+) = rowSums(Upos^2 %*% diag(1/lam)), BYM2 scale s = GM(diag(Q^+))
+    lam_inv   <- 1 / lam
+    diag_Qpin <- as.vector((Upos^2) %*% lam_inv)
+    s_c       <- exp(mean(log(diag_Qpin)))
+    
+    # R_c = Upos %*% diag(1/sqrt(lam)) / sqrt(s_c)
+    # use sweep instead of building an explicit diagonal matrix
+    Rc <- sweep(Upos, 2L, sqrt(lam), FUN = "/")
+    Rc <- Rc / sqrt(s_c)
+    
+    Rblocks[[c]] <- Rc
+    rows[[c]]    <- idx
+  }
+  
+  # ---- assemble R
+  ncols <- sum(vapply(Rblocks, function(M) if (is.null(M)) 0L else ncol(M), integer(1)))
+  R     <- matrix(0.0, nrow = N, ncol = ncols)
+  
+  off <- 0L
+  for (c in seq_len(comp$N_comps)) {
+    Rc <- Rblocks[[c]]
+    if (is.null(Rc)) next
+    p <- ncol(Rc)
+    R[rows[[c]], (off + 1L):(off + p)] <- Rc
     off <- off + p
   }
   
-  list(R = R, N_pos = ncol(R), comp_id = comp, N_comps = ncomp)
+  list(
+    R     = R,
+    N_pos = ncol(R),
+    comp  = comp
+  )
 }
 
 # ---------- Generic (county/state) builder — ORDER-PRESERVING + BYM2 ----------
@@ -206,7 +228,6 @@
     ids_vec,
     nat,                   # from create_static_edges_one(geo="county"/"state")
     pad_width = NULL,      # 5 for county, 2 for state, NULL if already clean
-    alpha = 1,             # BYM2 order (1 = standard ICAR/BYM2)
     verbose   = FALSE
 ) {
   ids_vec <- as.character(ids_vec)
@@ -229,7 +250,7 @@
 
   # Build BYM2 reduced-rank basis in this exact node order.
   # Edges reference only the first n_sel nodes; isolates occupy indices n_sel+1..N_total.
-  basis <- .bym2_basis(node1, node2, N = N_total, alpha = alpha)
+  basis <- .bym2_basis(node1, node2, N = N_total)
 
   # Components summary derived from the basis' comp_id (keeps everything in-sync)
   cm <- .comp_index_from_comp_id(basis$comp_id)
@@ -249,14 +270,11 @@
   list(
     id_to_node = id_to_node,                      # named int: ID -> local node (builder order)
     stan_graph = list(
-      N_nodes    = as.integer(N_total),
-      N_edges    = as.integer(length(node1)),
-      node1      = if (length(node1)) as.integer(node1) else integer(0),
-      node2      = if (length(node2)) as.integer(node2) else integer(0),
-      N_comps    = as.integer(cm$N_comps),
-      comp_sizes = as.integer(cm$comp_sizes),
-      comp_index = cm$comp_index,
-      N_pos      = as.integer(basis$N_pos),
+      N_nodes    = N_total,
+      N_edges    = length(node1),
+      node1      = if (length(node1) > 0) node1 else integer(0),
+      node2      = if (length(node2) > 0) node2 else integer(0),
+      N_pos      = basis$N_pos,
       R          = basis$R
     ),
     ids_local = c(sub$ids_local, ids_isolate)     # local node order (present then isolates)
@@ -335,14 +353,11 @@
   list(
     zip_to_node = zip_to_node,  # named int (ZIP -> local node) in caller order
     stan_graph  = list(
-      N_nodes    = as.integer(N_total),
-      N_edges    = as.integer(length(node1)),
-      node1      = if (length(node1)) as.integer(node1) else integer(0),
-      node2      = if (length(node2)) as.integer(node2) else integer(0),
-      N_comps    = as.integer(cm$N_comps),
-      comp_sizes = as.integer(cm$comp_sizes),
-      comp_index = cm$comp_index,
-      N_pos      = as.integer(basis$N_pos),
+      N_nodes    = N_total,
+      N_edges    = length(node1),
+      node1      = if (length(node1) > 0) node1 else integer(0),
+      node2      = if (length(node2) > 0) node2 else integer(0),
+      N_pos      = basis$N_pos,
       R          = basis$R
     ),
     ids_local = c(sub$ids_local, tgt$zips_isolate)  # local node order (ZCTAs then ZIP isolates)
