@@ -237,10 +237,10 @@ test_that("R construction works", {
     components = list(c(3, 3)),
     n_isolates = 0
   )
-  basis <- .compute_bym2_basis(
+  basis <- .compute_icar_basis(
     node1 = adj$node1,
     node2 = adj$node2,
-    N     = nrow(adj$W)
+    n_nodes = nrow(adj$W)
   )
 
   expect_true(attr(.check_basis_sum_to_zero(basis), "ok"))
@@ -258,10 +258,10 @@ test_that("R construction works", {
     components = list(c(3, 3), c(2, 2)),
     n_isolates = 0
   )
-  basis <- .compute_bym2_basis(
+  basis <- .compute_icar_basis(
     node1 = adj$node1,
     node2 = adj$node2,
-    N     = nrow(adj$W)
+    n_nodes = nrow(adj$W)
   )
 
   expect_true(attr(.check_basis_sum_to_zero(basis), "ok"))
@@ -279,10 +279,10 @@ test_that("R construction works", {
     components = list(c(3, 3)),
     n_isolates = 2
   )
-  basis <- .compute_bym2_basis(
+  basis <- .compute_icar_basis(
     node1 = adj$node1,
     node2 = adj$node2,
-    N     = nrow(adj$W)
+    n_nodes = nrow(adj$W)
   )
 
   expect_true(attr(.check_basis_sum_to_zero(basis), "ok"))

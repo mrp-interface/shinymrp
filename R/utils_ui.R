@@ -428,11 +428,18 @@
             tableOutput(ns(model$get_id("varying_tbl")))  
           )
         },
-        if(nrow(model$summary()$other) > 0) {
+        if(nrow(model$summary()$residual) > 0) {
           tags$div(
             tags$h4("Standard Deviation of Residuals", class = "break_title"),
             tags$hr(class = "break_line"),
-            tableOutput(ns(model$get_id("other_tbl")))  
+            tableOutput(ns(model$get_id("residual_tbl")))  
+          )
+        },
+        if(nrow(model$summary()$bym2) > 0) {
+          tags$div(
+            tags$h4("Proportions of Spatial Variation (BYM2)", class = "break_title"),
+            tags$hr(class = "break_line"),
+            tableOutput(ns(model$get_id("bym2_tbl")))  
           )
         },
         tags$div(

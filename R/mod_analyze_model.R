@@ -782,8 +782,13 @@ mod_analyze_model_server <- function(id, global){
         rownames = TRUE,
         na = ""
       )
-      output[[model$get_id("other_tbl")]] <- renderTable(
-        model$summary()$other,
+      output[[model$get_id("residual_tbl")]] <- renderTable(
+        model$summary()$residual,
+        rownames = TRUE,
+        na = ""
+      )
+      output[[model$get_id("bym2_tbl")]] <- renderTable(
+        model$summary()$bym2,
         rownames = TRUE,
         na = ""
       )

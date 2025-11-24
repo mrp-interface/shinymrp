@@ -85,7 +85,7 @@ bayesplot::bayesplot_theme_set(
 ```{r}
 seed <- sample(1e6, 1)
 components <- list(c(5, 5))
-stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/benchmark/"
+stan_dir <- "/path/to/stan/files/"
 
 sim_morris_sc <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_morris_sc.stan"))
 sim_morris_mc <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_morris_mc.stan"))
@@ -153,6 +153,7 @@ p_reparam
 ## Computational complexity
 
 ```{r}
+# Connect to Turbo
 result_dir <- "/Volumes/sph-yajuan2/toan/spatial_prior/result/benchmark/"
 results <- list(
   bym2_morris_sc = readRDS(paste0(result_dir, "sims_bym2_morris_sc.RDS")),

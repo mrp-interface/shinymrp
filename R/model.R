@@ -341,7 +341,8 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #' summary and diagnostics for model parameters:
 #' - fixed effects (`fixed`)
 #' - standard deviations of varying effects (`varying`)
-#' - standard deviations of residuals (`other`)
+#' - standard deviations of residuals (`residual`)
+#' - BYM2 mixing parameters (`bym2`)
 summary <- function() {
   private$assert_fit_exists()
 

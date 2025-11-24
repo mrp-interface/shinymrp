@@ -1206,7 +1206,7 @@ generated quantities { ${gq_code}
   # ICAR graph
   for (s in c(names(effects$m_var_icar))) {
     out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
-    g <- out$stan_graph[c("N_edges", "node1", "node2")]
+    g <- out[c("N_edges", "node1", "node2")]
     names(g) <- paste0(names(g), "_", s)
     stan_data <- modifyList(stan_data, g)
   }
@@ -1214,8 +1214,8 @@ generated quantities { ${gq_code}
   # BYM2 graph
   for (s in c(names(effects$m_var_bym2))) {
     out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
-    g <- out$stan_graph[c("N_edges", "node1", "node2",
-                          "N_pos", "R", "N_iso", "iso_idx")]
+    g <- out[c("N_edges", "node1", "node2",
+               "N_pos", "R", "N_iso", "iso_idx")]
     names(g) <- paste0(names(g), "_", s)
     stan_data <- modifyList(stan_data, g)
   }
@@ -1247,7 +1247,7 @@ generated quantities { ${gq_code}
       stan_data$J_time_pstrat <- new_data$time
     }
   }
-
+  stan_data_global <<- stan_data
   return(stan_data)
 }
 
@@ -1536,29 +1536,7 @@ generated quantities { ${gq_code}
 #' @param input_data Original input data frame used for model fitting, needed
 #'   for determining reference levels and variable types.
 #' @param metadata List containing model specifications including family type.
-#'
-#' @return List containing formatted parameter summary tables:
-#'   \item{fixed}{Data frame with fixed effects estimates including:
-#'     \itemize{
-#'       \item intercept and main effects
-#'       \item Reference levels for categorical variables
-#'       \item Fixed-slope interactions
-#'       \item Columns: Estimate, Est.Error, credible intervals, R-hat, ESS
-#'     }
-#'   }
-#'   \item{varying}{Data frame with varying effects standard deviations:
-#'     \itemize{
-#'       \item Varying intercepts (lambda parameters)
-#'       \item Varying slopes (lambda2 parameters)
-#'       \item Interaction effects
-#'     }
-#'   }
-#'   \item{other}{Data frame with additional parameters:
-#'     \itemize{
-#'       \item Residual standard deviation (for normal family)
-#'       \item Other model-specific parameters
-#'     }
-#'   }
+#' 
 #' @noRd
 #' @keywords internal
 .get_parameters <- function(
@@ -1623,25 +1601,30 @@ generated quantities { ${gq_code}
 
 
   ### other parameters
-  df_other <- data.frame()
-  row_names <- c()
-
+  # residual SD for normal family
+  df_residual <- data.frame()
   if (metadata$family == "normal") {
-    df_other <- rbind(
-      df_other,
-      .get_params_summary(fit, variables = "sigma")
+    df_residual <- .format_params_summary(
+      .get_params_summary(fit, variables = "sigma"),
+      row_names = c("Residual SD")
     )
-    row_names <- c(row_names, "Residual SD")
   }
 
-  if (nrow(df_other) > 0) {
-    df_other <- .format_params_summary(df_other, row_names = row_names)
+  # mixing parameter (rho) for BYM2
+  df_bym2 <- data.frame()
+  if (length(effects$m_var_bym2) > 0) {
+    vnames <- names(effects$m_var_bym2)
+    df_bym2 <- .format_params_summary(
+      .get_params_summary(fit, variables = paste0("rho_", vnames)),
+      row_names = vnames
+    )
   }
 
   return(list(
     fixed   = df_fixed,
     varying = df_varying,
-    other   = df_other
+    residual = df_residual,
+    bym2 = df_bym2
   ))
 }
 
