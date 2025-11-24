@@ -1,0 +1,223 @@
+---
+title: "Spatial priors implementation in shinymrp"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Spatial priors implementation in shinymrp}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+Conditional Autoregressive (CAR) models are commonly used to represent local dependency between random variables. We provide two popular members of this family of models as priors for our hierarchical models:
+
+- Intrinsic CAR (ICAR): an intrinsic (improper) Gaussian Markov random field that smooths by penalizing neighbor differences
+- BYM2: a reparameterization of the BYM (Besag-York-Mollié) model that combines a structured ICAR component with a spatially independent component and incorporates scaling to standardize interpretation across graphs.
+
+## Areal data & neighborhood graph
+These models specifically apply to *areal data*, which consist of a single aggregated measure for each areal unit. In spatial modeling, the primary interest lies in the **relationships between units** rather than in the units themselves. Common approaches to define these relationships include **rook** and **queen contiguity**, which identify two areal units as neighbors if they share a border. We use the `spdep` package to construct neighborhood graphs from areal units. For ZIP codes, **ZCTAs** (ZIP Code Tabulation Areas) are used as proxies to infer the adjacency structure. A common mathematical representation of this structure is the **adjacency matrix**, denoted \( \mathbf{W} \). Because the edges are undirected, \( \mathbf{W} \) is an \( N \times N \) symmetric matrix for a set of \( N \) areal units. This representation enables mathematical operations that yield valuable insights into the neighborhood graph, as will be illustrated in later sections.
+
+The **connectivity** of the graph can affect the choice of spatial model. For instance, the ICAR prior requires a connected graph. A **connected** graph contains a single **component**, meaning that each node can be reached from any other node. Conversely, a graph with multiple components is **disconnected**, as nodes in one component cannot reach those in another. A component of size one is referred to as an **island** (or **isolate**). Since the structured component of a spatial model relies on neighborhood edges for smoothing, these isolates require special handling. 
+
+## Intrinsic Conditional Auto-Regressive (ICAR) models
+At the heart of an **ICAR model** is a multivariate normal random variable \( \boldsymbol{\phi} \), where each element \( \phi_i \) is conditionally distributed based on a weighted sum of its neighboring values. The locality of this specification is analogous to the definition of a **Markov random field**. Under the assumption of complete spatial correlation, the ICAR model defines the joint distribution of \( \boldsymbol{\phi} \) as:
+
+\[ \boldsymbol{\phi} \sim \mathcal{N}(\mathbf{0}, \mathbf{L}^{-1}) \]
+
+where \( \mathbf{L} \) is the **graph Laplacian matrix**. Through linear algebra, the log-probability density can be expressed in terms of the pairwise differences between neighboring values of \( \boldsymbol{\phi} \): \[ \log p(\boldsymbol{\phi}) \propto -\frac{1}{2} \sum_{i \sim j} (\phi_i - \phi_j)^2 \] This formulation explicitly shows how the neighborhood structure is incorporated into the joint probability. It also reveals the **non-identifiability problem** of the ICAR model, which arises because adding a constant to all elements of \( \boldsymbol{\phi} \) does not change the differences. To resolve this, a **sum-to-zero constraint** is imposed: \[ \sum_{i=1}^{N} \phi_i = 0 \] This constraint also prevents \( \boldsymbol{\phi} \) from confounding the model intercept.
+
+### Stan implementation
+
+The implementation in Stan is straightforward with the pairwise difference fomulation.
+
+Function for computating the log probability density
+
+``` stan
+functions { 
+  real icar_normal_lpdf(vector phi, array[] int node1, array[] int node2) {
+    return -0.5 * dot_self(phi[node1] - phi[node2]);
+  }
+  ...
+```
+Pass neighborhood information using edges defined by node indices
+
+```stan
+data {
+  int<lower = 0> N;  // number of areal regions
+  int<lower = 0> N_edges;  // number of neighbor pairs
+  array[N_edges] int<lower = 1, upper = N> node1;
+  array[N_edges] int<lower = 1, upper = N> node2;
+  ...
+```
+
+Use Stan’s built-in sum_to_zero_vector to constrain phi
+
+```stan
+parameters {
+  sum_to_zero_vector[N] phi; // structured spatial random effects
+  ...
+```
+
+Add to joint probability density using Stan’s distribution statement
+
+```stan
+model {
+  phi ~ icar_normal(node1, node2);
+  ...
+```
+
+## BYM2 model
+
+The assumption of complete spatial correlation in ICAR models limits their applicability to most real datasets. The BYM (Besag–York–Mollié) model addresses this by adding an unstructured spatial random effect to account for independent region-specific noise. However, having both structured and unstructured components introduces confounding. The BYM2 model (Riebler et&nbsp;al., 2016) reparameterizes BYM to improve interpretability of parameters and hyperpriors without sacrificing performance. When a spatial random effect is assigned a BYM2 prior, it is modeled as a convex-like mixture of a standardized unstructured term and a scaled ICAR term:
+
+\[ b_i \;=\; \Big(\sqrt{\rho/s}\;\phi_i \;+\; \sqrt{1-\rho}\;\theta_i\Big) \sigma, \qquad i=1,\dots,N, \]
+
+where:
+
+- \(\phi_i\) is the ICAR component 
+- \(\theta_i\) is the unstructured spatial effect
+- \(s\) is the scaling factor computed from the neighborhood graph such that \(\operatorname{Var}(\phi_i) = 1\)
+- \(\rho \in [0,1]\) controls the mixing between unstructured and structured components
+- \(\sigma > 0\) is the overall standard deviation.
+
+### Stan implementation for connected graph
+
+We can use the implementation of the ICAR component in the previous section.
+
+``` stan
+functions { 
+  real icar_normal_lpdf(vector phi, array[] int node1, array[] int node2) {
+    return -0.5 * dot_self(phi[node1] - phi[node2]);
+  }
+  ...
+```
+Pass the scaling factor computed from the adjacency matrix in addition to the edgelist
+
+```stan
+data {
+  int<lower = 0> N;  // number of areal regions
+  int<lower = 0> N_edges;  // number of neighbor pairs
+  array[N_edges] int<lower = 1, upper = N> node1;
+  array[N_edges] int<lower = 1, upper = N> node2;
+  real<lower=0> scale_factor;
+  ...
+```
+
+Use Stan’s built-in sum_to_zero_vector to constrain phi
+
+```stan
+parameters {
+  real<lower=0> sigma; // overall standard deviation for spatial effect
+  real<lower=0, upper=1> rho; // mixing parameter 
+  vector[N] theta; // unstructured spatial random effect
+  sum_to_zero_vector[N] phi; // structured spatial random effect
+  ...
+```
+
+Compute combined spatial effect
+
+```stan
+transformed_parameters {
+  vector[N] b = sqrt(rho ./ scale_factor) * phi + sqrt(1 - rho) * theta
+  ...
+```
+
+Assigning priors
+
+```stan
+model {
+  theta ~ std_normal();
+  phi ~ icar_normal(node1, node2);
+  rho ~ beta(0.5, 0.5)
+  sigma ~ std_normal();
+  ...
+```
+
+### BYM2 reparameterization for disconnected graph
+According to Freni-Sterrantino et al. (2018), the BYM2 model can be extended to graphs with multiple components as follows:
+
+- Component nodes are given the BYM2 prior
+- Singleton nodes (islands) are given a standard Normal prior
+- Compute per-connected component scaling factor
+- Impose a sum-to-zero constraint on each connected component
+
+To make this extension easier, we reparameterize the structured ICAR field on a basis that (i) lies in each component’s sum-to-zero subspace and (ii) is BYM2-standardized. Isolates get no structured variance and only receive the spatially independent part.
+
+Consider a single connected neighborhood graph with \(N\ge2\) areas. Let \(A\) be the symmetric adjacency, \(D=\mathrm{diag}(d_i)\) the degree matrix, and \(L=D-A\) the graph Laplacian. Because the graph is connected, \(L\mathbf 1=0\) and \(\mathrm{null}(L)=\mathrm{span}\{\mathbf 1\}\). The intrinsic CAR prior has log-density \(-\tfrac12\,\phi^\top L\,\phi\); it is improper on \(\mathbb R^N\) but becomes proper on the sum-to-zero subspace
+\[
+\mathcal H=\{\phi\in\mathbb R^N:\mathbf 1^\top \phi=0\}.
+\]
+
+Since \(L\) is symmetric positive semidefinite, diagonalize \(L=U\Lambda U^\top\) where the eigenvalues satisfy \(0=\lambda_1<\lambda_2\le\cdots\le\lambda_N\), with \(u_1\propto \mathbf 1\). Write \(U_+=[u_2,\ldots,u_N]\in\mathbb R^{N\times(N-1)}\) and \(\Lambda_+=\mathrm{diag}(\lambda_2,\ldots,\lambda_N)\). The Moore–Penrose pseudoinverse is
+\[
+L^{+}=U_+\Lambda_+^{-1}U_+^\top,
+\]
+which equals the covariance of the ICAR prior restricted to \(\mathcal H\).
+
+Define the basis
+\[
+R \;=\; U_+\,\Lambda_+^{-1/2}\in\mathbb R^{N\times(N-1)},\qquad \eta \sim \mathcal N(0,I_{N-1}),\qquad \phi \;=\; R\,\eta.
+\]
+This reparameterization is equivalent to the constrained ICAR in the following sense. First, the support matches because each column of \(R\) is orthogonal to \(\mathbf 1\), hence \(\mathbf 1^\top\phi=\mathbf 1^\top R\eta=0\) for all \(\eta\), i.e., \(\phi\in\mathcal H\). Second, the mean matches since \(\mathbb E[\phi]=R\,\mathbb E[\eta]=0\). Third, the covariance matches because
+\[
+\mathrm{Var}(\phi) \;=\; R\,\mathrm{Var}(\eta)\,R^\top \;=\; R R^\top \;=\; U_+\Lambda_+^{-1}U_+^\top \;=\; L^{+}.
+\]
+Linear images of a multivariate normal are normal; therefore \(\phi\stackrel{d}{=}\mathcal N(0,L^{+})\) on \(\mathcal H\). Right-orthogonal rotations of the scores, \(R\mapsto RQ\) with \(Q\) orthogonal, leave \(R R^\top\) unchanged; the parameterization is not unique but the induced law for \(\phi\) is.
+
+BYM2 standardization rescales the structured field so that the geometric mean of its marginal variances equals one. Let \(v_i=(L^{+})_{ii}\) and define
+\[
+s \;=\; \exp\Big(\tfrac{1}{N}\sum_{i=1}^N \log v_i\Big),\qquad R_{\text{BYM2}} \;=\; \frac{1}{\sqrt{s}}\,R,\qquad \tilde\phi \;=\; R_{\text{BYM2}}\,\eta.
+\]
+Then \(\mathrm{GM}\big(\operatorname{diag}\mathrm{Var}(\tilde\phi)\big)=1\), while \(\mathbf 1^\top \tilde\phi=0\) still holds because the subspace is unchanged.
+
+
+### Stan implementation for all graphs
+The reparameterization allows more cleaner implementation as the reduced-rank ICAR basis is already BYM2-standardized and enforces the sum-to-zero constraint by construction. The sum_to_zero vector is not longer needed which can improve sampling.
+
+Pass the scaled reduced-rank ICAR basis
+
+```stan
+data {
+  int<lower=0> N;  // number of areal regions
+  int<lower=0> N_pos;
+  matrix[N_zip, N_pos] R; // already scaled so that geometric mean of
+                          // marginal variance is 1
+  ...
+```
+
+```stan
+parameters {
+  real<lower=0> sigma; // overall standard deviation for spatial effect
+  real<lower=0, upper=1> rho; // mixing parameter 
+  vector[N] theta; // unstructured spatial random effect
+  vector[N] eta; // structured reduced-rank scores
+  ...
+```
+
+Compute the scaled ICAR component and combined spatial effect
+
+```stan
+transformed_parameters {
+  vector[N] phi = R * eta;
+  vector[N] b = sqrt(rho) * phi + sqrt(1 - rho) * theta
+  ...
+```
+
+Assigning priors
+
+```stan
+model {
+  eta ~ std_normal();
+  theta ~ std_normal();
+  rho ~ beta(0.5, 0.5)
+  sigma ~ std_normal();
+  ...
+```
+
+

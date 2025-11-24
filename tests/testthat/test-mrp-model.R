@@ -42,7 +42,7 @@ test_that("summary works", {
   summary <- model$summary()
 
   expect_type(summary, "list")
-  expect_named(summary, c("fixed", "varying", "other"))
+  expect_named(summary, c("fixed", "varying", "residual", "bym2"))
 })
 
 test_that("diagnostics works", {

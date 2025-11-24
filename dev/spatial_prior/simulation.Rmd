@@ -1,0 +1,530 @@
+---
+title: "ICAR prior implementation validation"
+output: html_document
+---
+
+**NOTE**: Stan version 2.36 or later is required to render this R Markdown.
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = "")
+
+library(cmdstanr)
+library(posterior)
+library(loo)
+library(Matrix)
+library(dplyr)
+library(spdep)
+
+set.seed(123)
+
+stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/"
+
+make_lattice_adj <- function(nx = 20, ny = 20) {
+  K <- nx * ny
+  lab <- sprintf("Z%04d", seq_len(K))
+  W <- Matrix(0, K, K, sparse = FALSE)
+  idx <- function(x, y) (y - 1L) * nx + x
+  for (x in 1:nx) for (y in 1:ny) {
+    i <- idx(x, y)
+    if (x > 1)  W[i, idx(x - 1, y)] <- 1
+    if (x < nx) W[i, idx(x + 1, y)] <- 1
+    if (y > 1)  W[i, idx(x, y - 1)] <- 1
+    if (y < ny) W[i, idx(x, y + 1)] <- 1
+  }
+  W <- (W + t(W)) > 0
+  W <- Matrix(as.numeric(W), nrow = K, ncol = K, sparse = FALSE)
+  rownames(W) <- colnames(W) <- lab
+  
+  # undirected edge list (upper triangle, 1-based for Stan)
+  E <- which(upper.tri(W) & (W == 1), arr.ind = TRUE)
+  node1 <- as.integer(E[, 1])
+  node2 <- as.integer(E[, 2])
+  list(W = W, labels = lab, node1 = node1, node2 = node2)
+}
+
+icar_sample_sum_to_zero <- function(W, alpha = 1) {
+  L <- diag(rowSums(W)) - as.matrix(W)
+  eig <- eigen(L, symmetric = TRUE)
+  lam <- pmax(eig$values, 1e-12)     # numerical guard
+  U   <- eig$vectors
+  lam_pos <- lam[-1]
+  U_pos   <- U[, -1, drop = FALSE]
+  z <- rnorm(length(lam_pos))
+  phi <- as.numeric(U_pos %*% (z / (lam_pos^(alpha / 2))))
+  phi <- phi - mean(phi)
+  phi <- phi / sd(phi)               # unit sd; scale externally by lambda_zip
+  phi
+}
+
+# Compute BYM2 scaling factor s from a 1-based adjacency list (connected graph).
+# node1, node2: integer vectors of length E (1..N); each pair is an undirected edge.
+# N: number of nodes.
+#
+# Returns: a single number s so that GM(diag(Q^+)) == 1 when precision is s*Q.
+
+bym2_scale <- function(node1, node2, N) {
+  stopifnot(length(node1) == length(node2))
+  E <- length(node1)
+
+  # Build sparse adjacency (binary, symmetric)
+  # Note: add both (i,j) and (j,i) then coerce to 0/1.
+  i <- c(node1, node2)
+  j <- c(node2, node1)
+  x <- rep(1, 2 * E)
+
+  # Base R sparse via Matrix
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Please install the 'Matrix' package.")
+  }
+  W <- Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(N, N))
+  W@x[] <- 1  # ensure binary
+
+  d <- Matrix::rowSums(W)
+  Q <- Matrix::Diagonal(x = as.numeric(d)) - W  # graph Laplacian
+
+  # Eigen-decompose Q (connected graph => one zero eigenvalue)
+  # Use base eigen on dense if N is small; for larger N, consider RSpectra.
+  Qd <- as.matrix(Q)
+  eig <- eigen(Qd, symmetric = TRUE, only.values = FALSE)
+  lam <- eig$values
+  U   <- eig$vectors
+
+  # Drop the first (near-zero) eigenvalue/eigenvector
+  # Sort ascending just in case (eigen usually returns descending).
+  ord <- order(lam)
+  lam <- lam[ord]
+  U   <- U[, ord, drop = FALSE]
+
+  # Exclude the zero eigen (index 1 for connected graph)
+  lam_pos <- lam[-1]
+  U_pos   <- U[, -1, drop = FALSE]
+
+  # Moore–Penrose inverse: Q^+ = U_pos diag(1/lam_pos) U_pos^T
+  # only need the diagonal entries of Q^+.
+  inv_lam <- 1 / lam_pos
+  # diag(Q^+) = row-wise dot of U_pos * inv_lam with U_pos
+  # (efficient computation without forming the full matrix)
+  v <- rowSums((U_pos^2) %*% diag(inv_lam, nrow = length(inv_lam)))
+
+  # Geometric-mean scaling: s = exp(mean(log(diag(Q^+))))
+  s <- exp(mean(log(v)))
+  return(as.numeric(s))
+}
+
+simulate_stan_equiv <- function(
+    nx = 20, ny = 20, N_per_zip = 2,
+    N_race = 4, N_age = 5, N_time = 6, K = 1,
+    beta = c(-0.2),
+    intercept = 0.0,
+    lambda_race = 0.3, lambda_age = 0.5, lambda_time = 0.6,
+    lambda_zip = 0.8, alpha_icar = 1.8,
+    n_trials = 30
+) {
+  adj <- make_lattice_adj(nx, ny)
+  W <- adj$W
+  node1 <- adj$node1
+  node2 <- adj$node2
+  zip_levels <- adj$labels
+  N_zip <- length(zip_levels)
+  
+  J_zip  <- rep(seq_len(N_zip), each = N_per_zip)
+  N      <- length(J_zip)
+  J_race <- sample.int(N_race, N, TRUE)
+  J_age  <- sample.int(N_age,  N, TRUE)
+  J_time <- sample.int(N_time, N, TRUE)
+  
+  X <- matrix(rnorm(N * K), N, K); colnames(X) <- paste0("x", 1:K)
+  
+  a_race <- lambda_race * rnorm(N_race)
+  a_age  <- lambda_age  * rnorm(N_age)
+  a_time <- lambda_time * rnorm(N_time)
+  z_zip  <- icar_sample_sum_to_zero(W, alpha = alpha_icar)
+  a_zip  <- lambda_zip * z_zip
+  
+  eta <- intercept + as.numeric(X %*% beta) +
+    a_race[J_race] + a_age[J_age] + a_time[J_time] + a_zip[J_zip]
+  p <- plogis(eta)
+  n_sample <- rep(n_trials, N)
+  y <- rbinom(N, n_sample, p)
+  
+  dat <- data.frame(
+    y = y, n_sample = n_sample, X,
+    race = factor(J_race),
+    age  = factor(J_age),
+    time = factor(J_time),
+    zip  = factor(zip_levels[J_zip], levels = zip_levels)
+  )
+  
+  stan_data <- list(
+    N = as.integer(N),
+    K = as.integer(K),
+    X = X,
+    y = as.array(as.integer(y)),
+    n_sample = as.array(as.integer(n_sample)),
+    N_race = as.integer(N_race),
+    J_race = as.array(as.integer(J_race)),
+    N_age  = as.integer(N_age),
+    J_age  = as.array(as.integer(J_age)),
+    N_time = as.integer(N_time),
+    J_time = as.array(as.integer(J_time)),
+    N_zip  = as.integer(N_zip),
+    J_zip  = as.array(as.integer(J_zip)),
+    N_edges_zip = as.integer(length(node1)),
+    node1_zip = as.array(as.integer(node1)),
+    node2_zip = as.array(as.integer(node2)),
+    scale_factor = bym2_scale(as.integer(node1), as.integer(node2), N_zip)
+  )
+  
+  list(
+    data = dat,
+    stan_data = stan_data,
+    W = W,
+    true = list(
+      beta = beta,
+      intercept = intercept,
+      a_race = a_race,
+      a_age = a_age,
+      a_time = a_time,
+      a_zip = a_zip,
+      lambda_race = lambda_race,
+      lambda_age = lambda_age,
+      lambda_time = lambda_time,
+      lambda_zip = lambda_zip
+    )
+  )
+}
+
+moran_I <- function(W, phi) {
+  phi_c <- phi - mean(phi)
+  S0 <- sum(W)
+  N  <- length(phi)
+  as.numeric((N / S0) * (t(phi_c) %*% W %*% phi_c) / (t(phi_c) %*% phi_c))
+}
+
+geary_C <- function(W, phi) {
+  phi_c <- phi - mean(phi)
+  S0 <- sum(W); N <- length(phi)
+  num <- 0
+  # only upper triangle to avoid double counting
+  E <- which(upper.tri(W) & W > 0, arr.ind = TRUE)
+  for (k in seq_len(nrow(E))) {
+    i <- E[k,1]; j <- E[k,2]
+    num <- num + W[i,j] * (phi[i] - phi[j])^2
+  }
+  num <- 2 * num  # account for symmetry
+  as.numeric(((N - 1) / (2 * S0)) * num / sum(phi_c^2))
+}
+
+edge_corr <- function(W, phi) {
+  E <- which(upper.tri(W) & W > 0, arr.ind = TRUE)
+  cor(phi[E[,1]], phi[E[,2]])
+}
+
+energy_identity <- function(W, phi) {
+  Q <- diag(rowSums(W)) - W
+  E1 <- as.numeric(t(phi) %*% Q %*% phi)
+  E <- which(upper.tri(W) & W > 0, arr.ind = TRUE)
+  E2 <- sum((phi[E[,1]] - phi[E[,2]])^2)
+  list(phi_Q_phi = E1, sum_edge_diffs_sq = E2, diff = E1 - E2)
+}
+
+plot_moran <- function(W, phi) {
+  d <- rowSums(W); d[d == 0] <- 1
+  lag_phi <- as.numeric(W %*% phi / d)
+  plot(phi, lag_phi, pch = 16, cex = 0.6,
+       xlab = expression(phi), ylab = expression(W*phi / degree),
+       main = "Moran scatterplot")
+  abline(lm(lag_phi ~ phi), lwd = 2)
+  abline(0, 1, lty = 2)
+}
+
+plot_lattice_heatmap <- function(phi, nx, ny,
+                                 main = "Lattice heatmap (lower-left origin)") {
+  M <- matrix(phi, nrow = ny, ncol = nx, byrow = TRUE)
+  # Flip vertically so row 1 (y=1) is at the bottom like a grid
+  M <- M[ny:1, , drop = FALSE]
+  image(t(M[nrow(M):1, ])) # base image expects y to grow upward; transpose for x-fast
+  title(main = main); box()
+}
+
+fit_and_compare <- function(
+  data,
+  stan_models,                     # character vector of .stan paths or list of cmdstan_model objects
+  chains = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  refresh = 200,
+  seed = NULL,
+  adapt_delta = 0.95,
+  max_treedepth = 12,
+  show_messages = FALSE,
+  show_exceptions = FALSE,
+  model_labels = NULL              # optional; defaults to sanitized basenames
+) {
+  # Normalize input to a list of cmdstan_model objects
+  make_model <- function(m) {
+    if (inherits(m, "cmdstan_model")) return(m)
+    stopifnot(is.character(m), length(m) == 1L)
+    if (!file.exists(m)) stop("Stan file not found: ", m)
+    cmdstanr::cmdstan_model(m)
+  }
+  models <- lapply(stan_models, make_model)
+
+  # Default labels from file basenames or model index
+  if (is.null(model_labels)) {
+    model_labels <- vapply(
+      seq_along(stan_models),
+      function(i) {
+        x <- stan_models[[i]]
+        if (inherits(x, "cmdstan_model")) sprintf("model_%02d", i) else tools::file_path_sans_ext(basename(x))
+      },
+      FUN.VALUE = character(1)
+    )
+  }
+  if (length(unique(model_labels)) != length(model_labels)) {
+    stop("`model_labels` must be unique.")
+  }
+  if (length(model_labels) != length(models)) {
+    stop("`model_labels` must have the same length as `stan_models`.")
+  }
+
+  # Fit all models with identical sampling settings
+  fits <- stats::setNames(
+    lapply(models, function(mod) {
+      mod$sample(
+        data = data,
+        seed = seed,
+        chains = chains,
+        parallel_chains = chains,
+        iter_warmup = iter_warmup,
+        iter_sampling = iter_sampling,
+        refresh = refresh,
+        adapt_delta = adapt_delta,
+        max_treedepth = max_treedepth,
+        show_messages = show_messages,
+        show_exceptions = show_exceptions
+      )
+    }),
+    model_labels
+  )
+
+  # Build LOO objects (assumes generated quantities include vector[N] log_lik)
+  loo_list <- stats::setNames(
+    lapply(names(fits), function(lbl) {
+      fit <- fits[[lbl]]
+      # This tryCatch produces a clearer error if log_lik is missing or wrongly shaped
+      loglik_draws <- tryCatch(
+        fit$draws(variables = "log_lik"),
+        error = function(e) stop("Model '", lbl, "' does not contain a variable named 'log_lik' in generated quantities.")
+      )
+      loo::loo(loglik_draws)
+    }),
+    names(fits)
+  )
+
+  
+  compare_df <- data.frame()
+  if (length(loo_list) > 1)
+    compare_df <- loo::loo_compare(loo_list)
+
+  list(
+    fits = fits,               # named list of CmdStanMCMC objects
+    loo_list = loo_list,       # named list of loo objects
+    compare_df = compare_df    # matrix/data.frame from loo_compare
+  )
+}
+
+```
+
+This simulation study aims to evaluate the implementation of the ICAR prior and a derivative of the BYM2 in Stan using the following criteria:
+
+- How well can they recover the true parameter values
+- Whether they outperform a control model that assumes spatial independence
+
+All the simulation code and models assume that the neighborhood graph is fully connected. Revision is likely necessary in the future to handle graphs with multiple components.
+
+
+## Data simulation
+
+Our goal is to simulate data that contain a **geographic random effect with spatial autocorrelation**, i.e., nearby areas tend to have similar values. The Intrinsic Conditional Autoregressive (ICAR) prior encodes this idea by penalizing differences across adjacent areas. Let \(A\) be the (binary) adjacency matrix of the areal units, \(D=\mathrm{diag}(A\mathbf{1})\) the degree matrix, and \(L=D-A\) the graph Laplacian. The ICAR prior (improper) has density
+\[
+\log p(\boldsymbol\phi)\ \propto\ -\tfrac{1}{2}\sum_{(i,j)\in E}(\phi_i-\phi_j)^2
+\ =\ -\tfrac{1}{2}\,\boldsymbol\phi^\top L\,\boldsymbol\phi,
+\]
+so fields with large neighbor-to-neighbor differences are unlikely, and smoother fields are preferred.
+
+---
+
+### Build a neighborhood graph
+
+The function `make_lattice_adj` constructs a simple rook-contiguity grid using , which yields a square lattice where each interior cell is adjacent to its four compass neighbors. Although U.S. ZIP codes are not true areal units (they are USPS delivery routes), the simulation only requires a graph topology (who neighbors whom), not real geography. Any labeling of nodes is fine; what matters is the adjacency structure.
+
+---
+
+### Sample the ICAR component
+
+**ICAR via the Laplacian eigenbasis.** The ICAR prior is singular: adding a constant to all \(\phi_i\) leaves the penalty unchanged. Algebraically, the Laplacian \(L\) is symmetric positive semidefinite with at least one zero eigenvalue; its nullspace is spanned by the constant vector \(\mathbf{1}\) on each connected component. The code exploits this structure to draw an ICAR field:
+
+1. **Diagonalize the Laplacian.** Compute \(L = U\,\Lambda\,U^\top\), where \(U\) is orthonormal and \(\Lambda=\mathrm{diag}(\lambda_1,\ldots,\lambda_K)\) are the eigenvalues with \(\lambda_1=0\) for a connected graph (more zeros if there are multiple components).
+
+2. **Remove the nullspace.** Drop the eigenvectors associated with zero eigenvalues. Denote the remaining eigenvectors by \(U_+\) and their eigenvalues by \(\Lambda_+\) (all strictly positive).
+
+3. **Sample in the positive-eigenvalue subspace.** Draw \(\mathbf{z}\sim\mathcal{N}(\mathbf{0}, I)\) and set
+\[
+\boldsymbol{\phi}
+\;=\;
+U_{+}\,\Lambda_{+}^{-\alpha/2}\,\mathbf{z}.
+\]
+With \(\alpha=1\) this matches the ICAR precision \(L\) (i.e., \(\boldsymbol\phi\) has covariance proportional to the Moore–Penrose inverse \(L^+\)). Choosing \(\alpha>1\) is a **simulation-only smoothness knob** that further downweights high-frequency (wiggly) eigenmodes, creating broader, smoother patches; \(\alpha=1\) recovers the standard ICAR spectrum.
+
+4. **Impose identifiability (sum-to-zero).** Because the constant mode was removed, \(\sum_i\phi_i=0\) holds automatically for a single connected component (for multiple components, ensure zero-sum **within each component**). This mirrors Stan’s `sum_to_zero_vector`, which makes the intercept identifiable.
+
+5. **Normalize and scale.** For convenience, standardize \(\boldsymbol\phi\) to unit standard deviation and then introduce a magnitude parameter in the linear predictor,
+\[
+\mathbf{a}_{\text{zip}} \;=\; \lambda_{\text{zip}}\,\boldsymbol{\phi},
+\]
+so that \(\lambda_{\text{zip}}\) directly controls the strength of the spatial effect while \(\boldsymbol{\phi}\) controls its **shape**.
+
+I validated the sampled fields using standard measures of spatial autocorrelation:
+
+- **Moran’s I**: values closer to 1 indicate strong positive spatial autocorrelation (neighbors tend to be similar); values near 0 suggest randomness; negative values indicate dispersion.
+- **Geary’s C**: values closer to 0 indicate strong positive spatial autocorrelation; values around 1 suggest little to no autocorrelation; values >1 indicate negative autocorrelation.
+
+I also visualize the sampled ICAR field as a heatmap on the lattice. Large, contiguous color patches and smooth gradients highlight the local smoothness induced by the ICAR prior.
+
+
+
+```{r echo=FALSE}
+nx <- 10
+ny <- 10
+sim <- simulate_stan_equiv(
+  nx = nx, ny = ny,
+  N_per_zip = 2,
+  K = 1, beta = c(-0.2),
+  intercept = 0.0,
+  lambda_race = 0.2,
+  lambda_age = 0.15,
+  lambda_time = 0.3,
+  lambda_zip = 1.8,
+  alpha_icar = 1.0,
+  n_trials = 30
+)
+```
+
+```{r echo=FALSE}
+cat(paste0("Moran's I: ", moran_I(sim$W, sim$true$a_zip)))
+cat(paste0("Geary's C: ", geary_C(sim$W, sim$true$a_zip)))
+```
+
+```{r fig.height=8, echo=FALSE}
+plot_lattice_heatmap(sim$true$a_zip, nx = nx, ny = ny)
+```
+
+
+
+### Build a linear predictor and simulate data
+
+The data simulation mirrors the Stan model structure used for fitting. Each observation \(n=1,\dots,N\) has a binomial outcome
+\[
+y_n \sim \mathrm{Binomial}\!\left(n_n,\; p_n\right),\qquad
+\text{with}\;\; \mathrm{logit}(p_n)=\eta_n.
+\]
+The linear predictor \(\eta_n\) combines fixed effects and several varying effects:
+\[
+\eta_n
+= \beta_0 \;+\; \mathbf{x}_n^\top\boldsymbol\beta
+\;+\; a^{(\mathrm{race})}_{J_{\mathrm{race}}[n]}
+\;+\; a^{(\mathrm{age}) }_{J_{\mathrm{age}} [n]}
+\;+\; a^{(\mathrm{time})}_{J_{\mathrm{time}}[n]}
+\;+\; a^{(\mathrm{zip}) }_{J_{\mathrm{zip}} [n]}.
+\]
+Here \(\beta_0\) is the global intercept and \(\mathbf{x}_n\in\mathbb{R}^K\) is a vector of observed covariates; \(\boldsymbol\beta\) are the corresponding coefficients. The indices \(J_{\mathrm{race}}[n]\), \(J_{\mathrm{age}}[n]\), \(J_{\mathrm{time}}[n]\), and \(J_{\mathrm{zip}}[n]\) select the group-level effect for observation \(n\).
+
+For the non-spatial groups, the simulator uses independent Gaussian intercepts written in **non-centered** form:
+\[
+\begin{aligned}
+\mathbf{a}^{(\mathrm{race})} &= \lambda_{\mathrm{race}}\;\mathbf{z}^{(\mathrm{race})}, \quad &&\mathbf{z}^{(\mathrm{race})}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{race}}}),\\
+\mathbf{a}^{(\mathrm{age})}  &= \lambda_{\mathrm{age}}\;\,\mathbf{z}^{(\mathrm{age})},  \quad &&\mathbf{z}^{(\mathrm{age})}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{age}}}),\\
+\mathbf{a}^{(\mathrm{time})} &= \lambda_{\mathrm{time}}\;\mathbf{z}^{(\mathrm{time})}, \quad &&\mathbf{z}^{(\mathrm{time})}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{time}}}),
+\end{aligned}
+\]
+with scale hyperparameters \(\lambda_{\bullet}\ge 0\). For the spatial effect over ZIP codes, the simulator uses an ICAR field (sum-to-zero) and the same scaling pattern:
+\[
+\mathbf{a}^{(\mathrm{zip})} = \lambda_{\mathrm{zip}}\,\boldsymbol\phi, 
+\quad \boldsymbol\phi \sim \text{ICAR}(L)\ \text{ with } \mathbf{1}^\top\boldsymbol\phi=0,
+\]
+where \(L\) is the graph Laplacian built from the ZIP adjacency. In the simulator, \(\boldsymbol\phi\) is sampled in the Laplacian eigenbasis (dropping the zero-eigenvalue mode) and optionally normalized to unit SD; in Stan this corresponds to `sum_to_zero_vector` with an `icar_normal_lpdf` prior.
+
+
+## Model fitting and comparison
+I used leave-one-out cross-validation to compare the models with an ICAR and BYM2 component against the control model with independent effects for ZIP code. The two models with spatial prior consistently outperforms their counterpart but also are comparable. This is expected as the simulator is based on the model with the ICAR component and the BYM2 derivative approaches ICAR as $\rho$ is near 1.
+
+### Model with no spatial prior
+```{r echo=FALSE}
+writeLines(readLines(paste0(stan_dir, "iid.stan")))
+```
+### Model with ICAR prior
+```{r echo=FALSE}
+writeLines(readLines(paste0(stan_dir, "icar.stan")))
+```
+### Model with mixture of an ICAR term and spatially independent heterogeniety (BYM2)
+```{r echo=FALSE}
+writeLines(readLines(paste0(stan_dir, "bym2.stan")))
+```
+
+
+```{r echo=FALSE}
+out <- fit_and_compare(
+  data = sim$stan_data,
+  stan_models = c(
+    paste0(stan_dir, "bym2.stan"),
+    paste0(stan_dir, "icar.stan"),
+    paste0(stan_dir, "iid.stan")
+  ),
+  model_labels = c("bym2", "icar", "iid")
+)
+```
+
+```{r echo=FALSE}
+variables <- c(c("lp__", "intercept", "beta", "lambda_race",
+                 "lambda_age", "lambda_time", "lambda_zip"))
+hide_columns <- c("median", "mad")
+print(sim$true[variables[-1]])
+cat("BYM2 model sampling summary")
+print(out$fits$bym2$summary(variables = c(variables, "rho_zip")) |> select(-all_of(hide_columns)))
+cat("ICAR model sampling summary")
+print(out$fits$icar$summary(variables = variables) |> select(-all_of(hide_columns)))
+cat("IID model sampling summary")
+print(out$fits$iid$summary(variables = variables) |> select(-all_of(hide_columns)))
+```
+
+```{r echo=FALSE}
+out$compare_df
+```
+
+### Sanity check: ICAR prior with $\tau$
+This section demonstrates the sampling issues that stems from adding $\tau$ to the ICAR prior. Evidences of this include the extremely high number of transitions hitting the maximum treedepth limit and low effective sample sizes. Since the scale for ZIP code effect is already handled by $\lambda_{zip}$, adding $\tau$ leads to identification problems.
+```{r echo=FALSE}
+writeLines(readLines(paste0(stan_dir, "icar_w_tau.stan")))
+```
+
+```{r}
+out <- fit_and_compare(
+  data = sim$stan_data,
+  stan_models = c(
+    paste0(stan_dir, "icar_w_tau.stan")
+  ),
+  model_labels = c("icar_w_tau"),
+  max_treedepth = 15
+)
+```
+
+```{r echo=FALSE}
+variables <- c(c("lp__", "intercept", "beta", "lambda_race",
+                 "lambda_age", "lambda_time", "lambda_zip"))
+hide_columns <- c("median", "mad")
+cat("ICAR model with tau sampling summary")
+print(out$fits$icar_w_tau$summary(variables = variables) |> select(-all_of(hide_columns)))
+```

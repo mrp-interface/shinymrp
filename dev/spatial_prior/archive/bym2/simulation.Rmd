@@ -1,0 +1,230 @@
+
+---
+title: "BYM2 Simulation Study: Multi-Component ICAR on ZIP/ZCTA Lattices"
+author: "Toan Tran"
+header-includes:
+  - \usepackage{amsmath, amssymb, amsthm}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \usepackage{geometry}
+  - \geometry{margin=1in}
+  - \newtheorem{definition}{Definition}
+  - \newcommand{\E}{\mathbb{E}}
+  - \newcommand{\Var}{\mathrm{Var}}
+  - \newcommand{\N}{\mathcal{N}}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, warning = FALSE, error = FALSE,
+  fig.width = 7, fig.height = 4.5, out.width = "100%"
+)
+```
+
+# Overview
+
+This RMarkdown demonstrates a simulation-based validation of my implementation of the BYM2-style spatial prior, extending the one in Mitzi's [paper](https://www.sciencedirect.com/science/article/pii/S1877584518301175) to handle multiple connected subgraphs.
+The results show that the BYM2 parameterization, with per-component ICAR scaling and per-component soft centering, is robust across diverse graph topologies and recovers the true parameters in simulation.
+
+
+# Dependencies & Data
+
+```{r libs}
+library(sf)
+library(spdep)
+library(cmdstanr)
+library(bayesplot)
+library(posterior)
+
+# helper scripts
+source("simulation.R", local = TRUE)  # simulate_bym2_binomial_data(), run_sim(), etc.
+source("adjacency.R",  local = TRUE)  # build_bym2_inputs_with_isolates(), helpers
+source("sf_io.R",      local = TRUE)  # read_sf_normalized(), etc.
+
+# Paths to your cached inputs
+data_path <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/"
+zcta_sf <- read_sf_normalized(file.path(data_path, "zcta_2020_cb.gpkg"), layer = "zcta_2020_cb")
+xwalk   <- readr::read_csv(file.path(data_path, "zip_zcta_2020.csv"), show_col_types = FALSE)
+
+stan_path <- file.path(data_path, "with_spatial_prior_multicomp.stan")
+```
+
+# Model
+
+The Stan model below builds on Mitzi's to incorporate information about the neighborhood structure of areal units. Specifically, the scaling factor `inv_sqrt_scale_factor` is computed for each connected subgraphs using the `.component_inv_sqrt_scale()` function in `adjacency.R`. This ensures that the structured ICAR term has unit variance (geometric-mean sense) within each component, making the overall spatial effect interpretable. Additonally, the `icar_normal_components_lpdf()` function implements soft centering per component to address identifiability issues.
+
+Because the model requires adjacency structure derived from areal units, ZCTAs are used to approximate ZIP codes. ZIP codes without a clean ZCTA match are treated as isolates or nodes with no neighbors. The structured portion of the ICAR component is not sampled for isolates, effectively reducing the model to an IID random effect for those nodes.
+
+
+```stan
+// BYM2-like binomial model with ICAR (multi-component) on ZIP/ZCTA lattice.
+functions {
+  // ICAR log-density with per-component soft centering (identifiability).
+  // - phi is length N_nodes; isolates can be included with phi[i]=0.
+  // - comp_index is 0-padded index matrix mapping components -> node ids.
+  real icar_normal_components_lpdf(vector phi,
+                                   int N_nodes,
+                                   int N_edges,
+                                   array[] int node1,
+                                   array[] int node2,
+                                   int C,
+                                   array[] int comp_sizes,
+                                   array[,] int comp_index) {
+    // Edge penalty over unique undirected edges (i<j)
+    real lp = -0.5 * dot_self(phi[node1] - phi[node2]);
+
+    // Soft sum-to-zero within each connected component
+    for (c in 1:C) {
+      int nc = comp_sizes[c];
+      vector[nc] phi_c;
+      for (j in 1:nc)
+        phi_c[j] = phi[ comp_index[c, j] ];
+      // Lattice-wide scale: small comps aren’t over-constrained.
+      lp += normal_lpdf( sum(phi_c) | 0, 0.001 * N_nodes );
+    }
+    return lp;
+  }
+}
+
+data {
+  // Design & outcomes
+  int<lower=1> N;                  // rows (race × zip)
+  int<lower=0> K;                  // # fixed effects
+  matrix[N, K] X;
+  array[N] int y;                  // successes
+  array[N] int n_sample;           // totals
+
+  // Race & ZIP indexing
+  int<lower=1> N_race;
+  array[N] int<lower=1, upper=N_race> J_race;
+  int<lower=1> N_zip;
+  array[N] int<lower=1, upper=N_zip> J_zip;
+
+  // Test characteristics (can be 1,1 if not used)
+  real<lower=0> sens;
+  real<lower=0> spec;
+
+  // Graph / ICAR bits
+  int<lower=0> N_edges;
+  array[N_edges] int<lower=1, upper=N_zip> node1;
+  array[N_edges] int<lower=1, upper=N_zip> node2;
+
+  vector<lower=0>[N_zip] inv_sqrt_scale_factor; // per node (constant within component)
+  int<lower=1> C;                 // # components
+  int<lower=1> max_comp_size;
+  array[C] int<lower=1, upper=max_comp_size> comp_sizes;
+  array[C, max_comp_size] int<lower=0, upper=N_zip> comp_index; // 0=padding
+
+  // Non-isolates (degree>0) so we don’t sample φ for isolates
+  int<lower=0> N_noniso;
+  array[N_noniso] int<lower=1, upper=N_zip> noniso_idx;
+}
+
+parameters {
+  // Fixed and random effects
+  real intercept;
+  vector[K] beta;
+
+  real<lower=0>     lambda_race;          // SD of race effect
+  vector[N_race]    z_race;               // iid ~ N(0,1)
+
+  real<lower=0>     sigma_zip;            // overall ZIP SD
+  real<lower=0,upper=1> rho;              // structured fraction
+  vector[N_zip]     theta;                // iid piece ~ N(0,1)
+  vector[N_noniso]  phi_noniso;           // unscaled ICAR only on non-isolates
+}
+
+transformed parameters {
+  vector[N_race] a_race = lambda_race * z_race;
+
+  // Expand φ to all nodes (zeros at isolates)
+  vector[N_zip] phi = rep_vector(0, N_zip);
+  if (N_noniso > 0)
+    phi[noniso_idx] = phi_noniso;
+
+  // ICAR scaling to unit variance, then BYM2 mix
+  vector[N_zip] u_struct = phi ./ inv_sqrt_scale_factor;
+  vector[N_zip] a_zip = sigma_zip * ( sqrt(rho) * u_struct + sqrt(1 - rho) * theta );
+
+  // Prob with sens/spec adjustment
+  vector<lower=0, upper=1>[N] p =
+    inv_logit(intercept + X * beta + a_race[J_race] + a_zip[J_zip]);
+  vector<lower=0, upper=1>[N] p_sample = p * sens + (1 - p) * (1 - spec);
+}
+
+model {
+  // Likelihood
+  y ~ binomial(n_sample, p_sample);
+
+  // Priors
+  intercept ~ normal(0, 5);
+  beta      ~ normal(0, 3);
+
+  z_race      ~ std_normal();
+  lambda_race ~ normal(0, 3);
+
+  theta ~ std_normal();
+
+  target += icar_normal_components_lpdf(phi | N_zip, N_edges, node1, node2,
+                                        C, comp_sizes, comp_index);
+
+  sigma_zip ~ normal(0, 1);
+  rho       ~ beta(2, 2); // keeps sampler away from 0/1 boundaries
+}
+```
+
+# Data simulation
+
+Below is the general process for simulating the data based on the Stan model:
+
+1. Build a ZCTA lattice from a set of input ZIPs (rook or queen contiguity).
+2. Compute per-component **ICAR scaling** (`inv_sqrt_scale_factor`) so that the structured piece has unit variance.
+3. Draw ICAR `phi` **per component**, set isolates to 0, mix with iid `theta` using true `\(\sigma_{\text{zip}}\)` and `\(\rho\)`.
+4. Generate `race` effects, linear predictor, and binomial outcomes with sensitivity/specificity if provided.
+
+Note: For constructing the adjacency matrix, areal units are commonly considered neighbors when they share a border (rook contiguity) or a corner (queen contiguity). Queen contiguity is used in this example for more connected graphs and more spatial smoothing.
+
+# Scenarios
+
+The sections below illustrate three scenarios with different graph topologies. For each, a sequence of 20 ZIP codes with varying degrees of contiguity is drawn from the crosswalk. The first plot visualizes the corresponding ZCTA lattice with components color-coded. The last two plots compare the posterior distributions of the key BYM2 parameters:
+
+- `sigma_zip`: overall standard deviation of the ZIP random effects
+- `rho`: proportion of spatially structured variability (vs. IID)
+- `lambda_race`: standard deviation of the race effect
+
+The true values tend to fall within the 50% intervals, indicating good recovery.
+
+## 1) Fully connected graph
+
+```{r scenario-connected, results='hide'}
+res1 <- run_sim(
+  zcta_sf, xwalk, stan_path,
+  n_zips = 20, step = 1, seed = 10982409,
+  queen = TRUE, n_iter = 2000, n_chains = 4, verbose = TRUE
+)
+```
+
+## 2) All isolates
+
+```{r scenario-noedges, results='hide'}
+res2 <- run_sim(
+  zcta_sf, xwalk, stan_path,
+  n_zips = 20, step = 100, seed = 365430,
+  queen = TRUE, n_iter = 2000, n_chains = 4, verbose = TRUE
+)
+```
+
+## 3) Multiple connected subgraphs
+
+```{r scenario-multicomp, results='hide'}
+res3 <- run_sim(
+  zcta_sf, xwalk, stan_path,
+  n_zips = 20, step = 1, seed = 252334,
+  queen = TRUE, n_iter = 2000, n_chains = 4, verbose = TRUE
+)
+```
+
+
+
+
+

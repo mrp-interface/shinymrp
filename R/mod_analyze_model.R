@@ -291,32 +291,21 @@ mod_analyze_model_server <- function(id, global){
         # update select inputs for prior assignment
         observeEvent(input[[eff_id_open]], {
           if(input[[eff_id_open]]) {
-            intercept <- stats::setNames(c("intercept_intercept"), c("Intercept"))
-            fixed_effects <- if(length(input$fixed) > 0) stats::setNames(paste0("fixed_", input$fixed), input$fixed)
-            varying_effects <- if(length(input$varying) > 0) stats::setNames(paste0("varying_", input$varying), input$varying)
-            interactions <- if(length(input$interaction) > 0) stats::setNames(paste0("interaction_", input$interaction), input$interaction)
-            
-            # filter effects for structred prior
-            if(input[[dist_id]] == "structured") {
-              intercept <- list()
-              fixed_effects <- list()
-              varying_effects <- list()
-              interactions <- list()
-              
-              if(length(input$interaction) > 0) {
-                interactions <- .filter_interactions(input$interaction, input$fixed, global$workflow$mrp_data()$input)
-                interactions <- stats::setNames(paste0("interaction_", interactions), interactions)
-              }
-            }
-
+            effects <- .prior_spec_effects(
+              fixed_effects = input$fixed,
+              varying_effects = input$varying,
+              interactions = input$interaction,
+              prior = input[[dist_id]],
+              data = global$workflow$mrp_data()$input
+            )
             
             shinyWidgets::updateVirtualSelect(
               inputId = eff_id,
               choices = list(
-                "Intercept" = intercept,
-                "Fixed Effect" = fixed_effects,
-                "Varying Effect" = varying_effects,
-                "Interaction" = interactions
+                "Intercept" = effects$intercept,
+                "Fixed Effect" = effects$fixed,
+                "Varying Effect" = effects$varying,
+                "Interaction" = effects$interaction
               ),
               selected = input[[eff_id]]
             )
@@ -793,8 +782,13 @@ mod_analyze_model_server <- function(id, global){
         rownames = TRUE,
         na = ""
       )
-      output[[model$get_id("other_tbl")]] <- renderTable(
-        model$summary()$other,
+      output[[model$get_id("residual_tbl")]] <- renderTable(
+        model$summary()$residual,
+        rownames = TRUE,
+        na = ""
+      )
+      output[[model$get_id("bym2_tbl")]] <- renderTable(
+        model$summary()$bym2,
         rownames = TRUE,
         na = ""
       )

@@ -153,7 +153,11 @@ module_ids <- list(
       varying = "normal(0, 3)",
       interaction = "normal(0, 1)",
       global_scale = "cauchy(0 , 1)",
-      local_scale = "normal(0, 1)"
-    )
+      local_scale = "normal(0, 1)",
+      icar_scale = "normal(0, 1)",
+      bym2_scale = "normal(0, 1)",
+      bym2_rho = "beta(0.5, 0.5)"
+    ),
+    custom_priors = c("structured", "icar", "bym2")
   )
 }

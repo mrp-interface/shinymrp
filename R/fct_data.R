@@ -867,7 +867,6 @@
   # Numeric handling
   if (is.numeric(col)) {
     # If any decimal present (beyond tol) → continuous
-
     if (has_decimal) return(if (num) 3L else lbl[3])
 
     # Integer-like: decide cat vs cont by discreteness signals
@@ -1080,8 +1079,6 @@
     } else {
       if (!("positive" %in% names(df))) {
         stop("Individual-level data must contain a 'positive' column for data with binary outcome ('binomial' family).")
-      } else if (n_distinct(df$positive) != 2) {
-        stop("Individual-level data must have 'positive' column with binary values.")
       }
     }
   } else {
@@ -1522,7 +1519,9 @@
   covariates <- NULL
   if(!is.null(link_geo)) {
     # find geographic covariates
-    covariates <- .get_geo_predictors(input_data, link_geo)
+    covariates <- .get_geo_predictors(input_data, link_geo) %>%
+      select(-any_of(.const()$vars$ignore)) # drop ignore vars if present
+
     if(ncol(covariates) > 1) {
       new_data <- left_join(new_data, covariates, by = link_geo)
     }

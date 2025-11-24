@@ -78,7 +78,7 @@
 #' @return Character vector of filtered interaction terms suitable for structured priors
 #' @noRd
 #' @keywords internal
-.filter_interactions <- function(interactions, fixed_effects, data) {
+.interactions_for_structured <- function(interactions, fixed_effects, data) {
   bool <- purrr::map_lgl(interactions, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     type1 <- .data_type(data[[ss[1]]])
@@ -89,6 +89,95 @@
   })
   
   return(interactions[bool])
+}
+
+#' Create Effect List for Prior Specification
+#' 
+#' @description Constructs a structured list of model effects for prior specification,
+#' categorizing them into intercept, fixed effects, varying effects, and interactions.
+#' 
+#' @param fixed_effects Character vector of fixed effect variable names
+#' @param varying_effects Character vector of varying effect variable names
+#' @param interactions Character vector of interaction terms in "var1:var2" format
+#' @param data Data frame containing the variables (used for validation)
+#' 
+#' @return A list with components:
+#'  \itemize{
+#'    \item intercept: List of intercept effects
+#'    \item fixed: List of fixed effects
+#'    \item varying: List of varying effects
+#'    \item interaction: List of interaction effects
+#'  }
+#' @noRd
+#' @keywords internal
+.prior_spec_effects <- function(
+  fixed_effects,
+  varying_effects,
+  interactions,
+  prior,
+  data
+) {
+  effects <- list(
+    intercept = list(),
+    fixed = list(),
+    varying = list(),
+    interaction = list()
+  )
+
+  prior <- tolower(prior)
+            
+  # filter effects for structred prior
+  if (prior == "structured") {
+    filtered <- .interactions_for_structured(
+      interactions,
+      fixed_effects,
+      data
+    )
+    if (length(filtered) > 0) {
+      effects$interaction <- stats::setNames(
+        paste0("interaction_", filtered),
+        filtered
+      )
+    }
+  } else if (prior == "icar" || prior == "bym2") {
+    filtered <- intersect(
+      varying_effects,
+      .const()$vars$geo
+    ) %>%
+      setdiff(fixed_effects)
+
+    if (length(filtered) > 0) {
+      effects$varying <- stats::setNames(
+        paste0("varying_", filtered),
+        filtered
+      )
+    }
+  } else {
+    effects$intercept <- stats::setNames(
+      c("intercept_intercept"),
+      c("Intercept")
+    )
+    if(length(fixed_effects) > 0) {
+      effects$fixed <- stats::setNames(
+        paste0("fixed_", fixed_effects),
+        fixed_effects
+      )
+    }
+    if(length(varying_effects) > 0) {
+      effects$varying <- stats::setNames(
+        paste0("varying_", varying_effects),
+        varying_effects
+      )
+    }
+    if(length(interactions) > 0) {
+      effects$interaction <- stats::setNames(
+        paste0("interaction_", interactions),
+        interactions
+      )
+    }
+  }
+
+  return(effects)
 }
 
 # Keep interaction in expected order for Stan code generation:
@@ -269,12 +358,12 @@
 #'     \item m_fix_c: Categorical fixed main effects
 #'     \item i_fixsl: Fixed-slope interactions
 #'     \item i_varsl: Varying-slope interactions
-#'     \item s_varsl: Structured varying-slope interactions
+#'     \item i_varsl_str: Structured varying-slope interactions
 #'     \item m_var: Varying main effects
 #'     \item i_varit: Varying-intercept interactions
 #'     \item i_varits: Special varying-intercept interactions
-#'     \item s_varit: Structured varying-intercept interactions
-#'     \item s_varits: Special structured varying-intercept interactions
+#'     \item i_varit_str: Structured varying-intercept interactions
+#'     \item i_varits_str: Special structured varying-intercept interactions
 #'   }
 #'
 #' @return A character string representing the model formula with fixed effects,
@@ -288,19 +377,21 @@
     unique()
 
   fixed <- c(names(effects$m_fix_bc), m_fix_c, names(effects$i_fixsl))
-  varsl <- c(names(effects$i_varsl), names(effects$s_varsl))
-  varit <- c(names(effects$m_var), names(effects$i_varit), names(effects$i_varits), names(effects$s_varit), names(effects$s_varits))
+  varsl <- c(names(effects$i_varsl), names(effects$i_varsl_str))
+  varit <- c(names(effects$m_var), names(effects$m_var_icar), names(effects$m_var_bym2),
+             names(effects$i_varit), names(effects$i_varits),
+             names(effects$i_varit_str), names(effects$i_varits_str))
   
 
   s_fixed <- if(length(fixed) > 0) paste(paste0(" + ", fixed), collapse = '') else ''
-  s_varit <- if(length(varit) > 0) paste(paste0(" + (1 | ", varit, ")"), collapse = '') else ''
-  s_varsl <- if(length(varsl) > 0) paste(purrr::map(varsl, function(s) {
+  i_varit_str <- if(length(varit) > 0) paste(paste0(" + (1 | ", varit, ")"), collapse = '') else ''
+  i_varsl_str <- if(length(varsl) > 0) paste(purrr::map(varsl, function(s) {
     ss <- strsplit(s, split = ':')[[1]]
     return(paste0(" + (0 + ", ss[2], " | ", ss[1], ')'))
   }), collapse = '') else ''
 
 
-  formula <- paste0("1", s_fixed, s_varit, s_varsl)
+  formula <- paste0("1", s_fixed, i_varit_str, i_varsl_str)
 
   return(formula)
 }
