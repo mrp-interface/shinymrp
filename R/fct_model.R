@@ -745,7 +745,7 @@
     paste(purrr::map(names(int_varsl), ~ stringr::str_interp("\n  z2_${gsub(':', '', .x)} ~ std_normal();")), collapse = ""),
     paste(purrr::map(names(effects$m_var), ~ stringr::str_interp("\n  lambda_${.x} ~ ${effects$m_var[[.x]]};")), collapse = ""),
     paste(purrr::map(names(effects$m_var_icar), ~ stringr::str_interp("\n  lambda_${.x} ~ ${dp$icar_scale};")), collapse = ""),
-    paste(purrr::map(names(effects$m_var_bym2), ~ stringr::str_interp("\n  lambda_${.x} ~ ${dp$bym2_scale};\n  rho_${.x} ~ ${dp$bym2_rho};")), collapse = ""),
+    paste(purrr::map(names(effects$m_var_bym2), ~ stringr::str_interp("\n  lambda_${.x} ~ ${dp$bym2_scale};")), collapse = ""),
     paste(purrr::map(names(int_varit_wo_struct), ~ stringr::str_interp("\n  lambda_${gsub(':', '', .x)} ~ ${int_varit[[.x]]};")), collapse = ""),
     paste(purrr::map(names(int_varsl_wo_struct), ~ stringr::str_interp("\n  lambda2_${gsub(':', '', .x)} ~ ${int_varsl[[.x]]};")), collapse = "")
   )
