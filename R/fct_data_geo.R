@@ -283,9 +283,9 @@
 
   # Fetch full graph data based on geographic scale
   full_graph <- switch(geo_scale,
-    "zip" = .fetch_data("zcta_adj.qs", subdir = "geo"),
-    "county" = .fetch_data("county_adj.qs", subdir = "geo"),
-    "state" = .fetch_data("state_adj.qs", subdir = "geo")
+    "zip" = .fetch_data("zcta_adj.qs2", subdir = "geo"),
+    "county" = .fetch_data("county_adj.qs2", subdir = "geo"),
+    "state" = .fetch_data("state_adj.qs2", subdir = "geo")
   )
 
   geo_units <- unique(geo_units)
