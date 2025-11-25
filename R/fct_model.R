@@ -1208,7 +1208,7 @@ generated quantities { ${gq_code}
     out <- .build_graph(dat[[paste0(s, "_raw")]], geo_scale = s)
     g <- out[c("N_edges", "node1", "node2")]
     names(g) <- paste0(names(g), "_", s)
-    stan_data <- modifyList(stan_data, g)
+    stan_data <- utils::modifyList(stan_data, g)
   }
 
   # BYM2 graph
@@ -1217,7 +1217,7 @@ generated quantities { ${gq_code}
     g <- out[c("N_edges", "node1", "node2",
                "N_pos", "R", "N_iso", "iso_idx")]
     names(g) <- paste0(names(g), "_", s)
-    stan_data <- modifyList(stan_data, g)
+    stan_data <- utils::modifyList(stan_data, g)
   }
 
 
@@ -1247,7 +1247,7 @@ generated quantities { ${gq_code}
       stan_data$J_time_pstrat <- new_data$time
     }
   }
-  stan_data_global <<- stan_data
+
   return(stan_data)
 }
 
