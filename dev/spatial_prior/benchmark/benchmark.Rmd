@@ -8,63 +8,9 @@ knitr::opts_chunk$set(
   echo = TRUE,
   out.width = "100%"
 )
-```
 
-### Build a linear predictor and simulate data
-
-The data simulation mirrors the Stan model structure used for fitting. Each observation \(i=1,\dots,N\) has a binomial outcome
-\[
-y_i \sim \mathrm{Binomial}\!\left(n_i,\; p_i\right),\qquad
-\text{with}\;\; \mathrm{logit}(p_n)=\eta_i.
-\]
-The linear predictor \(\eta_n\) combines fixed effects and several varying effects:
-\[
-\eta_n
-= \beta_0 \;+\; \mathbf{x}_n^\top\boldsymbol\beta
-\;+\; a^{(\mathrm{race})}_{J_{\mathrm{race}}[i]}
-\;+\; a^{(\mathrm{age}) }_{J_{\mathrm{age}} [i]}
-\;+\; a^{(\mathrm{time})}_{J_{\mathrm{time}}[i]}
-\;+\; a^{(\mathrm{zip}) }_{J_{\mathrm{zip}} [i]}.
-\]
-Here \(\beta_0\) is the global intercept and \(\mathbf{x}_n\in\mathbb{R}^K\) is a vector of observed covariates; \(\boldsymbol\beta\) are the corresponding coefficients. The indices \(J_{\mathrm{race}}[i]\), \(J_{\mathrm{age}}[i]\), \(J_{\mathrm{time}}[i]\), and \(J_{\mathrm{zip}}[i]\) select the group-level effect for observation \(i\).
-
-For the non-spatial groups, the simulator uses independent Gaussian intercepts written in **non-centered** form:
-\[
-\begin{aligned}
-\mathbf{a}^{(\mathrm{race})} &= \lambda_{\mathrm{race}}\;\mathbf{z}^{(\mathrm{race})}, \quad &&\mathbf{z}^{(\mathrm{race})}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{race}}}),\\
-\mathbf{a}^{(\mathrm{age})}  &= \lambda_{\mathrm{age}}\;\,\mathbf{z}^{(\mathrm{age})}, \quad &&\mathbf{z}^{(\mathrm{age})}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{age}}}),\\
-\mathbf{a}^{(\mathrm{time})} &= \lambda_{\mathrm{time}}\;\mathbf{z}^{(\mathrm{time})}, \quad &&\mathbf{z}^{(\mathrm{time})}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{time}}}),
-\end{aligned}
-\]
-with scale hyperparameters \(\lambda_{\bullet}\ge 0\). For the spatial effect over ZIP codes, the simulator uses an ICAR field (sum-to-zero) and the same scaling pattern:
-\[
-\begin{aligned}
-\mathbf{a}^{(\mathrm{zip})} = \lambda_{\mathrm{zip}}\,\mathbf{z}^{(\mathrm{zip})}, \quad z_{j_{connected}}^{(\mathrm{zip})} \;=\; \Big(\sqrt{\rho/s}\;\phi \;+\; \sqrt{1-\rho}\;\theta_{j_{connectd}}\Big) \sigma, \quad z_{j_{isolated}}^{(\mathrm{zip})}\sim \mathcal{N}(\mathbf 0, 1)
-\end{aligned}
-\]
-
-where:
-
-- \(\phi_j\) is the ICAR component 
-- \(\theta_j\) is the unstructured spatial effect
-- \(s\) is the scaling factor computed from the neighborhood graph such that \(\operatorname{Var}(\phi_i) = 1\)
-- \(\rho \in [0,1]\) controls the mixing between unstructured and structured components
-- \(\sigma > 0\) is the overall standard deviation.
-
-The following reparametrization shows exactly how the ICAR field is sampled:
-
-\[
-\boldsymbol\phi \;=\; R\,\eta, \quad R \;=\; U_+\,\Lambda_+^{-1/2}\in\mathbb R^{N_{zip}\times(N_{zip}-1)}, \quad \eta \sim \mathcal N(0,I_{N_{zip}-1}).
-\]
-
-where \(U_+\) and \(\Lambda_+\) constitute the eigenbasis of the sum-to-zero subspace.
-
-\[
-L^{+}=U_+\Lambda_+^{-1}U_+^\top,
-\]
-
-```{r include=FALSE}
 source("simulation.R", local = TRUE)
+source("plotting.R", local = TRUE)
 
 suppressPackageStartupMessages({
   library(Matrix)
@@ -79,13 +25,86 @@ bayesplot::bayesplot_theme_set(
     ggplot2::theme(legend.position = "bottom")
 )
 ```
+This vignette aims to validate the reparametrization of the BYM2 model and to compare the computational efficiency of the corresponding Stan implementation with that of existing implementations. For a rigorous check, I simulate data with autocorrelation among geographic units, then fit all the following BYM2 model variants with the same sampling seed using CmdStanR:
+
+- Mitzi’s model for connected graph (`bym2_morris_sc.stan`)
+- Mitzi’s model for both connected graph and disconnected graph (`bym2_morris_mc.stan`)
+- Reparametrization using sum-to-zero basis that can handle both graph types (`bym2_reparam.stan`)
+
+
+### Build a linear predictor and simulate data
+
+The data simulation mirrors the Stan model structure in the `shinymrp` package. Each observation \(i=1,\dots,N\) has a binomial outcome
+\[
+y_i \sim \mathrm{Binomial}\!\left(n_i,\; p_i\right),\qquad
+\text{with}\;\; \mathrm{logit}(p_i)=\eta_i.
+\]
+The linear predictor \(\eta_i\) combines fixed effects and several varying effects:
+\[
+\eta_i
+= \beta_0 \;+\; \mathbf{x}_n^\top\boldsymbol\beta
+\;+\; a^{\mathrm{race}}_{J_{\mathrm{race}}[i]}
+\;+\; a^{\mathrm{age} }_{J_{\mathrm{age}} [i]}
+\;+\; a^{\mathrm{time}}_{J_{\mathrm{time}}[i]}
+\;+\; a^{\mathrm{zip} }_{J_{\mathrm{zip}} [i]}.
+\]
+Here \(\beta_0\) is the global intercept and \(\mathbf{x}_n\in\mathbb{R}^K\) is a vector of observed covariates; \(\boldsymbol\beta\) are the corresponding coefficients. The indices \(J_{\mathrm{race}}[i]\), \(J_{\mathrm{age}}[i]\), \(J_{\mathrm{time}}[i]\), and \(J_{\mathrm{zip}}[i]\) select the group-level effect for observation \(i\).
+
+For the non-spatial groups, the simulator uses independent Gaussian intercepts written in **non-centered** form:
+\[
+\begin{aligned}
+\mathbf{a}^{\mathrm{race}} &= \lambda_{\mathrm{race}}\;\mathbf{z}^{\mathrm{race}}, \quad 
+&&\mathbf{z}^{\mathrm{race}}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{race}}}),\\
+\mathbf{a}^{\mathrm{age}}  &= \lambda_{\mathrm{age}}\;\,\mathbf{z}^{\mathrm{age}}, \quad
+&&\mathbf{z}^{\mathrm{age}}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{age}}}),\\
+\mathbf{a}^{\mathrm{time}} &= \lambda_{\mathrm{time}}\;\mathbf{z}^{(\mathrm{time})}, \quad 
+&&\mathbf{z}^{\mathrm{time}}\sim \mathcal{N}(\mathbf 0, I_{N_{\mathrm{time}}}),
+\end{aligned}
+\]
+with scale hyperparameters \(\lambda_{\bullet}\ge 0\). For the spatial effect over ZIP codes, the simulator uses an ICAR field and the same scaling pattern:
+\[
+\begin{aligned}
+\mathbf{a}^{(\mathrm{zip})} = \lambda_{\mathrm{zip}}\,\mathbf{z}^{\mathrm{zip}}, \quad z_{j \in C}^{\mathrm{zip}} \;=\; \Big(\sqrt{\rho/s_{j \in C}}\;\phi \;+\; \sqrt{1-\rho}\;\theta_{j \in C}\Big) \sigma, \quad z_{j \in S}^{\mathrm{zip}}\sim \mathcal{N}(0, 1)
+\end{aligned}
+\]
+
+where:
+
+- \(C\) and \(S\) are respectively the index sets of connected and isolated nodes in the neighborhood graph
+- \(\phi_j\) is the ICAR component 
+- \(\theta_j\) is the unstructured spatial effect
+- \(s_j\) is the scaling factor computed from each of the non-singleton components/sub-graphs
+- \(\rho \in [0,1]\) controls the mixing between unstructured and structured components
+- \(\sigma > 0\) is the overall standard deviation.
+
+The following reparametrization shows exactly how the ICAR field is sampled:
+
+\[
+\boldsymbol\phi \;=\; R\,\eta, \quad R \;=\; U_+\,\Lambda_+^{-1/2}\in\mathbb R^{N_{zip}\times(N_{zip}-1)}, \quad \eta \sim \mathcal N(0,I_{N_{zip}-1}).
+\]
+
+where \(\Lambda_+\) is the diagonal matrix of nonzero eigenvalues and \(U_+\) is the matrix of corresponding eigenvectors. They constitute the basis of the sum-to-zero subspace. The full matrices are obtained through diagonalization of the graph Lapacian matrix \(L\).
+
+\[
+L=U\,\Lambda\,U^\top,
+\]
+
+For simplicity, the simulated neighborhood graphs for ZIP codes are lattices where neighboring tiles are horizontally and vertically adjacent. The heatmap below illustrates the values of the group-level parameter, \(a^{(\mathrm{zip})}\), for ZIP code in an example simulation run. Neighboring tiles tend to have similar values, which aligns with the core assumption of the BYM2 model.
+
+```{r}
+grid_dim <- c(10, 10)
+sim_data <- simulate_stan_equiv_disconnected(list(grid_dim))
+plot_grid_heatmap(grid_dim[1], grid_dim[2], sim_data$true$a_zip)
+```
 
 ## Model comparison for connected graphs
+
+For connected graphs, the comparison can include all three models. The posterior distributions are very similar, and the true parameter values are recovered relatively well, including the mixing parameter rho. This confirms the mathematical equivalence between the models as well as the correctness of the implementations.
 
 ```{r}
 seed <- sample(1e6, 1)
 components <- list(c(5, 5))
-stan_dir <- "/path/to/stan/files/"
+stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/benchmark/"
 
 sim_morris_sc <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_morris_sc.stan"))
 sim_morris_mc <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_morris_mc.stan"))
@@ -117,27 +136,33 @@ p_reparam
 
 ## Model comparison for disconnected graphs
 
+The results are also similar between the two models that can handle graphs with multiple components when the neighborhood graph is not connected.
+
 ```{r}
 seed <- sample(1e6, 1)
-components <- list(c(5, 5), c(5, 5), c(5, 5))
+components <- list(c(6, 6), c(2, 2))
+n_isolates <- 4
 stan_dir <- "/Users/tntoan/Desktop/repos/shinymrp/dev/spatial_prior/benchmark/"
 
-sim_morris_sc <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_morris_sc.stan"))
-sim_morris_mc <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_morris_mc.stan"))
-sim_reparam   <- run_sim(components = components, seed = seed, stan_path = paste0(stan_dir, "bym2_reparam.stan"))
+sim_morris_mc <- run_sim(
+  components = components,
+  n_isolates = n_isolates,
+  seed = seed,
+  stan_path = paste0(stan_dir, "bym2_morris_mc.stan")
+)
+
+sim_reparam   <- run_sim(
+  components = components,
+  n_isolates = n_isolates,
+  seed = seed,
+  stan_path = paste0(stan_dir, "bym2_reparam.stan")
+)
 ```
 
 
 ```{r}
-print(sim_morris_sc$fit_summary)
 print(sim_morris_mc$fit_summary)
 print(sim_reparam$fit_summary)
-```
-
-
-```{r}
-p_morris_sc <- sim_morris_sc$recovery$hist + sim_morris_sc$recovery$intervals
-p_morris_sc
 ```
 
 ```{r}
@@ -150,18 +175,58 @@ p_reparam <- sim_reparam$recovery$hist + sim_reparam$recovery$intervals
 p_reparam
 ```
 
-## Computational complexity
+## Computational complexity and sampling efficiency
+
+To see how the time to construct the R matrix and fit models scales with the size of the neighborhood graph, I simulate 10 datasets for several node counts up to 900 and record the runtime for these processes. These plots show the time averaged across datasets.
+
 
 ```{r}
-# Connect to Turbo
+# Require connecting to Turbo
 result_dir <- "/Volumes/sph-yajuan2/toan/spatial_prior/result/benchmark/"
 results <- list(
   bym2_morris_sc = readRDS(paste0(result_dir, "sims_bym2_morris_sc.RDS")),
   bym2_morris_mc = readRDS(paste0(result_dir, "sims_bym2_morris_mc.RDS")),
   bym2_reparam   = readRDS(paste0(result_dir, "sims_bym2_reparam.RDS"))
 )
+```
 
-plot_timing_by_nodes(results)
+Although the cubic complexity of constructing \(R\) is concerning, the runtime is less than 2 seconds for a connected graph with 900 nodes, which is relatively large. As long as the number of nodes stays around a few thousand, this step will not considerably increase the total runtime.
+
+```{r}
+plot_basis_time_by_nodes(results)
+```
+
+Up to 900 nodes, the model fitting time seems be comparable between the two models that can handle disconnected graphs. The single-component model took advantage of Stan built-in `sum_to_zero_vector` which likely led to more efficient sampling but this comes at the expense of modeling flexibility.
+
+
+```{r}
+plot_fit_time_by_nodes(results)
+```
+
+While the reparametrized version introduced some computational overhead, which is negligible for graphs with less than 1000 nodes, it improves sampling for the mixing parameter \(\rho\) and scale \(\lambda_{zip}\) for the spatial effect, as shown below. Based on the noisy trend, the gain in sampling efficiency is most pronounced when the number of nodes is in the hundreds, then tapers off as the graphs get larger.  Larger graph sizes and more datasets for each are needed to confirm this. There were no tangible improvements in the ESS for other parameters.
+
+```{r}
+plot_ess_ratio_by_nodes(
+  results,
+  variables = c("rho_zip"),
+  base_model = "bym2_reparam"
+)
+```
+
+```{r}
+plot_ess_ratio_by_nodes(
+  results,
+  variables = c("lambda_zip"),
+  base_model = "bym2_reparam"
+)
+```
+
+```{r}
+plot_ess_ratio_by_nodes(
+  results,
+  variables = c("lambda_time"),
+  base_model = "bym2_reparam"
+)
 ```
 
 

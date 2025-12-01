@@ -50,12 +50,19 @@ The syntax for the prior distributions is similar to that of Stan. The following
 \itemize{
 \item normal(mu, sigma)
 \item student_t(nu, mu, sigma)
-\item structured*
+\item structured
 \item icar
 \item bym2
 }
 
-The last one is a custom prior syntax for the structured prior distribution developed by \href{https://arxiv.org/abs/1707.08220}{Si et al. (2020)}.
+The structured prior distribution developed by \href{https://arxiv.org/abs/1707.08220}{Si et al. (2020)}, which can be assigned to three types of two-way interactions:
+\itemize{
+\item Two categorical variables (both with more than two levels)
+\item One categorical variable (with more than two levels) and one binary variable
+\item One categorical variable (with more than two levels) and one continuous variable
+}
+
+The spatial prior options (ICAR and BYM2) are useful when data contain geographic units (e.g., ZIP codes, counties, states) with spatial structure, specifically when observations exhibit correlation among neighboring regions. For details about the implementation and usage, see \href{https://mrp-interface.github.io/shinymrp/articles/spatial_prior.html}{Spatial Priors in shinymrp}.
 
 The following default prior distributions are assigned to effects with empty strings (\code{""})
 in the model specification list:

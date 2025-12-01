@@ -53,3 +53,5 @@ articles:
       - workflow
       - data-prep
       - example
+      - method
+      - spatial_prior

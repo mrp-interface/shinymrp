@@ -414,7 +414,7 @@ icar_sample <- function(R) {
 simulate_stan_equiv_disconnected <- function(
   components = list(c(20, 20)),
   n_isolates = 0,
-  N_per_zip = 2,
+  N_per_zip = 5,
   N_race = 3,
   N_age = 5,
   N_time = 6,
@@ -425,7 +425,7 @@ simulate_stan_equiv_disconnected <- function(
   lambda_age = 0.5,
   lambda_time = 0.6,
   lambda_zip = 0.8,
-  rho_zip = 0.5,
+  rho_zip = 0.75,
   n_trials = 30,
   seed = NULL
 ) {
@@ -606,104 +606,6 @@ check_recovery <- function(fit, sim) {
   )
 }
 
-plot_timing_by_nodes <- function(
-    models,
-    impl_labels = names(models),
-    basis_title = "Average R construction time",
-    fit_title   = "Average model fitting time"
-) {
-  
-  stopifnot(length(models) == length(impl_labels))
-  
-  # ---- helper to summarize one implementation ----
-  summarize_impl <- function(impl_res, impl_label) {
-    sizes <- names(impl_res)
-    
-    do.call(
-      rbind,
-      lapply(seq_along(impl_res), function(j) {
-        size_name <- sizes[j]
-        
-        # extract number of nodes from names like "25_nodes"
-        n_nodes <- suppressWarnings(as.integer(sub("_.*$", "", size_name)))
-        
-        runs <- impl_res[[j]]
-        
-        basis_times <- vapply(
-          runs,
-          function(run) run$time$basis,
-          numeric(1)
-        )
-        fit_times <- vapply(
-          runs,
-          function(run) run$time$fit,
-          numeric(1)
-        )
-        
-        data.frame(
-          implementation = impl_label,
-          nodes = n_nodes,
-          basis = mean(basis_times, na.rm = TRUE),
-          fit   = mean(fit_times,   na.rm = TRUE),
-          stringsAsFactors = FALSE
-        )
-      })
-    )
-  }
-  
-  # ---- build summary data frame for all implementations ----
-  df_list <- lapply(seq_along(models), function(i) {
-    summarize_impl(models[[i]], impl_labels[i])
-  })
-  df <- do.call(rbind, df_list)
-  
-  # ---- plots ----
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for this function.")
-  }
-  library(ggplot2)
-  
-  # Left: basis times
-  p_basis <- ggplot(df, aes(x = nodes, y = basis, color = implementation)) +
-    geom_line() +
-    geom_point() +
-    scale_x_continuous(breaks = sort(unique(df$nodes))) +
-    labs(
-      x = "Number of nodes",
-      y = "Time (s)",
-      color = "Model implementation",
-      title = basis_title
-    ) +
-    theme_bw() +
-    theme(
-      legend.position = "none"
-    )
-  
-  # Right: fit times
-  p_fit <- ggplot(df, aes(x = nodes, y = fit, color = implementation)) +
-    geom_line() +
-    geom_point() +
-    scale_x_continuous(breaks = sort(unique(df$nodes))) +
-    labs(
-      x = "Number of nodes",
-      y = "Time (s)",
-      color = "Model implementation",
-      title = fit_title
-    ) +
-    theme_bw()
-  
-  # ---- arrange side-by-side with whatever is available ----
-  if (requireNamespace("patchwork", quietly = TRUE)) {
-    # preferred if you have patchwork
-    p <- p_basis + p_fit
-    return(p)
-  } else {
-    # fallback: just print both, and return them
-    print(p_basis)
-    print(p_fit)
-    invisible(list(basis = p_basis, fit = p_fit))
-  }
-}
 
 run_sim <- function(
     seed = NULL,
@@ -720,7 +622,7 @@ run_sim <- function(
     lambda_age = 0.5,
     lambda_time = 0.6,
     lambda_zip = 0.8,
-    rho_zip = 0.8,
+    rho_zip = 0.75,
     n_trials = 30,
     stan_path = NULL,
     chains = 4,
@@ -786,7 +688,7 @@ repeat_sim <- function(
     seeds = NULL,
     components = list(c(20, 20)),
     n_isolates = 0,
-    N_per_zip = 2,
+    N_per_zip = 5,
     N_race = 3,
     N_age = 5,
     N_time = 6,
@@ -797,7 +699,7 @@ repeat_sim <- function(
     lambda_age = 0.5,
     lambda_time = 0.6,
     lambda_zip = 0.8,
-    rho_zip = 0.5,
+    rho_zip = 0.75,
     n_trials = 30,
     stan_path = NULL,
     chains = 4,
