@@ -189,7 +189,7 @@ mod_learn_interface_ui <- function(id){
       tags$p("*The plus sign (+) indicates that the distributions are restricted to positive values. For example, ", withMathJax("\\(normal_+(0, 3)\\)"), " is a normal distribution with mean 0 and standard deviation of 3 restricted to positive values.", class = "small text-muted mt-3"),
       
       tags$h5("Modifying Priors", class = "mt-4"),
-      tags$p("You may modify priors (where supported). The following from :", tags$a("Stan distribution syntax", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), "are available:"),
+      tags$p("You may modify priors (where supported). The following from ", tags$a("Stan distribution syntax", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), "are available:"),
       tags$ul(
         tags$li("normal(mu, sigma)"),
         tags$li("student_t(nu, mu, sigma)")

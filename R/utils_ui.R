@@ -256,15 +256,25 @@
       ),
       
       tags$h5("Modifying Priors", class = "mt-4"),
-      tags$p("You may modify priors (where supported). Valid choices are:"),
+      tags$p("You may modify priors (where supported). The following from ", tags$a("Stan distribution syntax", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), "are available:"),
       tags$ul(
         tags$li("normal(mu, sigma)"),
-        tags$li("student_t(nu, mu, sigma)"),
-        tags$li("structured**"),
+        tags$li("student_t(nu, mu, sigma)")
+      ),
+      tags$p("In addition, we provide custom prior options for more specilized modeling needs such as spatial smoothing."),
+      tags$h6(tags$u("Spatial Priors")),
+      tags$p("Valid syntax:"),
+      tags$ul(
         tags$li("icar"),
         tags$li("bym2")
       ),
-      tags$p("These mimic ", tags$a("Stan distribution syntax", href = "https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html", target = "_blank"), ". In addition, we provide the structured prior distribution developed by ", tags$a("Si et al. (2020)", href = "https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh", target = "_blank"), ", which can be assigned to three types of two-way interactions:"),
+      tags$p("These prior distributions are useful when data contain geographic units (e.g., ZIP codes, counties, states) with spatial structure, specifically when observations exhibit correlation among neighboring regions. For details about the implementation and usage, see ", tags$a("Spatial Priors in shinymrp", href = "https://mrp-interface.github.io/shinymrp/articles/spatial_prior.html", target = "_blank"), "." ),
+      tags$h6(tags$u("Structured Prior")),
+      tags$p("Valid syntax:"),
+      tags$ul(
+        tags$li("structured")
+      ),
+      tags$p("The structured prior distribution is developed by ", tags$a("Si et al. (2020)", href = "https://www150.statcan.gc.ca/n1/en/pub/12-001-x/2020002/article/00003-eng.pdf?st=iF1_Fbrh", target = "_blank"), ", which can be assigned to three types of two-way interactions:"),
       tags$ul(
         tags$li("Two categorical variables (both with more than two levels)"),
         tags$li("One categorical variable (with more than two levels) and one binary variable"),
@@ -276,11 +286,10 @@
         tags$li(withMathJax("Main effect of age: \\(normal(0, \\lambda_1\\sigma_{age})\\)")),
         tags$li(withMathJax("Interaction of race and age: \\(normal(0, \\lambda_1\\lambda_2\\sigma_{age}\\sigma_{race})\\)")),
         tags$li(withMathJax("Standard deviation of main effects (\\(\\sigma_{race}, \\sigma_{age}\\)): \\(normal_+(0, 1)\\)")),
-        tags$li(withMathJax("Global scale (\\(\\lambda_1\\)): \\(cauchy_+(0, 1)\\)*")),
-        tags$li(withMathJax("Local scale (\\(\\lambda_2\\)): \\(normal_+(0, 1)\\)*"))
+        tags$li(withMathJax("Global scale (\\(\\lambda_1\\)): \\(cauchy_+(0, 1)\\)")),
+        tags$li(withMathJax("Local scale (\\(\\lambda_2\\)): \\(normal_+(0, 1)\\)"))
       ),
-      tags$p("*The plus sign (+) indicates that the distributions are restricted to positive values. For example, ", withMathJax("\\(normal_+(0, 3)\\)"), " is a normal distribution with mean 0 and standard deviation of 3 restricted to positive values.", class = "small text-muted mt-3"),
-      tags$p("**The default priors for the global scale and local scale are ", withMathJax("\\(cauchy_+(0, 1)\\)"), " and ", withMathJax("\\(normal_+(0, 1)\\)"), " respectively. These cannot be changed at the moment.", class = "small text-muted")
+      tags$p("The default priors for the global scale and local scale are ", withMathJax("\\(cauchy_+(0, 1)\\)"), " and ", withMathJax("\\(normal_+(0, 1)\\)"), " respectively. These cannot be changed at the moment.")
     ),
     
     # Model Fitting panel

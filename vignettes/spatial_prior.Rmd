@@ -32,7 +32,7 @@ Cases involving disconnected graphs—where $\mathbf{L}$ has multiple null-space
 ## Intrinsic Conditional Auto-Regressive (ICAR) models
 <!-- Alex Jiang : it is more rigorous to write the probability of \phi without directly using L, as the graph Laplacian is singular, I recommend using the following exponential quadratic form. Also, ICAR is not necessarily multivariate normal, as the prior is improper. I rephrased the wording a little bit. -->
 
-The **ICAR model** is a special case of a Gaussian Markov random field (GMRF), known as the intrinsic GMRF. Let \( \boldsymbol{\phi} = \left(\phi_1, \ldots, \phi_N\right)^{\top} \) denote the spatial random effects associated with the $N$ neighboring regions from an ICAR model. Under the assumption that spatial dependence is fully captured by the neighborhood structure in $\mathbf{W}$, the ICAR model defines the joint distribution of \( \boldsymbol{\phi} \) as: Each $\phi_i$ is conditionally distributed based its neighboring values: 
+The **ICAR model** is a special case of a Gaussian Markov random field (GMRF), known as the intrinsic GMRF. Let $ \pmb{\phi} = \left(\phi_1, \ldots, \phi_N\right)^{\top} $ denote the spatial random effects associated with the $N$ neighboring regions from an ICAR model. Under the assumption that spatial dependence is fully captured by the neighborhood structure in $\mathbf{W}$, the ICAR model defines the joint distribution of \( \pmb{\phi} \) as: Each $\phi_i$ is conditionally distributed based its neighboring values: 
 
 \[
 \phi_i \mid \phi_{-i} \sim {N}\!\left(
@@ -43,13 +43,13 @@ The **ICAR model** is a special case of a Gaussian Markov random field (GMRF), k
 
 where $w_{ij} > 0$ if nodes $i$ and $j$ are neighbors and $w_{ij} = 0$ otherwise, and $\tau$ controls the precision and overall smoothness. Thus, the joint improper density can be written as 
 
-\[ p(\boldsymbol{\phi} \mid \tau ) \propto \tau^{\frac{N-1}{2}}\exp \left(-\frac{\tau}{2} \boldsymbol{\phi}^{\top} \mathbf{L} \boldsymbol{\phi}\right), \]
+\[ p(\pmb{\phi} \mid \tau ) \propto \tau^{\frac{N-1}{2}}\exp \left(-\frac{\tau}{2} \pmb{\phi}^{\top} \mathbf{L} \pmb{\phi}\right), \]
 
 where \( \mathbf{L} = \mathbf{D} - \mathbf{W} \) is the **graph Laplacian matrix**, constructed from the adjacency matrix $\mathbf{W}$ and the degree matrix $\mathbf{D}$, where $\mathbf{D} = \text{diag}(d_i)$ with $d_i = \sum_j w_{ij}$. Note that $\mathbf{L}$ satisfies $\mathbf{L} \mathbf{1}=\mathbf{0}$, and is positive semidefinite but not invertible. Expanding the quadratic form, we can express the log-probability density in terms of the pairwise differences between neighboring pairs:  
 
-\[ \log p(\boldsymbol{\phi}) = -\frac{\tau}{2} \sum_{i \sim j} w_{ij} (\phi_i - \phi_j)^2 + \text{const.}, \]
+\[ \log p(\pmb{\phi}) = -\frac{\tau}{2} \sum_{i \sim j} w_{ij} (\phi_i - \phi_j)^2 + \text{const.}, \]
 
-where ${i \sim j}$ means that $i$ and $j$ are neighbors. Its joint density is improper, but characterizes local conditional relationships among neighboring sites and penalizes large differences between neighbors, thereby encouraging local smoothness. Also, note that the precision parameter $\tau$ controls the degree of smoothness the ICAR component is able to capture. This formulation explicitly shows how the neighborhood structure is incorporated into the joint probability. It also reveals the **non-identifiability problem** of the ICAR model, which arises because adding a constant to all elements of \( \boldsymbol{\phi} \) does not change the differences. To resolve this, a **sum-to-zero constraint** is imposed: \[ \sum_{i=1}^{N} \phi_i = 0 \] This constraint also prevents \( \boldsymbol{\phi} \) from confounding the model intercept.
+where ${i \sim j}$ means that $i$ and $j$ are neighbors. Its joint density is improper, but characterizes local conditional relationships among neighboring sites and penalizes large differences between neighbors, thereby encouraging local smoothness. Also, note that the precision parameter $\tau$ controls the degree of smoothness the ICAR component is able to capture. This formulation explicitly shows how the neighborhood structure is incorporated into the joint probability. It also reveals the **non-identifiability problem** of the ICAR model, which arises because adding a constant to all elements of \( \pmb{\phi} \) does not change the differences. To resolve this, a **sum-to-zero constraint** is imposed: \[ \sum_{i=1}^{N} \phi_i = 0 \] This constraint also prevents \( \pmb{\phi} \) from confounding the model intercept.
 
 ### Stan implementation
 
@@ -93,7 +93,7 @@ model {
 
 ## BYM2 model
 <!-- Alex Jiang :  I expanded a bit on what you meant by complete spatial correlation). Also, the definition of the scaling factor is usually its reciprocal -- I kept our current version to align with the code.--->
-While the ICAR prior provides a convenient way to encode spatial dependence, it can be overly restrictive in practice. By construction, all variation in $\boldsymbol{\phi}$ is spatially structured, so independent region-specific deviations are absorbed into the smooth surface. In many real datasets, however, some variability is spatially uncorrelated (e.g., due to measurement error or region-specific effects). To address this, the Besag–York–Mollié (BYM) model augments the ICAR component with an unstructured random effect that captures independent noise. The BYM2 reparameterization (Riebler et al., 2016) further refines this approach by standardizing the ICAR term and separating overall scale from spatial structure. In effect, the precision parameter $\tau$ from the ICAR model is replaced by a fixed scaling constant derived from the neighborhood graph, ensuring that the total variance and spatial proportion parameters remain interpretable and comparable across datasets.
+While the ICAR prior provides a convenient way to encode spatial dependence, it can be overly restrictive in practice. By construction, all variation in $\pmb{\phi}$ is spatially structured, so independent region-specific deviations are absorbed into the smooth surface. In many real datasets, however, some variability is spatially uncorrelated (e.g., due to measurement error or region-specific effects). To address this, the Besag–York–Mollié (BYM) model augments the ICAR component with an unstructured random effect that captures independent noise. The BYM2 reparameterization (Riebler et al., 2016) further refines this approach by standardizing the ICAR term and separating overall scale from spatial structure. In effect, the precision parameter $\tau$ from the ICAR model is replaced by a fixed scaling constant derived from the neighborhood graph, ensuring that the total variance and spatial proportion parameters remain interpretable and comparable across datasets.
 
 In the BYM2 formulation, the ICAR precision matrix is rescaled by \(s\), computed from the graph Laplacian \(\mathbf{L}\) as
 
@@ -102,7 +102,7 @@ s = \left\{ \operatorname{mean}\!\big[\mathrm{diag}(\mathbf{L}^{-}_{\text{pseudo
 \]
 
 where \(\mathbf{L}^{-}_{\text{pseudo}}\) denotes the Moore–Penrose inverse of the Laplacian.  
-This ensures that the scaled ICAR component \(\boldsymbol{\phi}^\ast = s^{-1/2}\boldsymbol{\phi}\) has unit marginal variance under the graph structure, i.e. \(\operatorname{Var}(\phi_i^\ast) = 1\).
+This ensures that the scaled ICAR component \(\pmb{\phi}^\ast = s^{-1/2}\pmb{\phi}\) has unit marginal variance under the graph structure, i.e. \(\operatorname{Var}(\phi_i^\ast) = 1\).
 
 The spatial random effect for region \(i\) is then modeled as
 
@@ -216,7 +216,7 @@ where \(\mathbf{L}_{k,\text{pseudo}}^{-}\) is the Moore–Penrose inverse of \(\
 This ensures that the standardized ICAR field within component \(k\),
 
 \[
-\boldsymbol{\phi}_k^\ast = s_k^{-1/2}\boldsymbol{\phi}_k,
+\pmb{\phi}_k^\ast = s_k^{-1/2}\pmb{\phi}_k,
 \]
 
 has \(\operatorname{Var}(\phi_{i}^\ast)=1\) for all \(i\in \mathbf{C}_k\).
@@ -239,7 +239,7 @@ b_i
 \right),
 \]
 with  
-\(\boldsymbol{\phi}_k \sim \text{ICAR}(\mathbf{L}_k)\),  
+\(\pmb{\phi}_k \sim \text{ICAR}(\mathbf{L}_k)\),  
 \(\theta_i \sim \mathbf{N}(0,1)\),  
 and the same global parameters \(\sigma>0\) and \(\rho \in [0,1]\) shared across components.
 
@@ -273,15 +273,15 @@ This ensures identifiability and removes the constant-shift indeterminacy of eac
 
 #### 6. Compact matrix representation
 
-Stacking all components, the full structured term \(\boldsymbol{\phi}\) satisfies
+Stacking all components, the full structured term \(\pmb{\phi}\) satisfies
 
 \[
-p(\boldsymbol{\phi})
+p(\pmb{\phi})
 \propto
 \exp\!\left(
   -\tfrac{1}{2}
   \sum_{k=1}^K
-  s_k^{-1}\boldsymbol{\phi}_k^{\top}\mathbf{L}_k\boldsymbol{\phi}_k
+  s_k^{-1}\pmb{\phi}_k^{\top}\mathbf{L}_k\pmb{\phi}_k
 \right),
 \]
 with independent sum-to-zero constraints for each \(k\).
@@ -291,8 +291,8 @@ The complete BYM2 prior for disconnected graphs can then be expressed as
 \[
 \mathbf{b}
 = \sigma\!\left(
-  \sqrt{\rho}\,\mathbf{S}\,\boldsymbol{\phi}
-  + \sqrt{1-\rho}\,\boldsymbol{\theta}
+  \sqrt{\rho}\,\mathbf{S}\,\pmb{\phi}
+  + \sqrt{1-\rho}\,\pmb{\theta}
 \right),
 \]
 where \(\mathbf{S}=\mathrm{diag}(s_1^{-1/2},\ldots,s_K^{-1/2})\) scales each component appropriately.
