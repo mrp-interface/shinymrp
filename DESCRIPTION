@@ -1,6 +1,6 @@
 Package: shinymrp
 Title: Interface for Multilevel Regression and Poststratification
-Version: 0.9.1
+Version: 0.10.0
 Authors@R: c(
     person("Toan", "Tran", email = "trannttoan97@gmail.com", role = c("cre", "aut", "cph")),
     person("Jonah", "Gabry", email = "jgabry@gmail.com", role = c("aut", "cph")),

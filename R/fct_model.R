@@ -1624,7 +1624,7 @@ generated quantities { ${gq_code}
     fixed   = df_fixed,
     varying = df_varying,
     residual = df_residual,
-    bym2 = df_bym2
+    spatial_proportion = df_bym2
   ))
 }
 

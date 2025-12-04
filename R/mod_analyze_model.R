@@ -788,7 +788,7 @@ mod_analyze_model_server <- function(id, global){
         na = ""
       )
       output[[model$get_id("bym2_tbl")]] <- renderTable(
-        model$summary()$bym2,
+        model$summary()$spatial_proportion,
         rownames = TRUE,
         na = ""
       )

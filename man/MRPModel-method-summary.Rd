@@ -14,7 +14,7 @@ summary and diagnostics for model parameters:
 \item fixed effects (\code{fixed})
 \item standard deviations of varying effects (\code{varying})
 \item standard deviations of residuals (\code{residual})
-\item BYM2 mixing parameters (\code{bym2})
+\item BYM2 proportion of spatial structure (\code{spatial_proportion})
 }
 }
 \description{

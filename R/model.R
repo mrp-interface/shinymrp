@@ -342,7 +342,7 @@ MRPModel$set("public", "check_estimate_exists", check_estimate_exists)
 #' - fixed effects (`fixed`)
 #' - standard deviations of varying effects (`varying`)
 #' - standard deviations of residuals (`residual`)
-#' - BYM2 mixing parameters (`bym2`)
+#' - BYM2 proportion of spatial structure (`spatial_proportion`)
 summary <- function() {
   private$assert_fit_exists()
 

@@ -1,3 +1,15 @@
+# shinymrp 0.10.0
+
+## New features
+- Add ICAR model as a prior distribution option (#113)
+- Add BYM2 to prior distribution options (#114)
+
+## Other changes
+- Open Shiny App in browser by default (#110)
+- Add a vignette for spatial priors (#111)
+- Replace links that block auomated HEAD requests (#112)
+
+
 # shinymrp 0.9.1
 
 ## Bugfixes

@@ -62,7 +62,7 @@ The structured prior distribution developed by \href{https://arxiv.org/abs/1707.
 \item One categorical variable (with more than two levels) and one continuous variable
 }
 
-The spatial prior options (ICAR and BYM2) are useful when data contain geographic units (e.g., ZIP codes, counties, states) with spatial structure, specifically when observations exhibit correlation among neighboring regions. For details about the implementation and usage, see \href{https://mrp-interface.github.io/shinymrp/articles/spatial_prior.html}{Spatial Priors in shinymrp}.
+The spatial prior options (ICAR and BYM2) are useful when data contain geographic units (e.g., ZIP codes, counties, states) with spatial structure, specifically when observations exhibit correlation among neighboring regions. For details about the implementation and usage, see \href{https://mrp-interface.github.io/shinymrp/articles/spatial_prior.html}{Spatial prior specification in shinymrp}.
 
 The following default prior distributions are assigned to effects with empty strings (\code{""})
 in the model specification list:
