@@ -268,7 +268,7 @@
         tags$li("icar"),
         tags$li("bym2")
       ),
-      tags$p("These prior distributions are useful when data contain geographic units (e.g., ZIP codes, counties, states) with spatial structure, specifically when observations exhibit correlation among neighboring regions. For details about the implementation and usage, see ", tags$a("Spatial prior specification in shinymrp", href = "https://mrp-interface.github.io/shinymrp/articles/spatial_prior.html", target = "_blank"), "." ),
+      tags$p("These prior distributions are useful when data contain geographic units (e.g., ZIP codes, counties, states) with spatial structure, specifically when observations exhibit correlation among neighboring regions. For details about the implementation and usage, see ", tags$a("Spatial prior specification in shinymrp", href = "https://mrp-interface.github.io/shinymrp/articles/spatial-prior.html", target = "_blank"), "." ),
       tags$h6(tags$u("Structured Prior")),
       tags$p("Valid syntax:"),
       tags$ul(
